@@ -1,0 +1,187 @@
+/* ========== Tema y paleta ========== */
+:root{
+    /* Paleta base */
+    --color-bg: #757575;            /* Fondo general */
+    --color-primary: #95C1E7;       /* Navbar / acento claro azul */
+    --color-primary-600: #6FAFE0;   /* Hover/variación */
+    --color-primary-700: #3E8FCC;
+
+    --color-surface: #ffffff;       /* Tarjetas */
+    --color-surface-2: #f6f8fb;     /* Encabezados de tarjetas */
+
+    --color-text: #111111;          /* Texto sobre superficies claras */
+    --color-text-on-bg: #f5f5f5;    /* Texto sobre el fondo gris */
+
+    --color-success: #2E7D32;
+    --color-warning: #F9A825;
+    --color-danger:  #C62828;
+
+    /* Ajustes Bootstrap (algunos componentes los leen) */
+    --bs-primary: var(--color-primary);
+    --bs-success: var(--color-success);
+    --bs-warning: var(--color-warning);
+    --bs-danger:  var(--color-danger);
+
+    --accent:#0d6efd;               /* Punto decorativo en títulos */
+    --card-radius:18px;
+}
+
+/* ========== Fondo global ========== */
+body{
+    background-color: var(--color-bg) !important;
+    color: var(--color-text-on-bg);
+}
+/* Si tu layout dejó bg-light en <body>, lo forzamos a usar el tema */
+body.bg-light{
+    background-color: var(--color-bg) !important;
+    color: var(--color-text-on-bg);
+}
+
+/* ========== Superficies (cards/tablas) ========== */
+.card{
+    background: var(--color-surface);
+    color: var(--color-text);
+    border:0;
+    border-radius: var(--card-radius);
+    box-shadow: 0 6px 18px rgba(0,0,0,.08);
+}
+.card-header{
+    border-bottom:0;
+    background: var(--color-surface-2);
+    border-top-left-radius: var(--card-radius);
+    border-top-right-radius: var(--card-radius);
+}
+.table thead th{ font-weight:600; }
+.progress{ height:10px; border-radius:20px; }
+.badge-pill{ border-radius:50rem; }
+
+h1, h2, h3, .card-title{ letter-spacing:.2px }
+.section-title{ display:flex; align-items:center; gap:.6rem; margin-bottom:1rem; }
+.section-title .dot{ width:10px; height:10px; border-radius:50%; background:var(--accent); }
+
+/* ========== Navbar personalizada (#95C1E7) ========== */
+/* Usa esta clase en tu <nav class="navbar navbar-expand-lg navbar-custom"> */
+.navbar-custom{
+    background-color: var(--color-primary) !important;
+    --bs-navbar-bg: var(--color-primary);
+
+    /* Texto oscuro para buen contraste sobre #95C1E7 */
+    --bs-navbar-color: #111;
+    --bs-navbar-hover-color: #111;
+    --bs-navbar-active-color: #111;
+    --bs-navbar-brand-color: #111;
+    --bs-navbar-brand-hover-color: #111;
+
+    /* Toggler visible */
+    --bs-navbar-toggler-border-color: rgba(0,0,0,.25);
+    --bs-navbar-toggler-icon-bg:
+            url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(0,0,0,0.7)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+
+    box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+.navbar-custom .navbar-brand,
+.navbar-custom .nav-link,
+.navbar-custom .btn-link{ color:#111 !important; }
+.navbar-custom .btn-link{ text-decoration:none; }
+.navbar-custom .btn-link:hover,
+.navbar-custom .nav-link:hover,
+.navbar-custom .navbar-brand:hover{ text-decoration:underline; }
+.nav-user{ font-weight:500; padding:.45rem .65rem; }
+
+/* ========== Botones (armonizados con la paleta) ========== */
+.btn-primary{
+    background: var(--color-primary-700);
+    border-color: var(--color-primary-700);
+}
+.btn-primary:hover{
+    background: var(--color-primary-600);
+    border-color: var(--color-primary-600);
+}
+.btn-outline-primary{
+    color: var(--color-primary-700);
+    border-color: var(--color-primary-700);
+}
+.btn-outline-primary:hover{
+    background: var(--color-primary-700);
+    color: #fff;
+}
+
+/* ========== Badges & progreso (matching) ========== */
+.badge.bg-info{ background-color: var(--color-primary) !important; color:#111 !important; }
+.progress-bar.bg-success{ background-color: var(--color-success) !important; }
+.progress-bar.bg-warning{ background-color: var(--color-warning) !important; color:#111 !important; }
+.progress-bar.bg-secondary{ background-color: #9E9E9E !important; }
+
+/* ========== (Opcional) Topbar anterior, por si la sigues usando ========== */
+.topbar{
+    background:#a7c7e7;
+    border-top:3px solid #0b5ed7;
+    border-bottom:3px solid #76add6;
+}
+.topbar-link{ color:#1e1e1e; text-decoration:none; font-weight:500; }
+.topbar-link:hover{ text-decoration:underline; }
+.topbar-text{ color:#1e1e1e; font-weight:500; }
+
+/* ===== Nuevo color de superficies (reemplaza el blanco) ===== */
+:root{
+    /* antes: #ffffff y #f6f8fb */
+    --color-surface:   #E9F1F9; /* tarjetas / paneles */
+    --color-surface-2: #DCE8F3; /* encabezados de tarjeta / barras claras */
+    --color-text:      #111111; /* contraste correcto sobre los nuevos fondos */
+}
+
+/* aplica el color a los componentes clave */
+.card{
+    background: var(--color-surface) !important;
+    color: var(--color-text) !important;
+}
+.card-header{
+    background: var(--color-surface-2) !important;
+}
+
+/* tablas y filas con fondo acorde */
+.table{
+    --bs-table-bg: transparent; /* que se vea la card debajo */
+}
+.table thead{
+    background: var(--color-surface-2);
+}
+.table-striped > tbody > tr:nth-of-type(odd){
+    --bs-table-accent-bg: rgba(0,0,0,.03);
+}
+
+/* inputs/selects con leve tono para integrarse */
+.form-control,
+.form-select{
+    background-color: #F3F8FE;
+    border-color: #d7e3ef;
+}
+
+/* botones outline para que combinen con la paleta */
+.btn-outline-primary{
+    color: #3E8FCC;
+    border-color: #3E8FCC;
+}
+.btn-outline-primary:hover{
+    background: #3E8FCC;
+    color: #fff;
+}
+/* ===== List-group con fondo del tema (no blanco) ===== */
+.list-group{
+    --bs-list-group-bg: var(--color-surface);        /* fondo ítems */
+    --bs-list-group-color: var(--color-text);
+    --bs-list-group-border-color: #d7e3ef;
+    --bs-list-group-action-hover-bg: #E0EFFC;        /* hover suave */
+    --bs-list-group-action-active-bg: #DCE8F3;       /* active */
+}
+
+.list-group-item{
+    background-color: var(--color-surface) !important;
+    color: var(--color-text) !important;
+    border-color: #d7e3ef !important;
+}
+
+/* Si algún ítem trae 'bg-white' por utilidades, lo forzamos al tema */
+.card .list-group-item.bg-white{
+    background-color: var(--color-surface) !important;
+}
