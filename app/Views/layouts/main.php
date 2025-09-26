@@ -24,17 +24,24 @@
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <div class="collapse navbar-collapse" id="topnav">
-            <ul class="navbar-nav ms-auto align-items-lg-center">
-                <li class="nav-item"><a class="nav-link text-dark" href="<?= base_url('modulo3/dashboard') ?>">Inicio</a></li>
-                <li class="nav-item"><a class="nav-link text-dark" href="<?= base_url('perfilempleado') ?>">Mi perfil</a></li>
-                <li class="nav-item"><a class="nav-link text-dark" href="<?= base_url('pedidos') ?>">Pedidos</a></li>
-                <li class="nav-item"><a class="nav-link text-dark" href="<?= base_url('modulo3/ordenes') ?>">Órdenes</a></li>
 
+            <ul class="navbar-nav align-items-lg-center">
+                <!-- Usuario logueado -->
+                <li class="nav-item">
+                    <a class="nav-link text-dark" href="<?= base_url('dashboard') ?>">
+                        <i class="bi bi-house me-1"></i>Inicio
+                    </a>
+                </li>
+                <li class="nav-item d-lg-flex align-items-center ms-lg-3">
+                    <a class="nav-link text-dark" href="<?= base_url('modulo1/perfilempleado') ?>">
+                        <i class="bi bi-person-circle me-1"></i>Perfil
+                    </a>
+                </li>
                 <!-- Usuario logueado -->
                 <li class="nav-item d-lg-flex align-items-center ms-lg-3">
           <span class="nav-user badge rounded-pill bg-white text-dark border me-lg-3">
-            <i class="bi bi-person-circle me-1"></i><?= esc($userEmail ?? 'admin@fabrica.com') ?>
+            <i class="bi bi-person-circle me-1"></i><?= esc(session()->get('user_name') ?? 'Usuario') ?>
+            <small class="ms-1">(<?= esc(session()->get('user_role') ?? 'admin') ?>)</small>
           </span>
                 </li>
 
@@ -54,7 +61,7 @@
 </main>
 
 <footer class="border-top py-3 bg-white">
-    <div class="container small text-muted">© <?= date('Y') ?> Maquiladora · Módulo 3</div>
+    <div class="container small text-muted">© <?= date('Y') ?> Maquiladora </div>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

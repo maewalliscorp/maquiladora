@@ -72,19 +72,26 @@
 <div class="container-fluid h-100">
     <div class="row h-100">
         <div class="col-md-6 left-panel">
-            <img src="<?= base_url('img/maquiladora.png') ?>" alt="Logo" width="150">
+            <img src="<?= base_url('img/logo_Maquiladora.png') ?>" alt="Logo" width="150">
             <h2 class="mt-3 fw-bold">Sistema de Maquiladora</h2>
             <h4>Maewallis Corp</h4>
         </div>
         <div class="col-md-6 right-panel d-flex align-items-center">
             <div class="login-card mx-auto" style="max-width: 380px; width: 100%;">
                 <h3 class="mb-4">Inicio de Sesión</h3>
-                <form action="<?= base_url('auth/login') ?>" method="post">
+                
+                <?php if (session()->getFlashdata('error')): ?>
+                    <div class="alert alert-danger" role="alert">
+                        <?= session()->getFlashdata('error') ?>
+                    </div>
+                <?php endif; ?>
+                
+                <form action="<?= base_url('login') ?>" method="post">
                     <label for="usuario" class="form-label">Usuario</label>
-                    <input type="text" id="usuario" name="usuario" class="form-control" required>
+                    <input type="text" id="usuario" name="usuario" class="form-control" placeholder="Usuario" required>
 
                     <label for="password" class="form-label">Contraseña</label>
-                    <input type="password" id="password" name="password" class="form-control" required>
+                    <input type="password" id="password" name="password" class="form-control" placeholder="Contraseña" required>
 
                     <button type="submit" class="btn btn-custom w-100 mt-2">Ingresar</button>
                 </form>

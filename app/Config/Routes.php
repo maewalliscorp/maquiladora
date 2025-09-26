@@ -10,31 +10,78 @@ if (file_exists(SYSTEMPATH . 'Config/Routes.php')) {
 }
 
 $routes->setDefaultNamespace('App\Controllers');
-$routes->setDefaultController('Modulo3');
+$routes->setDefaultController('Modulos');
 $routes->setDefaultMethod('dashboard');
 $routes->setTranslateURIDashes(false);
 $routes->set404Override();
 $routes->setAutoRoute(false); // declaramos todas las rutas explícitas
-$routes->get('/login', 'Auth::login');
-$routes->get('/register', 'Auth::register');
-$routes->get('/perfilempleado', 'PerfilEmpleado::index');
-$routes->get('pedidos', 'Pedidos::index');
-$routes->get('agregar_pedido', 'agregar_pedido::index');
-$routes->get('editarpedido/(:num)', 'Pedidos::editar/$1');
-$routes->post('actualizar_pedido/(:num)', 'Pedidos::actualizar/$1');
-$routes->get('/detalle_pedido/(:num)', 'Pedidos::detalles/$1');
+
+// Rutas de autenticación (COMENTADAS TEMPORALMENTE)
+// $routes->get('/', 'Auth::login'); // Página de inicio es el login
+// $routes->get('/login', 'Auth::login');
+// $routes->post('/login', 'Auth::authenticate');
+// $routes->get('/logout', 'Auth::logout');
+// $routes->get('/register', 'Auth::register');
+
+// Ruta principal - va directamente al dashboard
+$routes->get('/', 'Modulos::dashboard');
+
+// Rutas protegidas (requieren autenticación) - COMENTADAS TEMPORALMENTE
+// $routes->get('/dashboard', 'Modulos::dashboard', ['filter' => 'auth']);
+$routes->get('/dashboard', 'Modulos::dashboard');
+// Rutas de compatibilidad para enlaces antiguos
+$routes->get('/perfilempleado', 'Modulos::m1_perfilempleado', ['filter' => 'auth']);
+$routes->get('/pedidos', 'Modulos::m1_pedidos', ['filter' => 'auth']);
+$routes->get('/agregar_pedido', 'Modulos::m1_agregar', ['filter' => 'auth']);
+$routes->get('/editarpedido/(:num)', 'Modulos::m1_editar/$1', ['filter' => 'auth']);
+$routes->get('/detalle_pedido/(:num)', 'Modulos::m1_detalles/$1', ['filter' => 'auth']);
+$routes->get('/perfildisenador', 'Modulos::m2_perfildisenador', ['filter' => 'auth']);
+$routes->get('/catalogodisenos', 'Modulos::m2_catalogodisenos', ['filter' => 'auth']);
+$routes->get('/agregardiseno', 'Modulos::m2_agregardiseno', ['filter' => 'auth']);
+$routes->get('/editardiseno', 'Modulos::m2_editardiseno', ['filter' => 'auth']);
 
 
-// Raíz del sitio -> Dashboard del módulo 3
-$routes->get('/', 'Modulo3::dashboard');
+// Grupo del módulo 1 (Pedidos y Empleados) - SIN FILTRO DE AUTH TEMPORALMENTE
+$routes->group('modulo1', [], function ($routes) {
+    $routes->get('/',                 'Modulos::m1_index');
+    $routes->get('pedidos',           'Modulos::m1_pedidos');
+    $routes->get('agregar',           'Modulos::m1_agregar');
+    $routes->post('agregar',          'Modulos::m1_agregar');
+    $routes->get('editar/(:num)',     'Modulos::m1_editar/$1');
+    $routes->post('editar',           'Modulos::m1_editar');
+    $routes->get('detalles/(:num)',   'Modulos::m1_detalles/$1');
+    $routes->get('perfilempleado',    'Modulos::m1_perfilempleado');
+    $routes->get('ordenes',           'Modulos::m1_ordenes');
+});
+// Grupo del módulo 2 (diseñador) - SIN FILTRO DE AUTH TEMPORALMENTE
+$routes->group('modulo2', [], function ($routes) {
+    $routes->get('/',                 'Modulos::m2_index');
+    $routes->get('perfildisenador',   'Modulos::m2_perfildisenador');
+    $routes->get('catalogodisenos',   'Modulos::m2_catalogodisenos');
+    $routes->get('agregardiseno',     'Modulos::m2_agregardiseno');
+    $routes->post('agregardiseno',    'Modulos::m2_agregardiseno');
+    $routes->get('editardiseno/(:num)', 'Modulos::m2_editardiseno/$1');
+    $routes->post('actualizar/(:num)', 'Modulos::m2_actualizar/$1');
+});
 
-// Grupo del módulo 3
-$routes->group('modulo3', function ($routes) {
-    $routes->get('/',            'Modulo3::dashboard');
-    $routes->get('dashboard',    'Modulo3::dashboard');
-    $routes->get('ordenes',      'Modulo3::ordenes');
-    $routes->get('wip',          'Modulo3::wip');
-    $routes->get('incidencias',  'Modulo3::incidencias');
-    $routes->get('reportes',     'Modulo3::reportes');
-    $routes->get('notificaciones','Modulo3::notificaciones');
+// Grupo del módulo 3 (Dashboard y Gestión) - SIN FILTRO DE AUTH TEMPORALMENTE
+$routes->group('modulo3', [], function ($routes) {
+    $routes->get('/',            'Modulos::dashboard');
+    $routes->get('dashboard',    'Modulos::dashboard');
+    $routes->get('ordenes',      'Modulos::ordenes');
+    $routes->get('wip',          'Modulos::wip');
+    $routes->get('incidencias',  'Modulos::incidencias');
+    $routes->get('reportes',     'Modulos::reportes');
+    $routes->get('notificaciones','Modulos::notificaciones');
+    // Nuevas vistas del módulo 3
+    $routes->get('mrp',          'Modulos::mrp');
+    $routes->get('desperdicios', 'Modulos::desperdicios');
+    $routes->get('mantenimiento_inventario', 'Modulos::mantenimientoInventario');
+    $routes->get('mantenimiento_preventivo', 'Modulos::mantenimientoPreventivo');
+    $routes->get('mantenimiento_correctivo', 'Modulos::mantenimientoCorrectivo');
+    $routes->get('logistica_preparacion', 'Modulos::logisticaPreparacion');
+    $routes->get('logistica_gestion', 'Modulos::logisticaGestion');
+    $routes->get('logistica_documentos', 'Modulos::logisticaDocumentos');
+    // Perfil del empleado desde Modulo1 para evitar controlador inexistente
+    $routes->get('perfilempleado', 'Modulos::m1_perfilempleado');
 });

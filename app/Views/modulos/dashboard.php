@@ -51,9 +51,20 @@
             <div class="card-header"><strong>Accesos rápidos</strong></div>
             <div class="card-body">
                 <div class="row g-3">
+                    <!-- Módulo 1 -->
                     <div class="col-md-3">
-                        <a class="btn w-100 btn-outline-primary" href="<?= base_url('modulo3/ordenes') ?>">Órdenes</a>
+                        <a class="btn w-100 btn-outline-primary" href="<?= base_url('modulo1/pedidos') ?>">Pedidos</a>
                     </div>
+                    <div class="col-md-3">
+                        <a class="btn w-100 btn-outline-primary" href="<?= base_url('modulo1/ordenes') ?>">Ordenes</a>
+                    </div>
+                    
+                    <!-- Módulo 2 -->
+                    <div class="col-md-3">
+                        <a class="btn w-100 btn-outline-primary" href="<?= base_url('modulo2/catalogodisenos') ?>">Catalogo de Diseños</a>
+                    </div>
+                    
+                    <!-- Módulo 3 - Operaciones -->
                     <div class="col-md-3">
                         <a class="btn w-100 btn-outline-primary" href="<?= base_url('modulo3/wip') ?>">WIP</a>
                     </div>
@@ -62,6 +73,33 @@
                     </div>
                     <div class="col-md-3">
                         <a class="btn w-100 btn-outline-primary" href="<?= base_url('modulo3/reportes') ?>">Reportes</a>
+                    </div>
+                    
+                    <!-- Módulo 3 - Planificación -->
+                    <div class="col-md-3">
+                        <a class="btn w-100 btn-outline-success" href="<?= base_url('modulo3/mrp') ?>">MRP</a>
+                    </div>
+                    <div class="col-md-3">
+                        <a class="btn w-100 btn-outline-danger" href="<?= base_url('modulo3/desperdicios') ?>">Desperdicios</a>
+                    </div>
+                    
+                    <!-- Módulo 3 - Mantenimiento -->
+                    <div class="col-md-3">
+                        <a class="btn w-100 btn-outline-secondary" href="<?= base_url('modulo3/mantenimiento_inventario') ?>">Inventario Maq.</a>
+                    </div>
+                    <div class="col-md-3">
+                        <a class="btn w-100 btn-outline-warning" href="<?= base_url('modulo3/mantenimiento_correctivo') ?>">Mant. Correctivo</a>
+                    </div>
+                    
+                    <!-- Módulo 3 - Logística -->
+                    <div class="col-md-3">
+                        <a class="btn w-100 btn-outline-info" href="<?= base_url('modulo3/logistica_preparacion') ?>">Prep. Envíos</a>
+                    </div>
+                    <div class="col-md-3">
+                        <a class="btn w-100 btn-outline-info" href="<?= base_url('modulo3/logistica_gestion') ?>">Gestión Envíos</a>
+                    </div>
+                    <div class="col-md-3">
+                        <a class="btn w-100 btn-outline-info" href="<?= base_url('modulo3/logistica_documentos') ?>">Docs. Embarque</a>
                     </div>
                 </div>
             </div>

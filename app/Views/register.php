@@ -49,7 +49,7 @@
 <body>
 <!-- Header arriba -->
 <div class="header">
-    <img src="<?= base_url('img/maquiladora.png') ?>" alt="Logo" width="60">
+    <img src="<?= base_url('img/logo_Maquiladora.png') ?>" alt="Logo" width="60">
     <h4 class="m-0">Sistema de Maquiladora</h4>
 </div>
 
