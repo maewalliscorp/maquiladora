@@ -25,7 +25,7 @@ class Modulos extends BaseController
     }
 
     /* =========================================================
-     *                   MÓDULO 3 (Dashboard)
+     *                   MÓDULO 3 si tu
      * ========================================================= */
 
     public function dashboard()
