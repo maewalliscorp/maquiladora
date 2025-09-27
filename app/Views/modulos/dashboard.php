@@ -58,7 +58,9 @@
                     <div class="col-md-3">
                         <a class="btn w-100 btn-outline-primary" href="<?= base_url('modulo1/ordenes') ?>">Ordenes</a>
                     </div>
-                    
+                    <div class="col-md-3">
+                        <a class="btn w-100 btn-outline-info" href="<?= base_url('modulo3/ordenesclientes') ?>">Órdenes Clientes</a>
+                    </div>
                     <!-- Módulo 2 -->
                     <div class="col-md-3">
                         <a class="btn w-100 btn-outline-primary" href="<?= base_url('modulo2/catalogodisenos') ?>">Catalogo de Diseños</a>
@@ -100,6 +102,11 @@
                     </div>
                     <div class="col-md-3">
                         <a class="btn w-100 btn-outline-info" href="<?= base_url('modulo3/logistica_documentos') ?>">Docs. Embarque</a>
+                    </div>
+                    
+                    <!-- Módulo 11 - Gestión de Usuarios -->
+                    <div class="col-md-3">
+                        <a class="btn w-100 btn-outline-dark" href="<?= base_url('modulo11/usuarios') ?>">Gestión Usuarios</a>
                     </div>
                 </div>
             </div>

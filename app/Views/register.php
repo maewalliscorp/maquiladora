@@ -61,53 +61,94 @@
             <div class="row">
                 <!-- Columna izquierda -->
                 <div class="col-md-6">
-                    <label class="form-label">Nombre</label>
+                    <label class="form-label">Número de Empleado *</label>
+                    <input type="text" name="noEmpleado" class="form-control" required>
+
+                    <label class="form-label">Nombre *</label>
                     <input type="text" name="nombre" class="form-control" required>
 
-                    <label class="form-label">Apellidos</label>
-                    <input type="text" name="apellidos" class="form-control" required>
+                    <label class="form-label">Apellido *</label>
+                    <input type="text" name="apellido" class="form-control" required>
 
-                    <label class="form-label">Edad</label>
-                    <input type="number" name="edad" class="form-control" required>
+                    <label class="form-label">Correo Electrónico *</label>
+                    <input type="email" name="email" class="form-control" required>
 
-                    <label class="form-label">Domicilio</label>
-                    <input type="text" name="domicilio" class="form-control" required>
-
-                    <label class="form-label">Teléfono</label>
-                    <input type="text" name="telefono" class="form-control" required>
-
-                    <label class="form-label">Correo</label>
-                    <input type="email" name="correo" class="form-control" required>
+                    <label class="form-label">Teléfono *</label>
+                    <input type="tel" name="telefono" class="form-control" required>
                 </div>
 
                 <!-- Columna derecha -->
                 <div class="col-md-6">
-                    <label class="form-label">Empresa a trabajar</label>
-                    <select name="empresa" class="form-control">
-                        <option>Nombre de empresa</option>
-                        <option>Maewallis Corp</option>
-                        <option>Otra empresa</option>
+                    <label class="form-label">Puesto *</label>
+                    <select name="puesto" class="form-control" required>
+                        <option value="">Seleccionar puesto...</option>
+                        <option value="Administrador">Administrador</option>
+                        <option value="Supervisor">Supervisor</option>
+                        <option value="Operador">Operador</option>
+                        <option value="Diseñador">Diseñador</option>
+                        <option value="Jefe de Producción">Jefe de Producción</option>
+                        <option value="Coordinador">Coordinador</option>
+                        <option value="Analista">Analista</option>
                     </select>
 
-                    <label class="form-label">Puesto a solicitar</label>
-                    <select name="puesto" class="form-control">
-                        <option>Puestos</option>
-                        <option>Operario</option>
-                        <option>Supervisor</option>
-                        <option>Diseñador</option>
-                    </select>
+                    <label class="form-label">Domicilio *</label>
+                    <textarea name="domicilio" class="form-control" rows="3" required></textarea>
 
-                    <label class="form-label">Usuario</label>
+                    <label class="form-label">Usuario *</label>
                     <input type="text" name="usuario" class="form-control" required>
 
-                    <label class="form-label">Contraseña</label>
+                    <label class="form-label">Contraseña *</label>
                     <input type="password" name="password" class="form-control" required>
 
-                    <button type="submit" class="btn btn-custom text-white w-100 mt-3">Enviar</button>
+                    <label class="form-label">Confirmar Contraseña *</label>
+                    <input type="password" name="confirm_password" class="form-control" required>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="terminos" name="terminos" required>
+                        <label class="form-check-label" for="terminos">
+                            Acepto los términos y condiciones de uso
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-12 text-center">
+                    <button type="submit" class="btn btn-custom text-white px-5">Registrarse</button>
                 </div>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+    // Validación de contraseñas
+    document.getElementById('confirm_password').addEventListener('input', function() {
+        const password = document.getElementById('password').value;
+        const confirmPassword = this.value;
+        
+        if (password !== confirmPassword) {
+            this.setCustomValidity('Las contraseñas no coinciden');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+
+    // Validación del formulario
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        
+        if (password !== confirmPassword) {
+            e.preventDefault();
+            alert('Las contraseñas no coinciden');
+            return false;
+        }
+    });
+</script>
 </body>
 </html>

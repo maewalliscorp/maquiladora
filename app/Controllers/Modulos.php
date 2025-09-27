@@ -25,7 +25,7 @@ class Modulos extends BaseController
     }
 
     /* =========================================================
-     *                   MÓDULO 3 si tu
+     *                   MÓDULO 3 (Dashboard)
      * ========================================================= */
 
     public function dashboard()
@@ -340,7 +340,21 @@ class Modulos extends BaseController
             'notifCount' => 0,
         ]));
     }
+    public function m1_ordenesclientes()
+    {
+        // Datos de ejemplo; la vista puede usarlos o seguir con DataTables
+        $lista = [
+            ['cliente' => 'Textiles MX',   'pedido' => 'PED-1001', 'op' => 'OP-0005', 'producto' => 'Camiseta básica',    'cantidad' => 500,  'estatus' => 'En producción', 'fecha' => '2025-09-22'],
+            ['cliente' => 'Fábrica Sur',   'pedido' => 'PED-1002', 'op' => 'OP-0006', 'producto' => 'Pantalón vaquero',   'cantidad' => 300,  'estatus' => 'Planificada',    'fecha' => '2025-09-23'],
+            ['cliente' => 'Industrias PZ', 'pedido' => 'PED-1003', 'op' => 'OP-0007', 'producto' => 'Chamarra deportiva', 'cantidad' => 150,  'estatus' => 'En producción', 'fecha' => '2025-09-24'],
+        ];
 
+        return view('modulos/ordenesclientes', $this->payload([
+            'title'      => 'Módulo 1 · Órdenes de Clientes',
+            'lista'      => $lista,
+            'notifCount' => 0,
+        ]));
+    }
     public function m1_perfilempleado()
     {
         $empleado = [
@@ -478,5 +492,187 @@ class Modulos extends BaseController
         // Por ahora, solo simulamos la actualización
         
         return redirect()->to('/modulo2/catalogodisenos')->with('success', 'Diseño actualizado correctamente');
+    }
+
+    /* =========================================================
+     *                       MÓDULO 11 - USUARIOS
+     * ========================================================= */
+
+    public function m11_usuarios()
+    {
+        $usuarios = [
+            [
+                'id' => 1,
+                'noEmpleado' => 'EMP001',
+                'nombre' => 'Juan',
+                'apellido' => 'Pérez',
+                'email' => 'juan.perez@fabrica.com',
+                'telefono' => '+52 555 123 4567',
+                'puesto' => 'Administrador',
+                'domicilio' => 'Calle Principal 123, Col. Centro, Ciudad de México',
+                'activo' => 1,
+                'fechaAlta' => '2024-01-15',
+                'ultimoAcceso' => '2025-09-26 10:30:00'
+            ],
+            [
+                'id' => 2,
+                'noEmpleado' => 'EMP002',
+                'nombre' => 'María',
+                'apellido' => 'López',
+                'email' => 'maria.lopez@fabrica.com',
+                'telefono' => '+52 555 234 5678',
+                'puesto' => 'Supervisor',
+                'domicilio' => 'Av. Industrial 456, Zona Industrial, Guadalajara',
+                'activo' => 1,
+                'fechaAlta' => '2024-02-20',
+                'ultimoAcceso' => '2025-09-25 14:15:00'
+            ],
+            [
+                'id' => 3,
+                'noEmpleado' => 'EMP003',
+                'nombre' => 'Carlos',
+                'apellido' => 'Ruiz',
+                'email' => 'carlos.ruiz@fabrica.com',
+                'telefono' => '+52 555 345 6789',
+                'puesto' => 'Operador',
+                'domicilio' => 'Calle Secundaria 789, Col. Obrera, Monterrey',
+                'activo' => 0,
+                'fechaAlta' => '2024-03-10',
+                'ultimoAcceso' => '2025-09-20 08:45:00'
+            ],
+            [
+                'id' => 4,
+                'noEmpleado' => 'EMP004',
+                'nombre' => 'Ana',
+                'apellido' => 'García',
+                'email' => 'ana.garcia@fabrica.com',
+                'telefono' => '+52 555 456 7890',
+                'puesto' => 'Diseñador',
+                'domicilio' => 'Blvd. Creativo 321, Col. Artística, Puebla',
+                'activo' => 1,
+                'fechaAlta' => '2024-04-05',
+                'ultimoAcceso' => '2025-09-26 16:20:00'
+            ],
+            [
+                'id' => 5,
+                'noEmpleado' => 'EMP005',
+                'nombre' => 'Roberto',
+                'apellido' => 'Méndez',
+                'email' => 'roberto.mendez@fabrica.com',
+                'telefono' => '+52 555 567 8901',
+                'puesto' => 'Jefe de Producción',
+                'domicilio' => 'Calle Industrial 654, Zona Franca, Tijuana',
+                'activo' => 1,
+                'fechaAlta' => '2024-05-12',
+                'ultimoAcceso' => '2025-09-26 09:10:00'
+            ],
+            [
+                'id' => 6,
+                'noEmpleado' => 'EMP006',
+                'nombre' => 'Patricia',
+                'apellido' => 'Hernández',
+                'email' => 'patricia.hernandez@fabrica.com',
+                'telefono' => '+52 555 678 9012',
+                'puesto' => 'Coordinador',
+                'domicilio' => 'Av. Reforma 987, Col. Moderna, León',
+                'activo' => 2, // Baja de la empresa
+                'fechaAlta' => '2023-11-08',
+                'ultimoAcceso' => '2025-08-15 16:30:00'
+            ],
+            [
+                'id' => 7,
+                'noEmpleado' => 'EMP007',
+                'nombre' => 'Miguel',
+                'apellido' => 'Torres',
+                'email' => 'miguel.torres@fabrica.com',
+                'telefono' => '+52 555 789 0123',
+                'puesto' => 'Analista',
+                'domicilio' => 'Calle Tecnológica 147, Col. Digital, Querétaro',
+                'activo' => 3, // En espera
+                'fechaAlta' => '2025-09-01',
+                'ultimoAcceso' => '2025-09-20 11:45:00'
+            ]
+        ];
+
+        return view('modulos/usuarios', $this->payload([
+            'title'      => 'Módulo 11 · Gestión de Usuarios',
+            'usuarios'   => $usuarios,
+            'notifCount' => 0,
+        ]));
+    }
+
+    public function m11_agregar_usuario()
+    {
+        if ($this->request->getMethod() === 'post') {
+            // Procesar formulario de nuevo usuario
+            $data = [
+                'noEmpleado' => $this->request->getPost('noEmpleado'),
+                'nombre' => $this->request->getPost('nombre'),
+                'apellido' => $this->request->getPost('apellido'),
+                'email' => $this->request->getPost('email'),
+                'telefono' => $this->request->getPost('telefono'),
+                'puesto' => $this->request->getPost('puesto'),
+                'domicilio' => $this->request->getPost('domicilio'),
+                'password' => password_hash($this->request->getPost('password'), PASSWORD_DEFAULT),
+                'activo' => 1,
+                'fechaAlta' => date('Y-m-d H:i:s'),
+                'ultimoAcceso' => date('Y-m-d H:i:s')
+            ];
+            
+            // Aquí iría la lógica para guardar en la base de datos
+            return redirect()->to('/modulo11/usuarios')->with('success', 'Usuario agregado correctamente');
+        }
+
+        return view('modulos/agregar_usuario', $this->payload([
+            'title'      => 'Módulo 11 · Agregar Usuario',
+            'notifCount' => 0,
+        ]));
+    }
+
+    public function m11_editar_usuario($id = null)
+    {
+        if ($this->request->getMethod() === 'post') {
+            // Procesar formulario de edición
+            $data = [
+                'noEmpleado' => $this->request->getPost('noEmpleado'),
+                'nombre' => $this->request->getPost('nombre'),
+                'apellido' => $this->request->getPost('apellido'),
+                'email' => $this->request->getPost('email'),
+                'telefono' => $this->request->getPost('telefono'),
+                'puesto' => $this->request->getPost('puesto'),
+                'domicilio' => $this->request->getPost('domicilio'),
+                'activo' => $this->request->getPost('activo')
+            ];
+            
+            // Si se proporcionó una nueva contraseña, la actualizamos
+            if ($this->request->getPost('password') && $this->request->getPost('password') !== '') {
+                $data['password'] = password_hash($this->request->getPost('password'), PASSWORD_DEFAULT);
+            }
+            
+            // Aquí iría la lógica para actualizar en la base de datos
+            return redirect()->to('/modulo11/usuarios')->with('success', 'Usuario actualizado correctamente');
+        }
+
+        // Datos de ejemplo del usuario (en una aplicación real, estos vendrían de la base de datos)
+        $usuario = [
+            'id' => $id,
+            'noEmpleado' => 'EMP001',
+            'nombre' => 'Juan',
+            'apellido' => 'Pérez',
+            'email' => 'juan.perez@fabrica.com',
+            'telefono' => '+52 555 123 4567',
+            'puesto' => 'Administrador',
+            'domicilio' => 'Calle Principal 123, Col. Centro, Ciudad de México',
+            'activo' => 1,
+            'fechaAlta' => '2024-01-15',
+            'ultimoAcceso' => '2025-09-26 10:30:00'
+        ];
+
+        return view('modulos/editar_usuario', $this->payload([
+            'title'      => 'Módulo 11 · Editar Usuario',
+            'usuario'    => $usuario,
+            'id'         => $id,
+            'notifCount' => 0,
+        ]));
     }
 }

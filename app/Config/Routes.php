@@ -16,12 +16,12 @@ $routes->setTranslateURIDashes(false);
 $routes->set404Override();
 $routes->setAutoRoute(false); // declaramos todas las rutas explícitas
 
-// Rutas de autenticación (COMENTADAS TEMPORALMENTE)
-// $routes->get('/', 'Auth::login'); // Página de inicio es el login
-// $routes->get('/login', 'Auth::login');
-// $routes->post('/login', 'Auth::authenticate');
-// $routes->get('/logout', 'Auth::logout');
-// $routes->get('/register', 'Auth::register');
+// Rutas de autenticación
+$routes->get('/login', 'Auth::login');
+$routes->post('/login', 'Auth::authenticate');
+$routes->get('/logout', 'Auth::logout');
+$routes->get('/register', 'Auth::register');
+$routes->post('/register', 'Auth::register');
 
 // Ruta principal - va directamente al dashboard
 $routes->get('/', 'Modulos::dashboard');
@@ -84,4 +84,15 @@ $routes->group('modulo3', [], function ($routes) {
     $routes->get('logistica_documentos', 'Modulos::logisticaDocumentos');
     // Perfil del empleado desde Modulo1 para evitar controlador inexistente
     $routes->get('perfilempleado', 'Modulos::m1_perfilempleado');
+    $routes->get('ordenesclientes',   'Modulos::m1_ordenesclientes');
+});
+
+// Grupo del módulo 11 (Usuarios) - SIN FILTRO DE AUTH TEMPORALMENTE
+$routes->group('modulo11', [], function ($routes) {
+    $routes->get('/',                 'Modulos::m11_usuarios');
+    $routes->get('usuarios',          'Modulos::m11_usuarios');
+    $routes->get('agregar',           'Modulos::m11_agregar_usuario');
+    $routes->post('agregar',          'Modulos::m11_agregar_usuario');
+    $routes->get('editar/(:num)',     'Modulos::m11_editar_usuario/$1');
+    $routes->post('editar/(:num)',    'Modulos::m11_editar_usuario/$1');
 });
