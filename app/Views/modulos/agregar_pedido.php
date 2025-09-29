@@ -1,10 +1,5 @@
 <?= $this->extend('layouts/main') ?>
 
-<?= $this->section('head') ?>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<?= $this->endSection() ?>
-
 <?= $this->section('content') ?>
     <div class="container-fluid">
         <div class="d-flex align-items-center mb-4">
@@ -137,10 +132,11 @@
 
             <!-- Botones -->
             <div class="d-flex justify-content-between mt-4">
-                <a href="<?= base_url('modulo1') ?>" class="btn btn-secondary px-4">
+                <a href="<?= base_url('modulo1') ?>" class="btn btn-danger px-4">
                     Cancelar
                 </a>
-                <button type="submit" class="btn btn-primary px-4">
+
+                <button type="submit" class="btn btn-success px-4">
                     Agregar Pedido
                 </button>
             </div>

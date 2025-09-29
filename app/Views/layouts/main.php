@@ -58,6 +58,9 @@
 
 <main class="container py-4">
     <?= $this->renderSection('content') ?>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 </main>
 
 <footer class="border-top py-3 bg-white">

@@ -1,15 +1,5 @@
 <?= $this->extend('layouts/main') ?>
 
-<?= $this->section('head') ?>
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-    <style>
-        .estatus { font-weight: bold; color: #000; padding: 5px 12px; border-radius: 8px; display: inline-block; }
-        .estatus-verde { background-color: #4caf50; }
-        .estatus-amarillo { background-color: #ffeb3b; }
-        .estatus-rojo { background-color: #f44336; }
-    </style>
-<?= $this->endSection() ?>
-
 <?= $this->section('content') ?>
     <div class="d-flex align-items-center mb-4">
         <h1 class="me-3">Inspección</h1>

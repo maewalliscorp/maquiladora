@@ -3,43 +3,7 @@
 <?= $this->section('head') ?>
 <!-- SweetAlert -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<style>
-    .form-section-title { 
-        font-weight: bold; 
-        margin-bottom: 10px; 
-        border-bottom: 2px solid var(--color-primary-700); 
-        padding-bottom: 5px; 
-        color: var(--color-text);
-    }
-    .btn-primary-custom { 
-        background-color: var(--color-primary-700); 
-        border: none; 
-        font-weight: bold; 
-    }
-    .btn-primary-custom:hover { 
-        background-color: var(--color-primary-600); 
-    }
-    .btn-secondary-custom { 
-        background-color: #444; 
-        border: none; 
-    }
-    .btn-secondary-custom:hover { 
-        background-color: #222; 
-    }
-    .preview-box { 
-        background: var(--color-primary); 
-        border-radius: 8px; 
-        padding: 10px; 
-        margin-top: 10px; 
-        text-align: center; 
-        color: var(--color-text);
-    }
-    .preview-box img { 
-        max-width: 100%; 
-        height: auto; 
-        border-radius: 6px; 
-    }
-</style>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>

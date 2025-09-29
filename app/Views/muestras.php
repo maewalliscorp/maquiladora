@@ -1,48 +1,5 @@
 <?= $this->extend('layouts/main') ?>
 
-<?= $this->section('head') ?>
-    <!-- DataTables -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-    <style>
-        .estado {
-            font-weight: bold;
-            color: #000;
-            padding: 5px 12px;
-            border-radius: 8px;
-            text-decoration: none;
-            display: inline-block;
-        }
-        .estado-aprobado { background-color: #4caf50; }
-        .estado-pendiente { background-color: #ffeb3b; }
-        .estado-rechazado { background-color: #f44336; }
-        .estado-en-proceso { background-color: #2196f3; color: white; }
-        .btn-accion {
-            margin: 0 5px;
-        }
-
-        /* Estilos específicos para el buscador */
-        .dataTables_wrapper .dataTables_filter {
-            text-align: center;
-            margin-bottom: 15px;
-        }
-        .dataTables_wrapper .dataTables_filter label {
-            color: var(--color-text);
-            font-size: 1.1rem;
-            font-weight: bold;
-        }
-        .dataTables_wrapper .dataTables_filter input {
-            background-color: #F3F8FE !important;
-            color: #333 !important;
-            border: 1px solid #d7e3ef !important;
-            border-radius: 5px !important;
-            padding: 8px 12px !important;
-            font-size: 1rem !important;
-            width: 300px !important;
-            margin-left: 10px !important;
-        }
-    </style>
-<?= $this->endSection() ?>
-
 <?= $this->section('content') ?>
     <div class="d-flex align-items-center mb-4">
         <h1 class="me-3">Aprobación de Muestras</h1>

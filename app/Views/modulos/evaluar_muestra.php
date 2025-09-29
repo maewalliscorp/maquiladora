@@ -1,20 +1,5 @@
 <?= $this->extend('layouts/main') ?>
 
-<?= $this->section('head') ?>
-    <style>
-        .seccion-control-calidad {
-            display: none;
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-        }
-        .form-group { margin-bottom: 15px; }
-        .archivos-section { background-color: #e8f4fd; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-    </style>
-<?= $this->endSection() ?>
-
 <?= $this->section('content') ?>
     <div class="d-flex align-items-center mb-4">
         <h1 class="me-3">Evaluar Muestra</h1>
@@ -114,7 +99,7 @@
 
                 <div class="mt-4">
                     <button type="submit" class="btn btn-success">Guardar Evaluación</button>
-                    <a href="<?= base_url('muestras') ?>" class="btn btn-secondary">Cancelar</a>
+                    <a href="<?= base_url('muestras') ?>" class="btn btn-danger px-4">Cancelar</a>
                 </div>
             </form>
         </div>

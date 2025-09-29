@@ -1,41 +1,5 @@
 <?= $this->extend('layouts/main') ?>
 
-<?= $this->section('head') ?>
-<style>
-    .card-profile {
-        background: var(--color-surface);
-        padding: 1.5rem;
-        border-radius: 10px;
-        border: 1px solid #d7e3ef;
-    }
-    .profile-img {
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid var(--color-primary-700);
-    }
-    .btn-upload {
-        margin-top: 1rem;
-    }
-    .info-section {
-        background: var(--color-surface-2);
-        padding: 1rem;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-    }
-    .info-section h6 {
-        color: var(--color-primary-700);
-        font-weight: bold;
-        margin-bottom: 0.5rem;
-    }
-    .info-section p {
-        color: var(--color-text);
-        margin-bottom: 0.3rem;
-    }
-</style>
-<?= $this->endSection() ?>
-
 <?= $this->section('content') ?>
 <div class="d-flex align-items-center mb-4">
     <h1 class="me-3">Perfil del Empleado</h1>

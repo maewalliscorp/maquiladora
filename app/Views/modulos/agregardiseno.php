@@ -1,70 +1,5 @@
 <?= $this->extend('layouts/main') ?>
 
-<?= $this->section('head') ?>
-    <style>
-        .form-section-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-            border-bottom: 2px solid var(--color-primary-700);
-            padding-bottom: 5px;
-            color: var(--color-text);
-        }
-        .btn-primary-custom {
-            background-color: var(--color-primary-700);
-            border: none;
-            font-weight: bold;
-        }
-        .btn-primary-custom:hover {
-            background-color: var(--color-primary-600);
-        }
-        .btn-secondary-custom {
-            background-color: #444;
-            border: none;
-        }
-        .btn-secondary-custom:hover {
-            background-color: #222;
-        }
-        .preview-box {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 10px;
-            text-align: center;
-            border: 2px dashed #ddd;
-        }
-        .preview-box img {
-            max-width: 100%;
-            max-height: 200px;
-            height: auto;
-            border-radius: 6px;
-            margin-bottom: 10px;
-        }
-
-        /* Estilos para el formulario */
-        .form-label {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .form-control {
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 8px 12px;
-        }
-        h2 {
-            color: #333;
-            border-bottom: 2px solid #0d6efd;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-
-        .preview-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #333;
-        }
-    </style>
-<?= $this->endSection() ?>
-
 <?= $this->section('content') ?>
     <div class="d-flex align-items-center mb-4">
         <h1 class="me-3">AGREGAR DISEÑO</h1>
@@ -125,8 +60,8 @@
 
         <!-- Botones -->
         <div class="d-flex justify-content-between mt-4">
-            <a href="<?= base_url('modulo2/catalogodisenos') ?>" class="btn btn-secondary-custom px-4">Cancelar</a>
-            <button type="submit" class="btn btn-primary-custom px-4">GUARDAR</button>
+            <a href="<?= base_url('modulo2/catalogodisenos') ?>" class="btn btn-danger px-4">Cancelar</a>
+            <button type="submit" class="btn btn-success px-4">GUARDAR</button>
         </div>
     </form>
 
