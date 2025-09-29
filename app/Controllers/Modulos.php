@@ -243,6 +243,17 @@ class Modulos extends BaseController
         ]));
     }
 
+    /**
+     * Vista de inspección (listado para iniciar evaluaciones)
+     */
+    public function inspeccion()
+    {
+        return view('modulos/inspeccion', $this->payload([
+            'title'      => 'Inspección de Producción',
+            'notifCount' => 0,
+        ]));
+    }
+
     /* =========================================================
      *                       MÓDULO 1
      * ========================================================= */
@@ -278,6 +289,14 @@ class Modulos extends BaseController
         return view('modulos/m1_ordenes', $this->payload([
             'title'      => 'Módulo 1 · Órdenes',
             'ordenes'    => $ordenes,
+            'notifCount' => 0,
+        ]));
+    }
+
+    public function m1_produccion()
+    {
+        return view('modulos/produccion', $this->payload([
+            'title'      => 'Módulo 1 · Producción',
             'notifCount' => 0,
         ]));
     }
@@ -339,6 +358,101 @@ class Modulos extends BaseController
             'id'         => $id,
             'notifCount' => 0,
         ]));
+    }
+
+    /**
+     * Formulario de evaluación por orden (desde Inspección)
+     */
+    public function m1_evaluar($id = null)
+    {
+        if (!$id) {
+            return redirect()->to('/modulo3/inspeccion');
+        }
+
+        // Datos de ejemplo; en producción vendrán de la BD
+        $ordenData = [
+            'folio' => 'OP-' . str_pad((string)$id, 4, '0', STR_PAD_LEFT),
+            'cantidadPlan' => 100,
+        ];
+
+        $defectos = [
+            ['id' => 1, 'codigo' => 'D01', 'description' => 'Costura abierta', 'severidad' => 'Media'],
+            ['id' => 2, 'codigo' => 'D02', 'description' => 'Mancha', 'severidad' => 'Baja'],
+            ['id' => 3, 'codigo' => 'D03', 'description' => 'Corte chueco', 'severidad' => 'Alta'],
+        ];
+
+        return view('evaluar', $this->payload([
+            'title'       => 'Evaluar Orden',
+            'orden_id'    => $id,
+            'orden_data'  => $ordenData,
+            'defectos'    => $defectos,
+            'notifCount'  => 0,
+        ]));
+    }
+
+    /**
+     * Recepción del formulario de evaluación
+     */
+    public function m1_guardarEvaluacion()
+    {
+        if ($this->request->getMethod() !== 'post') {
+            return redirect()->to('/modulo3/inspeccion');
+        }
+
+        // Aquí se procesaría y guardaría la evaluación
+        // $data = $this->request->getPost();
+
+        return redirect()->to('/modulo3/inspeccion')->with('success', 'Evaluación guardada correctamente');
+    }
+
+    /* =========================================================
+     *                       MUESTRAS
+     * ========================================================= */
+    public function muestras()
+    {
+        // Vista de listado de muestras (puede reusar una tabla similar a inspección)
+        return view('modulos/muestras', $this->payload([
+            'title'      => 'Muestras de Prototipos',
+            'notifCount' => 0,
+        ]));
+    }
+
+    public function muestras_evaluar($id = null)
+    {
+        if (!$id) {
+            return redirect()->to('/muestras');
+        }
+
+        // Datos de ejemplo; en producción vendrán de la BD
+        $muestraData = [
+            'prototipo_codigo' => 'PR-' . str_pad((string)$id, 4, '0', STR_PAD_LEFT),
+            'solicitadaPor' => 'Cliente Demo',
+            'archivoCadUrl' => '',
+            'archivoPatronUrl' => '',
+        ];
+
+        $responsables = [
+            ['id' => 1, 'nombre' => 'Ana Control Calidad'],
+            ['id' => 2, 'nombre' => 'Luis Supervisor'],
+        ];
+
+        return view('modulos/evaluar_muestra', $this->payload([
+            'title'        => 'Evaluar Muestra',
+            'muestra_id'   => $id,
+            'muestra_data' => $muestraData,
+            'responsables' => $responsables,
+            'notifCount'   => 0,
+        ]));
+    }
+
+    public function muestras_guardarEvaluacion()
+    {
+        if ($this->request->getMethod() !== 'post') {
+            return redirect()->to('/muestras');
+        }
+
+        // $data = $this->request->getPost(); // procesar y guardar
+        return redirect()->to('/muestras')->with('success', 'Evaluación de muestra guardada correctamente');
     }
     public function m1_ordenesclientes()
     {
@@ -442,7 +556,7 @@ class Modulos extends BaseController
             'descripcion' => 'Diseño clásico de camiseta básica con corte moderno',
             'materiales' => 'Algodón 100%, hilo de poliéster',
             'cortes' => 'Corte recto, manga corta, cuello redondo',
-            'archivo' => 'uploads/diseños/camiseta_basica.jpg', // Ruta de ejemplo
+            'archivo' => 'uploads/disenos/camiseta_basica.jpg', // Ruta de ejemplo
             'categoria' => 'Ropa Casual',
             'estatus' => 'Activo',
             'fecha_creacion' => '2025-01-10',
@@ -475,7 +589,7 @@ class Modulos extends BaseController
         $file = $this->request->getFile('archivo');
         if ($file && $file->isValid() && !$file->hasMoved()) {
             // Crear directorio si no existe
-            $uploadPath = WRITEPATH . 'uploads/diseños/';
+            $uploadPath = WRITEPATH . 'uploads/disenos/';
             if (!is_dir($uploadPath)) {
                 mkdir($uploadPath, 0755, true);
             }
@@ -485,7 +599,7 @@ class Modulos extends BaseController
             $file->move($uploadPath, $newName);
             
             // Guardar la ruta del archivo
-            $data['archivo'] = 'uploads/diseños/' . $newName;
+            $data['archivo'] = 'uploads/disenos/' . $newName;
         }
 
         // Aquí iría la lógica para actualizar en la base de datos

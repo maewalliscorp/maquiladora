@@ -26,10 +26,10 @@ class Database extends Config
      */
     public array $default = [
         'DSN'          => '',
-        'hostname'     => 'ballast.proxy.rlwy.net',
+        'hostname'     => 'localhost',
         'username'     => 'root',
-        'password'     => 'qtSptjpfbbQHTfGKTETAqAJbrqLPOZzO',
-        'database'     => 'railway',
+        'password'     => '',
+        'database'     => 'maquiladora',
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
         'pConnect'     => false,
@@ -41,7 +41,7 @@ class Database extends Config
         'compress'     => false,
         'strictOn'     => false,
         'failover'     => [],
-        'port'         => 51295,
+        'port'         => 3306,
         'numberNative' => false,
         'foundRows'    => false,
         'dateFormat'   => [

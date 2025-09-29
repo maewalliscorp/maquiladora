@@ -45,6 +45,7 @@ $routes->get('/editardiseno', 'Modulos::m2_editardiseno', ['filter' => 'auth']);
 $routes->group('modulo1', [], function ($routes) {
     $routes->get('/',                 'Modulos::m1_index');
     $routes->get('pedidos',           'Modulos::m1_pedidos');
+    $routes->get('produccion',        'Modulos::m1_produccion');
     $routes->get('agregar',           'Modulos::m1_agregar');
     $routes->post('agregar',          'Modulos::m1_agregar');
     $routes->get('editar/(:num)',     'Modulos::m1_editar/$1');
@@ -52,6 +53,9 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->get('detalles/(:num)',   'Modulos::m1_detalles/$1');
     $routes->get('perfilempleado',    'Modulos::m1_perfilempleado');
     $routes->get('ordenes',           'Modulos::m1_ordenes');
+    // Evaluación
+    $routes->get('evaluar/(:num)',    'Modulos::m1_evaluar/$1');
+    $routes->post('guardar-evaluacion','Modulos::m1_guardarEvaluacion');
 });
 // Grupo del módulo 2 (diseñador) - SIN FILTRO DE AUTH TEMPORALMENTE
 $routes->group('modulo2', [], function ($routes) {
@@ -73,6 +77,8 @@ $routes->group('modulo3', [], function ($routes) {
     $routes->get('incidencias',  'Modulos::incidencias');
     $routes->get('reportes',     'Modulos::reportes');
     $routes->get('notificaciones','Modulos::notificaciones');
+    // Inspección
+    $routes->get('inspeccion',   'Modulos::inspeccion');
     // Nuevas vistas del módulo 3
     $routes->get('mrp',          'Modulos::mrp');
     $routes->get('desperdicios', 'Modulos::desperdicios');
@@ -85,6 +91,13 @@ $routes->group('modulo3', [], function ($routes) {
     // Perfil del empleado desde Modulo1 para evitar controlador inexistente
     $routes->get('perfilempleado', 'Modulos::m1_perfilempleado');
     $routes->get('ordenesclientes',   'Modulos::m1_ordenesclientes');
+});
+
+// Grupo de muestras
+$routes->group('muestras', [], function ($routes) {
+    $routes->get('/',                 'Modulos::muestras');
+    $routes->get('evaluar/(:num)',    'Modulos::muestras_evaluar/$1');
+    $routes->post('guardar-evaluacion','Modulos::muestras_guardarEvaluacion');
 });
 
 // Grupo del módulo 11 (Usuarios) - SIN FILTRO DE AUTH TEMPORALMENTE
