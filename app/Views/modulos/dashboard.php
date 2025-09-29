@@ -56,6 +56,9 @@
                         <a class="btn w-100 btn-outline-primary" href="<?= base_url('modulo1/pedidos') ?>">Pedidos</a>
                     </div>
                     <div class="col-md-3">
+                        <a class="btn w-100 btn-outline-success" href="<?= base_url('modulo1/produccion') ?>">Producción</a>
+                    </div>
+                    <div class="col-md-3">
                         <a class="btn w-100 btn-outline-primary" href="<?= base_url('modulo1/ordenes') ?>">Ordenes</a>
                     </div>
                     <div class="col-md-3">
@@ -65,8 +68,14 @@
                     <div class="col-md-3">
                         <a class="btn w-100 btn-outline-primary" href="<?= base_url('modulo2/catalogodisenos') ?>">Catalogo de Diseños</a>
                     </div>
+                    <div class="col-md-3">
+                        <a class="btn w-100 btn-outline-success" href="<?= base_url('muestras') ?>">Muestras</a>
+                    </div>
                     
                     <!-- Módulo 3 - Operaciones -->
+                    <div class="col-md-3">
+                        <a class="btn w-100 btn-outline-primary" href="<?= base_url('modulo3/inspeccion') ?>">Inspección</a>
+                    </div>
                     <div class="col-md-3">
                         <a class="btn w-100 btn-outline-primary" href="<?= base_url('modulo3/wip') ?>">WIP</a>
                     </div>
