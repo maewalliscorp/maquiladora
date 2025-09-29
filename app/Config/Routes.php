@@ -17,11 +17,11 @@ $routes->set404Override();
 $routes->setAutoRoute(false); // declaramos todas las rutas explícitas
 
 // Rutas de autenticación
-$routes->get('/login', 'Auth::login');
-$routes->post('/login', 'Auth::authenticate');
-$routes->get('/logout', 'Auth::logout');
-$routes->get('/register', 'Auth::register');
-$routes->post('/register', 'Auth::register');
+$routes->get('/login', 'UsuarioController::login');
+$routes->post('/login', 'UsuarioController::authenticate');
+$routes->get('/logout', 'UsuarioController::logout');
+$routes->get('/register', 'UsuarioController::register');
+$routes->post('/register', 'UsuarioController::register');
 
 // Ruta principal - va directamente al dashboard
 $routes->get('/', 'Modulos::dashboard');

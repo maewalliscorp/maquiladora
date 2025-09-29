@@ -5,102 +5,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Maquiladora</title>
     <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            height: 100vh;
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .left-panel {
-            background: linear-gradient(135deg, #5ca0d3, #6baed6);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 2rem;
-        }
-        .right-panel {
-            background-color: #3f4257;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 2rem;
-        }
-        .login-card {
-            background: #ffffff10;
-            backdrop-filter: blur(6px);
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-        }
-        .login-card h3 {
-            font-weight: bold;
-            color: #f1f1f1;
-            text-align: center;
-        }
-        .form-control {
-            margin-bottom: 1rem;
-            border-radius: 8px;
-            border: none;
-            padding: 0.75rem;
-        }
-        .btn-custom {
-            background-color: #007bff;
-            border: none;
-            border-radius: 8px;
-            padding: 0.75rem;
-            font-weight: bold;
-            transition: background 0.3s;
-        }
-        .btn-custom:hover {
-            background-color: #0056b3;
-        }
-        .register-link a {
-            color: #9ec9ff;
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-        .register-link a:hover {
-            color: #ffffff;
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+            crossorigin="anonymous"></script>
 </head>
-<body>
-<div class="container-fluid h-100">
-    <div class="row h-100">
-        <div class="col-md-6 left-panel">
-            <img src="<?= base_url('img/logo_Maquiladora.png') ?>" alt="Logo" width="150">
-            <h2 class="mt-3 fw-bold">Sistema de Maquiladora</h2>
-            <h4>Maewallis Corp</h4>
-        </div>
-        <div class="col-md-6 right-panel d-flex align-items-center">
-            <div class="login-card mx-auto" style="max-width: 380px; width: 100%;">
-                <h3 class="mb-4">Inicio de Sesión</h3>
-                
-                <?php if (session()->getFlashdata('error')): ?>
-                    <div class="alert alert-danger" role="alert">
-                        <?= session()->getFlashdata('error') ?>
-                    </div>
-                <?php endif; ?>
-                
-                <form action="<?= base_url('login') ?>" method="post">
-                    <label for="usuario" class="form-label">Usuario</label>
-                    <input type="text" id="usuario" name="usuario" class="form-control" placeholder="Usuario" required>
+<body class="vh-100">
 
-                    <label for="password" class="form-label">Contraseña</label>
-                    <input type="password" id="password" name="password" class="form-control" placeholder="Contraseña" required>
+<div class="d-flex h-100">
 
-                    <button type="submit" class="btn btn-custom w-100 mt-2">Ingresar</button>
-                </form>
-                <div class="mt-3 text-center register-link">
-                    <a href="<?= base_url('register') ?>">¿No tienes cuenta? Regístrate</a>
+    <!-- Panel izquierdo -->
+    <div class="w-50 bg-primary d-flex flex-column justify-content-center align-items-center text-center text-light">
+        <h1 class="fw-bold">Sistema de Maquiladora</h1>
+        <img src="<?= base_url('img/logo_Maquiladora.png') ?>" alt="Logo" width="350" class="my-3">
+        <h2 class="text-secondary-emphasis fw-bold">Maewallis Corp</h2>
+    </div>
+
+    <!-- Panel derecho -->
+    <div class="w-50 bg-secondary d-flex justify-content-center align-items-center">
+        <div class="login-card" style="max-width: 380px; width: 100%;">
+            <h3 class="mb-4 fw-bold text-center">Inicio de Sesión</h3>
+
+            <?php if (session()->getFlashdata('error')): ?>
+                <div class="alert alert-danger" role="alert">
+                    <?= session()->getFlashdata('error') ?>
                 </div>
-            </div>
+            <?php endif; ?>
+
+            <form action="<?= base_url('login') ?>" method="post">
+                <label for="usuario" class="form-label text-light">Usuario</label>
+                <input type="text" id="usuario" name="usuario" class="form-control mb-3" placeholder="Usuario" required>
+
+                <label for="password" class="form-label text-light">Contraseña</label>
+                <input type="password" id="password" name="password" class="form-control mb-3" placeholder="Contraseña"
+                       required>
+
+                <button type="submit" class="mt-4 btn btn-primary border border-black w-100">Ingresar</button>
+                <div class="mt-3 text-center ">
+                    <a href="<?= base_url('register') ?>" class="text-light link-light link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover">¿No tienes cuenta? Regístrate</a>
+                </div>
+            </form>
+
         </div>
     </div>
+
 </div>
+
 </body>
 </html>
