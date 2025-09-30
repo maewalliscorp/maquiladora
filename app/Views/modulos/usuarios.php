@@ -24,6 +24,7 @@
                     <th>APELLIDO</th>
                     <th>EMAIL</th>
                     <th>PUESTO</th>
+                    <th>MAQUILADORA</th>
                     <th>ESTATUS</th>
                     <th>FECHA REGISTRO</th>
                     <th>ÚLTIMO ACCESO</th>
@@ -41,6 +42,11 @@
                     <td>
                         <span class="rol-badge rol-<?= strtolower(str_replace(' ', '', $usuario['puesto'])) ?>">
                             <?= $usuario['puesto'] ?>
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge bg-info text-dark">
+                            <?= $usuario['idmaquiladora'] ? 'ID: ' . $usuario['idmaquiladora'] : 'Sin asignar' ?>
                         </span>
                     </td>
                     <td>

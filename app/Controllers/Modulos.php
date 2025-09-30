@@ -614,99 +614,10 @@ class Modulos extends BaseController
 
     public function m11_usuarios()
     {
-        $usuarios = [
-            [
-                'id' => 1,
-                'noEmpleado' => 'EMP001',
-                'nombre' => 'Juan',
-                'apellido' => 'Pérez',
-                'email' => 'juan.perez@fabrica.com',
-                'telefono' => '+52 555 123 4567',
-                'puesto' => 'Administrador',
-                'domicilio' => 'Calle Principal 123, Col. Centro, Ciudad de México',
-                'activo' => 1,
-                'fechaAlta' => '2024-01-15',
-                'ultimoAcceso' => '2025-09-26 10:30:00'
-            ],
-            [
-                'id' => 2,
-                'noEmpleado' => 'EMP002',
-                'nombre' => 'María',
-                'apellido' => 'López',
-                'email' => 'maria.lopez@fabrica.com',
-                'telefono' => '+52 555 234 5678',
-                'puesto' => 'Supervisor',
-                'domicilio' => 'Av. Industrial 456, Zona Industrial, Guadalajara',
-                'activo' => 1,
-                'fechaAlta' => '2024-02-20',
-                'ultimoAcceso' => '2025-09-25 14:15:00'
-            ],
-            [
-                'id' => 3,
-                'noEmpleado' => 'EMP003',
-                'nombre' => 'Carlos',
-                'apellido' => 'Ruiz',
-                'email' => 'carlos.ruiz@fabrica.com',
-                'telefono' => '+52 555 345 6789',
-                'puesto' => 'Operador',
-                'domicilio' => 'Calle Secundaria 789, Col. Obrera, Monterrey',
-                'activo' => 0,
-                'fechaAlta' => '2024-03-10',
-                'ultimoAcceso' => '2025-09-20 08:45:00'
-            ],
-            [
-                'id' => 4,
-                'noEmpleado' => 'EMP004',
-                'nombre' => 'Ana',
-                'apellido' => 'García',
-                'email' => 'ana.garcia@fabrica.com',
-                'telefono' => '+52 555 456 7890',
-                'puesto' => 'Diseñador',
-                'domicilio' => 'Blvd. Creativo 321, Col. Artística, Puebla',
-                'activo' => 1,
-                'fechaAlta' => '2024-04-05',
-                'ultimoAcceso' => '2025-09-26 16:20:00'
-            ],
-            [
-                'id' => 5,
-                'noEmpleado' => 'EMP005',
-                'nombre' => 'Roberto',
-                'apellido' => 'Méndez',
-                'email' => 'roberto.mendez@fabrica.com',
-                'telefono' => '+52 555 567 8901',
-                'puesto' => 'Jefe de Producción',
-                'domicilio' => 'Calle Industrial 654, Zona Franca, Tijuana',
-                'activo' => 1,
-                'fechaAlta' => '2024-05-12',
-                'ultimoAcceso' => '2025-09-26 09:10:00'
-            ],
-            [
-                'id' => 6,
-                'noEmpleado' => 'EMP006',
-                'nombre' => 'Patricia',
-                'apellido' => 'Hernández',
-                'email' => 'patricia.hernandez@fabrica.com',
-                'telefono' => '+52 555 678 9012',
-                'puesto' => 'Coordinador',
-                'domicilio' => 'Av. Reforma 987, Col. Moderna, León',
-                'activo' => 2, // Baja de la empresa
-                'fechaAlta' => '2023-11-08',
-                'ultimoAcceso' => '2025-08-15 16:30:00'
-            ],
-            [
-                'id' => 7,
-                'noEmpleado' => 'EMP007',
-                'nombre' => 'Miguel',
-                'apellido' => 'Torres',
-                'email' => 'miguel.torres@fabrica.com',
-                'telefono' => '+52 555 789 0123',
-                'puesto' => 'Analista',
-                'domicilio' => 'Calle Tecnológica 147, Col. Digital, Querétaro',
-                'activo' => 3, // En espera
-                'fechaAlta' => '2025-09-01',
-                'ultimoAcceso' => '2025-09-20 11:45:00'
-            ]
-        ];
+        $usuarioModel = new \App\Models\UsuarioModel();
+        
+        // Obtener usuarios con datos de empleado desde la base de datos
+        $usuarios = $usuarioModel->getUsuariosConEmpleados();
 
         return view('modulos/usuarios', $this->payload([
             'title'      => 'Módulo 11 · Gestión de Usuarios',
@@ -718,23 +629,77 @@ class Modulos extends BaseController
     public function m11_agregar_usuario()
     {
         if ($this->request->getMethod() === 'post') {
-            // Procesar formulario de nuevo usuario
-            $data = [
-                'noEmpleado' => $this->request->getPost('noEmpleado'),
-                'nombre' => $this->request->getPost('nombre'),
-                'apellido' => $this->request->getPost('apellido'),
-                'email' => $this->request->getPost('email'),
-                'telefono' => $this->request->getPost('telefono'),
-                'puesto' => $this->request->getPost('puesto'),
-                'domicilio' => $this->request->getPost('domicilio'),
-                'password' => password_hash($this->request->getPost('password'), PASSWORD_DEFAULT),
-                'activo' => 1,
-                'fechaAlta' => date('Y-m-d H:i:s'),
-                'ultimoAcceso' => date('Y-m-d H:i:s')
-            ];
+            $usuarioModel = new \App\Models\UsuarioModel();
+            $empleadoModel = new \App\Models\EmpleadoModel();
             
-            // Aquí iría la lógica para guardar en la base de datos
-            return redirect()->to('/modulo11/usuarios')->with('success', 'Usuario agregado correctamente');
+            // Validar datos
+            $validation = \Config\Services::validation();
+            $validation->setRules([
+                'usuario' => 'required|min_length[3]|max_length[100]|is_unique[usuario.usuario]',
+                'password' => 'required|min_length[6]',
+                'noEmpleado' => 'required|min_length[3]|max_length[20]|is_unique[empleado.noEmpleado]',
+                'nombre' => 'required|min_length[2]|max_length[100]',
+                'apellido' => 'required|min_length[2]|max_length[100]',
+                'email' => 'required|valid_email|max_length[100]|is_unique[empleado.email]',
+                'puesto' => 'required|max_length[100]',
+            ]);
+
+            if (!$validation->withRequest($this->request)->run()) {
+                return redirect()->back()->withInput()->with('errors', $validation->getErrors());
+            }
+
+            // Iniciar transacción
+            $db = \Config\Database::connect();
+            $db->transStart();
+
+            try {
+                // Crear usuario
+                $usuarioData = [
+                    'usuario' => $this->request->getPost('usuario'),
+                    'password' => $this->request->getPost('password'),
+                    'activo' => 1,
+                    'fechaAlta' => date('Y-m-d H:i:s'),
+                    'ultimoAcceso' => date('Y-m-d H:i:s'),
+                    'idmaquiladora' => $this->request->getPost('idMaquiladora') ?: null
+                ];
+                
+                $usuarioId = $usuarioModel->insert($usuarioData);
+                
+                if (!$usuarioId) {
+                    throw new \Exception('Error al crear el usuario');
+                }
+
+                // Crear empleado
+                $empleadoData = [
+                    'noEmpleado' => $this->request->getPost('noEmpleado'),
+                    'nombre' => $this->request->getPost('nombre'),
+                    'apellido' => $this->request->getPost('apellido'),
+                    'email' => $this->request->getPost('email'),
+                    'telefono' => $this->request->getPost('telefono'),
+                    'domicilio' => $this->request->getPost('domicilio'),
+                    'puesto' => $this->request->getPost('puesto'),
+                    'activo' => 1,
+                    'idusuario' => $usuarioId
+                ];
+                
+                $empleadoId = $empleadoModel->insert($empleadoData);
+                
+                if (!$empleadoId) {
+                    throw new \Exception('Error al crear el empleado');
+                }
+
+                $db->transComplete();
+                
+                if ($db->transStatus() === false) {
+                    throw new \Exception('Error en la transacción');
+                }
+
+                return redirect()->to('/modulo11/usuarios')->with('success', 'Usuario agregado correctamente');
+                
+            } catch (\Exception $e) {
+                $db->transRollback();
+                return redirect()->back()->withInput()->with('error', 'Error al crear el usuario: ' . $e->getMessage());
+            }
         }
 
         return view('modulos/agregar_usuario', $this->payload([
@@ -745,42 +710,87 @@ class Modulos extends BaseController
 
     public function m11_editar_usuario($id = null)
     {
-        if ($this->request->getMethod() === 'post') {
-            // Procesar formulario de edición
-            $data = [
-                'noEmpleado' => $this->request->getPost('noEmpleado'),
-                'nombre' => $this->request->getPost('nombre'),
-                'apellido' => $this->request->getPost('apellido'),
-                'email' => $this->request->getPost('email'),
-                'telefono' => $this->request->getPost('telefono'),
-                'puesto' => $this->request->getPost('puesto'),
-                'domicilio' => $this->request->getPost('domicilio'),
-                'activo' => $this->request->getPost('activo')
-            ];
-            
-            // Si se proporcionó una nueva contraseña, la actualizamos
-            if ($this->request->getPost('password') && $this->request->getPost('password') !== '') {
-                $data['password'] = password_hash($this->request->getPost('password'), PASSWORD_DEFAULT);
-            }
-            
-            // Aquí iría la lógica para actualizar en la base de datos
-            return redirect()->to('/modulo11/usuarios')->with('success', 'Usuario actualizado correctamente');
+        if (!$id) {
+            return redirect()->to('/modulo11/usuarios')->with('error', 'ID de usuario no válido');
         }
 
-        // Datos de ejemplo del usuario (en una aplicación real, estos vendrían de la base de datos)
-        $usuario = [
-            'id' => $id,
-            'noEmpleado' => 'EMP001',
-            'nombre' => 'Juan',
-            'apellido' => 'Pérez',
-            'email' => 'juan.perez@fabrica.com',
-            'telefono' => '+52 555 123 4567',
-            'puesto' => 'Administrador',
-            'domicilio' => 'Calle Principal 123, Col. Centro, Ciudad de México',
-            'activo' => 1,
-            'fechaAlta' => '2024-01-15',
-            'ultimoAcceso' => '2025-09-26 10:30:00'
-        ];
+        $usuarioModel = new \App\Models\UsuarioModel();
+        $empleadoModel = new \App\Models\EmpleadoModel();
+
+        if ($this->request->getMethod() === 'post') {
+            // Validar datos
+            $validation = \Config\Services::validation();
+            $validation->setRules([
+                'usuario' => "required|min_length[3]|max_length[100]|is_unique[usuario.usuario,id,{$id}]",
+                'noEmpleado' => 'required|min_length[3]|max_length[20]',
+                'nombre' => 'required|min_length[2]|max_length[100]',
+                'apellido' => 'required|min_length[2]|max_length[100]',
+                'email' => 'required|valid_email|max_length[100]',
+                'puesto' => 'required|max_length[100]',
+            ]);
+
+            if (!$validation->withRequest($this->request)->run()) {
+                return redirect()->back()->withInput()->with('errors', $validation->getErrors());
+            }
+
+            // Iniciar transacción
+            $db = \Config\Database::connect();
+            $db->transStart();
+
+            try {
+                // Actualizar usuario
+                $usuarioData = [
+                    'usuario' => $this->request->getPost('usuario'),
+                    'activo' => $this->request->getPost('activo_usuario') ?: 1,
+                    'idmaquiladora' => $this->request->getPost('idMaquiladora') ?: null
+                ];
+                
+                // Si se proporcionó una nueva contraseña, la actualizamos
+                if ($this->request->getPost('password') && $this->request->getPost('password') !== '') {
+                    $usuarioData['password'] = $this->request->getPost('password');
+                }
+                
+                $usuarioModel->update($id, $usuarioData);
+
+                // Obtener el empleado asociado al usuario
+                $empleado = $empleadoModel->where('idusuario', $id)->first();
+                
+                if ($empleado) {
+                    // Actualizar empleado existente
+                    $empleadoData = [
+                        'noEmpleado' => $this->request->getPost('noEmpleado'),
+                        'nombre' => $this->request->getPost('nombre'),
+                        'apellido' => $this->request->getPost('apellido'),
+                        'email' => $this->request->getPost('email'),
+                        'telefono' => $this->request->getPost('telefono'),
+                        'domicilio' => $this->request->getPost('domicilio'),
+                        'puesto' => $this->request->getPost('puesto'),
+                        'activo' => $this->request->getPost('activo_empleado') ?: 1
+                    ];
+                    
+                    $empleadoModel->update($empleado['id'], $empleadoData);
+                }
+
+                $db->transComplete();
+                
+                if ($db->transStatus() === false) {
+                    throw new \Exception('Error en la transacción');
+                }
+
+                return redirect()->to('/modulo11/usuarios')->with('success', 'Usuario actualizado correctamente');
+                
+            } catch (\Exception $e) {
+                $db->transRollback();
+                return redirect()->back()->withInput()->with('error', 'Error al actualizar el usuario: ' . $e->getMessage());
+            }
+        }
+
+        // Obtener datos del usuario con empleado desde la base de datos
+        $usuario = $usuarioModel->getUsuarioConEmpleado($id);
+        
+        if (!$usuario) {
+            return redirect()->to('/modulo11/usuarios')->with('error', 'Usuario no encontrado');
+        }
 
         return view('modulos/editar_usuario', $this->payload([
             'title'      => 'Módulo 11 · Editar Usuario',

@@ -19,6 +19,22 @@
         </div>
         <div class="card-body">
             <form method="POST" action="<?= base_url('modulo11/agregar') ?>">
+                <!-- Información de Usuario -->
+                <h5 class="mb-3 text-primary">Información de Usuario</h5>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="usuario" class="form-label">Nombre de Usuario *</label>
+                        <input type="text" class="form-control" id="usuario" name="usuario" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="idMaquiladora" class="form-label">ID Maquiladora</label>
+                        <input type="number" class="form-control" id="idMaquiladora" name="idMaquiladora" 
+                               placeholder="Ingrese el ID de la maquiladora">
+                    </div>
+                </div>
+
+                <!-- Información de Empleado -->
+                <h5 class="mb-3 text-primary mt-4">Información de Empleado</h5>
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="noEmpleado" class="form-label">Número de Empleado *</label>
