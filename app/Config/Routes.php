@@ -53,6 +53,10 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->get('detalles/(:num)',   'Modulos::m1_detalles/$1');
     $routes->get('perfilempleado',    'Modulos::m1_perfilempleado');
     $routes->get('ordenes',           'Modulos::m1_ordenes');
+    //Rutas URL
+    $routes->get('modulo1/ordenes-produccion', 'Produccion::ordenes');  // URL pública
+
+
     // Evaluación
     $routes->get('evaluar/(:num)',    'Modulos::m1_evaluar/$1');
     $routes->post('guardar-evaluacion','Modulos::m1_guardarEvaluacion');
@@ -91,6 +95,11 @@ $routes->group('modulo3', [], function ($routes) {
     // Perfil del empleado desde Modulo1 para evitar controlador inexistente
     $routes->get('perfilempleado', 'Modulos::m1_perfilempleado');
     $routes->get('ordenesclientes',   'Modulos::m1_ordenesclientes');
+
+    $routes->get('maquinaria', 'Maquinaria::index');
+    $routes->post('maquinaria', 'Maquinaria::store');
+
+
 });
 
 // Grupo de muestras
