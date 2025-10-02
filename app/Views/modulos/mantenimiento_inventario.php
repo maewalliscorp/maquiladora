@@ -6,8 +6,8 @@
     <span class="badge bg-secondary">Mantenimiento</span>
 </div>
 
-<?php if (session()->getFlashdata('msg')): ?>
-    <div class="alert alert-success mb-3"><?= esc(session()->getFlashdata('msg')) ?></div>
+<?php if (session()->getFlashdata('success')): ?>
+    <div class="alert alert-success mb-3"><?= esc(session()->getFlashdata('success')) ?></div>
 <?php endif; ?>
 
 <?php if (session()->getFlashdata('error')): ?>
@@ -17,7 +17,8 @@
 <div class="card shadow-sm mb-3">
     <div class="card-header"><strong>Registro de máquina</strong></div>
     <div class="card-body">
-        <form class="row g-3" method="post" action="<?= site_url('maquinaria') ?>">
+        <!-- Opción A: rutas dentro de modulo3 -->
+        <form class="row g-3" method="post" action="<?= base_url('modulo3/maquinaria/guardar') ?>">
             <?= csrf_field() ?>
 
             <div class="col-md-4">
@@ -33,6 +34,18 @@
             </div>
 
             <div class="col-md-4">
+                <label for="fabricante" class="form-label">Fabricante</label>
+                <input id="fabricante" name="fabricante" class="form-control"
+                       value="<?= esc(old('fabricante')) ?>" placeholder="Juki / Brother / Siruba ...">
+            </div>
+
+            <div class="col-md-4">
+                <label for="serie" class="form-label">Serie</label>
+                <input id="serie" name="serie" class="form-control"
+                       value="<?= esc(old('serie')) ?>" placeholder="SER12345">
+            </div>
+
+            <div class="col-md-4">
                 <label for="fechaCompra" class="form-label">Fecha de compra</label>
                 <input id="fechaCompra" type="date" name="fechaCompra" class="form-control"
                        value="<?= esc(old('fechaCompra')) ?>">
@@ -45,9 +58,9 @@
             </div>
 
             <div class="col-md-4">
-                <label for="estado" class="form-label">Estado</label>
-                <select id="estado" name="estado" class="form-select">
-                    <?php $opt = old('estado') ?: 'Operativa'; ?>
+                <label for="activa" class="form-label">Estado</label>
+                <select id="activa" name="activa" class="form-select">
+                    <?php $opt = old('activa') ?: 'Operativa'; ?>
                     <option value="Operativa"     <?= $opt==='Operativa'?'selected':'' ?>>Operativa</option>
                     <option value="En reparación" <?= $opt==='En reparación'?'selected':'' ?>>En reparación</option>
                 </select>
@@ -68,6 +81,8 @@
             <tr>
                 <th>Código</th>
                 <th>Modelo</th>
+                <th>Fabricante</th>
+                <th>Serie</th>
                 <th>Compra</th>
                 <th>Ubicación</th>
                 <th>Estado</th>
@@ -90,6 +105,8 @@
                     <tr>
                         <td><?= esc($m['cod'] ?? '') ?></td>
                         <td><?= esc($m['modelo'] ?? '') ?></td>
+                        <td><?= esc($m['fabricante'] ?? '') ?></td>
+                        <td><?= esc($m['serie'] ?? '') ?></td>
                         <td><?= esc($compra) ?></td>
                         <td><?= esc($m['ubic'] ?? '') ?></td>
                         <td>
@@ -98,13 +115,17 @@
                             </span>
                         </td>
                         <td class="text-end">
-                            <a class="btn btn-sm btn-outline-primary" href="#">Editar</a>
+                            <?php $id = $m['id'] ?? null; ?>
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="<?= $id ? base_url('modulo3/maquinaria/editar/'.$id) : 'javascript:void(0)' ?>">
+                                Editar
+                            </a>
                         </td>
                     </tr>
                 <?php endforeach; ?>
             <?php else: ?>
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-4">
+                    <td colspan="8" class="text-center text-muted py-4">
                         No hay máquinas registradas.
                     </td>
                 </tr>
