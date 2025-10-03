@@ -265,11 +265,8 @@ class Modulos extends BaseController
 
     public function m1_pedidos()
     {
-        $pedidos = [
-            ['id' => 1, 'empresa' => 'Textiles MX', 'descripcion' => 'Camisetas básicas', 'estatus' => 'En proceso'],
-            ['id' => 2, 'empresa' => 'Fábrica Sur', 'descripcion' => 'Pantalones vaqueros', 'estatus' => 'Pendiente'],
-            ['id' => 3, 'empresa' => 'Industrias PZ', 'descripcion' => 'Chamarras de mezclilla', 'estatus' => 'Completado'],
-        ];
+        $pedidoModel = new \App\Models\PedidoModel();
+        $pedidos = $pedidoModel->getListadoPedidos();
 
         return view('modulos/pedidos', $this->payload([
             'title'      => 'Módulo 1 · Pedidos',
@@ -316,19 +313,24 @@ class Modulos extends BaseController
 
     public function m1_editar($id = null)
     {
+        $pedidoModel = new \App\Models\PedidoModel();
+
         if ($this->request->getMethod() === 'post') {
-            // Procesar formulario
+            // Procesar formulario (mínimo viable)
+            $data = [
+                'descripcion' => $this->request->getPost('descripcion'),
+                'estatus'     => $this->request->getPost('estatus') ?? 'Pendiente',
+                'fecha'       => $this->request->getPost('fecha') ?? null,
+                'folio'       => $this->request->getPost('folio') ?? null,
+                'moneda'      => $this->request->getPost('moneda') ?? null,
+                'total'       => $this->request->getPost('total') ?? null,
+            ];
+            // Nota: ajustar allowedFields si se cambia a save() de CI4
+            $pedidoModel->where('id', (int)$id)->set($data)->update();
             return redirect()->to('/modulo1/pedidos')->with('success', 'Pedido actualizado correctamente');
         }
 
-        $pedido = [
-            'id' => $id,
-            'empresa' => 'Textiles MX',
-            'descripcion' => 'Camisetas básicas',
-            'estatus' => 'En proceso',
-            'fecha_creacion' => '2025-01-15',
-            'fecha_entrega' => '2025-01-30',
-        ];
+        $pedido = $pedidoModel->getPedidoPorId((int)$id);
 
         return view('modulos/editarpedido', $this->payload([
             'title'      => 'Módulo 1 · Editar Pedido',
@@ -340,17 +342,8 @@ class Modulos extends BaseController
 
     public function m1_detalles($id = null)
     {
-        $pedido = [
-            'id' => $id,
-            'empresa' => 'Textiles MX',
-            'descripcion' => 'Camisetas básicas',
-            'estatus' => 'En proceso',
-            'fecha_creacion' => '2025-01-15',
-            'fecha_entrega' => '2025-01-30',
-            'cantidad' => 1000,
-            'precio_unitario' => 25.50,
-            'total' => 25500.00,
-        ];
+        $pedidoModel = new \App\Models\PedidoModel();
+        $pedido = $pedidoModel->getPedidoPorId((int)$id);
 
         return view('modulos/detalle_pedido', $this->payload([
             'title'      => 'Módulo 1 · Detalle del Pedido',
@@ -516,11 +509,9 @@ class Modulos extends BaseController
 
     public function m2_catalogodisenos()
     {
-        $disenos = [
-            ['id' => 1, 'nombre' => 'Camiseta Básica', 'categoria' => 'Ropa Casual', 'estatus' => 'Activo', 'fecha_creacion' => '2025-01-10'],
-            ['id' => 2, 'nombre' => 'Pantalón Vaquero', 'categoria' => 'Denim', 'estatus' => 'Activo', 'fecha_creacion' => '2025-01-12'],
-            ['id' => 3, 'nombre' => 'Chamarra Deportiva', 'categoria' => 'Deportiva', 'estatus' => 'En revisión', 'fecha_creacion' => '2025-01-15'],
-        ];
+        // Conectar a BD y traer catálogo real
+        $disenoModel = new \App\Models\DisenoModel();
+        $disenos = $disenoModel->getCatalogoDisenos();
 
         return view('modulos/catalogodisenos', $this->payload([
             'title'      => 'Módulo 2 · Catálogo de Diseños',
@@ -549,17 +540,21 @@ class Modulos extends BaseController
             return redirect()->to('/modulo2/catalogodisenos')->with('error', 'ID de diseño no válido');
         }
 
-        // Datos de ejemplo del diseño (en una aplicación real, estos vendrían de la base de datos)
+        // Traer detalle desde BD usando DisenoModel
+        $disenoModel = new \App\Models\DisenoModel();
+        $detalle = $disenoModel->getDisenoDetalle((int)$id);
+        if (!$detalle) {
+            return redirect()->to('/modulo2/catalogodisenos')->with('error', 'Diseño no encontrado');
+        }
+
+        // Adaptar al formato que espera la vista editardiseno
         $diseno = [
-            'id' => $id,
-            'nombre' => 'Camiseta Básica',
-            'descripcion' => 'Diseño clásico de camiseta básica con corte moderno',
-            'materiales' => 'Algodón 100%, hilo de poliéster',
-            'cortes' => 'Corte recto, manga corta, cuello redondo',
-            'archivo' => 'uploads/disenos/camiseta_basica.jpg', // Ruta de ejemplo
-            'categoria' => 'Ropa Casual',
-            'estatus' => 'Activo',
-            'fecha_creacion' => '2025-01-10',
+            'id'          => $detalle['id'],
+            'nombre'      => $detalle['nombre'],
+            'descripcion' => $detalle['descripcion'],
+            'materiales'  => implode("\n", $detalle['materiales'] ?? []),
+            'cortes'      => $detalle['notas'] ?? '',
+            'archivo'     => $detalle['archivoCadUrl'] ?? '',
         ];
 
         return view('modulos/editardiseno', $this->payload([
@@ -671,14 +666,14 @@ class Modulos extends BaseController
 
                 // Crear empleado
                 $empleadoData = [
-                    'noEmpleado' => $this->request->getPost('noEmpleado'),
-                    'nombre' => $this->request->getPost('nombre'),
-                    'apellido' => $this->request->getPost('apellido'),
-                    'email' => $this->request->getPost('email'),
-                    'telefono' => $this->request->getPost('telefono'),
+                'noEmpleado' => $this->request->getPost('noEmpleado'),
+                'nombre' => $this->request->getPost('nombre'),
+                'apellido' => $this->request->getPost('apellido'),
+                'email' => $this->request->getPost('email'),
+                'telefono' => $this->request->getPost('telefono'),
                     'domicilio' => $this->request->getPost('domicilio'),
-                    'puesto' => $this->request->getPost('puesto'),
-                    'activo' => 1,
+                'puesto' => $this->request->getPost('puesto'),
+                'activo' => 1,
                     'idusuario' => $usuarioId
                 ];
                 
@@ -694,7 +689,7 @@ class Modulos extends BaseController
                     throw new \Exception('Error en la transacción');
                 }
 
-                return redirect()->to('/modulo11/usuarios')->with('success', 'Usuario agregado correctamente');
+            return redirect()->to('/modulo11/usuarios')->with('success', 'Usuario agregado correctamente');
                 
             } catch (\Exception $e) {
                 $db->transRollback();
@@ -758,13 +753,13 @@ class Modulos extends BaseController
                 if ($empleado) {
                     // Actualizar empleado existente
                     $empleadoData = [
-                        'noEmpleado' => $this->request->getPost('noEmpleado'),
-                        'nombre' => $this->request->getPost('nombre'),
-                        'apellido' => $this->request->getPost('apellido'),
-                        'email' => $this->request->getPost('email'),
-                        'telefono' => $this->request->getPost('telefono'),
+                'noEmpleado' => $this->request->getPost('noEmpleado'),
+                'nombre' => $this->request->getPost('nombre'),
+                'apellido' => $this->request->getPost('apellido'),
+                'email' => $this->request->getPost('email'),
+                'telefono' => $this->request->getPost('telefono'),
                         'domicilio' => $this->request->getPost('domicilio'),
-                        'puesto' => $this->request->getPost('puesto'),
+                'puesto' => $this->request->getPost('puesto'),
                         'activo' => $this->request->getPost('activo_empleado') ?: 1
                     ];
                     
@@ -777,7 +772,7 @@ class Modulos extends BaseController
                     throw new \Exception('Error en la transacción');
                 }
 
-                return redirect()->to('/modulo11/usuarios')->with('success', 'Usuario actualizado correctamente');
+            return redirect()->to('/modulo11/usuarios')->with('success', 'Usuario actualizado correctamente');
                 
             } catch (\Exception $e) {
                 $db->transRollback();
