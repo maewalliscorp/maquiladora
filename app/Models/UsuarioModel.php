@@ -19,7 +19,7 @@ class UsuarioModel extends Model
         'activo',
         'fechaAlta',
         'ultimoAcceso',
-        'idMaquiladora',
+        'idmaquiladora',
     ];
 
     // Dates
@@ -36,7 +36,7 @@ class UsuarioModel extends Model
         'activo'        => 'required|in_list[0,1]', // estado: 0 = inactivo, 1 = activo
         'fechaAlta'     => 'permit_empty|valid_date',
         'ultimoAcceso'  => 'permit_empty|valid_date',
-        'idMaquiladora' => 'permit_empty|integer',
+        'idmaquiladora' => 'permit_empty|integer',
     ];
 
     protected $validationMessages = [
@@ -59,7 +59,7 @@ class UsuarioModel extends Model
         'ultimoAcceso' => [
             'valid_date' => 'La fecha de último acceso no es válida',
         ],
-        'idMaquiladora' => [
+        'idmaquiladora' => [
             'integer'  => 'El id de la maquiladora debe ser un número entero',
         ],
     ];
@@ -89,5 +89,53 @@ class UsuarioModel extends Model
         }
 
         return false;
+    }
+
+    /**
+     * Obtiene todos los usuarios con sus datos de empleado asociados
+     */
+    public function getUsuariosConEmpleados()
+    {
+        return $this->select('usuario.*, empleado.noEmpleado, empleado.nombre, empleado.apellido, empleado.email, empleado.telefono, empleado.domicilio, empleado.puesto, empleado.activo as empleado_activo')
+                    ->join('empleado', 'empleado.idusuario = usuario.id', 'left')
+                    ->findAll();
+    }
+
+    /**
+     * Obtiene un usuario específico con sus datos de empleado
+     */
+    public function getUsuarioConEmpleado($id)
+    {
+        return $this->select('usuario.*, empleado.noEmpleado, empleado.nombre, empleado.apellido, empleado.email, empleado.telefono, empleado.domicilio, empleado.puesto, empleado.activo as empleado_activo')
+                    ->join('empleado', 'empleado.idusuario = usuario.id', 'left')
+                    ->where('usuario.id', $id)
+                    ->first();
+    }
+
+    /**
+     * Obtiene usuarios activos con sus empleados
+     */
+    public function getUsuariosActivos()
+    {
+        return $this->select('usuario.*, empleado.noEmpleado, empleado.nombre, empleado.apellido, empleado.email, empleado.telefono, empleado.domicilio, empleado.puesto, empleado.activo as empleado_activo')
+                    ->join('empleado', 'empleado.idusuario = usuario.id', 'left')
+                    ->where('usuario.activo', 1)
+                    ->findAll();
+    }
+
+    /**
+     * Busca usuarios por nombre de usuario o datos de empleado
+     */
+    public function buscarUsuarios($termino)
+    {
+        return $this->select('usuario.*, empleado.noEmpleado, empleado.nombre, empleado.apellido, empleado.email, empleado.telefono, empleado.domicilio, empleado.puesto, empleado.activo as empleado_activo')
+                    ->join('empleado', 'empleado.idusuario = usuario.id', 'left')
+                    ->groupStart()
+                        ->like('usuario.usuario', $termino)
+                        ->orLike('empleado.nombre', $termino)
+                        ->orLike('empleado.apellido', $termino)
+                        ->orLike('empleado.noEmpleado', $termino)
+                    ->groupEnd()
+                    ->findAll();
     }
 }

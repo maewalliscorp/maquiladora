@@ -19,6 +19,24 @@
         </div>
         <div class="card-body">
             <form method="POST" action="<?= base_url('modulo11/editar/' . $id) ?>">
+                <!-- Información de Usuario -->
+                <h5 class="mb-3 text-primary">Información de Usuario</h5>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="usuario" class="form-label">Nombre de Usuario *</label>
+                        <input type="text" class="form-control" id="usuario" name="usuario" 
+                               value="<?= $usuario['usuario'] ?>" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="idMaquiladora" class="form-label">ID Maquiladora</label>
+                        <input type="number" class="form-control" id="idMaquiladora" name="idMaquiladora" 
+                               value="<?= $usuario['idmaquiladora'] ?? '' ?>" 
+                               placeholder="Ingrese el ID de la maquiladora">
+                    </div>
+                </div>
+
+                <!-- Información de Empleado -->
+                <h5 class="mb-3 text-primary mt-4">Información de Empleado</h5>
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="noEmpleado" class="form-label">Número de Empleado *</label>
@@ -75,17 +93,31 @@
 
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label for="activo" class="form-label">Estatus *</label>
-                        <select class="form-select" id="activo" name="activo" required>
+                        <label for="activo_usuario" class="form-label">Estatus Usuario *</label>
+                        <select class="form-select" id="activo_usuario" name="activo_usuario" required>
                             <option value="1" <?= $usuario['activo'] == 1 ? 'selected' : '' ?>>Activo</option>
                             <option value="0" <?= $usuario['activo'] == 0 ? 'selected' : '' ?>>Inactivo</option>
-                            <option value="2" <?= $usuario['activo'] == 2 ? 'selected' : '' ?>>Baja de la empresa</option>
-                            <option value="3" <?= $usuario['activo'] == 3 ? 'selected' : '' ?>>En espera</option>
                         </select>
                     </div>
                     <div class="col-md-6 mb-3">
+                        <label for="activo_empleado" class="form-label">Estatus Empleado *</label>
+                        <select class="form-select" id="activo_empleado" name="activo_empleado" required>
+                            <option value="1" <?= $usuario['empleado_activo'] == 1 ? 'selected' : '' ?>>Activo</option>
+                            <option value="0" <?= $usuario['empleado_activo'] == 0 ? 'selected' : '' ?>>Inactivo</option>
+                            <option value="2" <?= $usuario['empleado_activo'] == 2 ? 'selected' : '' ?>>Baja de la empresa</option>
+                            <option value="3" <?= $usuario['empleado_activo'] == 3 ? 'selected' : '' ?>>En espera</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
                         <label class="form-label">Fecha de Registro</label>
                         <input type="text" class="form-control" value="<?= date('d/m/Y', strtotime($usuario['fechaAlta'])) ?>" readonly>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Último Acceso</label>
+                        <input type="text" class="form-control" value="<?= date('d/m/Y H:i', strtotime($usuario['ultimoAcceso'])) ?>" readonly>
                     </div>
                 </div>
 

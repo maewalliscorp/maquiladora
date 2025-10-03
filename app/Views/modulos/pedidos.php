@@ -19,13 +19,50 @@
             <tr>
                 <th>No.</th>
                 <th>Empresa</th>
-                <th>Descripción</th>
+                <th>Folio</th>
+                <th>Fecha</th>
                 <th>Estatus</th>
-                <th>Acciones</th>
+                <th>Moneda</th>
+                <th>Total</th>
+                <th>Ver</th>
+                <th>Editar</th>
                 <th>Documento</th>
             </tr>
             </thead>
             <tbody>
+            <?php if (!empty($pedidos)): ?>
+                <?php foreach ($pedidos as $p): ?>
+                    <tr>
+                        <td><?= esc($p['id']) ?></td>
+                        <td><?= esc($p['empresa'] ?? '-') ?></td>
+                        <td><?= esc($p['folio'] ?? '-') ?></td>
+                        <td><?= isset($p['fecha']) ? esc(date('Y-m-d', strtotime($p['fecha']))) : '-' ?></td>
+                        <td><?= esc($p['estatus'] ?? '-') ?></td>
+                        <td><?= esc($p['moneda'] ?? '-') ?></td>
+                        <td><?= isset($p['total']) ? number_format((float)$p['total'], 2) : '0.00' ?></td>
+                        <td>
+                            <a class="btn btn-sm btn-outline-info" href="<?= base_url('modulo1/detalles/' . (int)$p['id']) ?>">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                        <td>
+                            <a class="btn btn-sm btn-outline-primary" href="<?= base_url('modulo1/editar/' . (int)$p['id']) ?>">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                        <td>
+                            <?php $docUrl = $p['documento_url'] ?? null; ?>
+                            <?php if ($docUrl): ?>
+                                <a class="btn btn-sm btn-outline-secondary" target="_blank" href="<?= esc($docUrl) ?>">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                </a>
+                            <?php else: ?>
+                                <span class="text-muted">—</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
             </tbody>
         </table>
     </div>

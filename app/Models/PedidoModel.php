@@ -6,99 +6,113 @@ use CodeIgniter\Model;
 
 class PedidoModel extends Model
 {
-    protected $table = 'pedidos';
-    protected $primaryKey = 'id';
+    // Tabla real según tu BD
+    protected $table            = 'orden_compra';
+    protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
-    protected $returnType = 'array';
-    protected $useSoftDeletes = false;
-    protected $protectFields = true;
-    protected $allowedFields = [
-        'empresa',
-        'contacto',
-        'descripcion',
-        'cantidad',
-        'precio_unitario',
-        'total',
-        'fecha_creacion',
-        'fecha_entrega',
-        'estatus',
-        'prioridad',
-        'observaciones',
-        'usuario_id'
-    ];
+    protected $returnType       = 'array';
+    protected $useSoftDeletes   = false;
+    protected $protectFields    = false;
 
-    // Dates
-    protected $useTimestamps = true;
-    protected $dateFormat = 'datetime';
-    protected $createdField = 'created_at';
-    protected $updatedField = 'updated_at';
-    protected $deletedField = 'deleted_at';
-
-    // Validation
-    protected $validationRules = [
-        'empresa' => 'required|max_length[100]',
-        'contacto' => 'required|max_length[100]',
-        'descripcion' => 'required|max_length[500]',
-        'cantidad' => 'required|integer|greater_than[0]',
-        'precio_unitario' => 'required|decimal|greater_than[0]',
-        'fecha_entrega' => 'required|valid_date',
-        'estatus' => 'required|in_list[Pendiente,En proceso,Completado,Cancelado]',
-        'prioridad' => 'required|in_list[Baja,Media,Alta,Urgente]',
-        'observaciones' => 'permit_empty|max_length[1000]',
-        'usuario_id' => 'required|integer'
-    ];
-
-    protected $validationMessages = [
-        'empresa' => [
-            'required' => 'La empresa es obligatoria',
-            'max_length' => 'El nombre de la empresa no puede exceder 100 caracteres'
-        ],
-        'cantidad' => [
-            'required' => 'La cantidad es obligatoria',
-            'integer' => 'La cantidad debe ser un número entero',
-            'greater_than' => 'La cantidad debe ser mayor a 0'
-        ],
-        'precio_unitario' => [
-            'required' => 'El precio unitario es obligatorio',
-            'decimal' => 'El precio debe ser un número decimal',
-            'greater_than' => 'El precio debe ser mayor a 0'
-        ],
-        'estatus' => [
-            'required' => 'El estatus es obligatorio',
-            'in_list' => 'El estatus debe ser Pendiente, En proceso, Completado o Cancelado'
-        ]
-    ];
-
-    protected $skipValidation = false;
-    protected $cleanValidationRules = true;
-
-    // Callbacks
-    protected $allowCallbacks = true;
-    protected $beforeInsert = ['calculateTotal'];
-    protected $beforeUpdate = ['calculateTotal'];
-
-    protected function calculateTotal(array $data)
+    /**
+     * Devuelve el listado de pedidos con datos de la empresa (cliente).
+     * Columnas: id, empresa, folio, fecha, estatus, moneda, total
+     */
+    public function getListadoPedidos(): array
     {
-        if (isset($data['data']['cantidad']) && isset($data['data']['precio_unitario'])) {
-            $data['data']['total'] = $data['data']['cantidad'] * $data['data']['precio_unitario'];
+        $db = $this->db;
+        $sql = "SELECT oc.id,
+                       c.nombre AS empresa,
+                       oc.folio,
+                       oc.fecha,
+                       oc.estatus,
+                       oc.moneda,
+                       oc.total,
+                       NULL as documento_url
+                FROM orden_compra oc
+                LEFT JOIN cliente c ON c.id = oc.clienteId
+                ORDER BY oc.fecha DESC, oc.id DESC";
+        try {
+            return $db->query($sql)->getResultArray();
+        } catch (\Throwable $e) {
+            // Variantes posibles por mayúsculas/minúsculas
+            $sql2 = "SELECT oc.id, c.nombre AS empresa, oc.folio, oc.fecha, oc.estatus, oc.moneda, oc.total
+                     FROM OrdenCompra oc
+                     LEFT JOIN Cliente c ON c.id = oc.clienteId
+                     ORDER BY oc.fecha DESC, oc.id DESC";
+            try {
+                return $db->query($sql2)->getResultArray();
+            } catch (\Throwable $e2) {
+                return [];
+            }
         }
-        return $data;
     }
 
-    public function getPedidosByEstatus($estatus)
+    /**
+     * Trae un pedido por ID con datos de cliente
+     */
+    public function getPedidoPorId(int $id): ?array
     {
-        return $this->where('estatus', $estatus)->findAll();
-    }
-
-    public function getPedidosByUsuario($usuario_id)
-    {
-        return $this->where('usuario_id', $usuario_id)->findAll();
-    }
-
-    public function getPedidosVencidos()
-    {
-        return $this->where('fecha_entrega <', date('Y-m-d'))
-                    ->where('estatus !=', 'Completado')
-                    ->findAll();
+        $db = $this->db;
+        $sql = "SELECT oc.id,
+                       oc.clienteId,
+                       c.nombre   AS empresa,
+                       c.contacto AS contacto,
+                       c.telefono AS telefono,
+                       c.email    AS email,
+                       c.rfc      AS rfc,
+                       c.direccion AS direccion,
+                       oc.folio,
+                       oc.fecha,
+                       oc.estatus,
+                       oc.moneda,
+                       oc.total,
+                       d.nombre   AS disenoNombre,
+                       d.descripcion AS disenoDescripcion,
+                       dv.version AS disenoVersion,
+                       dv.notas   AS disenoNotas,
+                       dv.archivoCadUrl,
+                       dv.archivoPatronUrl,
+                       GROUP_CONCAT(CONCAT(COALESCE(lm.articuloId,'Art'),' x ',COALESCE(lm.cantidadPorUnidad,0)) SEPARATOR '\n') AS materiales
+                FROM orden_compra oc
+                LEFT JOIN cliente c ON c.id = oc.clienteId
+                LEFT JOIN orden_produccion op ON op.ordenCompraId = oc.id
+                LEFT JOIN diseno_version dv ON dv.id = op.disenoVersionId
+                LEFT JOIN diseno d ON d.id = dv.disenoId
+                LEFT JOIN lista_materiales lm ON lm.disenoVersionId = dv.id
+                WHERE oc.id = ?
+                GROUP BY oc.id, oc.clienteId, c.nombre, c.contacto, c.telefono, c.email, c.rfc, c.direccion,
+                         oc.folio, oc.fecha, oc.estatus, oc.moneda, oc.total,
+                         d.nombre, d.descripcion, dv.version, dv.notas, dv.archivoCadUrl, dv.archivoPatronUrl";
+        try {
+            return $db->query($sql, [$id])->getRowArray() ?: null;
+        } catch (\Throwable $e) {
+            $sql2 = "SELECT oc.id, oc.clienteId,
+                             c.nombre AS empresa,
+                             NULL AS contacto, NULL AS telefono, NULL AS email, NULL AS rfc, NULL AS direccion,
+                             oc.folio, oc.fecha, oc.estatus, oc.moneda, oc.total,
+                             d.nombre AS disenoNombre,
+                             d.descripcion AS disenoDescripcion,
+                             dv.version AS disenoVersion,
+                             dv.notas   AS disenoNotas,
+                             dv.archivoCadUrl,
+                             dv.archivoPatronUrl,
+                             GROUP_CONCAT(CONCAT(COALESCE(lm.articuloId,'Art'),' x ',COALESCE(lm.cantidadPorUnidad,0)) SEPARATOR '\n') AS materiales
+                      FROM OrdenCompra oc
+                      LEFT JOIN Cliente c ON c.id = oc.clienteId
+                      LEFT JOIN OrdenProduccion op ON op.ordenCompraId = oc.id
+                      LEFT JOIN DisenoVersion dv ON dv.id = op.disenoVersionId
+                      LEFT JOIN Diseno d ON d.id = dv.disenoId
+                      LEFT JOIN ListaMateriales lm ON lm.disenoVersionId = dv.id
+                      WHERE oc.id = ?
+                      GROUP BY oc.id, oc.clienteId, c.nombre,
+                               oc.folio, oc.fecha, oc.estatus, oc.moneda, oc.total,
+                               d.nombre, d.descripcion, dv.version, dv.notas, dv.archivoCadUrl, dv.archivoPatronUrl";
+            try {
+                return $db->query($sql2, [$id])->getRowArray() ?: null;
+            } catch (\Throwable $e2) {
+                return null;
+            }
+        }
     }
 }
