@@ -327,6 +327,23 @@
     document.addEventListener('DOMContentLoaded', () => {
         const tips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         tips.forEach(el => new bootstrap.Tooltip(el));
+
+        // Envolver automáticamente todas las tablas en .table-responsive si aún no lo están
+        document.querySelectorAll('table').forEach(tbl => {
+            // Agregar clases Bootstrap por defecto si no existen
+            tbl.classList.add('table');
+            tbl.classList.add('table-striped');
+            tbl.classList.add('table-hover');
+            tbl.classList.add('align-middle');
+
+            const parent = tbl.parentElement;
+            if (!parent || !parent.classList || !parent.classList.contains('table-responsive')) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'table-responsive';
+                parent?.insertBefore(wrapper, tbl);
+                wrapper.appendChild(tbl);
+            }
+        });
     });
 </script>
 
