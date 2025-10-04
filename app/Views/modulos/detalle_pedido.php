@@ -9,6 +9,61 @@
     <a href="<?= base_url('modulo1') ?>" class="btn btn-volver">← Volver</a>
 </div>
 
+<?php if (empty($pedido)): ?>
+    <div class="alert alert-warning">
+        No se encontraron datos para este pedido. Verifica que exista en la base de datos y que el ID sea correcto.
+    </div>
+<?php endif; ?>
+
+<?php if (!empty($_GET['debug'])): ?>
+    <div class="alert alert-info" style="white-space:pre-wrap">
+        <strong>DEBUG $pedido:</strong>
+        <pre><?php print_r($pedido ?? null); ?></pre>
+    </div>
+<?php endif; ?>
+
+<!-- Datos básicos del pedido -->
+<div class="card shadow-sm mb-3">
+    <div class="card-header">
+        <strong>📄 DATOS DEL PEDIDO</strong>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="info-item">
+                    <div class="info-label">Folio:</div>
+                    <div class="info-value"><?= esc($pedido['folio'] ?? '') ?></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="info-item">
+                    <div class="info-label">Fecha:</div>
+                    <div class="info-value"><?= esc($pedido['fecha'] ?? '') ?></div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="info-item">
+                    <div class="info-label">Estatus:</div>
+                    <div class="info-value"><?= esc($pedido['estatus'] ?? '') ?></div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="info-item">
+                    <div class="info-label">Moneda:</div>
+                    <div class="info-value"><?= esc($pedido['moneda'] ?? '') ?></div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="info-item">
+                    <div class="info-label">Total:</div>
+                    <div class="info-value"><?= esc($pedido['total'] ?? '') ?></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
 <!-- Información del Cliente Compacta -->
 <div class="card shadow-sm">
     <div class="card-header">
@@ -126,13 +181,98 @@
         <div class="card shadow-sm h-100">
             <div class="card-header">
                 <strong>🖼️ IMAGEN DEL MODELO</strong>
-            </div>
             <div class="card-body text-center">
                 <?php if (!empty($pedido['modelo'])): ?>
                 <img src="https://via.placeholder.com/500x300/3E8FCC/ffffff?text=Modelo+<?= urlencode($pedido['modelo']) ?>"
                      alt="Modelo <?= esc($pedido['modelo']) ?>" class="modelo-img">
                 <?php endif; ?>
                 <p class="mt-3 info-value"><?= esc($pedido['descripcion'] ?? '') ?></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Orden de Producción -->
+<?php if (!empty($pedido['op_id']) || !empty($pedido['op_folio'])): ?>
+<div class="card shadow-sm mt-3">
+    <div class="card-header">
+        <strong>🏭 ORDEN DE PRODUCCIÓN</strong>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="info-item">
+                    <div class="info-label">OP ID:</div>
+                    <div class="info-value"><?= esc($pedido['op_id'] ?? '') ?></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="info-item">
+                    <div class="info-label">Folio OP:</div>
+                    <div class="info-value"><?= esc($pedido['op_folio'] ?? '') ?></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="info-item">
+                    <div class="info-label">Cantidad plan:</div>
+                    <div class="info-value"><?= esc($pedido['op_cantidadPlan'] ?? '') ?></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="info-item">
+                    <div class="info-label">Estatus OP:</div>
+                    <div class="info-value"><?= esc($pedido['op_status'] ?? '') ?></div>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-md-4">
+                <div class="info-item">
+                    <div class="info-label">Inicio plan:</div>
+                    <div class="info-value"><?= esc($pedido['op_fechaInicioPlan'] ?? '') ?></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="info-item">
+                    <div class="info-label">Fin plan:</div>
+                    <div class="info-value"><?= esc($pedido['op_fechaFinPlan'] ?? '') ?></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="info-item">
+                    <div class="info-label">Versión diseño:</div>
+                    <div class="info-value"><?= esc($pedido['op_disenoVersionId'] ?? '') ?></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Tarjeta de OP -->
+<div class="card shadow-sm mt-3">
+    <div class="card-header">
+        <strong>📝 TARJETA DE OP</strong>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="info-item">
+                    <div class="info-label">OP ID:</div>
+                    <div class="info-value"><?= esc($pedido['op_id'] ?? '') ?></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="info-item">
+                    <div class="info-label">Folio OP:</div>
+                    <div class="info-value"><?= esc($pedido['op_folio'] ?? '') ?></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="info-item">
+                    <div class="info-label">Estatus OP:</div>
+                    <div class="info-value"><?= esc($pedido['op_status'] ?? '') ?></div>
+                </div>
             </div>
         </div>
     </div>

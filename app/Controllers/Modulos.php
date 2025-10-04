@@ -316,17 +316,34 @@ class Modulos extends BaseController
         $pedidoModel = new \App\Models\PedidoModel();
 
         if ($this->request->getMethod() === 'post') {
-            // Procesar formulario (mínimo viable)
+            // Obtener ID desde POST si no viene en la URL
+            $idPost = (int)($this->request->getPost('id') ?? 0);
+            if (!$id && $idPost) {
+                $id = $idPost;
+            }
+
+            // Procesar formulario: actualizar campos del pedido
             $data = [
-                'descripcion' => $this->request->getPost('descripcion'),
-                'estatus'     => $this->request->getPost('estatus') ?? 'Pendiente',
-                'fecha'       => $this->request->getPost('fecha') ?? null,
-                'folio'       => $this->request->getPost('folio') ?? null,
-                'moneda'      => $this->request->getPost('moneda') ?? null,
-                'total'       => $this->request->getPost('total') ?? null,
+                'descripcion'      => $this->request->getPost('descripcion') ?? null,
+                'cantidad'         => $this->request->getPost('cantidad') ?? null,
+                'especificaciones' => $this->request->getPost('especificaciones') ?? null,
+                'materiales'       => $this->request->getPost('materiales') ?? null,
+                'modelo'           => $this->request->getPost('modelo') ?? null,
+                'tallas'           => $this->request->getPost('tallas') ?? null,
+                'color'            => $this->request->getPost('color') ?? null,
+                'fecha_entrega'    => $this->request->getPost('fecha_entrega') ?? null,
+                'estatus'          => $this->request->getPost('estatus') ?? 'Pendiente',
+                'fecha'            => $this->request->getPost('fecha') ?? null,
+                'folio'            => $this->request->getPost('folio') ?? null,
+                'moneda'           => $this->request->getPost('moneda') ?? null,
+                'total'            => $this->request->getPost('total') ?? null,
+                'progreso'         => $this->request->getPost('progreso') ?? null,
             ];
-            // Nota: ajustar allowedFields si se cambia a save() de CI4
-            $pedidoModel->where('id', (int)$id)->set($data)->update();
+
+            // Guardar
+            if ($id) {
+                $pedidoModel->where('id', (int)$id)->set($data)->update();
+            }
             return redirect()->to('/modulo1/pedidos')->with('success', 'Pedido actualizado correctamente');
         }
 

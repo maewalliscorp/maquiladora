@@ -156,3 +156,63 @@ $routes->get('dbcheck', function () {
         return 'ERROR DB: ' . $e->getMessage();
     }
 });
+
+// ---------------------------
+// Ruta de diagnóstico de esquema (/dbschema)
+// ---------------------------
+$routes->get('dbschema', function () {
+    $db  = \Config\Database::connect();
+    $out = [];
+    try {
+        $tables = $db->query('SHOW TABLES')->getResultArray();
+        $out[] = '<h3>SHOW TABLES</h3><pre>' . print_r($tables, true) . '</pre>';
+
+        $candidates = ['orden_compra','OrdenCompra','cliente','Cliente','orden_produccion','OrdenProduccion'];
+        foreach ($candidates as $t) {
+            try {
+                $desc = $db->query('DESCRIBE ' . $t)->getResultArray();
+                $out[] = '<h4>DESCRIBE ' . $t . '</h4><pre>' . print_r($desc, true) . '</pre>';
+            } catch (\Throwable $e) {
+                $out[] = '<h4>DESCRIBE ' . $t . '</h4><pre>ERROR: ' . $e->getMessage() . '</pre>';
+            }
+        }
+        return implode("\n", $out);
+    } catch (\Throwable $e) {
+        return 'ERROR DBSchema: ' . $e->getMessage();
+    }
+});
+
+// ---------------------------
+// Ruta de diagnóstico de pedido por ID (/pedido-debug/{id})
+// ---------------------------
+$routes->get('pedido-debug/(:num)', function ($id) {
+    $db  = \Config\Database::connect();
+    $out = [];
+    try {
+        // Intentar con ambos nombres de tabla
+        $rowOc = null; $tablaOC = null;
+        foreach (['orden_compra','OrdenCompra'] as $t) {
+            try {
+                $rowOc = $db->query('SELECT * FROM ' . $t . ' WHERE id = ?', [$id])->getRowArray();
+                if ($rowOc) { $tablaOC = $t; break; }
+            } catch (\Throwable $e) {}
+        }
+        $out[] = '<h3>Orden (' . ($tablaOC ?: 'no encontrada') . ')</h3><pre>' . print_r($rowOc, true) . '</pre>';
+
+        // Cliente relacionado
+        $rowCli = null; $tablaCli = null;
+        if ($rowOc && isset($rowOc['clienteId'])) {
+            foreach (['cliente','Cliente'] as $t) {
+                try {
+                    $rowCli = $db->query('SELECT * FROM ' . $t . ' WHERE id = ?', [$rowOc['clienteId']])->getRowArray();
+                    if ($rowCli) { $tablaCli = $t; break; }
+                } catch (\Throwable $e) {}
+            }
+        }
+        $out[] = '<h3>Cliente (' . ($tablaCli ?: 'no encontrada') . ')</h3><pre>' . print_r($rowCli, true) . '</pre>';
+
+        return implode("\n", $out);
+    } catch (\Throwable $e) {
+        return 'ERROR PedidoDebug: ' . $e->getMessage();
+    }
+});

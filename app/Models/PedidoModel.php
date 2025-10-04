@@ -54,65 +54,132 @@ class PedidoModel extends Model
     public function getPedidoPorId(int $id): ?array
     {
         $db = $this->db;
-        $sql = "SELECT oc.id,
-                       oc.clienteId,
-                       c.nombre   AS empresa,
-                       c.contacto AS contacto,
-                       c.telefono AS telefono,
-                       c.email    AS email,
-                       c.rfc      AS rfc,
-                       c.direccion AS direccion,
-                       oc.folio,
-                       oc.fecha,
-                       oc.estatus,
-                       oc.moneda,
-                       oc.total,
-                       d.nombre   AS disenoNombre,
-                       d.descripcion AS disenoDescripcion,
-                       dv.version AS disenoVersion,
-                       dv.notas   AS disenoNotas,
-                       dv.archivoCadUrl,
-                       dv.archivoPatronUrl,
-                       GROUP_CONCAT(CONCAT(COALESCE(lm.articuloId,'Art'),' x ',COALESCE(lm.cantidadPorUnidad,0)) SEPARATOR '\n') AS materiales
-                FROM orden_compra oc
-                LEFT JOIN cliente c ON c.id = oc.clienteId
-                LEFT JOIN orden_produccion op ON op.ordenCompraId = oc.id
-                LEFT JOIN diseno_version dv ON dv.id = op.disenoVersionId
-                LEFT JOIN diseno d ON d.id = dv.disenoId
-                LEFT JOIN lista_materiales lm ON lm.disenoVersionId = dv.id
-                WHERE oc.id = ?
-                GROUP BY oc.id, oc.clienteId, c.nombre, c.contacto, c.telefono, c.email, c.rfc, c.direccion,
-                         oc.folio, oc.fecha, oc.estatus, oc.moneda, oc.total,
-                         d.nombre, d.descripcion, dv.version, dv.notas, dv.archivoCadUrl, dv.archivoPatronUrl";
+        // 1) Traer base mínima de orden_compra (sin joins), para asegurar que algo se muestre
+        $base = null;
         try {
-            return $db->query($sql, [$id])->getRowArray() ?: null;
+            $base = $db->query(
+                "SELECT id, clienteId, folio, fecha, estatus, moneda, total
+                 FROM orden_compra WHERE id = ?",
+                [$id]
+            )->getRowArray();
         } catch (\Throwable $e) {
-            $sql2 = "SELECT oc.id, oc.clienteId,
-                             c.nombre AS empresa,
-                             NULL AS contacto, NULL AS telefono, NULL AS email, NULL AS rfc, NULL AS direccion,
-                             oc.folio, oc.fecha, oc.estatus, oc.moneda, oc.total,
-                             d.nombre AS disenoNombre,
-                             d.descripcion AS disenoDescripcion,
-                             dv.version AS disenoVersion,
-                             dv.notas   AS disenoNotas,
-                             dv.archivoCadUrl,
-                             dv.archivoPatronUrl,
-                             GROUP_CONCAT(CONCAT(COALESCE(lm.articuloId,'Art'),' x ',COALESCE(lm.cantidadPorUnidad,0)) SEPARATOR '\n') AS materiales
-                      FROM OrdenCompra oc
-                      LEFT JOIN Cliente c ON c.id = oc.clienteId
-                      LEFT JOIN OrdenProduccion op ON op.ordenCompraId = oc.id
-                      LEFT JOIN DisenoVersion dv ON dv.id = op.disenoVersionId
-                      LEFT JOIN Diseno d ON d.id = dv.disenoId
-                      LEFT JOIN ListaMateriales lm ON lm.disenoVersionId = dv.id
-                      WHERE oc.id = ?
-                      GROUP BY oc.id, oc.clienteId, c.nombre,
-                               oc.folio, oc.fecha, oc.estatus, oc.moneda, oc.total,
-                               d.nombre, d.descripcion, dv.version, dv.notas, dv.archivoCadUrl, dv.archivoPatronUrl";
             try {
-                return $db->query($sql2, [$id])->getRowArray() ?: null;
+                $base = $db->query(
+                    "SELECT id, clienteId, folio, fecha, estatus, moneda, total
+                     FROM OrdenCompra WHERE id = ?",
+                    [$id]
+                )->getRowArray();
             } catch (\Throwable $e2) {
-                return null;
+                $base = null;
             }
         }
+
+        if (!$base) {
+            return null;
+        }
+
+        // 2) Intentar enriquecer de forma ligera: nombre de cliente (empresa)
+        try {
+            if (!empty($base['clienteId'])) {
+                foreach (['cliente','Cliente'] as $t) {
+                    try {
+                        $cli = $db->query('SELECT nombre FROM ' . $t . ' WHERE id = ?', [$base['clienteId']])->getRowArray();
+                        if ($cli && isset($cli['nombre'])) {
+                            $base['empresa'] = $cli['nombre'];
+                            break;
+                        }
+                    } catch (\Throwable $e) {}
+                }
+            }
+        } catch (\Throwable $e) {}
+
+        // 3) Adjuntar datos de la última orden de producción ligada (si existe)
+        try {
+            if (!empty($base['id'])) {
+                // Variante 1: tablas en minúscula
+                try {
+                    $op = $db->query(
+                        "SELECT op.* FROM orden_produccion op
+                         INNER JOIN (
+                           SELECT MAX(id) AS id, ordenCompraId
+                           FROM orden_produccion
+                           GROUP BY ordenCompraId
+                         ) t ON t.id = op.id
+                         WHERE op.ordenCompraId = ?
+                         LIMIT 1",
+                        [$base['id']]
+                    )->getRowArray();
+                    if ($op) {
+                        $base['op_id'] = $op['id'] ?? null;
+                        $base['op_folio'] = $op['folio'] ?? null;
+                        $base['op_disenoVersionId'] = $op['disenoVersionId'] ?? null;
+                        $base['op_cantidadPlan'] = $op['cantidadPlan'] ?? null;
+                        $base['op_fechaInicioPlan'] = $op['fechaInicioPlan'] ?? null;
+                        $base['op_fechaFinPlan'] = $op['fechaFinPlan'] ?? null;
+                        $base['op_status'] = $op['status'] ?? null;
+                    }
+                } catch (\Throwable $e) {
+                    // Variante 2: tablas con mayúsculas
+                    try {
+                        $op = $db->query(
+                            "SELECT op.* FROM OrdenProduccion op
+                             INNER JOIN (
+                               SELECT MAX(id) AS id, ordenCompraId
+                               FROM OrdenProduccion
+                               GROUP BY ordenCompraId
+                             ) t ON t.id = op.id
+                             WHERE op.ordenCompraId = ?
+                             LIMIT 1",
+                            [$base['id']]
+                        )->getRowArray();
+                        if ($op) {
+                            $base['op_id'] = $op['id'] ?? null;
+                            $base['op_folio'] = $op['folio'] ?? null;
+                            $base['op_disenoVersionId'] = $op['disenoVersionId'] ?? null;
+                            $base['op_cantidadPlan'] = $op['cantidadPlan'] ?? null;
+                            $base['op_fechaInicioPlan'] = $op['fechaInicioPlan'] ?? null;
+                            $base['op_fechaFinPlan'] = $op['fechaFinPlan'] ?? null;
+                            $base['op_status'] = $op['status'] ?? null;
+                        }
+                    } catch (\Throwable $e2) {}
+                }
+            }
+        } catch (\Throwable $e) {}
+
+        // 4) Consulta robusta y simple (join solo con cliente.nombre)
+        try {
+            $row = $db->query(
+                "SELECT oc.id, oc.clienteId, oc.folio, oc.fecha, oc.estatus, oc.moneda, oc.total,
+                        c.nombre AS empresa
+                 FROM orden_compra oc
+                 LEFT JOIN cliente c ON c.id = oc.clienteId
+                 WHERE oc.id = ?",
+                [$id]
+            )->getRowArray();
+            if ($row) {
+                // Si ya trajimos op_*, preservarlos
+                return array_merge($row, array_intersect_key($base, array_flip([
+                    'op_id','op_folio','op_disenoVersionId','op_cantidadPlan','op_fechaInicioPlan','op_fechaFinPlan','op_status'
+                ])));
+            }
+        } catch (\Throwable $e) {
+            try {
+                $row2 = $db->query(
+                    "SELECT oc.id, oc.clienteId, oc.folio, oc.fecha, oc.estatus, oc.moneda, oc.total,
+                            c.nombre AS empresa
+                     FROM OrdenCompra oc
+                     LEFT JOIN Cliente c ON c.id = oc.clienteId
+                     WHERE oc.id = ?",
+                    [$id]
+                )->getRowArray();
+                if ($row2) {
+                    return array_merge($row2, array_intersect_key($base, array_flip([
+                        'op_id','op_folio','op_disenoVersionId','op_cantidadPlan','op_fechaInicioPlan','op_fechaFinPlan','op_status'
+                    ])));
+                }
+            } catch (\Throwable $e2) {}
+        }
+
+        return $base;
     }
 }
