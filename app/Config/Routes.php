@@ -59,6 +59,8 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->get('detalles/(:num)', 'Modulos::m1_detalles/$1');
     $routes->get('perfilempleado',  'Modulos::m1_perfilempleado');
     $routes->get('ordenes',         'Modulos::m1_ordenes');
+    // API JSON: detalle de pedido
+    $routes->get('pedido/(:num)/json', 'Modulos::m1_pedido_json/$1');
 
     // URL pública correcta dentro del grupo (evita /modulo1/modulo1/..)
     $routes->get('ordenes-produccion', 'Produccion::ordenes');
@@ -79,6 +81,8 @@ $routes->group('modulo2', [], function ($routes) {
     $routes->post('agregardiseno',      'Modulos::m2_agregardiseno');
     $routes->get('editardiseno/(:num)', 'Modulos::m2_editardiseno/$1');
     $routes->post('actualizar/(:num)',  'Modulos::m2_actualizar/$1');
+    // API JSON: detalle de diseño
+    $routes->get('diseno/(:num)/json',  'Modulos::m2_diseno_json/$1');
 });
 
 // ---------------------------

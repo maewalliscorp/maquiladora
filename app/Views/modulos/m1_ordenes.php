@@ -21,7 +21,7 @@
             <tr>
                 <th>OP</th>
                 <th>Cliente</th>
-                <th>Responsable</th>
+                <th>Diseño</th>
                 <th>Inicio</th>
                 <th>Fin</th>
                 <th>Estatus</th>
@@ -34,7 +34,7 @@
                     <tr>
                         <td><?= esc($orden['op']) ?></td>
                         <td><?= esc($orden['cliente']) ?></td>
-                        <td><?= esc($orden['responsable']) ?></td>
+                        <td><?= esc($orden['diseno'] ?? '') ?></td>
                         <td><?= esc($orden['ini']) ?></td>
                         <td><?= esc($orden['fin']) ?></td>
                         <td>

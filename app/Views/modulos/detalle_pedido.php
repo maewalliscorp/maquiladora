@@ -74,7 +74,7 @@
             <div>
                 <div class="info-item">
                     <div class="info-label">Empresa:</div>
-                    <div class="info-value"><?= esc($pedido['empresa'] ?? '') ?></div>
+                    <div class="info-value"><?= esc($pedido['empresa'] ?? ($pedido['cliente']['nombre'] ?? '')) ?></div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">Contacto:</div>
@@ -189,6 +189,84 @@
                 <p class="mt-3 info-value"><?= esc($pedido['descripcion'] ?? '') ?></p>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Diseño asignado al cliente / a la OP -->
+<div class="card shadow-sm mt-3">
+    <div class="card-header">
+        <strong>🎨 DISEÑO ASIGNADO</strong>
+    </div>
+    <div class="card-body">
+        <?php if (!empty($pedido['diseno'])): ?>
+            <?php $d = $pedido['diseno']; $ver = is_array($d['version'] ?? null) ? $d['version'] : null; ?>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="info-item">
+                        <div class="info-label">Código:</div>
+                        <div class="info-value"><?= esc($d['codigo'] ?? '') ?></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-item">
+                        <div class="info-label">Nombre:</div>
+                        <div class="info-value"><?= esc($d['nombre'] ?? '') ?></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-item">
+                        <div class="info-label">Versión:</div>
+                        <div class="info-value"><?= esc($ver['version'] ?? '') ?></div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-8">
+                    <div class="info-item">
+                        <div class="info-label">Descripción:</div>
+                        <div class="info-value"><?= esc($d['descripcion'] ?? '') ?></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-item">
+                        <div class="info-label">Fecha versión:</div>
+                        <div class="info-value"><?= esc($ver['fecha'] ?? '') ?></div>
+                    </div>
+                </div>
+            </div>
+            <?php if (!empty($ver['archivoCadUrl']) || !empty($ver['archivoPatronUrl'])): ?>
+            <div class="row mt-2">
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <div class="info-label">CAD:</div>
+                        <div class="info-value">
+                            <?php if (!empty($ver['archivoCadUrl'])): ?>
+                                <a href="<?= base_url($ver['archivoCadUrl']) ?>" target="_blank">Descargar CAD</a>
+                            <?php else: ?>
+                                <span class="text-muted">No disponible</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <div class="info-label">Patrón:</div>
+                        <div class="info-value">
+                            <?php if (!empty($ver['archivoPatronUrl'])): ?>
+                                <a href="<?= base_url($ver['archivoPatronUrl']) ?>" target="_blank">Descargar Patrón</a>
+                            <?php else: ?>
+                                <span class="text-muted">No disponible</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+        <?php else: ?>
+            <div class="alert alert-warning mb-0">
+                No hay un diseño ligado a este pedido. <?= !empty($pedido['disenos']) ? 'El cliente tiene '.count($pedido['disenos']).' diseño(s) registrados.' : 'El cliente no tiene diseños registrados.' ?>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
 

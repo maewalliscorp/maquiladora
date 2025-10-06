@@ -2,11 +2,10 @@
 
 namespace App\Controllers;
 
+/** Controlador principal: vistas y endpoints JSON de módulos. */
 class Modulos extends BaseController
 {
-    /**
-     * Datos base para todas las vistas (notificaciones y usuario).
-     */
+    /** Datos base (notif/usuario) + datos de vista. */
     private function payload(array $data = []): array
     {
         $base = [
@@ -16,9 +15,7 @@ class Modulos extends BaseController
         return array_merge($base, $data);
     }
 
-    /**
-     * Alias a dashboard por compatibilidad.
-     */
+    /** Alias a dashboard(). */
     public function index()
     {
         return $this->dashboard();
@@ -28,6 +25,7 @@ class Modulos extends BaseController
      *                   MÓDULO 3 (Dashboard)
      * ========================================================= */
 
+    /** Dashboard de gestión (demo). */
     public function dashboard()
     {
         $kpis = [
@@ -43,6 +41,94 @@ class Modulos extends BaseController
             'kpis'  => $kpis,
             'notifCount' => 3,
         ]));
+    }
+
+    /** JSON detalle normalizado de pedido. */
+    public function m1_pedido_json($id = null)
+    {
+        $id = (int)($id ?? 0);
+        if ($id <= 0) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'ID inválido']);
+        }
+
+        $pedidoModel = new \App\Models\PedidoModel();
+        // Traer detalle completo (cliente + clasificacion + items)
+        $detalle = $pedidoModel->getPedidoDetalle($id);
+        // Fallback: al menos datos básicos del pedido
+        if (!$detalle) {
+            $basic = $pedidoModel->getPedidoPorId($id);
+            if (!$basic) {
+                return $this->response->setStatusCode(404)->setJSON(['error' => 'Pedido no encontrado']);
+            }
+            $detalle = [
+                'id' => (int)($basic['id'] ?? $id),
+                'folio' => $basic['folio'] ?? '',
+                'fecha' => $basic['fecha'] ?? null,
+                'estatus' => $basic['estatus'] ?? '',
+                'moneda' => $basic['moneda'] ?? '',
+                'total' => $basic['total'] ?? 0,
+                'cliente' => [
+                    'nombre' => $basic['empresa'] ?? '',
+                ],
+                'items' => [],
+            ];
+        }
+
+        // Normalizar para el modal
+        $out = [
+            'id' => (int)($detalle['id'] ?? $id),
+            'folio' => $detalle['folio'] ?? '',
+            'fecha' => isset($detalle['fecha']) ? date('Y-m-d', strtotime($detalle['fecha'])) : '',
+            'estatus' => $detalle['estatus'] ?? '',
+            'moneda' => $detalle['moneda'] ?? '',
+            'total' => isset($detalle['total']) ? number_format((float)$detalle['total'], 2) : '0.00',
+            'empresa' => $detalle['cliente']['nombre'] ?? ($detalle['empresa'] ?? ''),
+            'cliente' => $detalle['cliente'] ?? null,
+            'items' => $detalle['items'] ?? [],
+            'diseno' => $detalle['diseno'] ?? null,
+            'disenos' => $detalle['disenos'] ?? [],
+            'documento_url' => $detalle['documento_url'] ?? '',
+        ];
+
+        return $this->response->setJSON($out);
+    }
+
+    /** JSON detalle normalizado de diseño. */
+    public function m2_diseno_json($id = null)
+    {
+        $id = (int)($id ?? 0);
+        if ($id <= 0) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'ID inválido']);
+        }
+
+        $disenoModel = new \App\Models\DisenoModel();
+        $detalle = $disenoModel->getDisenoDetalle($id);
+        if (!$detalle) {
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'Diseño no encontrado']);
+        }
+
+        // Normalizar salida y agregar campos convenientes
+        $out = [
+            'id' => (int)$detalle['id'],
+            'codigo' => $detalle['codigo'] ?? '',
+            'nombre' => $detalle['nombre'] ?? '',
+            'descripcion' => $detalle['descripcion'] ?? '',
+            'version' => $detalle['version'] ?? '',
+            'fecha' => $detalle['fecha'] ?? '',
+            'notas' => $detalle['notas'] ?? '',
+            'materiales' => $detalle['materiales'] ?? [],
+            'archivoCadUrl' => $detalle['archivoCadUrl'] ?? '',
+            'archivoPatronUrl' => $detalle['archivoPatronUrl'] ?? '',
+            'aprobado' => $detalle['aprobado'] ?? null,
+            // Nuevos: listas de archivos/imágenes (compatibles hacia atrás)
+            'archivosCad' => $detalle['archivosCad'] ?? [],
+            'archivosPatron' => $detalle['archivosPatron'] ?? [],
+            'imagenes' => $detalle['imagenes'] ?? [],
+            // Si más adelante tienes una imagen, puedes exponerla aquí
+            'imagenUrl' => $detalle['imagenUrl'] ?? '',
+        ];
+
+        return $this->response->setJSON($out);
     }
 
     public function ordenes()
@@ -263,6 +349,7 @@ class Modulos extends BaseController
         return $this->m1_pedidos();
     }
 
+    /** Vista listado de pedidos (Módulo 1). */
     public function m1_pedidos()
     {
         $pedidoModel = new \App\Models\PedidoModel();
@@ -277,11 +364,49 @@ class Modulos extends BaseController
 
     public function m1_ordenes()
     {
-        $ordenes = [
-            ['op' => 'OP-0001', 'cliente' => 'Textiles MX', 'responsable' => 'Juan Pérez', 'ini' => '2025-09-20', 'fin' => '2025-09-25', 'estatus' => 'En proceso'],
-            ['op' => 'OP-0002', 'cliente' => 'Fábrica Sur', 'responsable' => 'María López', 'ini' => '2025-09-21', 'fin' => '2025-09-27', 'estatus' => 'Planificada'],
-            ['op' => 'OP-0003', 'cliente' => 'Industrias PZ', 'responsable' => 'Carlos Ruiz', 'ini' => '2025-09-19', 'fin' => '2025-09-24', 'estatus' => 'En proceso'],
-        ];
+        // Traer órdenes reales: orden_produccion -> orden_compra -> cliente
+        $db = \Config\Database::connect();
+        $ordenes = [];
+
+        // Variante minúsculas
+        $sql = "SELECT 
+                    COALESCE(op.folio, CONCAT('OP-', LPAD(op.id, 4, '0'))) AS op,
+                    c.nombre AS cliente,
+                    d.nombre AS diseno,
+                    op.fechaInicioPlan AS ini,
+                    op.fechaFinPlan AS fin,
+                    op.status AS estatus
+                FROM orden_produccion op
+                LEFT JOIN orden_compra oc ON oc.id = op.ordenCompraId
+                LEFT JOIN cliente c ON c.id = oc.clienteId
+                LEFT JOIN diseno_version dv ON dv.id = op.disenoVersionId
+                LEFT JOIN diseno d ON d.id = dv.disenoId
+                WHERE op.status IS NULL OR UPPER(op.status) <> 'COMPLETADA'
+                ORDER BY op.fechaInicioPlan DESC, op.id DESC";
+        try {
+            $ordenes = $db->query($sql)->getResultArray();
+        } catch (\Throwable $e) {
+            // Variante con mayúsculas en nombres de tabla
+            $sql2 = "SELECT 
+                        COALESCE(op.folio, CONCAT('OP-', LPAD(op.id, 4, '0'))) AS op,
+                        c.nombre AS cliente,
+                        d.nombre AS diseno,
+                        op.fechaInicioPlan AS ini,
+                        op.fechaFinPlan AS fin,
+                        op.status AS estatus
+                    FROM OrdenProduccion op
+                    LEFT JOIN OrdenCompra oc ON oc.id = op.ordenCompraId
+                    LEFT JOIN Cliente c ON c.id = oc.clienteId
+                    LEFT JOIN DisenoVersion dv ON dv.id = op.disenoVersionId
+                    LEFT JOIN Diseno d ON d.id = dv.disenoId
+                    WHERE op.status IS NULL OR UPPER(op.status) <> 'COMPLETADA'
+                    ORDER BY op.fechaInicioPlan DESC, op.id DESC";
+            try {
+                $ordenes = $db->query($sql2)->getResultArray();
+            } catch (\Throwable $e2) {
+                $ordenes = [];
+            }
+        }
 
         return view('modulos/m1_ordenes', $this->payload([
             'title'      => 'Módulo 1 · Órdenes',
@@ -311,6 +436,7 @@ class Modulos extends BaseController
         ]));
     }
 
+    /** Formulario editar pedido (GET/POST). */
     public function m1_editar($id = null)
     {
         $pedidoModel = new \App\Models\PedidoModel();
@@ -357,10 +483,19 @@ class Modulos extends BaseController
         ]));
     }
 
+    /** Vista detalle de pedido (usa PedidoModel::getPedidoDetalle). */
     public function m1_detalles($id = null)
     {
         $pedidoModel = new \App\Models\PedidoModel();
-        $pedido = $pedidoModel->getPedidoPorId((int)$id);
+        // Traer detalle completo para incluir cliente, direcciones, y diseño asignado
+        $pedido = $pedidoModel->getPedidoDetalle((int)$id);
+
+        // Normalizar campos esperados por la vista
+        if (is_array($pedido)) {
+            if (!isset($pedido['empresa']) && isset($pedido['cliente']['nombre'])) {
+                $pedido['empresa'] = $pedido['cliente']['nombre'];
+            }
+        }
 
         return view('modulos/detalle_pedido', $this->payload([
             'title'      => 'Módulo 1 · Detalle del Pedido',

@@ -20,7 +20,6 @@
             <img src="<?= base_url('img/logo_Maquiladora.png') ?>" alt="Logo" width="32" class="me-1 d-lg-none">
             <img src="<?= base_url('img/logo_Maquiladora.png') ?>" alt="Logo" width="48" class="me-2 d-none d-lg-block">
             <span class="fw-bold text-dark d-none d-md-inline">Sistema de Maquiladora</span>
-            <span class="fw-bold text-dark d-md-none d-lg-inline">Maquiladora</span>
         </a>
 
         <!-- Indicador de usuario en móvil -->
