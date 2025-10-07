@@ -8,10 +8,13 @@
 
 <?= $this->section('content') ?>
 <div class="d-flex align-items-center mb-4">
-    <h1 class="me-3">Editar Pedido</h1>
+    <h1 class="me-3">Editar Pedido <?= isset($pedido['id']) ? '#'.esc($pedido['id']) : '' ?></h1>
     <span class="badge bg-primary">Módulo 1</span>
+    <div class="ms-auto d-flex gap-2">
+        <a href="<?= base_url('modulo1/detalles/' . ($id ?? ($pedido['id'] ?? ''))) ?>" class="btn btn-outline-secondary btn-sm">Ver detalle</a>
+        <a href="<?= base_url('modulo1') ?>" class="btn btn-volver btn-sm">← Volver</a>
+    </div>
 </div>
-<?php // Datos se llenarán desde la BD cuando esté disponible. ?>
 
 <form id="formEditarPedido" action="<?= base_url('modulo1/editar') ?>" method="POST">
     <input type="hidden" name="id" value="<?= esc($id ?? ($pedido['id'] ?? '')) ?>">
@@ -23,46 +26,21 @@
                     <strong>Cliente</strong>
                 </div>
                 <div class="card-body">
-                    <input type="text" class="form-control mb-2" name="empresa" value="<?= esc($pedido['empresa'] ?? '') ?>" required>
-                    <input type="text" class="form-control mb-2" name="contacto" value="<?= esc($pedido['contacto'] ?? '') ?>" required>
-                    <input type="email" class="form-control mb-2" name="email" value="<?= esc($pedido['email'] ?? '') ?>" required>
-                    <input type="tel" class="form-control mb-2" name="telefono" value="<?= esc($pedido['telefono'] ?? '') ?>" required>
-                    <input type="text" class="form-control mb-2" name="rfc" value="<?= esc($pedido['rfc'] ?? '') ?>" placeholder="RFC">
-                    <textarea class="form-control mb-2" name="direccion" placeholder="Dirección"><?= esc($pedido['direccion'] ?? '') ?></textarea>
-                </div>
-            </div>
-        </div>
-
-        <!-- Columna derecha -->
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    <strong>Pedido</strong>
-                </div>
-                <div class="card-body">
-                    <textarea class="form-control mb-2" name="descripcion" rows="2"><?= esc($pedido['descripcion'] ?? '') ?></textarea>
-                    <input type="number" class="form-control mb-2" name="cantidad" value="<?= esc($pedido['cantidad'] ?? '') ?>" required>
-                    <textarea class="form-control mb-2" name="especificaciones"><?= esc($pedido['especificaciones'] ?? '') ?></textarea>
-                    <textarea class="form-control mb-2" name="materiales"><?= esc($pedido['materiales'] ?? '') ?></textarea>
-
+                    <div class="info-grid">
+                        <div>
+                            <div class="info-item">
+                                <div class="info-label">Empresa:</div>
+                                <div class="info-value"><?= esc($pedido['empresa'] ?? ($pedido['cliente']['nombre'] ?? '')) ?></div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Contacto:</div>
                     <div class="row g-2">
-                        <div class="col-md-6">
-                            <label class="form-label">Folio</label>
-                            <input type="text" class="form-control" name="folio" value="<?= esc($pedido['folio'] ?? '') ?>">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Fecha</label>
-                            <input type="date" class="form-control" name="fecha" value="<?= esc($pedido['fecha'] ?? '') ?>">
-                        </div>
-                    </div>
-                    <div class="row g-2 mt-2">
                         <div class="col-md-4">
                             <label class="form-label">Estatus</label>
                             <select class="form-select" name="estatus">
                                 <?php $est = $pedido['estatus'] ?? 'Pendiente'; ?>
                                 <option value="Pendiente" <?= ($est==='Pendiente')?'selected':'' ?>>Pendiente</option>
                                 <option value="En proceso" <?= ($est==='En proceso')?'selected':'' ?>>En proceso</option>
-                                <option value="Completado" <?= ($est==='Completado')?'selected':'' ?>>Completado</option>
                                 <option value="Cancelado" <?= ($est==='Cancelado')?'selected':'' ?>>Cancelado</option>
                             </select>
                         </div>

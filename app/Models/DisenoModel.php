@@ -22,7 +22,7 @@ class DisenoModel extends Model
     protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
     protected $returnType       = 'array';
-    protected $useSoftDeletes   = false;
+    protected $useSoftDeletes   = false; 
     protected $protectFields    = false;
 
     /**
@@ -49,9 +49,12 @@ class DisenoModel extends Model
                 WHERE dv2.id IS NULL";
 
         $sql = "SELECT d.id,
+                       d.codigo,
                        d.nombre,
                        d.descripcion,
                        dv.version,
+                       dv.fecha,
+                       dv.aprobado,
                        GROUP_CONCAT(
                          CONCAT(
                            COALESCE(lm.articuloId, 'Art'),
@@ -64,7 +67,7 @@ class DisenoModel extends Model
                 LEFT JOIN ($sub) dvsel ON dvsel.disenoId = d.id
                 LEFT JOIN diseno_version dv ON dv.id = dvsel.id
                 LEFT JOIN lista_materiales lm ON lm.disenoVersionId = dv.id
-                GROUP BY d.id, d.nombre, d.descripcion, dv.version
+                GROUP BY d.id, d.codigo, d.nombre, d.descripcion, dv.version, dv.fecha, dv.aprobado
                 ORDER BY d.id";
 
         try {
@@ -82,15 +85,18 @@ class DisenoModel extends Model
                      WHERE dv2.id IS NULL";
 
             $sql2 = "SELECT d.id,
+                              d.codigo,
                               d.nombre,
                               d.descripcion,
                               dv.version,
+                              dv.fecha,
+                              dv.aprobado,
                               GROUP_CONCAT(CONCAT(COALESCE(lm.articulo_id, 'Art'),' x ',COALESCE(lm.cantidadPorUnidad, 0)) SEPARATOR '||') AS materiales_concat
                        FROM diseno d
                        LEFT JOIN ($sub2) dvsel ON dvsel.disenoId = d.id
                        LEFT JOIN disenoversion dv ON dv.id = dvsel.id
                        LEFT JOIN listamateriales lm ON lm.disenoVersionId = dv.id
-                       GROUP BY d.id, d.nombre, d.descripcion, dv.version
+                       GROUP BY d.id, d.codigo, d.nombre, d.descripcion, dv.version, dv.fecha, dv.aprobado
                        ORDER BY d.id";
             try {
                 $result = $db->query($sql2)->getResultArray();

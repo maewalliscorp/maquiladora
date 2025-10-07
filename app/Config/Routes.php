@@ -45,7 +45,6 @@ $routes->get('/catalogodisenos',        'Modulos::m2_catalogodisenos', ['filter'
 $routes->get('/agregardiseno',          'Modulos::m2_agregardiseno',   ['filter' => 'auth']);
 $routes->get('/editardiseno',           'Modulos::m2_editardiseno',    ['filter' => 'auth']);
 
-// ---------------------------
 // Grupo: módulo 1
 // ---------------------------
 $routes->group('modulo1', [], function ($routes) {
@@ -53,7 +52,7 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->get('pedidos',         'Modulos::m1_pedidos');
     $routes->get('produccion',      'Modulos::m1_produccion');
     $routes->get('agregar',         'Modulos::m1_agregar');
-    $routes->post('agregar',        'Modulos::m1_agregar');
+    $routes->get('agregar_pedido',  'Modulos::m1_agregar');
     $routes->get('editar/(:num)',   'Modulos::m1_editar/$1');
     $routes->post('editar',         'Modulos::m1_editar');
     $routes->get('detalles/(:num)', 'Modulos::m1_detalles/$1');
@@ -61,13 +60,28 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->get('ordenes',         'Modulos::m1_ordenes');
     // API JSON: detalle de pedido
     $routes->get('pedido/(:num)/json', 'Modulos::m1_pedido_json/$1');
+    // API JSON: catálogo de clientes
+    $routes->get('clientes/json',   'Clientes::json_catalogo');
 
     // URL pública correcta dentro del grupo (evita /modulo1/modulo1/..)
     $routes->get('ordenes-produccion', 'Produccion::ordenes');
-
-    // Evaluación
     $routes->get('evaluar/(:num)',       'Modulos::m1_evaluar/$1');
     $routes->post('guardar-evaluacion',  'Modulos::m1_guardarEvaluacion');
+});
+
+// ---------------------------
+// Diagnóstico rápido de vistas/rutas
+// ---------------------------
+$routes->get('diag/ping', function () {
+    return 'OK DIAG PING';
+});
+
+$routes->get('diag/agregar', function () {
+    // Renderizar la vista directamente, sin pasar por el controlador
+    return view('modulos/agregar_pedido', [
+        'title' => 'Diag · Agregar Pedido',
+        'notifCount' => 0,
+    ]);
 });
 
 // ---------------------------
@@ -83,6 +97,8 @@ $routes->group('modulo2', [], function ($routes) {
     $routes->post('actualizar/(:num)',  'Modulos::m2_actualizar/$1');
     // API JSON: detalle de diseño
     $routes->get('diseno/(:num)/json',  'Modulos::m2_diseno_json/$1');
+    // API JSON: catálogo completo (fallback para select)
+    $routes->get('disenos/json',        'Disenos::json_catalogo');
 });
 
 // ---------------------------

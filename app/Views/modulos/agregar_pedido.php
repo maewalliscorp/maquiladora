@@ -6,16 +6,31 @@
             <h1 class="me-3">Agregar Pedido</h1>
             <span class="badge bg-primary">Módulo 1</span>
         </div>
-
         <form action="<?= base_url('modulo1/agregar') ?>" method="POST" enctype="multipart/form-data">
             <div class="row">
                 <!-- Columna izquierda -->
                 <div class="col-md-6">
                     <div class="card shadow-sm mb-3">
-                        <div class="card-header bg-light">
-                            <strong>Cliente</strong>
+                        <div class="card-header bg-light d-flex align-items-center">
+                            <strong class="me-auto">Cliente</strong>
+                            <div class="btn-group btn-group-sm" role="group" aria-label="cliente actions">
+                                <button type="button" id="cli-btn-nuevo" class="btn btn-outline-secondary">Nuevo</button>
+                                <button type="button" id="cli-btn-elegir" class="btn btn-outline-primary">Elegir</button>
+                            </div>
                         </div>
                         <div class="card-body">
+                            <input type="hidden" name="cliente_id" id="cli-id" value="">
+                            <div class="row g-2 align-items-center mb-3" id="cli-chooser" style="display:none;">
+                                <div class="col-9">
+                                    <label class="form-label">Seleccionar cliente</label>
+                                    <select class="form-select" id="cli-select">
+                                        <option value="">Cargando...</option>
+                                    </select>
+                                </div>
+                                <div class="col-auto">
+                                    <div id="cli-loading" class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true" style="display:none;"></div>
+                                </div>
+                            </div>
                             <div class="mb-3">
                                 <label class="form-label">Empresa</label>
                                 <input type="text" class="form-control" name="empresa" required>
@@ -217,6 +232,89 @@
                     alert('Por favor, complete todos los campos requeridos.');
                 }
             });
-        });
-    </script>
-<?= $this->endSection() ?>
+
+            // === Cliente: modos Nuevo / Elegir ===
+            const btnNuevo   = document.getElementById('cli-btn-nuevo');
+            const btnElegir  = document.getElementById('cli-btn-elegir');
+            const chooser    = document.getElementById('cli-chooser');
+            const selCli     = document.getElementById('cli-select');
+            const spinnerCli = document.getElementById('cli-loading');
+            const hidCliId   = document.getElementById('cli-id');
+
+            // Inputs de cliente/dirección
+            const inpEmpresa = document.querySelector('input[name="empresa"]');
+            const inpContacto= document.querySelector('input[name="contacto"]');
+            const inpEmail   = document.querySelector('input[name="email"]');
+            const inpTel     = document.querySelector('input[name="telefono"]');
+            const inpCalle   = document.querySelector('input[name="calle"]');
+            const inpExt     = document.querySelector('input[name="numExt"]');
+            const inpInt     = document.querySelector('input[name="numInt"]');
+            const inpCiudad  = document.querySelector('input[name="ciudad"]');
+            const inpEstado  = document.querySelector('input[name="estado"]');
+            const inpCp      = document.querySelector('input[name="cp"]');
+            const inpPais    = document.querySelector('input[name="pais"]');
+
+            let clientesCache = null;
+
+            function fillFromCliente(c){
+                if(!c) return;
+                hidCliId.value   = c.id ?? '';
+                inpEmpresa.value = c.nombre ?? '';
+                // contacto queda intacto (lo define el pedido)
+                inpEmail.value   = c.email ?? '';
+                inpTel.value     = c.telefono ?? '';
+                const d = c.direccion || {};
+                inpCalle.value  = d.calle  ?? '';
+                inpExt.value    = d.numExt ?? '';
+                inpInt.value    = d.numInt ?? '';
+                inpCiudad.value = d.ciudad ?? '';
+                inpEstado.value = d.estado ?? '';
+                inpCp.value     = d.cp     ?? '';
+                inpPais.value   = d.pais   ?? '';
+            }
+
+            function ensureClientes(){
+                if (Array.isArray(clientesCache)) return Promise.resolve(clientesCache);
+                spinnerCli.style.display = 'inline-block';
+                return fetch('<?= base_url('modulo1/clientes/json') ?>')
+                    .then(r => r.json())
+                    .then(list => {
+                        clientesCache = Array.isArray(list) ? list : [];
+                        selCli.innerHTML = '<option value="">Seleccionar...</option>';
+                        clientesCache.forEach(c => {
+                            const opt = document.createElement('option');
+                            opt.value = String(c.id);
+                            const label = [c.nombre||'', c.email||'', c.telefono||'']
+                                .filter(Boolean).join(' — ');
+                            opt.textContent = label || ('ID ' + opt.value);
+                            selCli.appendChild(opt);
+                        });
+                        return clientesCache;
+                    })
+                    .finally(() => { spinnerCli.style.display = 'none'; });
+            }
+
+            if (btnElegir) {
+                btnElegir.addEventListener('click', function(){
+                    chooser.style.display = '';
+                    ensureClientes();
+                });
+            }
+
+            if (btnNuevo) {
+                btnNuevo.addEventListener('click', function(){
+                    // Oculta el selector; conserva lo ya capturado (no limpia)
+                    chooser.style.display = 'none';
+                    selCli.value = '';
+                    hidCliId.value = '';
+                });
+            }
+
+            if (selCli) {
+                selCli.addEventListener('change', function(){
+                    const id = this.value;
+                    if (!id || !Array.isArray(clientesCache)) return;
+                    const found = clientesCache.find(c => String(c.id) === String(id));
+                    if (found) fillFromCliente(found);
+                });
+            }

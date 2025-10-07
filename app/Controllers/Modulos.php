@@ -740,18 +740,18 @@ class Modulos extends BaseController
             if (!is_dir($uploadPath)) {
                 mkdir($uploadPath, 0755, true);
             }
-            
+
             // Generar nombre único para el archivo
             $newName = $file->getRandomName();
             $file->move($uploadPath, $newName);
-            
+
             // Guardar la ruta del archivo
             $data['archivo'] = 'uploads/disenos/' . $newName;
         }
 
         // Aquí iría la lógica para actualizar en la base de datos
         // Por ahora, solo simulamos la actualización
-        
+
         return redirect()->to('/modulo2/catalogodisenos')->with('success', 'Diseño actualizado correctamente');
     }
 
@@ -762,7 +762,7 @@ class Modulos extends BaseController
     public function m11_usuarios()
     {
         $usuarioModel = new \App\Models\UsuarioModel();
-        
+
         // Obtener usuarios con datos de empleado desde la base de datos
         $usuarios = $usuarioModel->getUsuariosConEmpleados();
 
@@ -778,7 +778,7 @@ class Modulos extends BaseController
         if ($this->request->getMethod() === 'post') {
             $usuarioModel = new \App\Models\UsuarioModel();
             $empleadoModel = new \App\Models\EmpleadoModel();
-            
+
             // Validar datos
             $validation = \Config\Services::validation();
             $validation->setRules([
@@ -809,40 +809,40 @@ class Modulos extends BaseController
                     'ultimoAcceso' => date('Y-m-d H:i:s'),
                     'idmaquiladora' => $this->request->getPost('idMaquiladora') ?: null
                 ];
-                
+
                 $usuarioId = $usuarioModel->insert($usuarioData);
-                
+
                 if (!$usuarioId) {
                     throw new \Exception('Error al crear el usuario');
                 }
 
                 // Crear empleado
                 $empleadoData = [
-                'noEmpleado' => $this->request->getPost('noEmpleado'),
-                'nombre' => $this->request->getPost('nombre'),
-                'apellido' => $this->request->getPost('apellido'),
-                'email' => $this->request->getPost('email'),
-                'telefono' => $this->request->getPost('telefono'),
+                    'noEmpleado' => $this->request->getPost('noEmpleado'),
+                    'nombre' => $this->request->getPost('nombre'),
+                    'apellido' => $this->request->getPost('apellido'),
+                    'email' => $this->request->getPost('email'),
+                    'telefono' => $this->request->getPost('telefono'),
                     'domicilio' => $this->request->getPost('domicilio'),
-                'puesto' => $this->request->getPost('puesto'),
-                'activo' => 1,
+                    'puesto' => $this->request->getPost('puesto'),
+                    'activo' => 1,
                     'idusuario' => $usuarioId
                 ];
-                
+
                 $empleadoId = $empleadoModel->insert($empleadoData);
-                
+
                 if (!$empleadoId) {
                     throw new \Exception('Error al crear el empleado');
                 }
 
                 $db->transComplete();
-                
+
                 if ($db->transStatus() === false) {
                     throw new \Exception('Error en la transacción');
                 }
 
-            return redirect()->to('/modulo11/usuarios')->with('success', 'Usuario agregado correctamente');
-                
+                return redirect()->to('/modulo11/usuarios')->with('success', 'Usuario agregado correctamente');
+
             } catch (\Exception $e) {
                 $db->transRollback();
                 return redirect()->back()->withInput()->with('error', 'Error al crear el usuario: ' . $e->getMessage());
@@ -891,41 +891,41 @@ class Modulos extends BaseController
                     'activo' => $this->request->getPost('activo_usuario') ?: 1,
                     'idmaquiladora' => $this->request->getPost('idMaquiladora') ?: null
                 ];
-                
+
                 // Si se proporcionó una nueva contraseña, la actualizamos
                 if ($this->request->getPost('password') && $this->request->getPost('password') !== '') {
                     $usuarioData['password'] = $this->request->getPost('password');
                 }
-                
+
                 $usuarioModel->update($id, $usuarioData);
 
                 // Obtener el empleado asociado al usuario
                 $empleado = $empleadoModel->where('idusuario', $id)->first();
-                
+
                 if ($empleado) {
                     // Actualizar empleado existente
                     $empleadoData = [
-                'noEmpleado' => $this->request->getPost('noEmpleado'),
-                'nombre' => $this->request->getPost('nombre'),
-                'apellido' => $this->request->getPost('apellido'),
-                'email' => $this->request->getPost('email'),
-                'telefono' => $this->request->getPost('telefono'),
+                        'noEmpleado' => $this->request->getPost('noEmpleado'),
+                        'nombre' => $this->request->getPost('nombre'),
+                        'apellido' => $this->request->getPost('apellido'),
+                        'email' => $this->request->getPost('email'),
+                        'telefono' => $this->request->getPost('telefono'),
                         'domicilio' => $this->request->getPost('domicilio'),
-                'puesto' => $this->request->getPost('puesto'),
+                        'puesto' => $this->request->getPost('puesto'),
                         'activo' => $this->request->getPost('activo_empleado') ?: 1
                     ];
-                    
+
                     $empleadoModel->update($empleado['id'], $empleadoData);
                 }
 
                 $db->transComplete();
-                
+
                 if ($db->transStatus() === false) {
                     throw new \Exception('Error en la transacción');
                 }
 
-            return redirect()->to('/modulo11/usuarios')->with('success', 'Usuario actualizado correctamente');
-                
+                return redirect()->to('/modulo11/usuarios')->with('success', 'Usuario actualizado correctamente');
+
             } catch (\Exception $e) {
                 $db->transRollback();
                 return redirect()->back()->withInput()->with('error', 'Error al actualizar el usuario: ' . $e->getMessage());
@@ -934,7 +934,7 @@ class Modulos extends BaseController
 
         // Obtener datos del usuario con empleado desde la base de datos
         $usuario = $usuarioModel->getUsuarioConEmpleado($id);
-        
+
         if (!$usuario) {
             return redirect()->to('/modulo11/usuarios')->with('error', 'Usuario no encontrado');
         }
