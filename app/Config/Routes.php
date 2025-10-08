@@ -100,9 +100,10 @@ $routes->group('modulo2', [], function ($routes) {
 });
 
 // --------------------------------------------------------------------
-// Módulo 3 (Dashboard y Gestión)
+// Módulo 3 (Dashboard, Gestión, Inspección, Mantenimiento)
 // --------------------------------------------------------------------
 $routes->group('modulo3', [], function ($routes) {
+
     $routes->get('/',         'Modulos::dashboard');
     $routes->get('dashboard', 'Modulos::dashboard');
     $routes->get('ordenes',   'Modulos::ordenes');
@@ -113,21 +114,29 @@ $routes->group('modulo3', [], function ($routes) {
     $routes->get ('wip/debug',              'Wip::debug');
     $routes->post('wip/actualizar/(:num)',  'Wip::actualizar/$1');
 
-    // Otras vistas de módulo 3
-    $routes->get('incidencias',     'Modulos::incidencias');
+    // Incidencias / Inspección
+    $routes->get('incidencias',                 'Incidencias::index');     // vista principal
+    $routes->post('incidencias/crear',          'Incidencias::store');     // registrar
+    $routes->get('incidencias/eliminar/(:num)', 'Incidencias::delete/$1'); // eliminar
+
+    // Otras vistas módulo 3
     $routes->get('reportes',        'Modulos::reportes');
     $routes->get('notificaciones',  'Modulos::notificaciones');
     $routes->get('inspeccion',                  'Inspeccion::index');
     $routes->get('inspeccion/evaluar/(:num)',   'Inspeccion::evaluar/$1');
     $routes->post('inspeccion/evaluar/(:num)',  'Inspeccion::guardarEvaluacion/$1');
     $routes->get('mrp',             'Modulos::mrp');
-    $routes->get('desperdicios',    'Modulos::desperdicios');
 
-    // Inventario / Mantenimiento (vistas)
+    // Desperdicios (alias dentro de módulo 3 → redirige al módulo "calidad")
+    $routes->get('desperdicios', function () {
+        return redirect()->to(site_url('calidad/desperdicios'));
+    });
+
+    // Inventario / Mantenimiento
     $routes->get('mantenimiento_inventario', 'Maquinaria::index');
     $routes->get('mantenimiento_preventivo', 'Modulos::mantenimientoPreventivo');
 
-    // Compat: redirige a la ruta nueva del correctivo
+    // Compat: mantenimiento correctivo
     $routes->get('mantenimiento_correctivo', function () {
         return redirect()->to(site_url('modulo3/mantenimiento/correctivo'));
     });
@@ -137,7 +146,7 @@ $routes->group('modulo3', [], function ($routes) {
     $routes->post('maquinaria/guardar',       'Maquinaria::guardar');
     $routes->get ('maquinaria/editar/(:num)', 'Maquinaria::editar/$1');
 
-    // --------- Mantenimiento Correctivo (oficial dentro de modulo3)
+    // --------- Mantenimiento Correctivo
     $routes->group('mantenimiento', function($r){
         $r->get ('correctivo',       'MantenimientoCorrectivo::index');
         $r->get ('correctivo/diag',  'MantenimientoCorrectivo::diag');
@@ -148,14 +157,13 @@ $routes->group('modulo3', [], function ($routes) {
 
 // --------------------------------------------------------------------
 // Alias corto fuera de módulo: /mantenimiento/correctivo
-// (útil para enlaces directos o favoritos)
 // --------------------------------------------------------------------
 $routes->group('mantenimiento', ['namespace'=>'App\Controllers'], static function($r){
     $r->get ('correctivo',         'MantenimientoCorrectivo::index');
     $r->get ('correctivo/diag',    'MantenimientoCorrectivo::diag');
     $r->get ('correctivo/probe',   'MantenimientoCorrectivo::probe');
     $r->post('correctivo/crear',   'MantenimientoCorrectivo::crear');
-    $r->post('correctivo/actualizar/(:num)', 'MantenimientoCorrectivo::actualizar/$1'); // ▶︎ NUEVA
+    $r->post('correctivo/actualizar/(:num)', 'MantenimientoCorrectivo::actualizar/$1');
 });
 
 $routes->group('modulo3', ['namespace'=>'App\Controllers'], static function($routes){
@@ -164,8 +172,26 @@ $routes->group('modulo3', ['namespace'=>'App\Controllers'], static function($rou
         $r->get ('correctivo/diag',    'MantenimientoCorrectivo::diag');
         $r->get ('correctivo/probe',   'MantenimientoCorrectivo::probe');
         $r->post('correctivo/crear',   'MantenimientoCorrectivo::crear');
-        $r->post('correctivo/actualizar/(:num)', 'MantenimientoCorrectivo::actualizar/$1'); // ▶︎ NUEVA
+        $r->post('correctivo/actualizar/(:num)', 'MantenimientoCorrectivo::actualizar/$1');
     });
+});
+
+// --------------------------------------------------------------------
+// Calidad (Desperdicios & Reprocesos)  ← NUEVO
+// --------------------------------------------------------------------
+$routes->group('calidad', [], function ($routes) {
+    // Vista principal (tabla + modales)
+    $routes->get('desperdicios', 'Calidad::desperdicios');
+
+    // Desechos (usa tablas: inspeccion + reproceso con accion = Desecho/Scrap)
+    $routes->post('desperdicios/guardar',        'Calidad::guardarDesecho');
+    $routes->get ('desperdicios/(:num)',         'Calidad::verDesecho/$1');       // JSON detalle
+    $routes->post('desperdicios/(:num)/editar',  'Calidad::editarDesecho/$1');
+
+    // Reprocesos (usa tablas: inspeccion + reproceso con accion = Reproceso)
+    $routes->post('reprocesos/guardar',          'Calidad::guardarReproceso');
+    $routes->get ('reprocesos/(:num)',           'Calidad::verReproceso/$1');     // JSON detalle
+    $routes->post('reprocesos/(:num)/editar',    'Calidad::editarReproceso/$1');
 });
 
 // --------------------------------------------------------------------
@@ -213,7 +239,7 @@ $routes->get('dbschema', function () {
         foreach ($candidates as $t) {
             try {
                 $desc = $db->query('DESCRIBE ' . $t)->getResultArray();
-                $out[] = '<h4>DESCRIBE ' . $t . '</h4><pre>' . print_r($desc, true) . '</pre>';
+                $out[] = '<h4>DESCRIBE ' . $t . '</h4><pre> ' . print_r($desc, true) . '</pre>';
             } catch (\Throwable $e) {
                 $out[] = '<h4>DESCRIBE ' . $t . '</h4><pre>ERROR: ' . $e->getMessage() . '</pre>';
             }
