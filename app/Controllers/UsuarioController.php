@@ -11,6 +11,10 @@ class UsuarioController extends Controller
     {
         return view('login');
     }
+    public function register()
+    {
+        return view('register');
+    }
 
     public function authenticate()
     {
