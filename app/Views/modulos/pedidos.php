@@ -4,10 +4,205 @@
         <h1 class="me-3">Pedidos</h1>
         <span class="badge bg-primary">Módulo 1</span>
         <div class="ms-auto">
-            <a href="<?= base_url('modulo1/agregar_pedido') ?>" class="btn btn-success">
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#pedidoAddModal">
                 <i class="bi bi-person-plus"></i> Agregar Pedido
-            </a>
+            </button>
         </div>
+    </div>
+
+    <!-- Modal Bootstrap: Agregar pedido (primero datos del cliente) -->
+    <div class="modal fade" id="pedidoAddModal" tabindex="-1" aria-labelledby="pedidoAddModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable modal-fullscreen-sm-down">
+        <div class="modal-content text-dark">
+          <div class="modal-header">
+            <h5 class="modal-title text-dark" id="pedidoAddModalLabel">Agregar pedido</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+            <div class="modal-body text-dark">
+              <!-- Paso 1: Cliente -->
+              <div class="mb-3">
+                <h6 class="mb-2">Cliente</h6>
+                <div class="d-flex align-items-center mb-2">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="pa-nuevo-cliente">
+                    <label class="form-check-label ms-2" for="pa-nuevo-cliente">Nuevo cliente</label>
+                  </div>
+                </div>
+                <div id="pa-select-wrap" class="row g-3 align-items-end">
+                  <div class="col-md-8">
+                    <label class="form-label">Seleccionar cliente</label>
+                    <select class="form-select" id="pa-cliente-select">
+                      <option value="">Cargando catálogo...</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4 text-end">
+                    <div id="pa-cli-loading" class="spinner-border spinner-border-sm text-primary" role="status" style="display:none;">
+                      <span class="visually-hidden">Cargando...</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="row g-3 mt-2">
+                  <input type="hidden" id="pa-cliente-id" name="cliente_id" value="">
+                  <div class="col-md-4">
+                    <label class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="pa-cli-nombre" name="cli_nombre">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="pa-cli-email" name="cli_email">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Telefono</label>
+                    <input type="text" class="form-control" id="pa-cli-telefono" name="cli_telefono">
+                  </div>
+                </div>
+              </div>
+
+              <hr>
+
+              <!-- Paso 2: Domicilio principal -->
+              <div class="mb-3">
+                <h6 class="mb-2">Domicilio</h6>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Calle</label>
+                    <input type="text" class="form-control" id="pa-dir-calle" name="cli_calle">
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label">Num. Ext</label>
+                    <input type="text" class="form-control" id="pa-dir-numext" name="cli_numext">
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label">Num. Int</label>
+                    <input type="text" class="form-control" id="pa-dir-numint" name="cli_numint">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Ciudad</label>
+                    <input type="text" class="form-control" id="pa-dir-ciudad" name="cli_ciudad">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Estado</label>
+                    <input type="text" class="form-control" id="pa-dir-estado" name="cli_estado">
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label">País</label>
+                    <input type="text" class="form-control" id="pa-dir-pais" name="cli_pais">
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label">CP</label>
+                    <input type="text" class="form-control" id="pa-dir-cp" name="cli_cp">
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Resumen</label>
+                    <input type="text" class="form-control" id="pa-dir-resumen" name="cli_dir_resumen" readonly>
+                  </div>
+                </div>
+              </div>
+
+              <hr>
+
+              <!-- Paso 3: Clasificación -->
+              <div class="mb-2">
+                <h6 class="mb-2">Clasificación</h6>
+                <div class="row g-2 align-items-end mb-2">
+                  <div class="col-md-6">
+                    <label class="form-label">Seleccionar clasificación</label>
+                    <select class="form-select" id="pa-cla-select">
+                      <option value="">Cargando catálogo...</option>
+                    </select>
+                  </div>
+                  <div class="col-auto">
+                    <div id="pa-cla-loading" class="spinner-border spinner-border-sm text-primary" role="status" style="display:none;">
+                      <span class="visually-hidden">Cargando...</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="row g-3">
+                  <input type="hidden" id="pa-cla-id" name="cla_id" value="">
+                  <div class="col-md-6">
+                    <label class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="pa-cla-nombre" name="cla_nombre" readonly>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Descripción</label>
+                    <input type="text" class="form-control" id="pa-cla-descripcion" name="cla_descripcion" readonly>
+                  </div>
+                </div>
+              </div>
+
+              <hr>
+
+              <!-- Paso 4: Diseño -->
+              <div class="mb-2">
+                <h6 class="mb-2">Diseño</h6>
+                <div class="row g-2 align-items-end mb-2">
+                  <div class="col-md-6">
+                    <label class="form-label">Seleccionar diseño</label>
+                    <select class="form-select" id="pa-dis-select">
+                      <option value="">Seleccionar...</option>
+                    </select>
+                  </div>
+                  <div class="col-auto">
+                    <div id="pa-dis-loading" class="spinner-border spinner-border-sm text-primary" role="status" style="display:none;">
+                      <span class="visually-hidden">Cargando...</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="pa-dis-nombre" readonly>
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Versión</label>
+                    <input type="text" class="form-control" id="pa-dis-version" readonly>
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Fecha versión</label>
+                    <input type="text" class="form-control" id="pa-dis-fecha" readonly>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Descripción</label>
+                    <textarea class="form-control" id="pa-dis-descripcion" rows="2" readonly></textarea>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Notas</label>
+                    <textarea class="form-control" id="pa-dis-notas" rows="2" readonly></textarea>
+                  </div>
+                </div>
+
+                <div class="row g-3 mt-2">
+                  <div class="col-md-7">
+                    <label class="form-label">Imágenes</label>
+                    <div id="pa-dis-carousel-wrap" style="display:none;">
+                      <div id="pa-dis-carousel" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner" id="pa-dis-carousel-inner"></div>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#pa-dis-carousel" data-bs-slide="prev">
+                          <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                          <span class="visually-hidden">Anterior</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#pa-dis-carousel" data-bs-slide="next">
+                          <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                          <span class="visually-hidden">Siguiente</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div id="pa-dis-noimg" class="text-muted" style="display:none;">Sin imágenes disponibles</div>
+                  </div>
+                  <div class="col-md-5">
+                    <label class="form-label">Lista de materiales</label>
+                    <ul class="list-group" id="pa-dis-materiales"></ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" id="pa-continuar">Continuar</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
 <!-- Modal Bootstrap: Detalles del pedido -->
@@ -44,7 +239,7 @@
                     <dd class="col-sm-9 text-dark" id="p-cli-nombre">-</dd>
                     <dt class="col-sm-3 fw-semibold text-dark">Email</dt>
                     <dd class="col-sm-9 text-dark" id="p-cli-email">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Teléfono</dt>
+                    <dt class="col-sm-3 fw-semibold text-dark">Telefono</dt>
                     <dd class="col-sm-9 text-dark" id="p-cli-telefono">-</dd>
                 </dl>
 
@@ -154,7 +349,7 @@
                 <input type="email" class="form-control" id="pe-cli-email" name="cli_email">
               </div>
               <div class="col-md-4">
-                <label class="form-label">Teléfono</label>
+                <label class="form-label">Telefono</label>
                 <input type="text" class="form-control" id="pe-cli-telefono" name="cli_telefono">
               </div>
             </div>
@@ -218,7 +413,7 @@
           </div>
           <div class="row g-3 mb-0">
               <div class="col-md-3">
-                <label class="form-label">Código</label>
+                <label class="form-label">Catalogo</label>
                 <input type="text" class="form-control" id="pe-dis-codigo" name="dis_codigo">
               </div>
               <div class="col-md-5">
@@ -348,6 +543,270 @@
             }
         });
 
+        // Manejar selección de diseño
+        $(document).on('change', '#pa-dis-select', function(){
+          const $opt = $(this).find('option:selected');
+          const id = $opt.data('id');
+          const key = $(this).val();
+          // Limpiar UI
+          const $carWrap = $('#pa-dis-carousel-wrap');
+          const $carInner = $('#pa-dis-carousel-inner');
+          const $noimg = $('#pa-dis-noimg');
+          const $matList = $('#pa-dis-materiales');
+          $carInner.empty();
+          $carWrap.hide();
+          $noimg.hide();
+          $matList.empty();
+          $('#pa-dis-nombre, #pa-dis-version, #pa-dis-fecha, #pa-dis-descripcion, #pa-dis-notas').val('');
+
+          if (!id) { return; }
+          $('#pa-dis-loading').show();
+          const url = '<?= base_url('modulo2/diseno') ?>/' + id + '/json?t=' + Date.now();
+          $.getJSON(url)
+            .done(function(data){
+              // Campos básicos
+              const nombre = pick(data, ['nombre','Nombre'], '');
+              const descripcion = pick(data, ['descripcion','Descripcion'], '');
+              let verObj = data && typeof data.version === 'object' ? data.version : (data.ultima_version || null);
+              const version = verObj ? (verObj.version ?? verObj.ver ?? '') : (data.version ?? '');
+              const fecha = verObj ? (verObj.fecha ?? '') : (data.fecha ?? '');
+              const notas = verObj ? (verObj.notas ?? '') : (data.notas ?? '');
+              $('#pa-dis-nombre').val(nombre || '');
+              $('#pa-dis-descripcion').val(descripcion || '');
+              $('#pa-dis-version').val(version || '');
+              if (fecha){
+                const d = new Date(fecha);
+                $('#pa-dis-fecha').val(isNaN(d) ? String(fecha).slice(0,10) : d.toISOString().slice(0,10));
+              } else {
+                $('#pa-dis-fecha').val('');
+              }
+              $('#pa-dis-notas').val(notas || '');
+
+              // Imágenes (tolerante)
+              let imgs = [];
+              const tryArrays = [
+                data?.imagenes, data?.images, data?.fotos,
+                verObj?.imagenes, verObj?.images, verObj?.fotos
+              ];
+              for (let i=0;i<tryArrays.length;i++){
+                if (Array.isArray(tryArrays[i]) && tryArrays[i].length){ imgs = tryArrays[i]; break; }
+              }
+              if (imgs.length){
+                imgs.forEach(function(it, idx){
+                  const url = typeof it === 'string' ? it : (it.url || it.src || '');
+                  if (!url) return;
+                  const active = idx === 0 ? ' active' : '';
+                  $carInner.append(
+                    '<div class="carousel-item'+active+'">\n' +
+                    '  <img class="d-block w-100" src="'+ url +'" alt="imagen '+ (idx+1) +'">\n' +
+                    '</div>'
+                  );
+                });
+                $carWrap.show();
+              } else {
+                $noimg.show();
+              }
+
+              // Materiales (tolerante)
+              let mats = [];
+              const tryMats = [data?.materiales, data?.lista_materiales, verObj?.materiales];
+              for (let i=0;i<tryMats.length;i++){
+                const src = tryMats[i];
+                if (!src) continue;
+                if (Array.isArray(src) && src.length){ mats = src; break; }
+                if (typeof src === 'string'){
+                  // Separar por ||, |, ;, coma o saltos de línea
+                  const arr = src.split(/[|]{2,}|[|,;\n]+/).map(s=>s.trim()).filter(Boolean);
+                  if (arr.length){ mats = arr; break; }
+                }
+              }
+              if (mats.length){
+                mats.forEach(function(m){
+                  if (typeof m === 'string') {
+                    // Intentar parsear formato "Nombre x Cantidad"
+                    const parts = m.split(/\s+x\s+/i);
+                    const nombre = (parts[0] || m).trim();
+                    const cant = (parts[1] || '').trim();
+                    const extra = cant ? ('<span class="badge bg-light text-dark">Cant: ' + cant + '</span>') : '';
+                    if (nombre) {
+                      $('#pa-dis-materiales').append('<li class="list-group-item d-flex justify-content-between align-items-center">'+ nombre + extra +'</li>');
+                    }
+                  } else if (m && typeof m === 'object') {
+                    let nombre = pick(m, ['nombre','articulo','articuloNombre','descripcion'], '');
+                    const artId = pick(m, ['articuloId','articulo_id','articuloID'], '');
+                    if (!nombre) { nombre = artId ? ('Art ' + artId) : ''; }
+                    const cant = pick(m, ['cantidad','cantidadPorUnidad','qty','cantidad_por_unidad'], '');
+                    const merma = pick(m, ['merma','mermaPct','merma_pct'], '');
+                    const extra = [cant ? ('Cant: ' + cant) : null, merma ? ('Merma: ' + merma) : null].filter(Boolean).join(' · ');
+                    if (nombre || extra){
+                      $('#pa-dis-materiales').append('<li class="list-group-item d-flex justify-content-between align-items-center">'+ (nombre||'Material') + (extra? ('<span class="badge bg-light text-dark">'+ extra +'</span>'):'') +'</li>');
+                    }
+                  }
+                });
+              }
+            })
+            .always(function(){ $('#pa-dis-loading').hide(); });
+        });
+
+        // Cargar catálogo de clientes al abrir el modal Agregar
+        let paClientesCache = null;
+        let paClasifCache = null;
+        let paNuevoCliente = false;
+        let paClientesMap = {};
+        // Normalizador: toma la primera clave disponible del objeto
+        function pick(obj, keys, def=''){
+            if (!obj) return def;
+            for (let i=0;i<keys.length;i++){
+                const k = keys[i];
+                if (Object.prototype.hasOwnProperty.call(obj, k) && obj[k] != null) return obj[k];
+            }
+            return def;
+        }
+        function paFillFromCliente(cli){
+            if (!cli) {
+                // Limpiar todos los campos cuando no hay cliente seleccionado
+                $('#pa-cliente-id').val('');
+                $('#pa-cli-nombre, #pa-cli-email, #pa-cli-telefono').val('');
+                $('#pa-dir-calle, #pa-dir-numext, #pa-dir-numint, #pa-dir-ciudad, #pa-dir-estado, #pa-dir-cp, #pa-dir-pais, #pa-dir-resumen').val('');
+                $('#pa-cla-nombre, #pa-cla-descripcion').val('');
+                return;
+            }
+            $('#pa-cliente-id').val(cli.id ?? '');
+            $('#pa-cli-nombre').val(cli.nombre || '');
+            $('#pa-cli-email').val(cli.email || '');
+            $('#pa-cli-telefono').val(cli.telefono || '');
+            const d0 = cli.direccion_detalle || cli.direccion || {};
+            const d = {
+                calle:  pick(d0, ['calle','Calle']),
+                numExt: pick(d0, ['numExt','num_ext','numext','numeroExterior','numero_exterior','NumeroExterior']),
+                numInt: pick(d0, ['numInt','num_int','numint','numeroInterior','numero_interior','NumeroInterior']),
+                ciudad: pick(d0, ['ciudad','Ciudad']),
+                estado: pick(d0, ['estado','Estado','provincia','Provincia']),
+                cp:     pick(d0, ['cp','CP','codigo_postal','codigoPostal','CodigoPostal','zip','ZIP']),
+                pais:   pick(d0, ['pais','País','Pais','country','Country'])
+            };
+            $('#pa-dir-calle').val(d.calle || '');
+            $('#pa-dir-numext').val(d.numExt || '');
+            $('#pa-dir-numint').val(d.numInt || '');
+            $('#pa-dir-ciudad').val(d.ciudad || '');
+            $('#pa-dir-estado').val(d.estado || '');
+            $('#pa-dir-cp').val(d.cp || '');
+            $('#pa-dir-pais').val(d.pais || '');
+            const resumen = [d.calle, d.numExt ? ('#'+d.numExt):null, d.numInt?('Int '+d.numInt):null, d.ciudad, d.estado, d.pais, d.cp?('CP '+d.cp):null]
+                .filter(Boolean).join(', ');
+            $('#pa-dir-resumen').val(resumen || '');
+            const cla = cli.clasificacion || {};
+            $('#pa-cla-nombre').val(cla.nombre || '');
+            $('#pa-cla-descripcion').val(cla.descripcion || '');
+        }
+
+        function paToggleNuevoCliente(on){
+            paNuevoCliente = !!on;
+            if (paNuevoCliente){
+                $('#pa-cliente-select').closest('.col-md-8').hide();
+                // limpiar para captura
+                $('#pa-cliente-id').val('');
+                $('#pa-cli-nombre, #pa-cli-email, #pa-cli-telefono').val('');
+                $('#pa-dir-calle, #pa-dir-numext, #pa-dir-numint, #pa-dir-ciudad, #pa-dir-estado, #pa-dir-cp, #pa-dir-pais, #pa-dir-resumen').val('');
+                $('#pa-cla-nombre, #pa-cla-descripcion').val('');
+            } else {
+                $('#pa-cliente-select').closest('.col-md-8').show();
+            }
+        }
+
+        $('#pedidoAddModal').on('show.bs.modal', function(){
+            // limpiar
+            $('#pa-cliente-select').empty().append('<option value="">Cargando catálogo...</option>');
+            $('#pa-cli-nombre, #pa-cli-email, #pa-cli-telefono').val('');
+            $('#pa-dir-calle, #pa-dir-numext, #pa-dir-numint, #pa-dir-ciudad, #pa-dir-estado, #pa-dir-cp, #pa-dir-pais, #pa-dir-resumen').val('');
+            $('#pa-cla-nombre, #pa-cla-descripcion').val('');
+            $('#pa-cliente-id').val('');
+            $('#pa-nuevo-cliente').prop('checked', false);
+            paToggleNuevoCliente(false);
+            // invalidar cache local para asegurar datos frescos
+            paClientesCache = null;
+
+            // Preparar UI de diseños
+            const $selDis = $('#pa-dis-select');
+            const $spinDis = $('#pa-dis-loading');
+            const $carWrap = $('#pa-dis-carousel-wrap');
+            const $carInner = $('#pa-dis-carousel-inner');
+            const $noimg = $('#pa-dis-noimg');
+            const $matList = $('#pa-dis-materiales');
+            $selDis.empty().append('<option value="">Seleccionar...</option>');
+            $carInner.empty();
+            $carWrap.hide();
+            $noimg.hide();
+            $matList.empty();
+            $('#pa-dis-nombre, #pa-dis-version, #pa-dis-fecha, #pa-dis-descripcion, #pa-dis-notas').val('');
+
+            // Cargar catálogo de diseños
+            $spinDis.show();
+            $.getJSON('<?= base_url('modulo2/disenos/json') ?>' + '?t=' + Date.now())
+              .done(function(arr){
+                const list = Array.isArray(arr) ? arr : [];
+                list.forEach(function(it, idx){
+                  const key = (it.id != null) ? String(it.id) : (it.codigo ? String(it.codigo) : ('idx_'+idx));
+                  const label = [it.codigo||'', it.nombre||''].filter(Boolean).join(' — ');
+                  $selDis.append('<option value="'+ key +'" data-id="'+ (it.id ?? '') +'">'+ label +'</option>');
+                });
+              })
+              .always(function(){ $spinDis.hide(); });
+
+            const cargar = function(list){
+                const $sel = $('#pa-cliente-select');
+                $sel.empty().append('<option value="">Seleccionar...</option>');
+                const keys = [];
+                paClientesMap = {};
+                list.forEach(function(c, idx){
+                    let key = (c.id != null) ? String(c.id) : (c.codigo ? String(c.codigo) : '');
+                    if (!key) { key = 'idx_' + idx; }
+                    keys.push(key);
+                    paClientesMap[key] = c;
+                    const label = [c.nombre||'', c.email||''].filter(Boolean).join(' — ');
+                    $sel.append('<option value="'+ key +'">'+ label +'</option>');
+                });
+                // No seleccionar automáticamente para evitar confusión; limpiar campos
+                $sel.val('');
+                paFillFromCliente(null);
+            };
+
+            $('#pa-cli-loading').show();
+            const urlClientes = '<?= base_url('modulo1/clientes/json') ?>' + '?t=' + Date.now();
+            $.getJSON(urlClientes)
+                .done(function(arr){
+                    paClientesCache = Array.isArray(arr) ? arr : [];
+                    cargar(paClientesCache);
+                })
+                .always(function(){ $('#pa-cli-loading').hide(); });
+        });
+
+        $(document).on('change', '#pa-cliente-select', function(){
+            const val = $(this).val();
+            if (!paClientesCache) return;
+            if (!val) { paFillFromCliente(null); return; }
+            let cli = (val && paClientesMap && paClientesMap[val]) ? paClientesMap[val] : null;
+            if (!cli && val) {
+                // Fallback por id/codigo si existiera
+                cli = paClientesCache.find(function(c){
+                    const idMatch = String(c.id ?? '') === String(val);
+                    const codMatch = String(c.codigo ?? '') === String(val);
+                    return idMatch || codMatch;
+                }) || null;
+            }
+            paFillFromCliente(cli);
+        });
+
+        $(document).on('change', '#pa-nuevo-cliente', function(){
+            paToggleNuevoCliente($(this).is(':checked'));
+        });
+
+        // Botón continuar (cerrar y abrir modal de edición existente)
+        $(document).on('click', '#pa-continuar', function(){
+            // Por ahora solo cerramos este modal; integración de guardado vendrá después
+            $('#pedidoAddModal').modal('hide');
+        });
+
         // Abrir y poblar el modal de pedido (AJAX JSON)
         $(document).on('click', '.btn-ver-pedido', function () {
             const id = $(this).data('id');
@@ -400,7 +859,7 @@
 
                     // Diseño relacionado
                     let dis = data.diseno || null;
-                    // Fallback: si no hay diseno pero viene el arreglo disenos, tomar el último
+                    // Fallback: si no hay diseño pero viene el arreglo diseños, tomar el último
                     if (!dis && Array.isArray(data.disenos) && data.disenos.length > 0) {
                         dis = data.disenos[data.disenos.length - 1];
                     }
@@ -473,7 +932,16 @@
                 $('#pe-cli-nombre').val(cli.nombre || '');
                 $('#pe-cli-email').val(cli.email || '');
                 $('#pe-cli-telefono').val(cli.telefono || '');
-                const d = cli.direccion_detalle || {};
+                const d0 = cli.direccion_detalle || cli.direccion || {};
+                const d = {
+                  calle:  pick(d0, ['calle','Calle']),
+                  numExt: pick(d0, ['numExt','num_ext','numext','numeroExterior','numero_exterior','NumeroExterior']),
+                  numInt: pick(d0, ['numInt','num_int','numint','numeroInterior','numero_interior','NumeroInterior']),
+                  ciudad: pick(d0, ['ciudad','Ciudad']),
+                  estado: pick(d0, ['estado','Estado','provincia','Provincia']),
+                  cp:     pick(d0, ['cp','CP','codigo_postal','codigoPostal','CodigoPostal','zip','ZIP']),
+                  pais:   pick(d0, ['pais','País','Pais','country','Country'])
+                };
                 $('#pe-dir-calle').val(d.calle || '');
                 $('#pe-dir-numext').val(d.numExt || '');
                 $('#pe-dir-numint').val(d.numInt || '');
@@ -692,7 +1160,7 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Descripci�n</label>
+            <label class="form-label">Descripciï¿½n</label>
             <textarea class="form-control" name="descripcion" id="pe-descripcion" rows="2"></textarea>
           </div>
 
@@ -741,9 +1209,9 @@
           <div class="small text-muted">
             <strong>Cliente</strong>: <span id="pe-empresa">-</span>
             &nbsp;|&nbsp;
-            <strong>Direcci�n</strong>: <span id="pe-dir">-</span>
+            <strong>Direcciï¿½n</strong>: <span id="pe-dir">-</span>
             &nbsp;|&nbsp;
-            <strong>Dise�o</strong>: <span id="pe-dis">-</span>
+            <strong>Diseï¿½o</strong>: <span id="pe-dis">-</span>
           </div>
         </div>
         <div class="modal-footer">
@@ -800,12 +1268,12 @@
     });
   }
 
-  // Interceptar bot�n Editar del modal de Ver
+  // Interceptar botï¿½n Editar del modal de Ver
   document.addEventListener('click', function(ev){
     const btn = ev.target.closest('#p-editar');
     if(btn){
       ev.preventDefault();
-      // Tomar ID que ya est� en el modal de ver
+      // Tomar ID que ya estï¿½ en el modal de ver
       const idTxt = document.getElementById('p-id')?.textContent?.trim() || '';
       const id = parseInt(idTxt) || null;
       if(id){
@@ -817,7 +1285,7 @@
     }
   });
 
-  // Interceptar clic al l�piz en la tabla (href actual redirige, lo transformamos en modal)
+  // Interceptar clic al lï¿½piz en la tabla (href actual redirige, lo transformamos en modal)
   document.addEventListener('click', function(ev){
     const a = ev.target.closest('a.btn.btn-sm.btn-outline-primary');
     if(!a) return;
@@ -866,3 +1334,4 @@
   });
 })();
 </script>
+

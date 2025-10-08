@@ -41,7 +41,6 @@ $routes->get('/agregar_pedido',         'Modulos::m1_agregar',        ['filter' 
 $routes->get('/editarpedido/(:num)',    'Modulos::m1_editar/$1',      ['filter' => 'auth']);
 $routes->get('/detalle_pedido/(:num)',  'Modulos::m1_detalles/$1',    ['filter' => 'auth']);
 $routes->get('/perfildisenador',        'Modulos::m2_perfildisenador', ['filter' => 'auth']);
-$routes->get('/catalogodisenos',        'Modulos::m2_catalogodisenos', ['filter' => 'auth']);
 $routes->get('/agregardiseno',          'Modulos::m2_agregardiseno',   ['filter' => 'auth']);
 $routes->get('/editardiseno',           'Modulos::m2_editardiseno',    ['filter' => 'auth']);
 
@@ -60,8 +59,9 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->get('ordenes',         'Modulos::m1_ordenes');
     // API JSON: detalle de pedido
     $routes->get('pedido/(:num)/json', 'Modulos::m1_pedido_json/$1');
-    // API JSON: catálogo de clientes
-    $routes->get('clientes/json',   'Clientes::json_catalogo');
+    // API JSON: catálogo de clientes y clasificaciones
+    $routes->get('clientes/json',              'Clientes::json_catalogo');
+    $routes->get('clientes/clasificaciones',   'Clientes::json_clasificaciones');
 
     // URL pública correcta dentro del grupo (evita /modulo1/modulo1/..)
     $routes->get('ordenes-produccion', 'Produccion::ordenes');

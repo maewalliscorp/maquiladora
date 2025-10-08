@@ -183,14 +183,109 @@
     
             if (!$row) return null;
     
-            // Expandir materiales en arreglo
+            // Expandir materiales: intento 1 (concatenado básico)
             $row['materiales'] = [];
             if (!empty($row['materiales_concat'])) {
                 foreach (explode('||', $row['materiales_concat']) as $m) {
-                    if ($m !== '') { $row['materiales'][] = $m; }
+                    if ($m !== '') {
+                        // Parsear "ArtId x Cant" a objeto
+                        $parts = preg_split('/\s+x\s+/i', (string)$m);
+                        $nombre = trim((string)($parts[0] ?? ''));
+                        $cant = trim((string)($parts[1] ?? ''));
+                        $obj = [
+                            'nombre' => $nombre ?: 'Material',
+                            'cantidad' => $cant !== '' ? $cant : null,
+                            'merma' => null,
+                        ];
+                        $row['materiales'][] = $obj;
+                    }
                 }
             }
             unset($row['materiales_concat']);
+
+            // Expandir materiales: intento 2 (consulta detallada con JOIN si es posible)
+            try {
+                // Detectar tabla de LM y columnas
+                $lmTables = ['lista_materiales','listamateriales','ListaMateriales'];
+                $dvId = null;
+                // Necesitamos el id de la última versión utilizada en el SELECT anterior
+                // Si no está explícito, intentamos recuperarlo mediante subconsulta del mismo patrón
+                $dvId = $db->query(
+                    "SELECT dv.id FROM diseno_version dv
+                     WHERE dv.disenoId = ?
+                     ORDER BY dv.fecha DESC, dv.id DESC
+                     LIMIT 1",
+                    [$row['id']]
+                )->getRow('id');
+
+                if (!$dvId) {
+                    // Fallback a variantes de tabla
+                    $dvId = $db->query(
+                        "SELECT dv.id FROM disenoversion dv
+                         WHERE dv.disenoId = ?
+                         ORDER BY dv.fecha DESC, dv.id DESC
+                         LIMIT 1",
+                        [$row['id']]
+                    )->getRow('id');
+                }
+
+                if ($dvId) {
+                    $detallados = [];
+                    foreach ($lmTables as $t) {
+                        try {
+                            // Intento unir con tabla de artículos para obtener nombre si existe
+                            $joinSqls = [
+                                // articulo (snake)
+                                "SELECT lm.articuloId, lm.cantidadPorUnidad, lm.mermaPct, a.nombre AS artNombre
+                                   FROM $t lm
+                                   LEFT JOIN articulo a ON a.id = lm.articuloId
+                                  WHERE lm.disenoVersionId = ?",
+                                // Articulo (Camel)
+                                "SELECT lm.articuloId, lm.cantidadPorUnidad, lm.mermaPct, a.nombre AS artNombre
+                                   FROM $t lm
+                                   LEFT JOIN Articulo a ON a.id = lm.articuloId
+                                  WHERE lm.disenoVersionId = ?",
+                                // producto como alternativa
+                                "SELECT lm.articuloId, lm.cantidadPorUnidad, lm.mermaPct, p.nombre AS artNombre
+                                   FROM $t lm
+                                   LEFT JOIN producto p ON p.id = lm.articuloId
+                                  WHERE lm.disenoVersionId = ?",
+                            ];
+                            $rowsLM = [];
+                            foreach ($joinSqls as $js) {
+                                try {
+                                    $rowsLM = $db->query($js, [$dvId])->getResultArray();
+                                    if ($rowsLM) break;
+                                } catch (\Throwable $e) { /* intentar siguiente */ }
+                            }
+                            if (!$rowsLM) {
+                                // Sin JOIN posible, leer crudo
+                                $rowsLM = $db->query("SELECT articuloId, cantidadPorUnidad, mermaPct FROM $t WHERE disenoVersionId = ?", [$dvId])->getResultArray();
+                            }
+                            if ($rowsLM) {
+                                foreach ($rowsLM as $rLM) {
+                                    $nombre = $rLM['artNombre'] ?? null;
+                                    if (!$nombre && isset($rLM['articuloId'])) {
+                                        $nombre = 'Art ' . $rLM['articuloId'];
+                                    }
+                                    $detallados[] = [
+                                        'nombre'   => $nombre ?: 'Material',
+                                        'cantidad' => $rLM['cantidadPorUnidad'] ?? null,
+                                        'merma'    => $rLM['mermaPct'] ?? null,
+                                    ];
+                                }
+                                break; // ya lo logramos con esta tabla
+                            }
+                        } catch (\Throwable $e) { /* probar siguiente nombre de tabla */ }
+                    }
+
+                    if ($detallados) {
+                        $row['materiales'] = $detallados; // sustituir por lista detallada
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Ignorar errores; al menos dejamos la lista básica si existe
+            }
     
             // Normalizar archivos múltiples (si existen variantes separadas por coma/pipe)
             $split = function ($val) {
