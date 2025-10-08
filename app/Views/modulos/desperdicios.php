@@ -1,4 +1,10 @@
 <?= $this->extend('layouts/main') ?>
+
+<!-- DataTables -->
+<?= $this->section('styles') ?>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
 
 <div class="d-flex align-items-center mb-4">
@@ -14,8 +20,13 @@
 <?php endif; ?>
 
 <style>
-    .table thead.table-primary th{ vertical-align:middle; font-weight:600; letter-spacing:.2px; }
     .table td, .table th{ padding:.85rem .8rem; }
+    /* Encabezado tipo catálogo (opcional) */
+    .table.tbl-head thead th{
+        background:#e6f0fb;color:#0b1720;font-weight:700;vertical-align:middle;border-color:#cfddec;position:relative;
+    }
+    .table.tbl-head thead th:not(:last-child){ box-shadow: inset -1px 0 0 #cfddec; }
+    .table.tbl-head tbody td{ background:#f9fbfe; }
 </style>
 
 <!-- Botón de diagnóstico -->
@@ -34,8 +45,8 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-striped table-bordered align-middle text-center mb-0">
-                        <thead class="table-primary">
+                    <table id="tablaDesechos" class="table table-striped table-bordered align-middle text-center mb-0 tbl-head">
+                        <thead>
                         <tr>
                             <th>Fecha</th><th>OP</th><th>Cantidad</th><th>Motivo</th><th>Vista</th><th>Editar</th>
                         </tr>
@@ -49,7 +60,8 @@
                                 <td><?= esc($x['observaciones']) ?></td>
                                 <td>
                                     <button class="btn btn-sm btn-outline-info ver-desecho"
-                                            data-id="<?= (int)$x['id'] ?>" data-bs-toggle="modal" data-bs-target="#modalVistaDesecho">
+                                            data-id="<?= (int)$x['id'] ?>" data-bs-toggle="modal" data-bs-target="#modalVistaDesecho"
+                                            title="Ver">
                                         <i class="bi bi-eye"></i>
                                     </button>
                                 </td>
@@ -60,7 +72,8 @@
                                             data-op="<?= esc($x['op']) ?>"
                                             data-cantidad="<?= esc($x['cantidad']) ?>"
                                             data-motivo="<?= esc($x['observaciones']) ?>"
-                                            data-bs-toggle="modal" data-bs-target="#modalDesecho">
+                                            data-bs-toggle="modal" data-bs-target="#modalDesecho"
+                                            title="Editar">
                                         <i class="bi bi-pencil"></i>
                                     </button>
                                 </td>
@@ -84,8 +97,8 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-striped table-bordered align-middle text-center mb-0">
-                        <thead class="table-primary">
+                    <table id="tablaReprocesos" class="table table-striped table-bordered align-middle text-center mb-0 tbl-head">
+                        <thead>
                         <tr>
                             <th>OP</th><th>Tarea</th><th>Pend.</th><th>ETA</th><th>Vista</th><th>Editar</th>
                         </tr>
@@ -99,7 +112,8 @@
                                 <td><?= esc($r['eta']) ?></td>
                                 <td>
                                     <button class="btn btn-sm btn-outline-info ver-rep"
-                                            data-id="<?= (int)$r['id'] ?>" data-bs-toggle="modal" data-bs-target="#modalVistaReproceso">
+                                            data-id="<?= (int)$r['id'] ?>" data-bs-toggle="modal" data-bs-target="#modalVistaReproceso"
+                                            title="Ver">
                                         <i class="bi bi-eye"></i>
                                     </button>
                                 </td>
@@ -110,7 +124,8 @@
                                             data-tarea="<?= esc($r['tarea']) ?>"
                                             data-pendientes="<?= (int)$r['pendientes'] ?>"
                                             data-eta="<?= esc($r['eta']) ?>"
-                                            data-bs-toggle="modal" data-bs-target="#modalReproceso">
+                                            data-bs-toggle="modal" data-bs-target="#modalReproceso"
+                                            title="Editar">
                                         <i class="bi bi-pencil"></i>
                                     </button>
                                 </td>
@@ -271,116 +286,141 @@
     </div>
 </div>
 
+<?= $this->endSection() ?>
+
+<?= $this->section('scripts') ?>
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
 <script>
-    // Helpers
-    function S(id, val){ const el=document.getElementById(id); if(el) el.textContent = val ?? '-'; }
-    function V(id, val){ const el=document.getElementById(id); if(el) el.value = val; }
+    $(function () {
+        const langES = {
+            sProcessing:"Procesando...",
+            sLengthMenu:"Mostrar _MENU_",
+            sZeroRecords:"No se encontraron resultados",
+            sEmptyTable:"Sin datos",
+            sInfo:"Mostrando _START_–_END_ de _TOTAL_",
+            sInfoEmpty:"Mostrando 0–0 de 0",
+            sInfoFiltered:"(filtrado de _MAX_)",
+            sSearch:"Buscar:",
+            oPaginate:{ sFirst:"Primero", sLast:"Último", sNext:"Siguiente", sPrevious:"Anterior" }
+        };
 
-    // Vista -> fetch JSON
-    document.querySelectorAll('.ver-desecho').forEach(b=>b.addEventListener('click', async ()=>{
-        const r = await (await fetch('<?= site_url('calidad/desperdicios') ?>/'+b.dataset.id)).json();
-        S('vd-fecha', r.fecha); S('vd-op', r.op);
-        S('vd-cantidad', r.cantidad); S('vd-motivo', r.observaciones || '-');
-    }));
+        // DataTables: deshabilitar ordenar/buscar en columnas de botones
+        $('#tablaDesechos').DataTable({
+            language: langES,
+            columnDefs: [{ orderable:false, searchable:false, targets:[4,5] }]
+        });
+        $('#tablaReprocesos').DataTable({
+            language: langES,
+            columnDefs: [{ orderable:false, searchable:false, targets:[4,5] }]
+        });
 
-    document.querySelectorAll('.ver-rep').forEach(b=>b.addEventListener('click', async ()=>{
-        const r = await (await fetch('<?= site_url('calidad/reprocesos') ?>/'+b.dataset.id)).json();
-        S('vr-op', r.op); S('vr-tarea', r.tarea);
-        S('vr-pendientes', r.cantidad ?? r.pendientes); S('vr-eta', r.fecha ?? r.eta);
-    }));
+        // ----- Eventos (delegados) compatibles con DataTables -----
 
-    // Editar -> precarga modal y cambia action
-    document.querySelectorAll('.edit-desecho').forEach(b=>b.addEventListener('click', ()=>{
-        const f = document.getElementById('formDesecho');
-        f.action = '<?= site_url('calidad/desperdicios') ?>/'+b.dataset.id+'/editar';
-        V('d-fecha', b.dataset.fecha); V('d-op', b.dataset.op);
-        V('d-cantidad', b.dataset.cantidad); V('d-motivo', b.dataset.motivo||'');
-    }));
-    document.getElementById('modalDesecho').addEventListener('show.bs.modal', e=>{
-        if (!e.relatedTarget.classList.contains('edit-desecho')) {
+        // Ver: Desecho
+        $(document).on('click', '.ver-desecho', async function(){
+            const id = this.dataset.id;
+            const r  = await (await fetch('<?= site_url('calidad/desperdicios') ?>/'+id)).json();
+            document.getElementById('vd-fecha').textContent     = r.fecha || '-';
+            document.getElementById('vd-op').textContent        = r.op || '-';
+            document.getElementById('vd-cantidad').textContent  = r.cantidad || '-';
+            document.getElementById('vd-motivo').textContent    = r.observaciones || '-';
+        });
+
+        // Ver: Reproceso
+        $(document).on('click', '.ver-rep', async function(){
+            const id = this.dataset.id;
+            const r  = await (await fetch('<?= site_url('calidad/reprocesos') ?>/'+id)).json();
+            document.getElementById('vr-op').textContent         = r.op || '-';
+            document.getElementById('vr-tarea').textContent      = r.tarea || '-';
+            document.getElementById('vr-pendientes').textContent = (r.cantidad ?? r.pendientes) || '-';
+            document.getElementById('vr-eta').textContent        = (r.fecha ?? r.eta) || '-';
+        });
+
+        // Editar: Desecho
+        $(document).on('click', '.edit-desecho', function(){
             const f = document.getElementById('formDesecho');
-            f.action = '<?= site_url('calidad/desperdicios/guardar') ?>';
-            ['d-fecha','d-op','d-cantidad','d-motivo'].forEach(id=>V(id,''));
-        }
-    });
+            f.action = '<?= site_url('calidad/desperdicios') ?>/'+this.dataset.id+'/editar';
+            document.getElementById('d-fecha').value    = this.dataset.fecha || '';
+            document.getElementById('d-op').value       = this.dataset.op || '';
+            document.getElementById('d-cantidad').value = this.dataset.cantidad || '';
+            document.getElementById('d-motivo').value   = this.dataset.motivo || '';
+        });
+        document.getElementById('modalDesecho').addEventListener('show.bs.modal', e=>{
+            if (!e.relatedTarget.classList.contains('edit-desecho')) {
+                const f = document.getElementById('formDesecho');
+                f.action = '<?= site_url('calidad/desperdicios/guardar') ?>';
+                ['d-fecha','d-op','d-cantidad','d-motivo'].forEach(id=>document.getElementById(id).value='');
+            }
+        });
 
-    document.querySelectorAll('.edit-rep').forEach(b=>b.addEventListener('click', ()=>{
-        const f = document.getElementById('formReproceso');
-        f.action = '<?= site_url('calidad/reprocesos') ?>/'+b.dataset.id+'/editar';
-        V('r-op', b.dataset.op); V('r-tarea', b.dataset.tarea);
-        V('r-pendientes', b.dataset.pendientes); V('r-eta', b.dataset.eta);
-    }));
-    document.getElementById('modalReproceso').addEventListener('show.bs.modal', e=>{
-        if (!e.relatedTarget.classList.contains('edit-rep')) {
+        // Editar: Reproceso
+        $(document).on('click', '.edit-rep', function(){
             const f = document.getElementById('formReproceso');
-            f.action = '<?= site_url('calidad/reprocesos/guardar') ?>';
-            ['r-op','r-tarea','r-pendientes','r-eta'].forEach(id=>V(id,''));
-            V('r-estado','pendiente');
-        }
-    });
+            f.action = '<?= site_url('calidad/reprocesos') ?>/'+this.dataset.id+'/editar';
+            document.getElementById('r-op').value         = this.dataset.op || '';
+            document.getElementById('r-tarea').value      = this.dataset.tarea || '';
+            document.getElementById('r-pendientes').value = this.dataset.pendientes || '';
+            document.getElementById('r-eta').value        = this.dataset.eta || '';
+            document.getElementById('r-estado').value     = 'pendiente';
+        });
+        document.getElementById('modalReproceso').addEventListener('show.bs.modal', e=>{
+            if (!e.relatedTarget.classList.contains('edit-rep')) {
+                const f = document.getElementById('formReproceso');
+                f.action = '<?= site_url('calidad/reprocesos/guardar') ?>';
+                ['r-op','r-tarea','r-pendientes','r-eta'].forEach(id=>document.getElementById(id).value='');
+                document.getElementById('r-estado').value = 'pendiente';
+            }
+        });
 
-    // -------- Diagnóstico
-    document.getElementById('btnDiag')?.addEventListener('click', async ()=>{
-        try{
-            const resp = await fetch('<?= site_url('calidad/desperdicios/diag') ?>');
-            const j = await resp.json();
+        // -------- Diagnóstico
+        document.getElementById('btnDiag')?.addEventListener('click', async ()=>{
+            try{
+                const resp = await fetch('<?= site_url('calidad/desperdicios/diag') ?>');
+                const j = await resp.json();
+                const sumEl = document.getElementById('diagSummary');
+                const accEl = document.getElementById('diagAccion');
+                const smpEl = document.getElementById('diagSample');
 
-            const sumEl = document.getElementById('diagSummary');
-            const accEl = document.getElementById('diagAccion');
-            const smpEl = document.getElementById('diagSample');
+                if(!j.ok){
+                    sumEl.innerHTML = `<div class="alert alert-danger">Error: ${j.error || 'desconocido'}</div>`;
+                    accEl.innerHTML = ''; smpEl.textContent = '';
+                }else{
+                    const hasIns = j.has?.inspeccion ? '✅' : '❌';
+                    const hasRep = j.has?.reproceso  ? '✅' : '❌';
+                    const cIns = j.counts?.inspeccion ?? 0;
+                    const cRep = j.counts?.reproceso  ?? 0;
+                    const joinC = j.join_count ?? 0;
 
-            if(!j.ok){
-                sumEl.innerHTML = `<div class="alert alert-danger">Error: ${j.error || 'desconocido'}</div>`;
-                accEl.innerHTML = ''; smpEl.textContent = '';
-            }else{
-                const hasIns = j.has?.inspeccion ? '✅' : '❌';
-                const hasRep = j.has?.reproceso  ? '✅' : '❌';
-                const cIns = j.counts?.inspeccion ?? 0;
-                const cRep = j.counts?.reproceso  ?? 0;
-                const joinC = j.join_count ?? 0;
-
-                sumEl.innerHTML = `
+                    sumEl.innerHTML = `
           <div class="table-responsive mb-2">
-            <table class="table table-sm table-bordered align-middle text-center mb-0">
-              <thead class="table-primary">
-                <tr><th>BD</th><th>inspeccion</th><th>reproceso</th><th>#inspeccion</th><th>#reproceso</th><th>#JOIN</th></tr>
-              </thead>
+            <table class="table table-sm table-bordered align-middle text-center mb-0 tbl-head">
+              <thead><tr><th>BD</th><th>inspeccion</th><th>reproceso</th><th>#inspeccion</th><th>#reproceso</th><th>#JOIN</th></tr></thead>
               <tbody>
-                <tr>
-                  <td>${j.database || '-'}</td>
-                  <td>${hasIns}</td>
-                  <td>${hasRep}</td>
-                  <td>${cIns}</td>
-                  <td>${cRep}</td>
-                  <td>${joinC}</td>
-                </tr>
+                <tr><td>${j.database || '-'}</td><td>${hasIns}</td><td>${hasRep}</td><td>${cIns}</td><td>${cRep}</td><td>${joinC}</td></tr>
               </tbody>
             </table>
-          </div>
-        `;
-
-                if (Array.isArray(j.accion_values) && j.accion_values.length){
-                    accEl.innerHTML = `
+          </div>`;
+                    if (Array.isArray(j.accion_values) && j.accion_values.length){
+                        accEl.innerHTML = `
             <div class="table-responsive">
-              <table class="table table-sm table-bordered text-center mb-0">
-                <thead class="table-light"><tr><th>accion (lower)</th><th>count</th></tr></thead>
-                <tbody>
-                  ${j.accion_values.map(r=>`<tr><td>${r.accion}</td><td>${r.c}</td></tr>`).join('')}
-                </tbody>
+              <table class="table table-sm table-bordered text-center mb-0 tbl-head">
+                <thead><tr><th>accion (lower)</th><th>count</th></tr></thead>
+                <tbody>${j.accion_values.map(r=>`<tr><td>${r.accion}</td><td>${r.c}</td></tr>`).join('')}</tbody>
               </table>
             </div>`;
-                } else {
-                    accEl.innerHTML = `<div class="text-muted">Sin valores en <code>reproceso.accion</code></div>`;
+                    } else {
+                        accEl.innerHTML = `<div class="text-muted">Sin valores en <code>reproceso.accion</code></div>`;
+                    }
+                    smpEl.textContent = JSON.stringify(j.sample ?? [], null, 2);
                 }
-
-                smpEl.textContent = JSON.stringify(j.sample ?? [], null, 2);
+                new bootstrap.Modal(document.getElementById('modalDiag')).show();
+            }catch(e){
+                alert('No se pudo ejecutar el diagnóstico: ' + e.message);
             }
-
-            new bootstrap.Modal(document.getElementById('modalDiag')).show();
-        }catch(e){
-            alert('No se pudo ejecutar el diagnóstico: ' + e.message);
-        }
+        });
     });
 </script>
-
 <?= $this->endSection() ?>
