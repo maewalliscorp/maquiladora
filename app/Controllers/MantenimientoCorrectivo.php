@@ -19,7 +19,8 @@ class MantenimientoCorrectivo extends BaseController
         return view('modulos/mantenimiento_correctivo', [
             'title'   => 'Mantenimiento Correctivo',
             'tableId' => 'tablaMtto',
-            'columns' => ['Folio','Apertura','Máquina','Tipo','Estatus','Descripción','Cierre','Horas'],
+            // ▶︎ Vista pasa al final
+            'columns' => ['Folio','Apertura','Máquina','Tipo','Estatus','Descripción','Cierre','Horas','Vista'],
             'rows'    => $rows,
         ]);
     }
@@ -56,6 +57,33 @@ class MantenimientoCorrectivo extends BaseController
             ->with('success','Orden de mantenimiento registrada.');
     }
 
+    /** ▶︎ Actualiza la orden (desde el modal Editar) */
+    public function actualizar($id)
+    {
+        $id = (int)$id;
+        $post = $this->request->getPost([
+            'fechaApertura','maquinaId','responsableId','tipo','estatus','descripcion','fechaCierre'
+        ]);
+
+        if (!$id || empty($post['fechaApertura']) || empty($post['maquinaId']) || empty($post['tipo']) || empty($post['estatus'])) {
+            return redirect()->back()->with('error','Completa los campos obligatorios.');
+        }
+
+        $m = new MttoModel();
+        $ok = $m->update($id, [
+            'fechaApertura' => $post['fechaApertura'],
+            'maquinaId'     => (int)$post['maquinaId'],
+            'responsableId' => $post['responsableId'] ?: null,
+            'tipo'          => trim($post['tipo']),
+            'estatus'       => trim($post['estatus']),
+            'descripcion'   => trim($post['descripcion'] ?? ''),
+            'fechaCierre'   => $post['fechaCierre'] ?: null,
+        ]);
+
+        return redirect()->to(site_url('mantenimiento/correctivo'))
+            ->with($ok ? 'success' : 'error', $ok ? 'Orden actualizada.' : 'No se pudo actualizar.');
+    }
+
     /** Diagnóstico simple */
     public function diag()
     {
@@ -69,7 +97,7 @@ class MantenimientoCorrectivo extends BaseController
         return $this->response->setJSON($info);
     }
 
-    /** Probe: muestra SQL y resultados de join y simple */
+    /** Probe (opcional) */
     public function probe()
     {
         $m = new MttoModel();

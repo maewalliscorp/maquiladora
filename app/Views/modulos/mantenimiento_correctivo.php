@@ -6,8 +6,7 @@
 
 <?php
 $tableId = $tableId ?? 'tablaMtto';
-$columns = $columns ?? ['Folio','Apertura','Máquina','Tipo','Estatus','Descripción','Cierre','Horas'];
-$columns = array_values(array_filter($columns, fn($c)=>mb_strtolower($c,'UTF-8')!=='acciones'));
+$columns = $columns ?? ['Folio','Apertura','Máquina','Tipo','Estatus','Descripción','Cierre','Horas','Vista']; // Vista al final
 $rows    = is_array($rows ?? null) ? $rows : [];
 ?>
 
@@ -24,14 +23,14 @@ $rows    = is_array($rows ?? null) ? $rows : [];
     <div class="alert alert-danger mb-3"><?= esc(session()->getFlashdata('error')) ?></div>
 <?php endif; ?>
 
-<!-- Botón Agregar -> Modal -->
+<!-- Botón Agregar -> Modal crear -->
 <div class="mb-3">
     <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#modalMtto">
         <i class="bi bi-plus-circle me-1"></i> Agregar
     </button>
 </div>
 
-<!-- ============== MODAL: Registrar orden (centrado) ============== -->
+<!-- ====================== MODAL CREAR (centrado) ====================== -->
 <div class="modal fade" id="modalMtto" tabindex="-1" aria-labelledby="modalMttoLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -103,8 +102,8 @@ $rows    = is_array($rows ?? null) ? $rows : [];
         </div>
     </div>
 </div>
-<!-- =============================================================== -->
 
+<!-- ====================== TABLA ====================== -->
 <div class="card shadow-sm">
     <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Historial por máquina</strong>
@@ -124,6 +123,7 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                             : (($estado === 'En reparación') ? 'bg-warning text-dark' : 'bg-danger');
                     ?>
                     <tr>
+                        <!-- Campos en el orden del header, excepto Vista que va al final -->
                         <td><?= esc($r['Folio'] ?? '') ?></td>
                         <td><?= esc($r['Apertura'] ?? '') ?></td>
                         <td><?= esc($r['Maquina'] ?? '') ?></td>
@@ -132,6 +132,22 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                         <td class="text-start"><?= esc($r['Descripcion'] ?? '') ?></td>
                         <td><?= esc($r['Cierre'] ?? '-') ?></td>
                         <td><?= number_format((float)($r['Horas'] ?? 0), 2) ?></td>
+
+                        <!-- ▶︎ Última columna: Vista -->
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-info btn-vista"
+                                    data-bs-toggle="modal" data-bs-target="#modalVista"
+                                    data-id="<?= esc($r['Folio'] ?? '', 'attr') ?>"
+                                    data-apertura="<?= esc($r['Apertura'] ?? '', 'attr') ?>"
+                                    data-maquina="<?= esc($r['Maquina'] ?? '', 'attr') ?>"
+                                    data-tipo="<?= esc($r['Tipo'] ?? '', 'attr') ?>"
+                                    data-estatus="<?= esc($estado, 'attr') ?>"
+                                    data-descripcion="<?= esc($r['Descripcion'] ?? '', 'attr') ?>"
+                                    data-cierre="<?= esc($r['Cierre'] ?? '', 'attr') ?>"
+                                    data-horas="<?= esc((string)($r['Horas'] ?? '0'), 'attr') ?>">
+                                <i class="bi bi-eye"></i> Vista
+                            </button>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>
@@ -139,6 +155,96 @@ $rows    = is_array($rows ?? null) ? $rows : [];
         </div>
     </div>
 </div>
+
+<!-- ====================== MODAL VISTA ====================== -->
+<div class="modal fade" id="modalVista" tabindex="-1" aria-labelledby="modalVistaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-semibold text-dark" id="modalVistaLabel">Detalle de la orden</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-3 fw-semibold text-dark">Folio</dt>        <dd class="col-sm-9" id="v-folio"></dd>
+                    <dt class="col-sm-3 fw-semibold text-dark">Apertura</dt>     <dd class="col-sm-9" id="v-apertura"></dd>
+                    <dt class="col-sm-3 fw-semibold text-dark">Máquina</dt>      <dd class="col-sm-9" id="v-maquina"></dd>
+                    <dt class="col-sm-3 fw-semibold text-dark">Tipo</dt>         <dd class="col-sm-9" id="v-tipo"></dd>
+                    <dt class="col-sm-3 fw-semibold text-dark">Estatus</dt>      <dd class="col-sm-9" id="v-estatus"></dd>
+                    <dt class="col-sm-3 fw-semibold text-dark">Descripción</dt>  <dd class="col-sm-9" id="v-descripcion"></dd>
+                    <dt class="col-sm-3 fw-semibold text-dark">Cierre</dt>       <dd class="col-sm-9" id="v-cierre"></dd>
+                    <dt class="col-sm-3 fw-semibold text-dark">Horas</dt>        <dd class="col-sm-9" id="v-horas"></dd>
+                </dl>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="btnAbrirEditar" data-bs-target="#modalEditar" data-bs-toggle="modal">
+                    <i class="bi bi-pencil"></i> Editar
+                </button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====================== MODAL EDITAR ====================== -->
+<div class="modal fade" id="modalEditar" tabindex="-1" aria-labelledby="modalEditarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-semibold text-dark" id="modalEditarLabel">Editar orden</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <form id="formEditar" class="row g-3" method="post">
+                <?= csrf_field() ?>
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="e-id">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark">Fecha apertura *</label>
+                            <input name="fechaApertura" id="e-apertura" type="datetime-local" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark">Máquina ID *</label>
+                            <input name="maquinaId" id="e-maquinaId" type="number" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark">Responsable ID</label>
+                            <input name="responsableId" id="e-responsableId" type="number" class="form-control">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark">Tipo *</label>
+                            <input name="tipo" id="e-tipo" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark">Estatus *</label>
+                            <select name="estatus" id="e-estatus" class="form-select" required>
+                                <option>Abierta</option>
+                                <option>En reparación</option>
+                                <option>Cerrado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold text-dark">Descripción</label>
+                            <input name="descripcion" id="e-descripcion" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark">Fecha cierre</label>
+                            <input name="fechaCierre" id="e-cierre" type="datetime-local" class="form-control">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-primary" type="submit">Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -147,27 +253,69 @@ $rows    = is_array($rows ?? null) ? $rows : [];
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script>
     (function(){
+        // DataTables: desactivar ordenar/buscar solo en la ÚLTIMA columna (Vista)
         $('#<?= esc($tableId) ?>').DataTable({
             language:{
-                sEmptyTable:"Sin datos",
-                sZeroRecords:"No se encontraron resultados",
-                sInfo:"Mostrando _START_–_END_ de _TOTAL_",
-                sInfoEmpty:"Mostrando 0–0 de 0",
-                sInfoFiltered:"(filtrado de _MAX_)",
-                sSearch:"Buscar:",
+                sEmptyTable:"Sin datos", sZeroRecords:"No se encontraron resultados",
+                sInfo:"Mostrando _START_–_END_ de _TOTAL_", sInfoEmpty:"Mostrando 0–0 de 0",
+                sInfoFiltered:"(filtrado de _MAX_)", sSearch:"Buscar:",
                 oPaginate:{sFirst:"Primero",sLast:"Último",sNext:"Siguiente",sPrevious:"Anterior"}
-            }
+            },
+            columnDefs: [{ targets: -1, orderable:false, searchable:false }]
         });
 
-        // Fecha apertura por defecto al abrir el modal
-        const modal = document.getElementById('modalMtto');
-        modal.addEventListener('show.bs.modal', () => {
+        // Autollenar fecha apertura al abrir "Crear"
+        document.getElementById('modalMtto').addEventListener('show.bs.modal', () => {
             const input = document.getElementById('f-fechaApertura');
             const pad = n => String(n).padStart(2,'0');
             const d = new Date();
             const val = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+
                 'T'+pad(d.getHours())+':'+pad(d.getMinutes());
             if (!input.value) input.value = val;
+        });
+
+        // Utilidad para normalizar datetime-local
+        function toLocalInputValue(dt) {
+            if (!dt) return '';
+            if (dt.includes('T')) return dt.slice(0,16);
+            return dt.replace(' ', 'T').slice(0,16);
+        }
+
+        // Cargar datos al modal Vista
+        let currentRowData = null;
+        document.querySelectorAll('.btn-vista').forEach(btn=>{
+            btn.addEventListener('click', ()=>{
+                const d = btn.dataset;
+                currentRowData = { ...d };
+
+                document.getElementById('v-folio').textContent       = d.id || '';
+                document.getElementById('v-apertura').textContent    = d.apertura || '';
+                document.getElementById('v-maquina').textContent     = d.maquina || '';
+                document.getElementById('v-tipo').textContent        = d.tipo || '';
+                document.getElementById('v-estatus').textContent     = d.estatus || '';
+                document.getElementById('v-descripcion').textContent = d.descripcion || '';
+                document.getElementById('v-cierre').textContent      = d.cierre || '-';
+                document.getElementById('v-horas').textContent       = (d.horas ? parseFloat(d.horas).toFixed(2) : '0.00');
+            });
+        });
+
+        // Pasar datos al modal Editar
+        document.getElementById('btnAbrirEditar').addEventListener('click', ()=>{
+            if (!currentRowData) return;
+            const d = currentRowData;
+
+            const form = document.getElementById('formEditar');
+            form.action = '<?= site_url("mantenimiento/correctivo/actualizar") ?>' + '/' + (d.id || '');
+
+            document.getElementById('e-id').value          = d.id || '';
+            document.getElementById('e-apertura').value    = toLocalInputValue(d.apertura || '');
+            // si "Maquina" es código (MC-001), aquí deberías pasar también data-maquinaid en el botón:
+            document.getElementById('e-maquinaId').value   = (!isNaN(d.maquina) ? d.maquina : '');
+            document.getElementById('e-responsableId').value = '';
+            document.getElementById('e-tipo').value        = d.tipo || 'Correctivo';
+            document.getElementById('e-estatus').value     = d.estatus || 'Abierta';
+            document.getElementById('e-descripcion').value = d.descripcion || '';
+            document.getElementById('e-cierre').value      = toLocalInputValue(d.cierre || '');
         });
     })();
 </script>

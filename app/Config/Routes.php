@@ -151,10 +151,21 @@ $routes->group('modulo3', [], function ($routes) {
 // (útil para enlaces directos o favoritos)
 // --------------------------------------------------------------------
 $routes->group('mantenimiento', ['namespace'=>'App\Controllers'], static function($r){
-    $r->get ('correctivo',       'MantenimientoCorrectivo::index');
-    $r->get ('correctivo/diag',  'MantenimientoCorrectivo::diag');
-    $r->get ('correctivo/probe', 'MantenimientoCorrectivo::probe');
-    $r->post('correctivo/crear', 'MantenimientoCorrectivo::crear');
+    $r->get ('correctivo',         'MantenimientoCorrectivo::index');
+    $r->get ('correctivo/diag',    'MantenimientoCorrectivo::diag');
+    $r->get ('correctivo/probe',   'MantenimientoCorrectivo::probe');
+    $r->post('correctivo/crear',   'MantenimientoCorrectivo::crear');
+    $r->post('correctivo/actualizar/(:num)', 'MantenimientoCorrectivo::actualizar/$1'); // ▶︎ NUEVA
+});
+
+$routes->group('modulo3', ['namespace'=>'App\Controllers'], static function($routes){
+    $routes->group('mantenimiento', static function($r){
+        $r->get ('correctivo',         'MantenimientoCorrectivo::index');
+        $r->get ('correctivo/diag',    'MantenimientoCorrectivo::diag');
+        $r->get ('correctivo/probe',   'MantenimientoCorrectivo::probe');
+        $r->post('correctivo/crear',   'MantenimientoCorrectivo::crear');
+        $r->post('correctivo/actualizar/(:num)', 'MantenimientoCorrectivo::actualizar/$1'); // ▶︎ NUEVA
+    });
 });
 
 // --------------------------------------------------------------------
