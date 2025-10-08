@@ -5,8 +5,6 @@ use Config\Services;
 $routes = Services::routes();
 
 // --------------------------------------------------------------------
-// Rutas del sistema (NO tocar)
-// --------------------------------------------------------------------
 if (file_exists(SYSTEMPATH . 'Config/Routes.php')) {
     require SYSTEMPATH . 'Config/Routes.php';
 }
@@ -19,10 +17,10 @@ $routes->setDefaultController('Modulos');
 $routes->setDefaultMethod('dashboard');
 $routes->setTranslateURIDashes(false);
 $routes->set404Override();
-$routes->setAutoRoute(false); // todo debe declararse explícitamente
+$routes->setAutoRoute(false);
 
 // --------------------------------------------------------------------
-// Autenticación
+// Auth
 // --------------------------------------------------------------------
 $routes->get('/login',     'UsuarioController::login');
 $routes->post('/login',    'UsuarioController::authenticate');
@@ -31,13 +29,13 @@ $routes->get('/register',  'UsuarioController::register');
 $routes->post('/register', 'UsuarioController::register');
 
 // --------------------------------------------------------------------
-// Home / Dashboard
+// Home
 // --------------------------------------------------------------------
 $routes->get('/',          'Modulos::dashboard');
 $routes->get('/dashboard', 'Modulos::dashboard');
 
 // --------------------------------------------------------------------
-// Enlaces legacy (compatibilidad)
+// Legacy
 // --------------------------------------------------------------------
 $routes->get('/perfilempleado',        'Modulos::m1_perfilempleado', ['filter' => 'auth']);
 $routes->get('/pedidos',               'Modulos::m1_pedidos',        ['filter' => 'auth']);
@@ -64,18 +62,16 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->get('perfilempleado',  'Modulos::m1_perfilempleado');
     $routes->get('ordenes',         'Modulos::m1_ordenes');
 
-    // APIs
     $routes->get('pedido/(:num)/json', 'Modulos::m1_pedido_json/$1');
     $routes->get('clientes/json',      'Clientes::json_catalogo');
 
-    // Evaluación
     $routes->get('ordenes-produccion', 'Produccion::ordenes');
     $routes->get('evaluar/(:num)',       'Modulos::m1_evaluar/$1');
     $routes->post('guardar-evaluacion',  'Modulos::m1_guardarEvaluacion');
 });
 
 // --------------------------------------------------------------------
-// Diagnóstico rápido
+// Diag
 // --------------------------------------------------------------------
 $routes->get('diag/ping', function () { return 'OK DIAG PING'; });
 $routes->get('diag/agregar', function () {
@@ -94,13 +90,12 @@ $routes->group('modulo2', [], function ($routes) {
     $routes->get('editardiseno/(:num)', 'Modulos::m2_editardiseno/$1');
     $routes->post('actualizar/(:num)',  'Modulos::m2_actualizar/$1');
 
-    // APIs
     $routes->get('diseno/(:num)/json',  'Modulos::m2_diseno_json/$1');
     $routes->get('disenos/json',        'Disenos::json_catalogo');
 });
 
 // --------------------------------------------------------------------
-// Módulo 3 (Dashboard, Gestión, Inspección, Mantenimiento)
+// Módulo 3
 // --------------------------------------------------------------------
 $routes->group('modulo3', [], function ($routes) {
 
@@ -108,18 +103,15 @@ $routes->group('modulo3', [], function ($routes) {
     $routes->get('dashboard', 'Modulos::dashboard');
     $routes->get('ordenes',   'Modulos::ordenes');
 
-    // WIP
     $routes->get ('wip',                    'Wip::index');
     $routes->get ('wip/json',               'Wip::json');
     $routes->get ('wip/debug',              'Wip::debug');
     $routes->post('wip/actualizar/(:num)',  'Wip::actualizar/$1');
 
-    // Incidencias / Inspección
-    $routes->get('incidencias',                 'Incidencias::index');     // vista principal
-    $routes->post('incidencias/crear',          'Incidencias::store');     // registrar
-    $routes->get('incidencias/eliminar/(:num)', 'Incidencias::delete/$1'); // eliminar
+    $routes->get('incidencias',                 'Incidencias::index');
+    $routes->post('incidencias/crear',          'Incidencias::store');
+    $routes->get('incidencias/eliminar/(:num)', 'Incidencias::delete/$1');
 
-    // Otras vistas módulo 3
     $routes->get('reportes',        'Modulos::reportes');
     $routes->get('notificaciones',  'Modulos::notificaciones');
     $routes->get('inspeccion',                  'Inspeccion::index');
@@ -127,26 +119,22 @@ $routes->group('modulo3', [], function ($routes) {
     $routes->post('inspeccion/evaluar/(:num)',  'Inspeccion::guardarEvaluacion/$1');
     $routes->get('mrp',             'Modulos::mrp');
 
-    // Desperdicios (alias dentro de módulo 3 → redirige al módulo "calidad")
+    // Alias → Calidad/Desperdicios
     $routes->get('desperdicios', function () {
         return redirect()->to(site_url('calidad/desperdicios'));
     });
 
-    // Inventario / Mantenimiento
     $routes->get('mantenimiento_inventario', 'Maquinaria::index');
     $routes->get('mantenimiento_preventivo', 'Modulos::mantenimientoPreventivo');
 
-    // Compat: mantenimiento correctivo
     $routes->get('mantenimiento_correctivo', function () {
         return redirect()->to(site_url('modulo3/mantenimiento/correctivo'));
     });
 
-    // CRUD Maquinaria
     $routes->get ('maquinaria',               'Maquinaria::index');
     $routes->post('maquinaria/guardar',       'Maquinaria::guardar');
     $routes->get ('maquinaria/editar/(:num)', 'Maquinaria::editar/$1');
 
-    // --------- Mantenimiento Correctivo
     $routes->group('mantenimiento', function($r){
         $r->get ('correctivo',       'MantenimientoCorrectivo::index');
         $r->get ('correctivo/diag',  'MantenimientoCorrectivo::diag');
@@ -156,7 +144,7 @@ $routes->group('modulo3', [], function ($routes) {
 });
 
 // --------------------------------------------------------------------
-// Alias corto fuera de módulo: /mantenimiento/correctivo
+// Alias /mantenimiento/correctivo
 // --------------------------------------------------------------------
 $routes->group('mantenimiento', ['namespace'=>'App\Controllers'], static function($r){
     $r->get ('correctivo',         'MantenimientoCorrectivo::index');
@@ -177,46 +165,27 @@ $routes->group('modulo3', ['namespace'=>'App\Controllers'], static function($rou
 });
 
 // --------------------------------------------------------------------
-// Calidad (Desperdicios & Reprocesos)  ← NUEVO
+// Calidad (Desperdicios & Reprocesos)
 // --------------------------------------------------------------------
 $routes->group('calidad', [], function ($routes) {
-    // Vista principal (tabla + modales)
     $routes->get('desperdicios', 'Calidad::desperdicios');
 
-    // Desechos (usa tablas: inspeccion + reproceso con accion = Desecho/Scrap)
+    // Desechos
     $routes->post('desperdicios/guardar',        'Calidad::guardarDesecho');
-    $routes->get ('desperdicios/(:num)',         'Calidad::verDesecho/$1');       // JSON detalle
+    $routes->get ('desperdicios/(:num)',         'Calidad::verDesecho/$1');
     $routes->post('desperdicios/(:num)/editar',  'Calidad::editarDesecho/$1');
 
-    // Reprocesos (usa tablas: inspeccion + reproceso con accion = Reproceso)
+    // Reprocesos
     $routes->post('reprocesos/guardar',          'Calidad::guardarReproceso');
-    $routes->get ('reprocesos/(:num)',           'Calidad::verReproceso/$1');     // JSON detalle
+    $routes->get ('reprocesos/(:num)',           'Calidad::verReproceso/$1');
     $routes->post('reprocesos/(:num)/editar',    'Calidad::editarReproceso/$1');
+
+    // Diagnóstico
+    $routes->get ('desperdicios/diag',           'Calidad::diag');
 });
 
 // --------------------------------------------------------------------
-// Muestras
-// --------------------------------------------------------------------
-$routes->group('muestras', [], function ($routes) {
-    $routes->get('/',                   'Modulos::muestras');
-    $routes->get('evaluar/(:num)',      'Modulos::muestras_evaluar/$1');
-    $routes->post('guardar-evaluacion', 'Modulos::muestras_guardarEvaluacion');
-});
-
-// --------------------------------------------------------------------
-// Módulo 11 (Usuarios)
-// --------------------------------------------------------------------
-$routes->group('modulo11', [], function ($routes) {
-    $routes->get('/',                 'Modulos::m11_usuarios');
-    $routes->get('usuarios',          'Modulos::m11_usuarios');
-    $routes->get('agregar',           'Modulos::m11_agregar_usuario');
-    $routes->post('agregar',          'Modulos::m11_agregar_usuario');
-    $routes->get('editar/(:num)',     'Modulos::m11_editar_usuario/$1');
-    $routes->post('editar/(:num)',    'Modulos::m11_editar_usuario/$1');
-});
-
-// --------------------------------------------------------------------
-// utilidades de BD / diagnóstico
+// Utils DB
 // --------------------------------------------------------------------
 $routes->get('dbcheck', function () {
     $db = \Config\Database::connect();

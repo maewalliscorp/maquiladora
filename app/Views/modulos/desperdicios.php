@@ -13,9 +13,19 @@
     <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
 <?php endif; ?>
 
+<style>
+    .table thead.table-primary th{ vertical-align:middle; font-weight:600; letter-spacing:.2px; }
+    .table td, .table th{ padding:.85rem .8rem; }
+</style>
+
+<!-- Botón de diagnóstico -->
+<div class="d-flex justify-content-end mb-2">
+    <button id="btnDiag" class="btn btn-sm btn-outline-secondary">Diagnóstico</button>
+</div>
+
 <div class="row g-3">
 
-    <!-- ====== DESECHOS (reproceso.accion in [Desecho,Scrap]) ====== -->
+    <!-- ====== DESECHOS ====== -->
     <div class="col-lg-6">
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -24,21 +34,22 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-striped table-bordered align-middle text-center">
+                    <table class="table table-striped table-bordered align-middle text-center mb-0">
                         <thead class="table-primary">
                         <tr>
                             <th>Fecha</th><th>OP</th><th>Cantidad</th><th>Motivo</th><th>Vista</th><th>Editar</th>
                         </tr>
                         </thead>
                         <tbody>
-                        <?php foreach(($desp ?? []) as $x): ?>
+                        <?php if(!empty($desp)): foreach($desp as $x): ?>
                             <tr>
                                 <td><?= esc($x['fecha']) ?></td>
                                 <td><?= esc($x['op']) ?></td>
                                 <td><?= esc($x['cantidad']) ?></td>
                                 <td><?= esc($x['observaciones']) ?></td>
                                 <td>
-                                    <button class="btn btn-sm btn-outline-info ver-desecho" data-id="<?= (int)$x['id'] ?>" data-bs-toggle="modal" data-bs-target="#modalVistaDesecho">
+                                    <button class="btn btn-sm btn-outline-info ver-desecho"
+                                            data-id="<?= (int)$x['id'] ?>" data-bs-toggle="modal" data-bs-target="#modalVistaDesecho">
                                         <i class="bi bi-eye"></i>
                                     </button>
                                 </td>
@@ -54,7 +65,9 @@
                                     </button>
                                 </td>
                             </tr>
-                        <?php endforeach; ?>
+                        <?php endforeach; else: ?>
+                            <tr><td colspan="6" class="text-muted">Sin datos</td></tr>
+                        <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
@@ -62,7 +75,7 @@
         </div>
     </div>
 
-    <!-- ====== REPROCESOS (reproceso.accion = Reproceso) ====== -->
+    <!-- ====== REPROCESOS ====== -->
     <div class="col-lg-6">
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -71,21 +84,22 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-striped table-bordered align-middle text-center">
+                    <table class="table table-striped table-bordered align-middle text-center mb-0">
                         <thead class="table-primary">
                         <tr>
                             <th>OP</th><th>Tarea</th><th>Pend.</th><th>ETA</th><th>Vista</th><th>Editar</th>
                         </tr>
                         </thead>
                         <tbody>
-                        <?php foreach(($rep ?? []) as $r): ?>
+                        <?php if(!empty($rep)): foreach($rep as $r): ?>
                             <tr>
                                 <td><?= esc($r['op']) ?></td>
                                 <td><?= esc($r['tarea']) ?></td>
                                 <td><?= (int)$r['pendientes'] ?></td>
                                 <td><?= esc($r['eta']) ?></td>
                                 <td>
-                                    <button class="btn btn-sm btn-outline-info ver-rep" data-id="<?= (int)$r['id'] ?>" data-bs-toggle="modal" data-bs-target="#modalVistaReproceso">
+                                    <button class="btn btn-sm btn-outline-info ver-rep"
+                                            data-id="<?= (int)$r['id'] ?>" data-bs-toggle="modal" data-bs-target="#modalVistaReproceso">
                                         <i class="bi bi-eye"></i>
                                     </button>
                                 </td>
@@ -101,7 +115,9 @@
                                     </button>
                                 </td>
                             </tr>
-                        <?php endforeach; ?>
+                        <?php endforeach; else: ?>
+                            <tr><td colspan="6" class="text-muted">Sin datos</td></tr>
+                        <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
@@ -111,7 +127,7 @@
 
 </div>
 
-<!-- ===== Modales centrados ===== -->
+<!-- ===== Modales ===== -->
 
 <!-- Agregar/Editar Desecho -->
 <div class="modal fade" id="modalDesecho" tabindex="-1" aria-hidden="true">
@@ -236,54 +252,135 @@
     </div>
 </div>
 
+<!-- Modal diagnóstico -->
+<div class="modal fade" id="modalDiag" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content text-dark">
+            <div class="modal-header">
+                <h5 class="modal-title">Diagnóstico de datos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="diagSummary" class="mb-3"></div>
+                <h6 class="mt-2">Valores de <code>reproceso.accion</code></h6>
+                <div id="diagAccion" class="mb-3"></div>
+                <h6 class="mt-2">Muestra (JOIN reproceso + inspeccion)</h6>
+                <pre id="diagSample" class="bg-light p-2 rounded small mb-0" style="white-space:pre-wrap"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+    // Helpers
+    function S(id, val){ const el=document.getElementById(id); if(el) el.textContent = val ?? '-'; }
+    function V(id, val){ const el=document.getElementById(id); if(el) el.value = val; }
+
     // Vista -> fetch JSON
     document.querySelectorAll('.ver-desecho').forEach(b=>b.addEventListener('click', async ()=>{
         const r = await (await fetch('<?= site_url('calidad/desperdicios') ?>/'+b.dataset.id)).json();
-        vd('vd-fecha', r.fecha); vd('vd-op', r.op);
-        vd('vd-cantidad', r.cantidad); vd('vd-motivo', r.observaciones || '-');
+        S('vd-fecha', r.fecha); S('vd-op', r.op);
+        S('vd-cantidad', r.cantidad); S('vd-motivo', r.observaciones || '-');
     }));
-    function vd(id, val){ document.getElementById(id).textContent = val ?? '-'; }
 
     document.querySelectorAll('.ver-rep').forEach(b=>b.addEventListener('click', async ()=>{
         const r = await (await fetch('<?= site_url('calidad/reprocesos') ?>/'+b.dataset.id)).json();
-        vd('vr-op', r.op); vd('vr-tarea', r.tarea);
-        vd('vr-pendientes', r.cantidad ?? r.pendientes); vd('vr-eta', r.fecha ?? r.eta);
+        S('vr-op', r.op); S('vr-tarea', r.tarea);
+        S('vr-pendientes', r.cantidad ?? r.pendientes); S('vr-eta', r.fecha ?? r.eta);
     }));
 
     // Editar -> precarga modal y cambia action
     document.querySelectorAll('.edit-desecho').forEach(b=>b.addEventListener('click', ()=>{
         const f = document.getElementById('formDesecho');
         f.action = '<?= site_url('calidad/desperdicios') ?>/'+b.dataset.id+'/editar';
-        setVal('d-fecha', b.dataset.fecha); setVal('d-op', b.dataset.op);
-        setVal('d-cantidad', b.dataset.cantidad); setVal('d-motivo', b.dataset.motivo||'');
+        V('d-fecha', b.dataset.fecha); V('d-op', b.dataset.op);
+        V('d-cantidad', b.dataset.cantidad); V('d-motivo', b.dataset.motivo||'');
     }));
-
     document.getElementById('modalDesecho').addEventListener('show.bs.modal', e=>{
         if (!e.relatedTarget.classList.contains('edit-desecho')) {
             const f = document.getElementById('formDesecho');
             f.action = '<?= site_url('calidad/desperdicios/guardar') ?>';
-            ['d-fecha','d-op','d-cantidad','d-motivo'].forEach(id=>setVal(id,''));
+            ['d-fecha','d-op','d-cantidad','d-motivo'].forEach(id=>V(id,''));
         }
     });
 
     document.querySelectorAll('.edit-rep').forEach(b=>b.addEventListener('click', ()=>{
         const f = document.getElementById('formReproceso');
         f.action = '<?= site_url('calidad/reprocesos') ?>/'+b.dataset.id+'/editar';
-        setVal('r-op', b.dataset.op); setVal('r-tarea', b.dataset.tarea);
-        setVal('r-pendientes', b.dataset.pendientes); setVal('r-eta', b.dataset.eta);
+        V('r-op', b.dataset.op); V('r-tarea', b.dataset.tarea);
+        V('r-pendientes', b.dataset.pendientes); V('r-eta', b.dataset.eta);
     }));
-
     document.getElementById('modalReproceso').addEventListener('show.bs.modal', e=>{
         if (!e.relatedTarget.classList.contains('edit-rep')) {
             const f = document.getElementById('formReproceso');
             f.action = '<?= site_url('calidad/reprocesos/guardar') ?>';
-            ['r-op','r-tarea','r-pendientes','r-eta'].forEach(id=>setVal(id,''));
-            setVal('r-estado','pendiente');
+            ['r-op','r-tarea','r-pendientes','r-eta'].forEach(id=>V(id,''));
+            V('r-estado','pendiente');
         }
     });
 
-    function setVal(id,v){ const el=document.getElementById(id); if(el) el.value=v; }
+    // -------- Diagnóstico
+    document.getElementById('btnDiag')?.addEventListener('click', async ()=>{
+        try{
+            const resp = await fetch('<?= site_url('calidad/desperdicios/diag') ?>');
+            const j = await resp.json();
+
+            const sumEl = document.getElementById('diagSummary');
+            const accEl = document.getElementById('diagAccion');
+            const smpEl = document.getElementById('diagSample');
+
+            if(!j.ok){
+                sumEl.innerHTML = `<div class="alert alert-danger">Error: ${j.error || 'desconocido'}</div>`;
+                accEl.innerHTML = ''; smpEl.textContent = '';
+            }else{
+                const hasIns = j.has?.inspeccion ? '✅' : '❌';
+                const hasRep = j.has?.reproceso  ? '✅' : '❌';
+                const cIns = j.counts?.inspeccion ?? 0;
+                const cRep = j.counts?.reproceso  ?? 0;
+                const joinC = j.join_count ?? 0;
+
+                sumEl.innerHTML = `
+          <div class="table-responsive mb-2">
+            <table class="table table-sm table-bordered align-middle text-center mb-0">
+              <thead class="table-primary">
+                <tr><th>BD</th><th>inspeccion</th><th>reproceso</th><th>#inspeccion</th><th>#reproceso</th><th>#JOIN</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>${j.database || '-'}</td>
+                  <td>${hasIns}</td>
+                  <td>${hasRep}</td>
+                  <td>${cIns}</td>
+                  <td>${cRep}</td>
+                  <td>${joinC}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+
+                if (Array.isArray(j.accion_values) && j.accion_values.length){
+                    accEl.innerHTML = `
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered text-center mb-0">
+                <thead class="table-light"><tr><th>accion (lower)</th><th>count</th></tr></thead>
+                <tbody>
+                  ${j.accion_values.map(r=>`<tr><td>${r.accion}</td><td>${r.c}</td></tr>`).join('')}
+                </tbody>
+              </table>
+            </div>`;
+                } else {
+                    accEl.innerHTML = `<div class="text-muted">Sin valores en <code>reproceso.accion</code></div>`;
+                }
+
+                smpEl.textContent = JSON.stringify(j.sample ?? [], null, 2);
+            }
+
+            new bootstrap.Modal(document.getElementById('modalDiag')).show();
+        }catch(e){
+            alert('No se pudo ejecutar el diagnóstico: ' + e.message);
+        }
+    });
 </script>
 
 <?= $this->endSection() ?>

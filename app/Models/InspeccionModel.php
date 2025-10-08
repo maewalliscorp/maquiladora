@@ -8,7 +8,8 @@ class InspeccionModel extends Model
     protected $table         = 'inspeccion';
     protected $primaryKey    = 'id';
     protected $returnType    = 'array';
-    protected $useTimestamps = false; // activa si tu tabla tiene created_at/updated_at
+    protected $useTimestamps = false;
+
     protected $allowedFields = [
         'ordenProduccionId','puntoInspeccionId','inspectorId',
         'fecha','resultado','observaciones'

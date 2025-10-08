@@ -9,11 +9,12 @@ class ReprocesoModel extends Model
     protected $primaryKey    = 'id';
     protected $returnType    = 'array';
     protected $useTimestamps = false;
+
     protected $allowedFields = ['inspeccionId','accion','cantidad','fecha'];
 
     protected $validationRules = [
         'inspeccionId' => 'required|integer',
-        'accion'       => 'required|in_list[Reproceso,Desecho,Scrap]',
+        'accion'       => 'required|string',
         'cantidad'     => 'required|numeric',
         'fecha'        => 'required|valid_date',
     ];
