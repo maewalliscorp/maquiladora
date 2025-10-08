@@ -108,7 +108,7 @@
                   <div class="col-md-6">
                     <label class="form-label">Seleccionar clasificación</label>
                     <select class="form-select" id="pa-cla-select">
-                      <option value="">Cargando catálogo...</option>
+                      <option value="">Cargando catálogo....</option>
                     </select>
                   </div>
                   <div class="col-auto">
