@@ -1,6 +1,6 @@
 <?= $this->extend('layouts/main') ?>
 
-<!-- DataTables (si ya los cargas en el layout, puedes omitir estas secciones) -->
+<!-- ====== CSS: solo DataTables (Bootstrap lo carga el layout) ====== -->
 <?= $this->section('styles') ?>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <?= $this->endSection() ?>
@@ -63,9 +63,9 @@
     </div>
 </div>
 
-<!-- Modal Bootstrap: Detalles del diseño (mismo patrón que Pedidos) -->
+<!-- ====== Modal: Detalles del diseño (centrado) ====== -->
 <div class="modal fade" id="disenoModal" tabindex="-1" aria-labelledby="disenoModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content text-dark">
             <div class="modal-header">
                 <h5 class="modal-title text-dark" id="disenoModalLabel">Detalle del diseño</h5>
@@ -73,7 +73,6 @@
             </div>
 
             <div class="modal-body text-dark">
-                <!-- Datos generales del diseño -->
                 <dl class="row mb-3 text-dark">
                     <dt class="col-sm-3 fw-semibold text-dark">ID</dt>
                     <dd class="col-sm-9 text-dark" id="d-id">-</dd>
@@ -93,7 +92,6 @@
             </div>
 
             <div class="modal-footer">
-                <!-- Botón Editar dentro del modal -->
                 <a id="d-editar" href="#" class="btn btn-primary">
                     <i class="bi bi-pencil"></i> Editar
                 </a>
@@ -104,30 +102,33 @@
 </div>
 <?= $this->endSection() ?>
 
+<!-- ====== JS: jQuery + DataTables (Bootstrap bundle lo carga el layout) ====== -->
 <?= $this->section('scripts') ?>
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
 <script>
     $(function () {
-        // DataTables en ES y desactivar orden/busca para la columna "Ver" (índice 5)
-        $('#tablaWip').DataTable({
-            language: {
-                sProcessing:"Procesando...",
-                sLengthMenu:"Mostrar _MENU_",
-                sZeroRecords:"No se encontraron resultados",
-                sEmptyTable:"Sin datos",
-                sInfo:"Mostrando _START_–_END_ de _TOTAL_",
-                sInfoEmpty:"Mostrando 0–0 de 0",
-                sInfoFiltered:"(filtrado de _MAX_)",
-                sSearch:"Buscar:",
-                oPaginate:{ sFirst:"Primero", sLast:"Último", sNext:"Siguiente", sPrevious:"Anterior" }
-            },
-            columnDefs: [{ orderable:false, searchable:false, targets:[5] }]
-        });
+        // Evita doble inicialización si navegas con PJAX o turbolinks
+        if (!$.fn.dataTable.isDataTable('#tablaWip')) {
+            $('#tablaWip').DataTable({
+                language: {
+                    sProcessing:"Procesando...",
+                    sLengthMenu:"Mostrar _MENU_",
+                    sZeroRecords:"No se encontraron resultados",
+                    sEmptyTable:"Sin datos",
+                    sInfo:"Mostrando _START_–_END_ de _TOTAL_",
+                    sInfoEmpty:"Mostrando 0–0 de 0",
+                    sInfoFiltered:"(filtrado de _MAX_)",
+                    sSearch:"Buscar:",
+                    oPaginate:{ sFirst:"Primero", sLast:"Último", sNext:"Siguiente", sPrevious:"Anterior" }
+                },
+                columnDefs: [{ orderable:false, searchable:false, targets:[5] }]
+            });
+        }
 
-        // Poblar modal desde los data-* del botón "Ver"
+        // Poblar modal
         const modalEl = document.getElementById('disenoModal');
         modalEl.addEventListener('show.bs.modal', (ev) => {
             const btn = ev.relatedTarget; if (!btn) return;
@@ -141,8 +142,14 @@
             document.getElementById('d-nombre').textContent      = get('data-nombre');
             document.getElementById('d-descripcion').textContent = get('data-descripcion');
 
-            // Enlace de edición dentro del modal (ajusta la ruta si es diferente)
             document.getElementById('d-editar').href = "<?= site_url('diseno/editar') ?>/" + id;
+        });
+
+        // Limpieza por si queda backdrop y bloquea el click del menú
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.paddingRight = '';
         });
     });
 </script>
