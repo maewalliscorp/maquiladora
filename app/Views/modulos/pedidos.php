@@ -543,6 +543,8 @@
             }
         });
 
+        // (Estatus inline removido aquí; se implementará en m1_ordenes.php)
+
         // Manejar selección de diseño
         $(document).on('change', '#pa-dis-select', function(){
           const $opt = $(this).find('option:selected');

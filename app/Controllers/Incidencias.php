@@ -9,15 +9,27 @@ class Incidencias extends BaseController
     {
         $m = new IncidenciaModel();
 
-        // Formato SQL con alias (siguiendo tu estilo de “formadesql”):
-        // select i.id as Ide, i.op as OP, i.tipo as Tipo, i.fecha as Fecha, i.descripcion as Descripcion from incidencia as i
-        $rows = $m->select('id as Ide, op as OP, tipo as Tipo, fecha as Fecha, descripcion as Descripcion')
-            ->orderBy('fecha','DESC')
-            ->findAll();
+        try {
+            // Formato SQL con alias (siguiendo tu estilo de “formadesql”):
+            // select i.id as Ide, i.op as OP, i.tipo as Tipo, i.fecha as Fecha, i.descripcion as Descripcion from incidencia as i
+            $rows = $m->select('id as Ide, op as OP, tipo as Tipo, fecha as Fecha, descripcion as Descripcion')
+                ->orderBy('fecha','DESC')
+                ->findAll();
+            $lista = $rows;
+            $error = null;
+        } catch (\Throwable $e) {
+            // Si hay error de BD/tabla, no romper la vista
+            $lista = [];
+            $error = 'No fue posible consultar incidencias (' . $e->getMessage() . ')';
+        }
+
+        if ($error) {
+            session()->setFlashdata('error', $error);
+        }
 
         return view('modulos/incidencias', [
             'title'   => 'Incidencias',
-            'lista'   => $rows,
+            'lista'   => $lista,
         ]);
     }
 

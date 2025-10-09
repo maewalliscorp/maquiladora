@@ -21,4 +21,18 @@ class InspeccionModel extends Model
         'resultado'         => 'required|string',
         'observaciones'     => 'permit_empty|string'
     ];
+
+    /**
+     * Devuelve listado para la vista de inspección.
+     * Fallback simple: solo tabla inspeccion ordenada por fecha desc.
+     */
+    public function getListado(): array
+    {
+        try {
+            return $this->orderBy('fecha', 'DESC')->findAll();
+        } catch (\Throwable $e) {
+            // En caso de error de tabla/consulta, devolver arreglo vacío
+            return [];
+        }
+    }
 }

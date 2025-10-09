@@ -4,120 +4,151 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro - Maquiladora</title>
-
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://kit.fontawesome.com/f2923602be.js" crossorigin="anonymous"></script>
-    <!-- FontAwesome -->
+    <style>
+        body {
+            min-height: 100vh;
+            background-color: #63677c;
+            color: white;
+        }
+        .header {
+            background-color: #4b4f63;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        .header img {
+            margin-right: 1rem;
+        }
+        .form-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+        .form-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2rem;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 900px;
+        }
+        .form-control {
+            margin-bottom: 1rem;
+        }
+        .btn-custom {
+            background-color: #007bff;
+            border: none;
+        }
+        .btn-custom:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 <body>
+<!-- Header arriba -->
+<div class="header">
+    <img src="<?= base_url('img/logo_Maquiladora.png') ?>" alt="Logo" width="60">
+    <h4 class="m-0">Sistema de Maquiladora</h4>
+</div>
 
-<section class=" d-flex align-items-center justify-content-center"">
-    <div class="container">
-        <div class="row justify-content-center align-items-center">
-            <div class="col-lg-10 col-xl-9">
-                <div class="card p-md-5">
-                    <div class="row align-items-center">
-                        <!-- Imagen lado derecho -->
-                        <div class="col-md-6 d-none d-md-flex justify-content-center">
-                            <img src="<?= base_url('img/logo_Maquiladora.png') ?>" alt="Logo" width="350" class="my-3">
-                        </div>
+<!-- Sección del formulario -->
+<div class="container-fluid form-section">
+    <div class="form-card">
+        <h2 class="mb-4 text-center">Regístrate</h2>
+        <form action="<?= base_url('auth/register') ?>" method="post">
+            <div class="row">
+                <!-- Columna izquierda -->
+                <div class="col-md-6">
+                    <label class="form-label">Número de Empleado *</label>
+                    <input type="text" name="noEmpleado" class="form-control" required>
 
-                        <!-- Formulario -->
-                        <div class="col-md-6">
-                            <div class="text-center logo">
-                                <h4>Sistema de Maquiladora</h4>
-                            </div>
+                    <label class="form-label">Nombre *</label>
+                    <input type="text" name="nombre" class="form-control" required>
 
-                            <h3 class="text-center fw-bold mb-4">Registro</h3>
+                    <label class="form-label">Apellido *</label>
+                    <input type="text" name="apellido" class="form-control" required>
 
-                            <form action="<?= base_url('auth/register') ?>" method="post" id="registroForm">
+                    <label class="form-label">Correo Electrónico *</label>
+                    <input type="email" name="email" class="form-control" required>
 
-                                <div class="mb-3 d-flex align-items-center">
-                                    <i class="fas fa-user me-2" style="min-width:25px;text-align:center;"></i>
-                                    <input type="text" name="nombre" class="form-control" placeholder="Nombre" required>
-                                </div>
+                    <label class="form-label">Teléfono *</label>
+                    <input type="tel" name="telefono" class="form-control" required>
+                </div>
 
-                                <div class="mb-3 d-flex align-items-center">
-                                    <i class="fas fa-user-tag me-2" style="min-width:25px;text-align:center;"></i>
-                                    <input type="text" name="apellidoPaterno" class="form-control" placeholder="Apellido paterno" required>
-                                </div>
+                <!-- Columna derecha -->
+                <div class="col-md-6">
+                    <label class="form-label">Puesto *</label>
+                    <select name="puesto" class="form-control" required>
+                        <option value="">Seleccionar puesto...</option>
+                        <option value="Administrador">Administrador</option>
+                        <option value="Supervisor">Supervisor</option>
+                        <option value="Operador">Operador</option>
+                        <option value="Diseñador">Diseñador</option>
+                        <option value="Jefe de Producción">Jefe de Producción</option>
+                        <option value="Coordinador">Coordinador</option>
+                        <option value="Analista">Analista</option>
+                    </select>
 
-                                <div class="mb-3 d-flex align-items-center">
-                                    <i class="fas fa-user-tag me-2" style="min-width:25px;text-align:center;"></i>
-                                    <input type="text" name="apellidoMaterno" class="form-control" placeholder="Apellido materno">
-                                </div>
+                    <label class="form-label">Domicilio *</label>
+                    <textarea name="domicilio" class="form-control" rows="3" required></textarea>
 
-                                <div class="mb-3 d-flex align-items-center">
-                                    <i class="fas fa-envelope me-2" style="min-width:25px;text-align:center;"></i>
-                                    <input type="email" name="email" class="form-control" required placeholder="Correo electronico">
-                                </div>
+                    <label class="form-label">Usuario *</label>
+                    <input type="text" name="usuario" class="form-control" required>
 
-                                <div class="mb-3 d-flex align-items-center">
-                                    <i class="fas fa-phone me-2" style="min-width:25px;text-align:center;"></i>
-                                    <input type="number" name="telefono" class="form-control" required placeholder="Numero de telefono">
-                                </div>
+                    <label class="form-label">Contraseña *</label>
+                    <input type="password" name="password" class="form-control" required>
 
-                                <div class="mb-3 d-flex align-items-center">
-                                    <i class="fas fa-map-marker-alt me-2" style="min-width:25px;text-align:center;"></i>
-                                    <textarea name="domicilio" class="form-control" rows="2" required placeholder="Domicilio"></textarea>
-                                </div>
+                    <label class="form-label">Confirmar Contraseña *</label>
+                    <input type="password" name="confirm_password" class="form-control" required>
+                </div>
+            </div>
 
-                                <div class="mb-3 d-flex align-items-center">
-                                    <i class="fas fa-user-circle me-2" style="min-width:25px;text-align:center;"></i>
-                                    <input type="text" name="usuario" class="form-control" required placeholder="Usuario">
-                                </div>
-
-                                <div class="mb-3 d-flex align-items-center">
-                                    <i class="fas fa-lock me-2" style="min-width:25px;text-align:center;"></i>
-                                    <input type="password" name="password" id="password" class="form-control" required placeholder="Contraseña">
-                                </div>
-
-                                <div class="mb-3 d-flex align-items-center">
-                                    <i class="fas fa-key me-2" style="min-width:25px;text-align:center;"></i>
-                                    <input type="password" name="confirm_password" id="confirm_password" class="form-control" required placeholder="Confirmar contraseña">
-                                </div>
-
-                                <div class="form-check mb-4">
-                                    <input class="form-check-input" type="checkbox" id="terminos" name="terminos" required>
-                                    <label class="form-check-label" for="terminos">
-                                        Acepto los <a href="#">términos y condiciones</a>
-                                    </label>
-                                </div>
-
-                                <div class="text-center">
-                                    <button type="submit" class="btn btn-primary px-5 py-2">
-                                        <i class="fas fa-user-plus me-2"></i>Registrarse
-                                    </button>
-                                </div>
-                            </form>
-
-                        </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="terminos" name="terminos" required>
+                        <label class="form-check-label" for="terminos">
+                            Acepto los términos y condiciones de uso
+                        </label>
                     </div>
                 </div>
             </div>
-        </div>
+
+            <div class="row mt-3">
+                <div class="col-12 text-center">
+                    <button type="submit" class="btn btn-custom text-white px-5">Registrarse</button>
+                </div>
+            </div>
+        </form>
     </div>
-</section>
 </div>
+
 <script>
     // Validación de contraseñas
-    const password = document.getElementById('password');
-    const confirmPassword = document.getElementById('confirm_password');
-
-    confirmPassword.addEventListener('input', () => {
-        confirmPassword.setCustomValidity(
-            password.value !== confirmPassword.value ? 'Las contraseñas no coinciden' : ''
-        );
+    document.getElementById('confirm_password').addEventListener('input', function() {
+        const password = document.getElementById('password').value;
+        const confirmPassword = this.value;
+        
+        if (password !== confirmPassword) {
+            this.setCustomValidity('Las contraseñas no coinciden');
+        } else {
+            this.setCustomValidity('');
+        }
     });
 
-    document.getElementById('registroForm').addEventListener('submit', e => {
-        if (password.value !== confirmPassword.value) {
+    // Validación del formulario
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        
+        if (password !== confirmPassword) {
             e.preventDefault();
             alert('Las contraseñas no coinciden');
+            return false;
         }
     });
 </script>
-
 </body>
 </html>

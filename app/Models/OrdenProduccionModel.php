@@ -12,12 +12,7 @@ class OrdenProduccionModel extends Model
     {
         // ⚠️ SOLO columnas que EXISTEN en tu tabla
         $rows = $this->db->table($this->table . ' op')
-            ->select("
-                op.folio            AS op,
-                op.fechaInicioPlan  AS ini,
-                op.fechaFinPlan     AS fin,
-                op.status           AS estatus
-            ")
+            ->select("\n                op.id               AS opId,\n                op.folio            AS op,\n                op.fechaInicioPlan  AS ini,\n                op.fechaFinPlan     AS fin,\n                op.status           AS estatus\n            ")
             ->orderBy('op.fechaInicioPlan', 'DESC')
             ->get()->getResultArray();
 

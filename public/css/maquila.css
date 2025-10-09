@@ -204,3 +204,18 @@ h1, h2, h3, .card-title{ letter-spacing:.2px }
         max-height: calc(100vh - 260px);
     }
 }
+
+/* ========== Modals: texto oscuro legible ========== */
+/* Fuerza tipografía negra dentro de los modales (títulos, cuerpo, footer, labels, inputs, etc.) */
+.modal-content{
+    color: #111 !important;
+    background: var(--color-surface) !important; /* mantiene la estética del tema */
+}
+.modal-header, .modal-body, .modal-footer{ color:#111 !important; }
+.modal-title{ color:#111 !important; }
+.modal .form-label{ color:#111 !important; }
+.modal .form-control,
+.modal .form-select,
+.modal .form-check-label,
+.modal .input-group-text{ color:#111 !important; }
+.modal a{ color:#0d6efd; }
