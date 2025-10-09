@@ -6,14 +6,21 @@
 
 <?php
 $tableId = $tableId ?? 'tablaMtto';
-$columns = $columns ?? ['Folio','Apertura','Máquina','Tipo','Estatus','Descripción','Cierre','Horas','Vista']; // Vista al final
+$columns = $columns ?? ['Folio','Apertura','Máquina','Tipo','Estatus','Descripción','Cierre','Horas','Acciones']; // Acciones al final
 $rows    = is_array($rows ?? null) ? $rows : [];
 ?>
 
 <?= $this->section('content') ?>
-<div class="d-flex align-items-center mb-3">
-    <h1 class="me-3">Mantenimiento Correctivo</h1>
-    <span class="badge bg-danger">Averías</span>
+
+<!-- Título + botón Agregar a la derecha -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="d-flex align-items-center">
+        <h1 class="me-3">Mantenimiento Correctivo</h1>
+        <span class="badge bg-danger">Averías</span>
+    </div>
+    <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#modalMtto">
+        <i class="bi bi-plus-circle me-1"></i> Agregar
+    </button>
 </div>
 
 <?php if (session()->getFlashdata('success')): ?>
@@ -22,13 +29,6 @@ $rows    = is_array($rows ?? null) ? $rows : [];
 <?php if (session()->getFlashdata('error')): ?>
     <div class="alert alert-danger mb-3"><?= esc(session()->getFlashdata('error')) ?></div>
 <?php endif; ?>
-
-<!-- Botón Agregar -> Modal crear -->
-<div class="mb-3">
-    <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#modalMtto">
-        <i class="bi bi-plus-circle me-1"></i> Agregar
-    </button>
-</div>
 
 <!-- ====================== MODAL CREAR (centrado) ====================== -->
 <div class="modal fade" id="modalMtto" tabindex="-1" aria-labelledby="modalMttoLabel" aria-hidden="true">
@@ -121,32 +121,59 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                     $estado = $r['Estatus'] ?? '';
                     $cls = ($estado === 'Cerrado') ? 'bg-success'
                             : (($estado === 'En reparación') ? 'bg-warning text-dark' : 'bg-danger');
+
+                    $folio       = $r['Folio']        ?? '';
+                    $apertura    = $r['Apertura']     ?? '';
+                    $maquina     = $r['Maquina']      ?? '';
+                    $maquinaId   = $r['MaquinaId']    ?? ''; // si lo tienes
+                    $tipo        = $r['Tipo']         ?? '';
+                    $descripcion = $r['Descripcion']  ?? '';
+                    $cierre      = $r['Cierre']       ?? '';
+                    $horas       = (string)($r['Horas'] ?? '0');
                     ?>
                     <tr>
-                        <!-- Campos en el orden del header, excepto Vista que va al final -->
-                        <td><?= esc($r['Folio'] ?? '') ?></td>
-                        <td><?= esc($r['Apertura'] ?? '') ?></td>
-                        <td><?= esc($r['Maquina'] ?? '') ?></td>
-                        <td><?= esc($r['Tipo'] ?? '') ?></td>
+                        <td><?= esc($folio) ?></td>
+                        <td><?= esc($apertura) ?></td>
+                        <td><?= esc($maquina) ?></td>
+                        <td><?= esc($tipo) ?></td>
                         <td><span class="badge <?= esc($cls,'attr') ?>"><?= esc($estado) ?></span></td>
-                        <td class="text-start"><?= esc($r['Descripcion'] ?? '') ?></td>
-                        <td><?= esc($r['Cierre'] ?? '-') ?></td>
-                        <td><?= number_format((float)($r['Horas'] ?? 0), 2) ?></td>
+                        <td class="text-start"><?= esc($descripcion) ?></td>
+                        <td><?= esc($cierre ?: '-') ?></td>
+                        <td><?= number_format((float)$horas, 2) ?></td>
 
-                        <!-- ▶︎ Última columna: Vista -->
-                        <td class="text-center">
-                            <button type="button" class="btn btn-sm btn-outline-info btn-vista"
-                                    data-bs-toggle="modal" data-bs-target="#modalVista"
-                                    data-id="<?= esc($r['Folio'] ?? '', 'attr') ?>"
-                                    data-apertura="<?= esc($r['Apertura'] ?? '', 'attr') ?>"
-                                    data-maquina="<?= esc($r['Maquina'] ?? '', 'attr') ?>"
-                                    data-tipo="<?= esc($r['Tipo'] ?? '', 'attr') ?>"
-                                    data-estatus="<?= esc($estado, 'attr') ?>"
-                                    data-descripcion="<?= esc($r['Descripcion'] ?? '', 'attr') ?>"
-                                    data-cierre="<?= esc($r['Cierre'] ?? '', 'attr') ?>"
-                                    data-horas="<?= esc((string)($r['Horas'] ?? '0'), 'attr') ?>">
-                                <i class="bi bi-eye"></i> Vista
-                            </button>
+                        <!-- ▶︎ Última columna: Acciones -->
+                        <td class="text-end">
+                            <div class="btn-group" role="group" aria-label="Acciones">
+                                <!-- Ver -->
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-info btn-ver"
+                                        data-bs-toggle="modal" data-bs-target="#modalVista"
+                                        data-id="<?= esc($folio, 'attr') ?>"
+                                        data-apertura="<?= esc($apertura, 'attr') ?>"
+                                        data-maquina="<?= esc($maquina, 'attr') ?>"
+                                        data-maquinaid="<?= esc($maquinaId, 'attr') ?>"
+                                        data-tipo="<?= esc($tipo, 'attr') ?>"
+                                        data-estatus="<?= esc($estado, 'attr') ?>"
+                                        data-descripcion="<?= esc($descripcion, 'attr') ?>"
+                                        data-cierre="<?= esc($cierre, 'attr') ?>"
+                                        data-horas="<?= esc($horas, 'attr') ?>">
+                                    <i class="bi bi-eye me-1"></i> Ver
+                                </button>
+
+                                <!-- Editar -->
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary btn-editar"
+                                        data-bs-toggle="modal" data-bs-target="#modalEditar"
+                                        data-id="<?= esc($folio, 'attr') ?>"
+                                        data-apertura="<?= esc($apertura, 'attr') ?>"
+                                        data-maquinaid="<?= esc($maquinaId, 'attr') ?>"
+                                        data-tipo="<?= esc($tipo, 'attr') ?>"
+                                        data-estatus="<?= esc($estado, 'attr') ?>"
+                                        data-descripcion="<?= esc($descripcion, 'attr') ?>"
+                                        data-cierre="<?= esc($cierre, 'attr') ?>">
+                                    <i class="bi bi-pencil me-1"></i> Editar
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -156,7 +183,7 @@ $rows    = is_array($rows ?? null) ? $rows : [];
     </div>
 </div>
 
-<!-- ====================== MODAL VISTA ====================== -->
+<!-- ====================== MODAL VISTA (solo lectura, sin botón Editar) ====================== -->
 <div class="modal fade" id="modalVista" tabindex="-1" aria-labelledby="modalVistaLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -177,9 +204,6 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                 </dl>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" id="btnAbrirEditar" data-bs-target="#modalEditar" data-bs-toggle="modal">
-                    <i class="bi bi-pencil"></i> Editar
-                </button>
                 <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
@@ -253,7 +277,7 @@ $rows    = is_array($rows ?? null) ? $rows : [];
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script>
     (function(){
-        // DataTables: desactivar ordenar/buscar solo en la ÚLTIMA columna (Vista)
+        // DataTables: desactivar ordenar/buscar en la última columna (Acciones)
         $('#<?= esc($tableId) ?>').DataTable({
             language:{
                 sEmptyTable:"Sin datos", sZeroRecords:"No se encontraron resultados",
@@ -265,14 +289,16 @@ $rows    = is_array($rows ?? null) ? $rows : [];
         });
 
         // Autollenar fecha apertura al abrir "Crear"
-        document.getElementById('modalMtto').addEventListener('show.bs.modal', () => {
-            const input = document.getElementById('f-fechaApertura');
-            const pad = n => String(n).padStart(2,'0');
-            const d = new Date();
-            const val = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+
-                'T'+pad(d.getHours())+':'+pad(d.getMinutes());
-            if (!input.value) input.value = val;
-        });
+        const crear = document.getElementById('modalMtto');
+        if (crear) {
+            crear.addEventListener('show.bs.modal', () => {
+                const input = document.getElementById('f-fechaApertura');
+                const pad = n => String(n).padStart(2,'0');
+                const d = new Date();
+                const val = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+                if (input && !input.value) input.value = val;
+            });
+        }
 
         // Utilidad para normalizar datetime-local
         function toLocalInputValue(dt) {
@@ -281,13 +307,10 @@ $rows    = is_array($rows ?? null) ? $rows : [];
             return dt.replace(' ', 'T').slice(0,16);
         }
 
-        // Cargar datos al modal Vista
-        let currentRowData = null;
-        document.querySelectorAll('.btn-vista').forEach(btn=>{
+        // Modal VER (solo lectura)
+        document.querySelectorAll('.btn-ver').forEach(btn=>{
             btn.addEventListener('click', ()=>{
                 const d = btn.dataset;
-                currentRowData = { ...d };
-
                 document.getElementById('v-folio').textContent       = d.id || '';
                 document.getElementById('v-apertura').textContent    = d.apertura || '';
                 document.getElementById('v-maquina').textContent     = d.maquina || '';
@@ -299,23 +322,23 @@ $rows    = is_array($rows ?? null) ? $rows : [];
             });
         });
 
-        // Pasar datos al modal Editar
-        document.getElementById('btnAbrirEditar').addEventListener('click', ()=>{
-            if (!currentRowData) return;
-            const d = currentRowData;
+        // Modal EDITAR
+        document.querySelectorAll('.btn-editar').forEach(btn=>{
+            btn.addEventListener('click', ()=>{
+                const d = btn.dataset;
 
-            const form = document.getElementById('formEditar');
-            form.action = '<?= site_url("mantenimiento/correctivo/actualizar") ?>' + '/' + (d.id || '');
+                const form = document.getElementById('formEditar');
+                form.action = '<?= site_url("mantenimiento/correctivo/actualizar") ?>' + '/' + (d.id || '');
 
-            document.getElementById('e-id').value          = d.id || '';
-            document.getElementById('e-apertura').value    = toLocalInputValue(d.apertura || '');
-            // si "Maquina" es código (MC-001), aquí deberías pasar también data-maquinaid en el botón:
-            document.getElementById('e-maquinaId').value   = (!isNaN(d.maquina) ? d.maquina : '');
-            document.getElementById('e-responsableId').value = '';
-            document.getElementById('e-tipo').value        = d.tipo || 'Correctivo';
-            document.getElementById('e-estatus').value     = d.estatus || 'Abierta';
-            document.getElementById('e-descripcion').value = d.descripcion || '';
-            document.getElementById('e-cierre').value      = toLocalInputValue(d.cierre || '');
+                document.getElementById('e-id').value          = d.id || '';
+                document.getElementById('e-apertura').value    = toLocalInputValue(d.apertura || '');
+                document.getElementById('e-maquinaId').value   = d.maquinaid || ''; // usa MaquinaId si lo mandas desde backend
+                document.getElementById('e-responsableId').value = '';
+                document.getElementById('e-tipo').value        = d.tipo || 'Correctivo';
+                document.getElementById('e-estatus').value     = d.estatus || 'Abierta';
+                document.getElementById('e-descripcion').value = d.descripcion || '';
+                document.getElementById('e-cierre').value      = toLocalInputValue(d.cierre || '');
+            });
         });
     })();
 </script>

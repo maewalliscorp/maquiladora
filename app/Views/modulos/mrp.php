@@ -13,46 +13,54 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
-<div class="d-flex align-items-center mb-4">
-    <h1 class="me-3"><?= esc($title ?? 'MRP') ?></h1>
-    <span class="badge bg-primary">Planificación de Materiales</span>
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center">
+        <h1 class="me-3 mb-0">Planificación de requerimientos de materiales</h1>
+        <span class="badge bg-primary">MRP</span>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#reqEditModal">
+            <i class="bi bi-plus-lg me-1"></i> Agregar CA
+        </button>
+        <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#ocEditModal">
+            <i class="bi bi-plus-lg me-1"></i> Agregar OC
+        </button>
+    </div>
 </div>
 
 <div class="row g-3">
 
-    <!-- ===== Requerimientos ===== -->
-    <div class="col-lg-6">
+    <!-- ===== Requerimientos (apilado) ===== -->
+    <div class="col-12">
         <div class="card shadow-sm">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header">
                 <strong>Cálculo automático de necesidades</strong>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-success" type="button" id="btnImportBOM">Importar BOM</button>
-                    <button class="btn btn-sm btn-primary" type="button" id="btnCalcular">Calcular</button>
-                </div>
             </div>
-            <div class="card-body">
-                <!-- Botón Agregar (abre modal con Orden/BOM arriba) -->
-                <div class="d-flex justify-content-end mb-2">
-                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#reqEditModal">Agregar</button>
-                </div>
 
-                <?php if (empty($reqs)) {
+            <div class="card-body">
+                <?php
+                if (!isset($reqs) || !is_array($reqs) || !count($reqs)) {
                     $reqs = [
                             ['id'=>1,'mat'=>'Tela Algodón 180g','u'=>'m','necesidad'=>1200,'stock'=>450,'comprar'=>750],
                             ['id'=>2,'mat'=>'Hilo 40/2','u'=>'rollo','necesidad'=>35,'stock'=>10,'comprar'=>25],
                             ['id'=>3,'mat'=>'Etiqueta talla','u'=>'pz','necesidad'=>1000,'stock'=>1200,'comprar'=>0],
                     ];
-                } ?>
-
+                }
+                ?>
                 <div class="table-responsive">
                     <table id="tablaReqs" class="table table-striped table-bordered align-middle text-center mb-0 tbl-head">
                         <thead>
                         <tr>
-                            <th>Material</th><th>U.</th><th>Necesidad</th><th>Stock</th><th>A comprar</th><th>Ver</th><th>Editar</th>
+                            <th>Material</th>
+                            <th>U.</th>
+                            <th>Necesidad</th>
+                            <th>Stock</th>
+                            <th>A comprar</th>
+                            <th>Acciones</th> <!-- ← combinado -->
                         </tr>
                         </thead>
                         <tbody>
-                        <?php foreach($reqs as $r): ?>
+                        <?php foreach ($reqs as $r): ?>
                             <tr>
                                 <td><?= esc($r['mat']) ?></td>
                                 <td><?= esc($r['u']) ?></td>
@@ -60,30 +68,28 @@
                                 <td><?= esc($r['stock']) ?></td>
                                 <td><strong><?= esc($r['comprar']) ?></strong></td>
                                 <td>
-                                    <button class="btn btn-sm btn-outline-info ver-req"
-                                            data-bs-toggle="modal" data-bs-target="#reqViewModal"
-                                            data-id="<?= (int)$r['id'] ?>"
-                                            data-mat="<?= esc($r['mat']) ?>"
-                                            data-u="<?= esc($r['u']) ?>"
-                                            data-necesidad="<?= esc($r['necesidad']) ?>"
-                                            data-stock="<?= esc($r['stock']) ?>"
-                                            data-comprar="<?= esc($r['comprar']) ?>"
-                                            title="Ver">
-                                        <i class="bi bi-eye"></i>
-                                    </button>
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary edit-req"
-                                            data-bs-toggle="modal" data-bs-target="#reqEditModal"
-                                            data-id="<?= (int)$r['id'] ?>"
-                                            data-mat="<?= esc($r['mat']) ?>"
-                                            data-u="<?= esc($r['u']) ?>"
-                                            data-necesidad="<?= esc($r['necesidad']) ?>"
-                                            data-stock="<?= esc($r['stock']) ?>"
-                                            data-comprar="<?= esc($r['comprar']) ?>"
-                                            title="Editar">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-info ver-req"
+                                                data-bs-toggle="modal" data-bs-target="#reqViewModal"
+                                                data-id="<?= (int)$r['id'] ?>"
+                                                data-mat="<?= esc($r['mat']) ?>"
+                                                data-u="<?= esc($r['u']) ?>"
+                                                data-necesidad="<?= esc($r['necesidad']) ?>"
+                                                data-stock="<?= esc($r['stock']) ?>"
+                                                data-comprar="<?= esc($r['comprar']) ?>">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-primary edit-req"
+                                                data-bs-toggle="modal" data-bs-target="#reqEditModal"
+                                                data-id="<?= (int)$r['id'] ?>"
+                                                data-mat="<?= esc($r['mat']) ?>"
+                                                data-u="<?= esc($r['u']) ?>"
+                                                data-necesidad="<?= esc($r['necesidad']) ?>"
+                                                data-stock="<?= esc($r['stock']) ?>"
+                                                data-comprar="<?= esc($r['comprar']) ?>">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach ?>
@@ -94,80 +100,82 @@
         </div>
     </div>
 
-    <!-- ===== OCs sugeridas ===== -->
-    <div class="col-lg-6">
+    <!-- ===== OCs sugeridas (apilado) ===== -->
+    <div class="col-12">
         <div class="card shadow-sm">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header">
                 <strong>Órdenes de Compra sugeridas</strong>
-                <button class="btn btn-sm btn-success" type="button" id="btnGenTodas">Generar todas</button>
             </div>
-            <div class="card-body">
 
-                <?php if (empty($ocs)) {
+            <div class="card-body">
+                <?php
+                if (!isset($ocs) || !is_array($ocs) || !count($ocs)) {
                     $ocs = [
                             ['id'=>101,'prov'=>'Textiles MX','mat'=>'Tela Algodón 180g','cant'=>750,'u'=>'m','eta'=>'2025-10-02'],
                             ['id'=>102,'prov'=>'Hilos del Norte','mat'=>'Hilo 40/2','cant'=>25,'u'=>'rollo','eta'=>'2025-09-30'],
                     ];
-                } ?>
-
-                <div class="d-flex justify-content-end mb-2">
-                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#ocEditModal">Agregar</button>
-                </div>
-
+                }
+                ?>
                 <div class="table-responsive">
                     <table id="tablaOCs" class="table table-striped table-bordered align-middle text-center mb-0 tbl-head">
                         <thead>
                         <tr>
-                            <th>Proveedor</th><th>Material</th><th>Cantidad</th><th>ETA</th><th>Ver</th><th>Editar</th><th>Generar</th>
+                            <th>Proveedor</th>
+                            <th>Material</th>
+                            <th>Cantidad</th>
+                            <th>ETA</th>
+                            <th>Acciones</th> <!-- ← combinado -->
+                            <th>Generar</th>
                         </tr>
                         </thead>
                         <tbody>
-                        <?php foreach($ocs as $o): ?>
+                        <?php foreach ($ocs as $o): ?>
                             <tr>
                                 <td><?= esc($o['prov']) ?></td>
                                 <td><?= esc($o['mat']) ?></td>
                                 <td><?= esc($o['cant']) ?> <?= esc($o['u']) ?></td>
                                 <td><?= esc($o['eta']) ?></td>
                                 <td>
-                                    <button class="btn btn-sm btn-outline-info ver-oc"
-                                            data-bs-toggle="modal" data-bs-target="#ocViewModal"
-                                            data-id="<?= (int)$o['id'] ?>"
-                                            data-prov="<?= esc($o['prov']) ?>"
-                                            data-mat="<?= esc($o['mat']) ?>"
-                                            data-cant="<?= esc($o['cant']) ?>"
-                                            data-u="<?= esc($o['u']) ?>"
-                                            data-eta="<?= esc($o['eta']) ?>"
-                                            title="Ver">
-                                        <i class="bi bi-eye"></i>
-                                    </button>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-info ver-oc"
+                                                data-bs-toggle="modal" data-bs-target="#ocViewModal"
+                                                data-id="<?= (int)$o['id'] ?>"
+                                                data-prov="<?= esc($o['prov']) ?>"
+                                                data-mat="<?= esc($o['mat']) ?>"
+                                                data-cant="<?= esc($o['cant']) ?>"
+                                                data-u="<?= esc($o['u']) ?>"
+                                                data-eta="<?= esc($o['eta']) ?>">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-primary edit-oc"
+                                                data-bs-toggle="modal" data-bs-target="#ocEditModal"
+                                                data-id="<?= (int)$o['id'] ?>"
+                                                data-prov="<?= esc($o['prov']) ?>"
+                                                data-mat="<?= esc($o['mat']) ?>"
+                                                data-cant="<?= esc($o['cant']) ?>"
+                                                data-u="<?= esc($o['u']) ?>"
+                                                data-eta="<?= esc($o['eta']) ?>">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </div>
                                 </td>
                                 <td>
-                                    <button class="btn btn-sm btn-outline-primary edit-oc"
-                                            data-bs-toggle="modal" data-bs-target="#ocEditModal"
-                                            data-id="<?= (int)$o['id'] ?>"
-                                            data-prov="<?= esc($o['prov']) ?>"
-                                            data-mat="<?= esc($o['mat']) ?>"
-                                            data-cant="<?= esc($o['cant']) ?>"
-                                            data-u="<?= esc($o['u']) ?>"
-                                            data-eta="<?= esc($o['eta']) ?>"
-                                            title="Editar">
-                                        <i class="bi bi-pencil"></i>
+                                    <button class="btn btn-sm btn-primary gen-oc" data-id="<?= (int)$o['id'] ?>">
+                                        Generar OC
                                     </button>
                                 </td>
-                                <td><button class="btn btn-sm btn-primary gen-oc" data-id="<?= (int)$o['id'] ?>">Generar OC</button></td>
                             </tr>
                         <?php endforeach ?>
                         </tbody>
                     </table>
                 </div>
-
             </div>
         </div>
     </div>
+
 </div>
 
-<!-- ===== Modales ===== -->
-
+<!-- ===== Modales (sin cambios) ===== -->
 <!-- Ver Requerimiento -->
 <div class="modal fade" id="reqViewModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -192,25 +200,29 @@
 <div class="modal fade" id="reqEditModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content text-dark">
-            <div class="modal-header"><h5 class="modal-title">Requerimiento</h5>
+            <div class="modal-header">
+                <h5 class="modal-title">Requerimiento</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" id="formReq" action="#">
                 <?= csrf_field() ?>
                 <input type="hidden" name="id" id="req-id">
                 <div class="modal-body">
-                    <!-- Orden/BOM en el modal -->
                     <div class="mb-3">
                         <label class="form-label">Orden de Cliente/Producción</label>
                         <input class="form-control" name="oc" id="req-oc" value="OC-2025-0012">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">BOM</label>
-                        <select class="form-select" name="bom" id="req-bom">
-                            <option value="BOM-TSHIRT-001">BOM-TSHIRT-001</option>
-                            <option value="BOM-HOODIE-042">BOM-HOODIE-042</option>
-                            <option value="BOM-PANTS-317">BOM-PANTS-317</option>
-                        </select>
+                        <div class="d-flex gap-2">
+                            <select class="form-select" name="bom" id="req-bom">
+                                <option value="BOM-TSHIRT-001">BOM-TSHIRT-001</option>
+                                <option value="BOM-HOODIE-042">BOM-HOODIE-042</option>
+                                <option value="BOM-PANTS-317">BOM-PANTS-317</option>
+                            </select>
+                            <button type="button" class="btn btn-success" id="btnImportBOM">Importar BOM</button>
+                            <button type="button" class="btn btn-primary" id="btnCalcular">Calcular</button>
+                        </div>
                     </div>
 
                     <div class="row g-3">
@@ -268,7 +280,8 @@
 <div class="modal fade" id="ocEditModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content text-dark">
-            <div class="modal-header"><h5 class="modal-title">OC sugerida</h5>
+            <div class="modal-header">
+                <h5 class="modal-title">OC sugerida</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" id="formOC" action="#">
@@ -299,6 +312,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-success" id="btnGenTodas">Generar todas</button>
                     <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
                     <button class="btn btn-primary" type="submit">Guardar</button>
                 </div>
@@ -323,15 +337,19 @@
             oPaginate:{ sFirst:"Primero", sLast:"Último", sNext:"Siguiente", sPrevious:"Anterior" }
         };
 
+        // Reqs: ahora la columna de Acciones es el índice 5
         $('#tablaReqs').DataTable({
-            language: langES, order: [[0,'asc']],
-            columnDefs: [{ orderable:false, searchable:false, targets:[5,6] }],
+            language: langES,
+            order: [[0,'asc']],
+            columnDefs: [{ orderable:false, searchable:false, targets:[5] }],
             pageLength: 5, lengthMenu: [5,10,25,50]
         });
 
+        // OCs: Acciones=4, Generar=5
         $('#tablaOCs').DataTable({
-            language: langES, order: [[3,'asc']],
-            columnDefs: [{ orderable:false, searchable:false, targets:[4,5,6] }],
+            language: langES,
+            order: [[3,'asc']],
+            columnDefs: [{ orderable:false, searchable:false, targets:[4,5] }],
             pageLength: 5, lengthMenu: [5,10,25,50]
         });
 
@@ -345,7 +363,7 @@
             $('#rv-comp').text(g('data-comprar'));
         });
 
-        // Editar requerimiento (precarga modal)
+        // Editar/Agregar requerimiento
         $(document).on('click', '.edit-req', function(){
             $('#formReq').attr('action', '#');
             $('#req-id').val(this.dataset.id || '');
@@ -358,7 +376,8 @@
         document.getElementById('reqEditModal').addEventListener('show.bs.modal', e=>{
             if (!e.relatedTarget.classList.contains('edit-req')) {
                 $('#formReq').attr('action', '#');
-                ['req-id','req-mat','req-u','req-nec','req-stk','req-comp'].forEach(id=>$('#'+id).val(''));
+                ['req-id','req-oc','req-mat','req-u','req-nec','req-stk','req-comp'].forEach(id=>$('#'+id).val(''));
+                $('#req-bom').val('BOM-TSHIRT-001');
             }
         });
 
@@ -371,7 +390,7 @@
             $('#ov-eta').text(g('data-eta'));
         });
 
-        // Editar OC
+        // Editar/Agregar OC
         $(document).on('click', '.edit-oc', function(){
             $('#formOC').attr('action', '#');
             $('#oc-id').val(this.dataset.id || '');
@@ -388,7 +407,7 @@
             }
         });
 
-        // Acciones demo
+        // Botones demo
         $('#btnCalcular').on('click', ()=>alert('Calcular (demo)'));
         $('#btnImportBOM').on('click', ()=>alert('Importar BOM (demo)'));
         $('#btnGenTodas').on('click', ()=>alert('Generar todas (demo)'));

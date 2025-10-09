@@ -1,9 +1,16 @@
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
 
-<div class="d-flex align-items-center mb-4">
-    <h1 class="me-3">Inventario de Maquinaria</h1>
-    <span class="badge bg-secondary">Mantenimiento</span>
+<!-- Encabezado con botón Agregar al lado derecho -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center">
+        <h1 class="me-3">Inventario de Maquinaria</h1>
+        <span class="badge bg-secondary">Mantenimiento</span>
+    </div>
+
+    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#maqModal">
+        <i class="bi bi-plus-circle me-1"></i> Agregar máquina
+    </button>
 </div>
 
 <?php if (session()->getFlashdata('success')): ?>
@@ -14,13 +21,7 @@
     <div class="alert alert-danger mb-3"><?= esc(session()->getFlashdata('error')) ?></div>
 <?php endif; ?>
 
-<div class="mb-3">
-    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#maqModal">
-        <i class="bi bi-plus-circle me-1"></i> Agregar máquina
-    </button>
-</div>
-
-<!-- MODAL centrado -->
+<!-- MODAL: Agregar / Registrar máquina (centrado) -->
 <div class="modal fade" id="maqModal" tabindex="-1" aria-labelledby="maqModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -66,7 +67,7 @@
                         <div class="col-md-4">
                             <label for="ubicacion" class="form-label fw-semibold text-dark">Ubicación</label>
                             <input id="ubicacion" name="ubicacion" class="form-control"
-                                   value="<?= esc(old('ubicacion')) ?>" placeholder="Línea 2">
+                                   value"><?= esc(old('ubicacion')) ?>" placeholder="Línea 2">
                         </div>
 
                         <div class="col-md-4">
@@ -89,6 +90,33 @@
     </div>
 </div>
 
+<!-- MODAL: Ver / Más información (solo lectura, sin botón Editar) -->
+<div class="modal fade" id="verModal" tabindex="-1" aria-labelledby="verModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content text-dark">
+            <div class="modal-header">
+                <h5 class="modal-title fw-semibold" id="verModalLabel">Detalles de la máquina</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">Código</dt>       <dd class="col-sm-9" id="v-codigo">-</dd>
+                    <dt class="col-sm-3">Modelo</dt>       <dd class="col-sm-9" id="v-modelo">-</dd>
+                    <dt class="col-sm-3">Fabricante</dt>   <dd class="col-sm-9" id="v-fabricante">-</dd>
+                    <dt class="col-sm-3">Serie</dt>        <dd class="col-sm-9" id="v-serie">-</dd>
+                    <dt class="col-sm-3">Compra</dt>       <dd class="col-sm-9" id="v-compra">-</dd>
+                    <dt class="col-sm-3">Ubicación</dt>    <dd class="col-sm-9" id="v-ubicacion">-</dd>
+                    <dt class="col-sm-3">Estado</dt>       <dd class="col-sm-9" id="v-estado"><span class="badge bg-success">Operativa</span></dd>
+                </dl>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla -->
 <div class="card shadow-sm">
     <div class="card-header"><strong>Listado</strong></div>
     <div class="card-body table-responsive">
@@ -109,28 +137,57 @@
             <?php if (!empty($maq) && is_array($maq)): ?>
                 <?php foreach ($maq as $m): ?>
                     <?php
+                    // Normaliza fecha de compra
                     $compra = '';
                     if (!empty($m['compra'])) {
                         $ts = strtotime($m['compra']);
                         if ($ts) { $compra = date('Y-m-d', $ts); }
                     }
-                    $esOperativa = (isset($m['estado']) && $m['estado'] === 'Operativa');
-                    $badgeClass  = $esOperativa ? 'bg-success' : 'bg-warning text-dark';
-                    $id = $m['id'] ?? null;
+                    $estado       = $m['estado'] ?? 'Operativa';
+                    $esOperativa  = ($estado === 'Operativa');
+                    $badgeClass   = $esOperativa ? 'bg-success' : 'bg-warning text-dark';
+
+                    $id         = $m['id']        ?? null;
+                    $codigo     = $m['cod']       ?? '';
+                    $modelo     = $m['modelo']    ?? '';
+                    $fabricante = $m['fabricante']?? '';
+                    $serie      = $m['serie']     ?? '';
+                    $ubicacion  = $m['ubic']      ?? '';
                     ?>
                     <tr>
-                        <td><?= esc($m['cod'] ?? '') ?></td>
-                        <td><?= esc($m['modelo'] ?? '') ?></td>
-                        <td><?= esc($m['fabricante'] ?? '') ?></td>
-                        <td><?= esc($m['serie'] ?? '') ?></td>
+                        <td><?= esc($codigo) ?></td>
+                        <td><?= esc($modelo) ?></td>
+                        <td><?= esc($fabricante) ?></td>
+                        <td><?= esc($serie) ?></td>
                         <td><?= esc($compra) ?></td>
-                        <td><?= esc($m['ubic'] ?? '') ?></td>
-                        <td><span class="badge <?= esc($badgeClass,'attr') ?>"><?= esc($m['estado'] ?? 'Operativa') ?></span></td>
+                        <td><?= esc($ubicacion) ?></td>
+                        <td><span class="badge <?= esc($badgeClass,'attr') ?>"><?= esc($estado) ?></span></td>
                         <td class="text-end">
-                            <a class="btn btn-sm btn-outline-primary"
-                               href="<?= $id ? base_url('modulo3/maquinaria/editar/'.$id) : 'javascript:void(0)' ?>">
-                                Editar
-                            </a>
+                            <div class="btn-group" role="group" aria-label="Acciones">
+                                <!-- Ver -->
+                                <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-info"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#verModal"
+                                        data-id="<?= esc($id) ?>"
+                                        data-codigo="<?= esc($codigo, 'attr') ?>"
+                                        data-modelo="<?= esc($modelo, 'attr') ?>"
+                                        data-fabricante="<?= esc($fabricante, 'attr') ?>"
+                                        data-serie="<?= esc($serie, 'attr') ?>"
+                                        data-compra="<?= esc($compra, 'attr') ?>"
+                                        data-ubicacion="<?= esc($ubicacion, 'attr') ?>"
+                                        data-estado="<?= esc($estado, 'attr') ?>"
+                                >
+                                    <i class="bi bi-eye me-1"></i> Ver
+                                </button>
+
+                                <!-- Editar -->
+                                <a class="btn btn-sm btn-outline-primary <?= $id ? '' : 'disabled' ?>"
+                                   href="<?= $id ? base_url('modulo3/maquinaria/editar/'.$id) : 'javascript:void(0)' ?>">
+                                    <i class="bi bi-pencil me-1"></i> Editar
+                                </a>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -144,14 +201,43 @@
 
 <script>
     (function(){
-        const modal = document.getElementById('maqModal');
-        modal.addEventListener('show.bs.modal', () => {
-            const input = document.getElementById('fechaCompra');
-            if (!input.value) {
-                const d = new Date(), pad = n => String(n).padStart(2,'0');
-                input.value = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-            }
-        });
+        // Rellena fecha por defecto al abrir el modal de "Agregar"
+        const addModal = document.getElementById('maqModal');
+        if (addModal) {
+            addModal.addEventListener('show.bs.modal', () => {
+                const input = document.getElementById('fechaCompra');
+                if (input && !input.value) {
+                    const d = new Date(), pad = n => String(n).padStart(2,'0');
+                    input.value = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+                }
+            });
+        }
+
+        // Pinta datos en el modal de "Ver"
+        const verModal = document.getElementById('verModal');
+        if (verModal) {
+            verModal.addEventListener('show.bs.modal', function (event) {
+                const btn = event.relatedTarget;
+                if (!btn) return;
+
+                const q = (id) => this.querySelector(id);
+
+                q('#v-codigo').textContent     = btn.getAttribute('data-codigo')     || '-';
+                q('#v-modelo').textContent     = btn.getAttribute('data-modelo')     || '-';
+                q('#v-fabricante').textContent = btn.getAttribute('data-fabricante') || '-';
+                q('#v-serie').textContent      = btn.getAttribute('data-serie')      || '-';
+                q('#v-compra').textContent     = btn.getAttribute('data-compra')     || '-';
+                q('#v-ubicacion').textContent  = btn.getAttribute('data-ubicacion')  || '-';
+
+                const estado = btn.getAttribute('data-estado') || 'Operativa';
+                const vEstado = q('#v-estado');
+                vEstado.innerHTML = '';
+                const span = document.createElement('span');
+                span.className = 'badge ' + (estado === 'Operativa' ? 'bg-success' : 'bg-warning text-dark');
+                span.textContent = estado;
+                vEstado.appendChild(span);
+            });
+        }
     })();
 </script>
 
