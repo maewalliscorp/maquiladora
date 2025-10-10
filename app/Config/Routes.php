@@ -77,10 +77,24 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->get('ordenes-produccion', 'Produccion::ordenes');
     $routes->post('ordenes/estatus',   'Produccion::actualizarEstatus');
     $routes->get('ordenes/(:num)/json','Produccion::orden_json/$1');
+    // APIs / Producción
+    $routes->get('pedido/(:num)/json', 'Modulos::m1_pedido_json/$1');
+    $routes->get('clientes/json',      'Clientes::json_catalogo');
+    $routes->get('ordenes-produccion', 'Produccion::ordenes');
+    $routes->post('ordenes/estatus',   'Produccion::actualizarEstatus');
+    $routes->get('ordenes/(:num)/json','Produccion::orden_json/$1');
+
+    // Endpoints usados por los modales en vista modulos/m1_ordenes.php
+    $routes->get('ordenes/folio/(:segment)/json', 'Produccion::orden_json_folio/$1');
+    $routes->get('ordenes/(:num)/asignaciones',   'Produccion::asignaciones/$1');
+    $routes->post('ordenes/asignaciones/agregar', 'Produccion::asignaciones_agregar');
+    $routes->post('ordenes/asignaciones/agregar-multiple', 'Produccion::asignaciones_agregar_multiple');
+    $routes->post('ordenes/asignaciones/eliminar', 'Produccion::asignaciones_eliminar');
 
     // Evaluación
     $routes->get('evaluar/(:num)',      'Modulos::m1_evaluar/$1');
     $routes->post('guardar-evaluacion', 'Modulos::m1_guardarEvaluacion');
+
 });
 
 /* --------------------------------------------------------------------

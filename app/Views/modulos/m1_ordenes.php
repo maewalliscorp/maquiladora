@@ -3,12 +3,13 @@
 <?= $this->section('head') ?>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
 <div class="d-flex align-items-center mb-4">
     <h1 class="me-3">Órdenes de Producción</h1>
+{{ ... }}
     <span class="badge bg-primary">Módulo 1</span>
 </div>
 
@@ -41,22 +42,21 @@
                         <td>
                             <?php $estatusActual = trim($orden['estatus'] ?? ''); ?>
                             <div class="d-flex align-items-center justify-content-center gap-2">
+                                <div class="spinner-border spinner-border-sm text-primary op-estatus-saving" role="status" style="display:none;" aria-hidden="true"></div>
                                 <select class="form-select form-select-sm op-estatus-select" data-id="<?= esc($orden['opId'] ?? '') ?>" data-prev="<?= esc($estatusActual) ?>" style="min-width: 150px;">
                                     <option value="Planificada" <?= strcasecmp($estatusActual,'Planificada')===0 ? 'selected' : '' ?>>Planificada</option>
                                     <option value="En proceso"  <?= strcasecmp($estatusActual,'En proceso')===0 ? 'selected' : '' ?>>En proceso</option>
                                     <option value="Completada"  <?= strcasecmp($estatusActual,'Completada')===0 ? 'selected' : '' ?>>Completada</option>
                                     <option value="Pausada"     <?= strcasecmp($estatusActual,'Pausada')===0 ? 'selected' : '' ?>>Pausada</option>
-                                    <option value="Cancelada"   <?= strcasecmp($estatusActual,'Cancelada')===0 ? 'selected' : '' ?>>Cancelada</option>
                                 </select>
-                                <div class="spinner-border spinner-border-sm text-primary op-estatus-saving" role="status" style="display:none;" aria-hidden="true"></div>
                             </div>
                         </td>
                         <td>
                             <div class="d-flex gap-2 justify-content-center">
-                                <button type="button" class="btn btn-sm btn-outline-info btn-ver-op" data-id="<?= esc($orden['opId'] ?? '') ?>">
+                                <button type="button" class="btn btn-sm btn-outline-info btn-ver-op" data-folio="<?= esc($orden['op'] ?? '') ?>" data-bs-toggle="modal" data-bs-target="#opDetalleModal">
                                     <i class="bi bi-eye"></i> Ver
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary btn-agregar-op" data-id="<?= esc($orden['opId'] ?? '') ?>">
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-agregar-op" data-id="<?= esc($orden['opId'] ?? '') ?>" data-folio="<?= esc($orden['op'] ?? '') ?>" data-bs-toggle="modal" data-bs-target="#opAsignacionesModal">
                                     <i class="bi bi-person-plus"></i> Agregar
                                 </button>
                             </div>
@@ -65,7 +65,6 @@
                 <?php endforeach; ?>
             <?php else: ?>
                 <tr>
-                    <td colspan="7" class="text-muted">No hay órdenes registradas</td>
                 </tr>
             <?php endif; ?>
             </tbody>
@@ -95,11 +94,74 @@
               <dt class="col-sm-3">Fecha versión</dt><dd class="col-sm-9" id="op-dis-fecha">-</dd>
               <dt class="col-sm-3">Aprobado</dt><dd class="col-sm-9" id="op-dis-aprobado">-</dd>
               <dt class="col-sm-3">Notas</dt><dd class="col-sm-9" id="op-dis-notas">-</dd>
-              <dt class="col-sm-3">Archivo CAD</dt>
-              <dd class="col-sm-9"><a id="op-dis-cad" href="#" target="_blank" style="display:none;">Ver CAD</a><span id="op-dis-cad-na" class="text-muted">—</span></dd>
-              <dt class="col-sm-3">Archivo Patrón</dt>
-              <dd class="col-sm-9"><a id="op-dis-patron" href="#" target="_blank" style="display:none;">Ver Patrón</a><span id="op-dis-patron-na" class="text-muted">—</span></dd>
+              <dt class="col-sm-3">Archivos</dt>
+              <dd class="col-sm-9">
+                <div id="op-dis-archivos">
+                  <div id="opDisCarousel" class="carousel slide" data-bs-ride="false" style="display:none;">
+                    <div class="carousel-inner"></div>
+                    <button class="carousel-control-prev" type="button" data-bs-target="#opDisCarousel" data-bs-slide="prev">
+                      <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                      <span class="visually-hidden">Anterior</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#opDisCarousel" data-bs-slide="next">
+                      <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                      <span class="visually-hidden">Siguiente</span>
+                    </button>
+                  </div>
+                  <span id="op-dis-archivos-na" class="text-muted">—</span>
+                </div>
+              </dd>
             </dl>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Modal Asignaciones OP (estático) -->
+    <div class="modal fade" id="opAsignacionesModal" tabindex="-1" aria-labelledby="opAsignacionesLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content text-dark">
+          <div class="modal-header">
+            <h5 class="modal-title" id="opAsignacionesLabel">Asignación de Tareas a OP <span id="asg-opid"></span></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label">Empleados disponibles (marque para asignar)</label>
+                <div id="asg-disponibles-list" class="border rounded p-2" style="max-height:260px; overflow:auto;"></div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Desde</label>
+                <input type="datetime-local" id="asg-desde" class="form-control" />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Hasta</label>
+                <input type="datetime-local" id="asg-hasta" class="form-control" />
+              </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div class="small text-muted">Seleccione uno o más empleados y luego presione Asignar.</div>
+              <button id="asg-btn-assign-selected" type="button" class="btn btn-primary">
+                <i class="bi bi-person-plus"></i> Asignar seleccionados
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm table-striped align-middle" id="asg-tabla">
+                <thead class="table-light">
+                  <tr>
+                    <th>Empleado</th>
+                    <th>Puesto</th>
+                    <th>Desde</th>
+                    <th>Hasta</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -113,7 +175,7 @@
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
   $(function(){
     // DataTable
@@ -130,6 +192,135 @@
         oPaginate:     { sFirst:"Primero", sLast:"Último", sNext:"Siguiente", sPrevious:"Anterior" },
         oAria:         { sSortAscending:": Orden asc", sSortDescending:": Orden desc" }
       }
+    });
+
+    // ---------------- Asignaciones ----------------
+
+    function cargarAsignaciones(opId){
+      const $modal = $('#opAsignacionesModal');
+      $modal.find('#asg-opid').text(opId);
+      const $list = $modal.find('#asg-disponibles-list');
+      const $tbody = $modal.find('#asg-tabla tbody');
+      $list.html('<div class="text-muted">Cargando empleados...</div>');
+      $tbody.html('<tr><td colspan="5" class="text-center text-muted">Cargando...</td></tr>');
+      $.getJSON('<?= base_url('modulo1/ordenes') ?>/' + opId + '/asignaciones?t=' + Date.now())
+        .done(function(data){
+          // Empleados disponibles como checkboxes
+          const emps = data.empleados || [];
+          if (!emps.length) {
+            $list.html('<div class="text-muted">No hay empleados disponibles.</div>');
+          } else {
+            const items = emps.map(function(e){
+              const label = (e.noEmpleado?('['+e.noEmpleado+'] '):'') + e.nombre + ' ' + (e.apellido||'');
+              return `<div class="form-check">
+                        <input class="form-check-input asg-chk" type="checkbox" value="${e.id}" id="asg-chk-${e.id}">
+                        <label class="form-check-label" for="asg-chk-${e.id}">${label}</label>
+                      </div>`;
+            });
+            $list.html(items.join(''));
+          }
+          // Asignados
+          $tbody.empty();
+          if (!data.asignadas || !data.asignadas.length){
+            $tbody.html('<tr><td colspan="5" class="text-center text-muted">Sin asignaciones</td></tr>');
+          } else {
+            data.asignadas.forEach(function(a){
+              const nombre = (a.noEmpleado?('['+a.noEmpleado+'] '):'') + (a.nombre||'') + ' ' + (a.apellido||'');
+              const tr = `<tr>
+                <td>${nombre}</td>
+                <td>${a.puesto||'-'}</td>
+                <td>${a.asignadoDesde||'-'}</td>
+                <td>${a.asignadoHasta||'-'}</td>
+                <td class="text-end">
+                  <button class="btn btn-sm btn-outline-danger asg-del" data-id="${a.id}"><i class="bi bi-trash"></i></button>
+                </td>
+              </tr>`;
+              $tbody.append(tr);
+            });
+          }
+        })
+        .fail(function(xhr){
+          $tbody.html('<tr><td colspan="5" class="text-center text-danger">Error al cargar asignaciones</td></tr>');
+          console.error('Asignaciones error', xhr?.status, xhr?.responseText);
+        });
+    }
+
+    // Abrir modal Asignaciones (la apertura la hace data-bs-toggle; aquí solo precargamos)
+    $(document).on('click', '.btn-agregar-op', function(){
+      let opId = parseInt($(this).data('id') || 0, 10);
+      const folio = ($(this).data('folio')||'').toString();
+      const $modal = $('#opAsignacionesModal');
+      const setAndLoad = (id) => {
+        $modal.data('opid', id);
+        $('#asg-btn-add').data('opid', id);
+        cargarAsignaciones(id);
+      };
+      if (opId > 0) { setAndLoad(opId); return; }
+      if (folio) {
+        console.log('Resolviendo OP id por folio=', folio);
+        $.getJSON('<?= base_url('modulo1/ordenes/folio') ?>/' + encodeURIComponent(folio) + '/json?t=' + Date.now())
+          .done(function(data){
+            const id = parseInt(data.id||0,10);
+            if (id>0) setAndLoad(id); else alert('No se pudo resolver la OP por folio.');
+          })
+          .fail(function(xhr){
+            console.error('No se pudo resolver OP por folio', folio, xhr?.status, xhr?.responseText);
+            alert('No se pudo resolver la OP por folio.');
+          });
+        return;
+      }
+      alert('No se pudo determinar el ID de la OP.');
+    });
+
+    // También volver a cargar al mostrar el modal por si quedó abierto
+    $('#opAsignacionesModal').on('shown.bs.modal', function(){
+      const opId = $(this).data('opid');
+      if (opId) cargarAsignaciones(opId);
+    });
+
+    // Asignar empleados seleccionados (multi)
+    $(document).on('click', '#asg-btn-assign-selected', function(){
+      const $modal = $('#opAsignacionesModal');
+      const opId = $modal.data('opid');
+      const desde = $modal.find('#asg-desde').val() || '';
+      const hasta = $modal.find('#asg-hasta').val() || '';
+      const empleados = $('#asg-disponibles-list .asg-chk:checked')
+          .map(function(){ return parseInt($(this).val(),10); }).get()
+          .filter(n=>!isNaN(n) && n>0);
+      if (!opId || empleados.length===0){ alert('Seleccione al menos un empleado.'); return; }
+      const url = empleados.length > 1
+        ? '<?= base_url('modulo1/ordenes/asignaciones/agregar-multiple') ?>'
+        : '<?= base_url('modulo1/ordenes/asignaciones/agregar') ?>';
+      const payload = empleados.length > 1
+        ? { opId, empleados, desde, hasta }
+        : { opId, empleadoId: empleados[0], desde, hasta };
+      $.ajax({ url, method: 'POST', data: payload, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .done(function(resp){
+          cargarAsignaciones(opId);
+        })
+        .fail(function(xhr){
+          alert('No se pudo asignar: ' + (xhr?.status||''));
+          console.error('asignar fail', xhr?.status, xhr?.responseText);
+        });
+    });
+
+    // Eliminar asignación
+    $(document).on('click', '.asg-del', function(){
+      const asignacionId = $(this).data('id');
+      const opId = $('#opAsignacionesModal').data('opid');
+      if (!asignacionId || !opId) return;
+      if (!confirm('¿Eliminar esta asignación?')) return;
+      $.ajax({
+        url: '<?= base_url('modulo1/ordenes/asignaciones/eliminar') ?>',
+        method: 'POST',
+        data: { asignacionId },
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      }).done(function(){
+        cargarAsignaciones(opId);
+      }).fail(function(xhr){
+        alert('No se pudo eliminar: ' + (xhr?.status||''));
+        console.error('eliminar fail', xhr?.status, xhr?.responseText);
+      });
     });
 
     // Guardar estatus inline
@@ -165,39 +356,131 @@
 
     // Ver detalle (modal)
     $(document).on('click', '.btn-ver-op', function(){
-      const id = $(this).data('id');
-      if (!id) return;
+      const folio = $(this).data('folio');
+      if (!folio) return;
       const $modal = $('#opDetalleModal');
       const $btn = $(this);
       $btn.prop('disabled', true);
-      // Limpiar
-      $modal.find('#op-id,#op-folio,#op-status,#op-cant,#op-ini,#op-fin,#op-dis-nombre,#op-dis-version,#op-dis-fecha,#op-dis-aprobado,#op-dis-notas').text('-');
-      $('#op-dis-cad').hide().attr('href','#'); $('#op-dis-cad-na').show();
-      $('#op-dis-patron').hide().attr('href','#'); $('#op-dis-patron-na').show();
-      $.getJSON('<?= base_url('modulo1/ordenes') ?>/' + id + '/json?t=' + Date.now())
+      // Estado de carga
+      const setText = (sel, val) => $modal.find(sel).text(val);
+      setText('#op-id','Cargando...');
+      setText('#op-folio','Cargando...');
+      setText('#op-status','Cargando...');
+      setText('#op-cant','Cargando...');
+      setText('#op-ini','Cargando...');
+      setText('#op-fin','Cargando...');
+      setText('#op-dis-nombre','Cargando...');
+      setText('#op-dis-version','Cargando...');
+      setText('#op-dis-fecha','Cargando...');
+      setText('#op-dis-aprobado','Cargando...');
+      setText('#op-dis-notas','');
+      // Reset carrusel de archivos
+      const $car = $('#opDisCarousel');
+      const $inner = $car.find('.carousel-inner');
+      $inner.empty();
+      $car.hide();
+      $('#op-dis-archivos-na').show();
+
+      // Nota: el modal se abre vía data-bs-toggle en el botón. Evitamos abrirlo aquí para no duplicar y causar aria-hidden issues.
+
+      $.getJSON('<?= base_url('modulo1/ordenes/folio') ?>/' + encodeURIComponent(folio) + '/json?t=' + Date.now())
         .done(function(data){
-          $('#op-id').text(data.id ?? '-');
-          $('#op-folio').text(data.folio || '-');
-          $('#op-status').text(data.status || '-');
-          $('#op-cant').text((data.cantidadPlan ?? '') || '-');
-          $('#op-ini').text(data.fechaInicioPlan || '-');
-          $('#op-fin').text(data.fechaFinPlan || '-');
+          console.log('OP detalle OK folio=', folio, 'data=', data);
+          setText('#op-id', data.id ?? '-');
+          setText('#op-folio', data.folio || '-');
+          setText('#op-status', data.status || '-');
+          setText('#op-cant', (data.cantidadPlan ?? '') || '-');
+          setText('#op-ini', data.fechaInicioPlan || '-');
+          setText('#op-fin', data.fechaFinPlan || '-');
           if (data.diseno){
-            $('#op-dis-nombre').text(data.diseno.nombre || '-');
-            $('#op-dis-version').text(data.diseno.version || '-');
-            $('#op-dis-fecha').text(data.diseno.fecha || '-');
+            setText('#op-dis-nombre', data.diseno.nombre || '-');
+            setText('#op-dis-version', data.diseno.version || '-');
+            setText('#op-dis-fecha', data.diseno.fecha || '-');
             const aprobado = (data.diseno.aprobado===1 || data.diseno.aprobado==='1') ? 'Sí' : (data.diseno.aprobado===0 || data.diseno.aprobado==='0' ? 'No' : '-');
-            $('#op-dis-aprobado').text(aprobado);
-            $('#op-dis-notas').text(data.diseno.notas || '-');
-            if (data.diseno.archivoCadUrl){ $('#op-dis-cad').attr('href', data.diseno.archivoCadUrl).show(); $('#op-dis-cad-na').hide(); }
-            if (data.diseno.archivoPatronUrl){ $('#op-dis-patron').attr('href', data.diseno.archivoPatronUrl).show(); $('#op-dis-patron-na').hide(); }
+            setText('#op-dis-aprobado', aprobado);
+            setText('#op-dis-notas', data.diseno.notas || '-');
+            // Construir carrusel si hay archivos
+            const files = [];
+            if (data.diseno.archivoCadUrl) files.push({url: data.diseno.archivoCadUrl, label:'CAD'});
+            if (data.diseno.archivoPatronUrl) files.push({url: data.diseno.archivoPatronUrl, label:'Patrón'});
+            if (Array.isArray(data.diseno.archivos)) {
+              data.diseno.archivos.forEach((u,i)=>{ if(u) files.push({url:u, label:'Archivo '+(i+1)}) });
+            }
+            if (files.length){
+              const buildSlideContent = (url, label) => {
+                const u = String(url || '');
+                const extMatch = u.match(/\.([a-z0-9]+)(?:\?|#|$)/i);
+                const ext = extMatch ? extMatch[1].toLowerCase() : '';
+                const isImg   = /^(png|jpg|jpeg|gif|webp|bmp|svg)$/.test(ext);
+                const isPdf   = ext === 'pdf';
+                const isVideo = /^(mp4|webm|ogv|ogg)$/.test(ext);
+                const isAudio = /^(mp3|wav|ogg)$/.test(ext);
+                const isOffice= /^(doc|docx|xls|xlsx|ppt|pptx)$/.test(ext);
+                const isText  = /^(txt|csv|json|xml|md|log)$/.test(ext);
+                const isCad   = /^(dwg|dxf|stp|step|igs|iges)$/.test(ext);
+                const safeUrl = encodeURI(u);
+
+                if (isImg) {
+                  return `<img src="${safeUrl}" class="d-block w-100" alt="${label}" style="max-height:460px; object-fit:contain; background:#f8f9fa;">`;
+                }
+                if (isPdf) {
+                  return `<iframe src="${safeUrl}" class="d-block w-100" style="height:460px; border:0;" title="${label}"></iframe>`;
+                }
+                if (isVideo) {
+                  return `<video class="d-block w-100" style="max-height:460px; background:#000;" controls src="${safeUrl}"></video>`;
+                }
+                if (isAudio) {
+                  return `<div class="p-3 text-center bg-light"><audio controls src="${safeUrl}" style="width:100%"></audio><div class="small mt-2">${label}</div></div>`;
+                }
+                if (isOffice) {
+                  const gview = 'https://docs.google.com/gview?embedded=1&url=' + encodeURIComponent(u);
+                  return `<iframe src="${gview}" class="d-block w-100" style="height:460px; border:0;" title="${label}"></iframe>`;
+                }
+                if (isText) {
+                  return `<iframe src="${safeUrl}" class="d-block w-100" style="height:460px; border:0; background:#fff;" title="${label}"></iframe>`;
+                }
+                if (isCad) {
+                  return `<div class="p-4 text-center bg-light">
+                            <div class="mb-2">Formato CAD no previsualizable en el navegador.</div>
+                            <a class="btn btn-outline-primary" href="${safeUrl}" target="_blank" rel="noopener">Descargar ${label}</a>
+                          </div>`;
+                }
+                // Fallback genérico
+                return `<div class="p-4 text-center bg-light">
+                          <div class="mb-2">Previsualización no disponible para este formato.</div>
+                          <a class="btn btn-outline-primary" href="${safeUrl}" target="_blank" rel="noopener">Abrir / Descargar</a>
+                        </div>`;
+              };
+
+              files.forEach((f, idx)=>{
+                const content = buildSlideContent(f.url, f.label);
+                const item = `<div class="carousel-item${idx===0?' active':''}">
+                                ${content}
+                                <div class="carousel-caption d-none d-md-block">
+                                  <span class="badge bg-dark">${f.label}</span>
+                                </div>
+                              </div>`;
+                $inner.append(item);
+              });
+              $('#op-dis-archivos-na').hide();
+              $car.show();
+            }
           }
-          const modalEl = document.getElementById('opDetalleModal');
-          const bsModal = new bootstrap.Modal(modalEl);
-          bsModal.show();
         })
-        .fail(function(){
-          alert('No se pudo cargar el detalle de la orden.');
+        .fail(function(xhr){
+          // Mostrar error dentro del modal para visibilidad
+          setText('#op-id', '-');
+          setText('#op-folio', '-');
+          setText('#op-status', 'Error HTTP ' + (xhr?.status || '?'));
+          setText('#op-cant', '-');
+          setText('#op-ini', '-');
+          setText('#op-fin', '-');
+          setText('#op-dis-nombre', '-');
+          setText('#op-dis-version', '-');
+          setText('#op-dis-fecha', '-');
+          setText('#op-dis-aprobado', '-');
+          setText('#op-dis-notas', 'No se pudo cargar el detalle de la orden.');
+          console.error('OP detalle error', 'folio=', folio, 'url=', '<?= base_url('modulo1/ordenes/folio') ?>/' + encodeURIComponent(folio) + '/json', 'status=', xhr?.status, 'body=', xhr?.responseText);
         })
         .always(function(){
           $btn.prop('disabled', false);

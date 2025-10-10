@@ -139,4 +139,45 @@ class EmpleadoModel extends Model
                     ->groupEnd()
                     ->findAll();
     }
+
+    /**
+     * Empleados activos no asignados aún a la OP indicada.
+     */
+    public function listarDisponiblesParaOP(int $opId): array
+    {
+        if ($opId <= 0) return [];
+        $sql = "SELECT e.id, e.noEmpleado, e.nombre, e.apellido, e.puesto
+                FROM empleado e
+                WHERE e.activo = 1
+                  AND e.id NOT IN (
+                      SELECT at.empleadoId FROM asignacion_tarea at WHERE at.ordenProduccionId = ?
+                  )
+                ORDER BY e.nombre, e.apellido";
+        return $this->db->query($sql, [$opId])->getResultArray();
+    }
+
+    /**
+     * Búsqueda remota de empleados activos no asignados a una OP, filtrando por término.
+     */
+    public function buscarDisponiblesParaOP(int $opId, string $termino, int $limit = 20): array
+    {
+        if ($opId <= 0) return [];
+        $termino = trim($termino);
+        $like = '%' . $termino . '%';
+        $params = [$opId];
+        $whereLike = '';
+        if ($termino !== '') {
+            $whereLike = ' AND (e.nombre LIKE ? OR e.apellido LIKE ? OR e.noEmpleado LIKE ?)';
+            $params[] = $like; $params[] = $like; $params[] = $like;
+        }
+        $sql = "SELECT e.id, e.noEmpleado, e.nombre, e.apellido, e.puesto
+                FROM empleado e
+                WHERE e.activo = 1
+                  AND e.id NOT IN (
+                      SELECT at.empleadoId FROM asignacion_tarea at WHERE at.ordenProduccionId = ?
+                  )" . $whereLike . "
+                ORDER BY e.nombre, e.apellido
+                LIMIT " . (int)$limit;
+        return $this->db->query($sql, $params)->getResultArray();
+    }
 }
