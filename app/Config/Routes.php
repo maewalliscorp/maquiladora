@@ -116,10 +116,12 @@ $routes->group('modulo2', [], function ($routes) {
     $routes->post('agregardiseno',      'Modulos::m2_agregardiseno');
     $routes->get('editardiseno/(:num)', 'Modulos::m2_editardiseno/$1');
     $routes->post('actualizar/(:num)',  'Modulos::m2_actualizar/$1');
+    $routes->post('disenos/crear',      'Modulos::m2_crear_diseno');
 
     // APIs
     $routes->get('diseno/(:num)/json',  'Modulos::m2_diseno_json/$1');
     $routes->get('disenos/json',        'Disenos::json_catalogo');
+    $routes->get('articulos/json',      'Modulos::m2_articulos_json');
 });
 
 /* --------------------------------------------------------------------

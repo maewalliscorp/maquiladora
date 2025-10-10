@@ -6,9 +6,9 @@
 <?= $this->section('content') ?>
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="me-3">CATÁLOGO DE DISEÑOS</h1>
-        <a href="<?= base_url('modulo2/agregardiseno') ?>" class="btn btn-success">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#nuevoDisenoModal">
             <i class="bi bi-plus-circle"></i> NUEVO DISEÑO
-        </a>
+        </button>
     </div>
     <div class="card shadow-sm">
         <div class="card-body">
@@ -70,6 +70,94 @@
                 <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Modal Bootstrap: Nuevo Diseño -->
+    <div class="modal fade" id="nuevoDisenoModal" tabindex="-1" aria-labelledby="nuevoDisenoLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="nuevoDisenoLabel">Nuevo diseño</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formNuevoDiseno">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Código</label>
+                                <input type="text" name="codigo" class="form-control" />
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label">Nombre<span class="text-danger">*</span></label>
+                                <input type="text" name="nombre" class="form-control" required />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Descripción</label>
+                                <textarea name="descripcion" class="form-control" rows="2"></textarea>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Versión<span class="text-danger">*</span></label>
+                                <input type="text" name="version" class="form-control" placeholder="v1.0" required />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Fecha</label>
+                                <input type="date" name="fecha" class="form-control" value="<?= date('Y-m-d') ?>" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Notas</label>
+                                <input type="text" name="notas" class="form-control" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Archivo CAD (subir cualquier formato)</label>
+                                <input type="file" name="archivoCadFile" class="form-control" />
+                                <small class="text-muted">Opcional: si no subes archivo, puedes poner URL manual.</small>
+                                <input type="text" name="archivoCadUrl" class="form-control mt-1" placeholder="/archivos/cad/archivo.dxf" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Archivo Patrón (subir cualquier formato)</label>
+                                <input type="file" name="archivoPatronFile" class="form-control" />
+                                <small class="text-muted">Opcional: si no subes archivo, puedes poner URL manual.</small>
+                                <input type="text" name="archivoPatronUrl" class="form-control mt-1" placeholder="/archivos/patron/archivo.pdf" />
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="1" id="aprobadoCheck" name="aprobado">
+                                    <label class="form-check-label" for="aprobadoCheck">Aprobado</label>
+                                </div>
+                            </div>
+                            <div class="col-12 mt-3">
+                                <label class="form-label">Materiales (desde artículos)</label>
+                                <select id="selectArticulos" class="form-select" multiple size="6"></select>
+                                <small class="text-muted">Selecciona uno o varios. Luego indica cantidades abajo.</small>
+                            </div>
+                            <div class="col-12">
+                                <div class="table-responsive mt-2">
+                                    <table class="table table-sm align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th style="width:60%">Artículo</th>
+                                                <th style="width:20%">Cantidad por unidad</th>
+                                                <th style="width:20%">Merma % (opc)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tblMaterialesBody">
+                                            <tr class="text-muted" id="rowMaterialesEmpty"><td colspan="3">Sin materiales seleccionados</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="nuevoDisenoAlert" class="alert alert-danger mt-3 d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" id="btnGuardarDiseno" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Guardar
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -193,6 +281,105 @@
                     }).catch(() => {
                         el.innerHTML = '<div class="p-3 text-muted">No fue posible descargar el DXF.</div>';
                     });
+
+            // Cargar artículos al abrir el modal (una sola vez por sesión)
+            let articulosCache = null;
+            const renderMateriales = () => {
+                const $sel = $('#selectArticulos');
+                const selected = $sel.val() || [];
+                const $tb = $('#tblMaterialesBody');
+                $tb.empty();
+                if (selected.length === 0) {
+                    $tb.append('<tr class="text-muted" id="rowMaterialesEmpty"><td colspan="3">Sin materiales seleccionados</td></tr>');
+                    return;
+                }
+                selected.forEach(id => {
+                    const art = (articulosCache || []).find(a => String(a.id) === String(id));
+                    const nombre = art ? (art.nombre + (art.unidadMedida ? ' ('+art.unidadMedida+')' : '')) : ('ID ' + id);
+                    const row = `
+                        <tr data-id="${id}">
+                            <td>${nombre}</td>
+                            <td><input type="number" min="0" step="0.0001" class="form-control form-control-sm inp-cant" placeholder="0" /></td>
+                            <td><input type="number" min="0" step="0.01" class="form-control form-control-sm inp-merma" placeholder="0" /></td>
+                        </tr>`;
+                    $tb.append(row);
+                });
+            };
+
+            function cargarArticulos(){
+                const url = '<?= base_url('modulo2/articulos/json') ?>';
+                const $sel = $('#selectArticulos');
+                $sel.empty().append('<option disabled>Cargando artículos…</option>');
+                return $.getJSON(url)
+                    .done(function(resp){
+                        articulosCache = (resp && resp.items) ? resp.items : [];
+                        $sel.empty();
+                        if (!articulosCache || articulosCache.length === 0) {
+                            $sel.append('<option disabled>No hay artículos disponibles</option>');
+                            return;
+                        }
+                        articulosCache.forEach(a => {
+                            const label = (a.nombre || ('ID '+a.id)) + (a.unidadMedida ? ' ('+a.unidadMedida+')' : '') + (a.sku ? ' • ' + a.sku : '');
+                            $sel.append('<option value="'+a.id+'">'+label+'</option>');
+                        });
+                    })
+                    .fail(function(xhr){
+                        $sel.empty().append('<option disabled>Error cargando artículos</option>');
+                        console.error('Error articulos/json', xhr && (xhr.responseText || xhr.statusText));
+                    });
+            }
+
+            $('#nuevoDisenoModal').on('shown.bs.modal', function(){
+                if (articulosCache === null) {
+                    cargarArticulos();
+                }
+            });
+
+            $(document).on('change', '#selectArticulos', renderMateriales);
+
+            // Guardar nuevo diseño por AJAX (multipart, con archivos)
+            $('#btnGuardarDiseno').on('click', function(){
+                const $alert = $('#nuevoDisenoAlert');
+                $alert.addClass('d-none').text('');
+
+                const formEl = document.getElementById('formNuevoDiseno');
+                const fd = new FormData(formEl);
+
+                // Construir materials JSON a partir de la tabla
+                const materials = [];
+                $('#tblMaterialesBody tr').each(function(){
+                    const id = $(this).data('id');
+                    if (!id) return;
+                    const cant = parseFloat($(this).find('.inp-cant').val() || '0');
+                    const merma = $(this).find('.inp-merma').val();
+                    const mermaNum = merma === '' ? null : parseFloat(merma);
+                    materials.push({ articuloId: parseInt(id,10), cantidadPorUnidad: isNaN(cant)?0:cant, mermaPct: (mermaNum===null||isNaN(mermaNum))?null:mermaNum });
+                });
+                if (materials.length > 0) {
+                    fd.append('materials', JSON.stringify(materials));
+                }
+
+                $.ajax({
+                    url: '<?= base_url('modulo2/disenos/crear') ?>',
+                    method: 'POST',
+                    data: fd,
+                    contentType: false,
+                    processData: false,
+                }).done(function(resp){
+                    if (resp && resp.ok) {
+                        const modalEl = document.getElementById('nuevoDisenoModal');
+                        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                        modal.hide();
+                        window.location.reload();
+                    } else {
+                        $alert.removeClass('d-none').text(resp && resp.message ? resp.message : 'No se pudo guardar.');
+                    }
+                }).fail(function(xhr){
+                    let msg = 'Error al guardar.';
+                    if (xhr && xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                    $alert.removeClass('d-none').text(msg);
+                });
+            });
                     return;
                 }
                 // Fallback final

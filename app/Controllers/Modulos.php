@@ -43,6 +43,187 @@ class Modulos extends BaseController
         ]));
     }
 
+    /**
+     * Crear un nuevo diseño y su primera versión.
+     * Entrada (POST): codigo?, nombre (req), descripcion?, version (req), fecha?, notas?, archivoCadUrl?, archivoPatronUrl?, aprobado?
+     * Respuesta: JSON { ok: bool, id, versionId, message }
+     */
+    public function m2_crear_diseno()
+    {
+        if ($this->request->getMethod() !== 'post') {
+            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+        }
+
+        $db = \Config\Database::connect();
+        $dataDiseno = [
+            'codigo'      => trim((string)$this->request->getPost('codigo')) ?: null,
+            'nombre'      => trim((string)$this->request->getPost('nombre')),
+            'descripcion' => trim((string)$this->request->getPost('descripcion')) ?: null,
+        ];
+        $dataVersion = [
+            'version'         => trim((string)$this->request->getPost('version')),
+            'fecha'           => $this->request->getPost('fecha') ?: date('Y-m-d'),
+            'notas'           => trim((string)$this->request->getPost('notas')) ?: null,
+            'archivoCadUrl'   => trim((string)$this->request->getPost('archivoCadUrl')) ?: null,
+            'archivoPatronUrl'=> trim((string)$this->request->getPost('archivoPatronUrl')) ?: null,
+            'aprobado'        => $this->request->getPost('aprobado') === null ? null : (int)(bool)$this->request->getPost('aprobado'),
+        ];
+
+        // Manejo de archivos subidos (cualquier formato)
+        try {
+            $cadFile = $this->request->getFile('archivoCadFile');
+            if ($cadFile && $cadFile->isValid() && !$cadFile->hasMoved()) {
+                $dir = FCPATH . 'uploads/cad/'; // carpeta pública
+                if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
+                $new = $cadFile->getRandomName();
+                $cadFile->move($dir, $new);
+                $dataVersion['archivoCadUrl'] = 'uploads/cad/' . $new; // URL relativa pública
+            }
+        } catch (\Throwable $e) { /* ignorar carga CAD */ }
+
+        try {
+            $patFile = $this->request->getFile('archivoPatronFile');
+            if ($patFile && $patFile->isValid() && !$patFile->hasMoved()) {
+                $dir2 = FCPATH . 'uploads/patron/';
+                if (!is_dir($dir2)) { @mkdir($dir2, 0755, true); }
+                $new2 = $patFile->getRandomName();
+                $patFile->move($dir2, $new2);
+                $dataVersion['archivoPatronUrl'] = 'uploads/patron/' . $new2;
+            }
+        } catch (\Throwable $e) { /* ignorar carga patrón */ }
+
+        // Validación mínima
+        if ($dataDiseno['nombre'] === '' || $dataVersion['version'] === '') {
+            return $this->response->setStatusCode(422)->setJSON(['ok' => false, 'message' => 'Nombre y versión son obligatorios']);
+        }
+
+        $db->transStart();
+        try {
+            // Insertar en diseno
+            $db->table('diseno')->insert($dataDiseno);
+            $idDiseno = (int)$db->insertID();
+
+            if (!$idDiseno) {
+                // Fallback por mayúsculas
+                $db->table('Diseno')->insert($dataDiseno);
+                $idDiseno = (int)$db->insertID();
+            }
+
+            if (!$idDiseno) {
+                throw new \Exception('No se pudo crear el diseño');
+            }
+
+            // Insertar versión
+            $dataVersion['disenoId'] = $idDiseno;
+            $db->table('diseno_version')->insert($dataVersion);
+            $idVersion = (int)$db->insertID();
+            if (!$idVersion) {
+                // Fallback por mayúsculas / sin guiones
+                $db->table('disenoversion')->insert($dataVersion);
+                $idVersion = (int)$db->insertID();
+            }
+
+            if (!$idVersion) {
+                throw new \Exception('No se pudo crear la versión');
+            }
+
+            // Guardar materiales si vienen en la solicitud
+            $materialsRaw = $this->request->getPost('materials');
+            if ($materialsRaw) {
+                $materials = is_array($materialsRaw) ? $materialsRaw : json_decode((string)$materialsRaw, true);
+                if (is_array($materials)) {
+                    // Intentar varios nombres de tabla por compatibilidad
+                    $lmTables = ['lista_materiales','listamateriales','ListaMateriales'];
+                    foreach ($materials as $m) {
+                        $artId = isset($m['articuloId']) ? (int)$m['articuloId'] : (int)($m['id'] ?? 0);
+                        if ($artId <= 0) { continue; }
+                        $cant  = isset($m['cantidadPorUnidad']) ? (float)$m['cantidadPorUnidad'] : (float)($m['cantidad'] ?? 0);
+                        $merma = isset($m['mermaPct']) ? (float)$m['mermaPct'] : (isset($m['merma']) ? (float)$m['merma'] : null);
+                        $rowLM = [
+                            'disenoVersionId'   => $idVersion,
+                            'articuloId'        => $artId,
+                            'cantidadPorUnidad' => $cant,
+                            'mermaPct'          => $merma,
+                        ];
+                        $inserted = false;
+                        foreach ($lmTables as $t) {
+                            try {
+                                $db->table($t)->insert($rowLM);
+                                $inserted = true; break;
+                            } catch (\Throwable $e) { /* probar siguiente */ }
+                        }
+                        if (!$inserted) {
+                            // Como último recurso, intenta con columnas alternativas
+                            try {
+                                $db->query('INSERT INTO lista_materiales (disenoVersionId, articuloId, cantidadPorUnidad, mermaPct) VALUES (?,?,?,?)', [$idVersion, $artId, $cant, $merma]);
+                            } catch (\Throwable $e) { /* ignorar error individual */ }
+                        }
+                    }
+                }
+            }
+
+            $db->transComplete();
+            if ($db->transStatus() === false) {
+                throw new \Exception('Error en la transacción');
+            }
+
+            return $this->response->setJSON([
+                'ok'        => true,
+                'id'        => $idDiseno,
+                'versionId' => $idVersion,
+                'message'   => 'Diseño creado correctamente'
+            ]);
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            return $this->response->setStatusCode(500)->setJSON([
+                'ok' => false,
+                'message' => 'Error al crear diseño: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Lista de artículos para armar lista de materiales (JSON)
+     * Campos: id, sku?, nombre, unidadMedida?, tipo?, activo?
+     */
+    public function m2_articulos_json()
+    {
+        $db = \Config\Database::connect();
+        $rows = [];
+        $queries = [
+            // nombre de tabla snake + columnas completas
+            "SELECT id, sku, nombre, unidadMedida, tipo, activo FROM articulo ORDER BY nombre",
+            // mismo pero con mayúscula
+            "SELECT id, sku, nombre, unidadMedida, tipo, activo FROM Articulo ORDER BY nombre",
+            // plural
+            "SELECT id, sku, nombre, unidadMedida, tipo, activo FROM articulos ORDER BY nombre",
+            "SELECT id, sku, nombre, unidadMedida, tipo, activo FROM Articulos ORDER BY nombre",
+            // variante sin unidadMedida/tipo/activo
+            "SELECT id, sku, nombre FROM articulo ORDER BY nombre",
+            "SELECT id, sku, nombre FROM Articulo ORDER BY nombre",
+            "SELECT id, sku, nombre FROM articulos ORDER BY nombre",
+            "SELECT id, sku, nombre FROM Articulos ORDER BY nombre",
+            // mínima garantizada
+            "SELECT id, nombre FROM articulo ORDER BY nombre",
+            "SELECT id, nombre FROM Articulo ORDER BY nombre",
+            "SELECT id, nombre FROM articulos ORDER BY nombre",
+            "SELECT id, nombre FROM Articulos ORDER BY nombre",
+            // producto como alternativa
+            "SELECT id, sku, nombre, unidadMedida, tipo, activo FROM producto ORDER BY nombre",
+            "SELECT id, sku, nombre, unidadMedida, tipo, activo FROM Producto ORDER BY nombre",
+            "SELECT id, sku, nombre FROM producto ORDER BY nombre",
+            "SELECT id, sku, nombre FROM Producto ORDER BY nombre",
+            "SELECT id, nombre FROM producto ORDER BY nombre",
+            "SELECT id, nombre FROM Producto ORDER BY nombre",
+            "SELECT id, nombre FROM productos ORDER BY nombre",
+            "SELECT id, nombre FROM Productos ORDER BY nombre",
+        ];
+        foreach ($queries as $q) {
+            try { $rows = $db->query($q)->getResultArray(); if ($rows !== null) break; } catch (\Throwable $e) { /* intenta siguiente */ }
+        }
+        return $this->response->setJSON(['items' => $rows]);
+    }
+
     /** JSON detalle normalizado de pedido. */
     public function m1_pedido_json($id = null)
     {
