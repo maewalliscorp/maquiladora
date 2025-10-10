@@ -1,7 +1,9 @@
 <?php
 
 use Config\Services;
+use CodeIgniter\Router\RouteCollection;
 
+/** @var RouteCollection $routes */
 $routes = Services::routes();
 
 /* --------------------------------------------------------------------
@@ -37,11 +39,19 @@ $routes->get('/',          'Modulos::dashboard');
 $routes->get('/dashboard', 'Modulos::dashboard');
 
 /* --------------------------------------------------------------------
+ * API (Dashboard, etc.)
+ * ------------------------------------------------------------------*/
+$routes->group('api', static function ($routes) {
+    // Usa tu controlador app/Controllers/Api.php -> método dashboard()
+    $routes->get('dashboard', 'Api::dashboard'); // ?range=30
+});
+
+/* --------------------------------------------------------------------
  * Muestras (prototipos)
  * ------------------------------------------------------------------*/
-$routes->get('muestras',                  'Modulos::muestras');
-$routes->get('muestras/evaluar/(:num)',   'Modulos::muestras_evaluar/$1');
-$routes->post('muestras/guardar',         'Modulos::muestras_guardarEvaluacion');
+$routes->get('muestras',                'Modulos::muestras');
+$routes->get('muestras/evaluar/(:num)', 'Modulos::muestras_evaluar/$1');
+$routes->post('muestras/guardar',       'Modulos::muestras_guardarEvaluacion');
 
 /* --------------------------------------------------------------------
  * Legacy (compat enlaces antiguos)
@@ -72,29 +82,22 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->get('ordenes',         'Modulos::m1_ordenes');
 
     // APIs / Producción
-    $routes->get('pedido/(:num)/json', 'Modulos::m1_pedido_json/$1');
-    $routes->get('clientes/json',      'Clientes::json_catalogo');
-    $routes->get('ordenes-produccion', 'Produccion::ordenes');
-    $routes->post('ordenes/estatus',   'Produccion::actualizarEstatus');
-    $routes->get('ordenes/(:num)/json','Produccion::orden_json/$1');
-    // APIs / Producción
-    $routes->get('pedido/(:num)/json', 'Modulos::m1_pedido_json/$1');
-    $routes->get('clientes/json',      'Clientes::json_catalogo');
-    $routes->get('ordenes-produccion', 'Produccion::ordenes');
-    $routes->post('ordenes/estatus',   'Produccion::actualizarEstatus');
-    $routes->get('ordenes/(:num)/json','Produccion::orden_json/$1');
+    $routes->get('pedido/(:num)/json',   'Modulos::m1_pedido_json/$1');
+    $routes->get('clientes/json',        'Clientes::json_catalogo');
+    $routes->get('ordenes-produccion',   'Produccion::ordenes');
+    $routes->post('ordenes/estatus',     'Produccion::actualizarEstatus');
+    $routes->get('ordenes/(:num)/json',  'Produccion::orden_json/$1');
 
     // Endpoints usados por los modales en vista modulos/m1_ordenes.php
     $routes->get('ordenes/folio/(:segment)/json', 'Produccion::orden_json_folio/$1');
     $routes->get('ordenes/(:num)/asignaciones',   'Produccion::asignaciones/$1');
     $routes->post('ordenes/asignaciones/agregar', 'Produccion::asignaciones_agregar');
     $routes->post('ordenes/asignaciones/agregar-multiple', 'Produccion::asignaciones_agregar_multiple');
-    $routes->post('ordenes/asignaciones/eliminar', 'Produccion::asignaciones_eliminar');
+    $routes->post('ordenes/asignaciones/eliminar',         'Produccion::asignaciones_eliminar');
 
     // Evaluación
     $routes->get('evaluar/(:num)',      'Modulos::m1_evaluar/$1');
     $routes->post('guardar-evaluacion', 'Modulos::m1_guardarEvaluacion');
-
 });
 
 /* --------------------------------------------------------------------
@@ -146,9 +149,9 @@ $routes->group('modulo3', [], function ($routes) {
 
     $routes->get('reportes',        'Modulos::reportes');
     $routes->get('notificaciones',  'Modulos::notificaciones');
-    $routes->get('inspeccion',                  'Inspeccion::index');
-    $routes->get('inspeccion/evaluar/(:num)',   'Inspeccion::evaluar/$1');
-    $routes->post('inspeccion/evaluar/(:num)',  'Inspeccion::guardarEvaluacion/$1');
+    $routes->get('inspeccion',                 'Inspeccion::index');
+    $routes->get('inspeccion/evaluar/(:num)',  'Inspeccion::evaluar/$1');
+    $routes->post('inspeccion/evaluar/(:num)', 'Inspeccion::guardarEvaluacion/$1');
 
     // Alias MRP → nuevo controlador Mrp
     $routes->get('mrp', function () { return redirect()->to(site_url('mrp')); });
@@ -172,11 +175,11 @@ $routes->group('modulo3', [], function ($routes) {
 
     // Mantenimiento Correctivo (unificado)
     $routes->group('mantenimiento', function($r){
-        $r->get ('correctivo',                     'MantenimientoCorrectivo::index');
-        $r->get ('correctivo/diag',                'MantenimientoCorrectivo::diag');
-        $r->get ('correctivo/probe',               'MantenimientoCorrectivo::probe');
-        $r->post('correctivo/crear',               'MantenimientoCorrectivo::crear');
-        $r->post('correctivo/actualizar/(:num)',   'MantenimientoCorrectivo::actualizar/$1');
+        $r->get ('correctivo',                   'MantenimientoCorrectivo::index');
+        $r->get ('correctivo/diag',              'MantenimientoCorrectivo::diag');
+        $r->get ('correctivo/probe',             'MantenimientoCorrectivo::probe');
+        $r->post('correctivo/crear',             'MantenimientoCorrectivo::crear');
+        $r->post('correctivo/actualizar/(:num)', 'MantenimientoCorrectivo::actualizar/$1');
     });
 
     // Logística
@@ -215,7 +218,7 @@ $routes->group('mrp', [], function ($r) {
     $r->get('/',   'Mrp::index');
     $r->get('diag','Mrp::diag');
 
-    // Endpoints opcionales (si más adelante guardas desde los modales)
+    // Endpoints opcionales
     $r->post('requerimientos/guardar',       'Mrp::guardarRequerimiento');
     $r->post('requerimientos/(:num)/editar', 'Mrp::editarRequerimiento/$1');
     $r->get ('requerimientos/(:num)',        'Mrp::verReq/$1'); // JSON

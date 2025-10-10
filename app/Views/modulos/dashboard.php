@@ -19,12 +19,12 @@
 </div>
 
 <?php
-// Fuente: $kpis del controlador, con fallback local
+// Fallback de KPIs por si la API no responde. El JS los reemplaza con datos reales.
 $cards = $kpis ?? [
-        ['label'=>'Órdenes activas', 'value'=>18, 'icon'=>'bi-clipboard2-check', 'muted'=>'+2 hoy', 'mutedClass'=>'text-success'],
-        ['label'=>'WIP (pzs)',       'value'=>362,'icon'=>'bi-gear-wide-connected','muted'=>'En proceso', 'mutedClass'=>'text-secondary'],
-        ['label'=>'Defectos (%)',    'value'=>'1.8%','icon'=>'bi-activity','muted'=>'-0.4% vs. ayer','mutedClass'=>'text-success'],
-        ['label'=>'Stock crítico',   'value'=>5,  'icon'=>'bi-box-seam','muted'=>'Por debajo de mínimo','mutedClass'=>'text-warning'],
+        ['label'=>'Órdenes activas', 'value'=>18,  'icon'=>'bi-clipboard2-check',   'muted'=>'+2 hoy',              'mutedClass'=>'text-success'],
+        ['label'=>'WIP (pzs)',       'value'=>362, 'icon'=>'bi-gear-wide-connected','muted'=>'En proceso',         'mutedClass'=>'text-secondary'],
+        ['label'=>'Defectos (%)',    'value'=>'1.8%','icon'=>'bi-activity',         'muted'=>'-0.4% vs. ayer',     'mutedClass'=>'text-success'],
+        ['label'=>'Stock crítico',   'value'=>5,   'icon'=>'bi-box-seam',           'muted'=>'Por debajo de mínimo','mutedClass'=>'text-warning'],
 ];
 
 // Notificaciones (fallback)
@@ -34,15 +34,6 @@ $recentNotifs = $recentNotifs ?? [
         ['nivel'=>'Alta','color'=>'#ffd43b','titulo'=>'Revisar muestra M-0045 del cliente A','sub'=>'Vence hoy • Prototipos'],
         ['nivel'=>'Media','color'=>'#4dabf7','titulo'=>'OC #1045 recibida','sub'=>'Almacén PT • Entrada parcial'],
 ];
-
-// Valor WIP robusto si lo necesitas para una barra de progreso
-$wipValue = 62;
-foreach ($cards as $tmp) {
-    if (stripos($tmp['label'], 'wip') !== false) {
-        $wipValue = (int) filter_var($tmp['value'], FILTER_SANITIZE_NUMBER_INT);
-        break;
-    }
-}
 ?>
 
 <div class="row g-4">
@@ -50,13 +41,18 @@ foreach ($cards as $tmp) {
     <div class="col-12 col-xxl-9">
         <!-- KPIs -->
         <div class="row g-3 mb-1">
-            <?php foreach ($cards as $c): ?>
+            <?php foreach ($cards as $i => $c):
+                $dataLabel = strtolower(preg_replace('/\s+/', '-', $c['label']));
+                ?>
                 <div class="col-6 col-lg-3">
                     <div class="card kpi-card p-3">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <div class="text-secondary small"><?= esc($c['label']) ?></div>
-                                <div class="fs-3 fw-bold"><?= esc($c['value']) ?></div>
+                                <!-- valor con data-label para actualizar desde JS -->
+                                <div class="fs-3 fw-bold kpi-value" data-label="<?= esc($dataLabel, 'attr') ?>">
+                                    <?= esc($c['value']) ?>
+                                </div>
                             </div>
                             <i class="bi <?= esc($c['icon'] ?? 'bi-graph-up') ?> fs-2"></i>
                         </div>
@@ -166,7 +162,7 @@ foreach ($cards as $tmp) {
                 </div>
             </div>
 
-            <!-- Filtros compactos (opcional) -->
+            <!-- Filtros compactos -->
             <div class="card chart-card">
                 <div class="card-body">
                     <h6 class="text-secondary mb-2">Filtros rápidos</h6>
@@ -193,85 +189,127 @@ foreach ($cards as $tmp) {
 
 <?= $this->endSection() ?>
 
-<?php // --- Scripts (Chart.js y demo de datos). Si ya cargas Chart.js en el layout, quita el <script> CDN. ?>
+<?php // --- Scripts: SIN datos de demo. Todo se carga desde la API. ?>
 <?= $this->section('scripts') ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
 <script>
-    // ===== Demo de datos (reemplaza por fetch a tus endpoints) =====
-    const semanas = ['S-34','S-35','S-36','S-37','S-38','S-39'];
-    const ordenesActivas = [10,14,12,15,18,17];
-    const ordenesCompletadas = [8,9,11,12,14,16];
+    document.addEventListener('DOMContentLoaded', () => {
+        const API_URL = "<?= base_url('api/dashboard') ?>";
+        const selRango = document.getElementById('selRango');
+        const btnAplicar = document.getElementById('btnAplicarFiltros');
 
-    const insumos = ['Tela Denim','Hilo 40/2','Botón #18','Cierre 20cm','Etiqueta','Forro'];
-    const stockActual = [520,1200,2600,800,4500,1100];
-    const stockMin =    [600,1000,2000,900,3000,1200];
-    const stockMax =    [2000,2000,3500,1400,6000,1800];
+        let chProduccion = null, chInventario = null, chCalidad = null, chLogistica = null;
 
-    const dias = Array.from({length: 30}, (_,i)=>`D-${i+1}`);
-    const tasaDefectos = dias.map((_,i)=> (Math.sin(i/5)*0.6 + 2).toFixed(2));
-
-    const estados = ['Pendiente','Parcial','Recibida','Cancelada'];
-    const ocEstado = [8,3,12,1];
-
-    // ===== Producción (barras apiladas) =====
-    new Chart(document.getElementById('chProduccion'), {
-        type: 'bar',
-        data: {
-            labels: semanas,
-            datasets: [
-                { label: 'Activas', data: ordenesActivas, borderWidth: 1 },
-                { label: 'Completadas', data: ordenesCompletadas, borderWidth: 1 }
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision:0 } } },
-            plugins: { legend: { position: 'top' }, tooltip: { mode: 'index', intersect: false } }
+        function makeKey(label) {
+            return (label || '').toLowerCase().replace(/\s+/g, '-');
         }
-    });
-
-    // ===== Inventario (mixto) =====
-    new Chart(document.getElementById('chInventario'), {
-        data: {
-            labels: insumos,
-            datasets: [
-                { type: 'bar',  label: 'Stock actual', data: stockActual, borderWidth: 1 },
-                { type: 'line', label: 'Stock mínimo', data: stockMin,    borderWidth: 2, fill: false },
-                { type: 'line', label: 'Stock máximo', data: stockMax,    borderWidth: 2, fill: false }
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true } },
-            plugins: { legend: { position: 'top' } }
+        function createOrUpdateChart(ref, ctx, cfg) {
+            if (ref && typeof ref.destroy === 'function') ref.destroy();
+            return new Chart(ctx, cfg);
         }
-    });
-
-    // ===== Calidad (línea) =====
-    new Chart(document.getElementById('chCalidad'), {
-        type: 'line',
-        data: { labels: dias, datasets: [{ label: '% Defectos', data: tasaDefectos, tension: .3, borderWidth: 2, pointRadius: 0 }] },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true } },
-            plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y}%` } } }
+        function pintarKpis(kpis = []) {
+            kpis.forEach(k => {
+                const key = makeKey(k.label);
+                document.querySelectorAll(`.kpi-value[data-label="${key}"]`).forEach(el => {
+                    // si el label tiene '%' lo formateamos como porcentaje
+                    const isPct = /%|\bdefecto/.test((k.label || '').toLowerCase());
+                    el.textContent = isPct ? (Number(k.value).toFixed(1) + '%') : k.value;
+                });
+            });
         }
-    });
 
-    // ===== Logística (dona) =====
-    new Chart(document.getElementById('chLogistica'), {
-        type: 'doughnut',
-        data: { labels: estados, datasets: [{ data: ocEstado }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } }, cutout: '55%' }
-    });
+        async function cargarDashboard(rangeDays = 30) {
+            try {
+                const res = await fetch(`${API_URL}?range=${rangeDays}`, { headers:{'Accept':'application/json'} });
+                if (!res.ok) {
+                    console.error('API dashboard error:', res.status, await res.text());
+                    return;
+                }
+                const d = await res.json();
 
-    // ===== Hook filtros demo =====
-    document.getElementById('btnAplicarFiltros')?.addEventListener('click', () => {
-        const rango = document.getElementById('selRango').value;
-        // Ejemplo de integración:
-        // fetch(`<?= base_url('api/dashboard') ?>?range=${rango}`)
-        //   .then(r=>r.json()).then(data => { /* actualizar datasets y chart.update() */ });
-        alert(`(Demo) Filtros aplicados: últimos ${rango} días`);
+                // ===== KPIs =====
+                if (Array.isArray(d.kpis)) pintarKpis(d.kpis);
+
+                // ===== PRODUCCIÓN =====
+                chProduccion = createOrUpdateChart(
+                    chProduccion,
+                    document.getElementById('chProduccion'),
+                    {
+                        type: 'bar',
+                        data: {
+                            labels: d.produccion.labels,
+                            datasets: [
+                                { label: 'Activas',     data: d.produccion.activas,     borderWidth: 1 },
+                                { label: 'Completadas', data: d.produccion.completadas, borderWidth: 1 }
+                            ]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            scales: { x: { stacked:true }, y: { stacked:true, beginAtZero:true, ticks:{precision:0} } },
+                            plugins: { legend:{position:'top'}, tooltip:{mode:'index', intersect:false} }
+                        }
+                    }
+                );
+
+                // ===== INVENTARIO =====
+                chInventario = createOrUpdateChart(
+                    chInventario,
+                    document.getElementById('chInventario'),
+                    {
+                        data: {
+                            labels: d.inventario.labels,
+                            datasets: [
+                                { type:'bar',  label:'Stock actual', data: d.inventario.actual, borderWidth:1 },
+                                { type:'line', label:'Stock mínimo', data: d.inventario.min,    borderWidth:2, fill:false },
+                                { type:'line', label:'Stock máximo', data: d.inventario.max,    borderWidth:2, fill:false }
+                            ]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio:false,
+                            scales: { y: { beginAtZero:true } },
+                            plugins: { legend:{position:'top'} }
+                        }
+                    }
+                );
+
+                // ===== CALIDAD =====
+                chCalidad = createOrUpdateChart(
+                    chCalidad,
+                    document.getElementById('chCalidad'),
+                    {
+                        type:'line',
+                        data:{ labels: d.calidad.labels, datasets:[{ label:'% Defectos', data:d.calidad.tasa, tension:.3, borderWidth:2, pointRadius:0 }] },
+                        options:{
+                            responsive:true, maintainAspectRatio:false,
+                            scales:{ y:{ beginAtZero:true } },
+                            plugins:{ legend:{position:'top'}, tooltip:{ callbacks:{ label:ctx => ` ${ctx.parsed.y}%` } } }
+                        }
+                    }
+                );
+
+                // ===== LOGÍSTICA =====
+                chLogistica = createOrUpdateChart(
+                    chLogistica,
+                    document.getElementById('chLogistica'),
+                    {
+                        type:'doughnut',
+                        data:{ labels:d.logistica.labels, datasets:[{ data:d.logistica.data }] },
+                        options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right' } }, cutout:'55%' }
+                    }
+                );
+
+            } catch (err) {
+                console.error('Error cargando dashboard:', err);
+            }
+        }
+
+        btnAplicar?.addEventListener('click', () => {
+            const rango = parseInt(selRango.value || '30', 10);
+            cargarDashboard(rango);
+        });
+
+        // Primera carga
+        cargarDashboard(parseInt(selRango?.value || '30', 10));
     });
 </script>
 <?= $this->endSection() ?>
