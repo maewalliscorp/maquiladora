@@ -467,9 +467,8 @@
                 <th>Estatus</th>
                 <th>Moneda</th>
                 <th>Total</th>
-                <th>Ver</th>
-                <th>Editar</th>
-                <th>Documento</th>
+                <th>Acciones</th>
+
             </tr>
             </thead>
             <tbody>
@@ -488,13 +487,9 @@
                                     data-id="<?= (int)$p['id'] ?>" data-bs-toggle="modal" data-bs-target="#pedidoModal">
                                 <i class="bi bi-eye"></i>
                             </button>
-                        </td>
-                        <td>
                             <a class="btn btn-sm btn-outline-primary" href="<?= base_url('modulo1/editar/' . (int)$p['id']) ?>" role="button" onclick="return false;">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                        </td>
-                        <td>
                             <?php $docUrl = $p['documento_url'] ?? null; ?>
                             <?php if ($docUrl): ?>
                                 <a class="btn btn-sm btn-outline-secondary" target="_blank" href="<?= esc($docUrl) ?>">

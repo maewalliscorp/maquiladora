@@ -20,7 +20,6 @@
                     <th>DESCRIPCIÓN</th>
                     <th>VERSIÓN</th>
                     <th>MATERIALES</th>
-                    <th>DETALLES</th>
                     <th>ACCIONES</th>
                 </tr>
                 </thead>
@@ -56,8 +55,6 @@
                                         data-bs-target="#disenoModal">
                                     <i class="bi bi-eye"></i> Ver
                                 </button>
-                            </td>
-                            <td>
                                 <a href="<?= base_url('modulo2/editardiseno/' . $d['id']) ?>"
                                    class="btn btn-sm btn-outline-primary me-1 btn-accion" title="Editar"
                                    data-id="<?= (int)$d['id'] ?>">

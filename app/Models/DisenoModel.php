@@ -120,6 +120,83 @@
     
             return $result;
         }
+
+        /**
+         * getCatalogoDisenosTodasVersiones
+         * 
+         * Retorna el catálogo con TODAS las versiones de cada diseño.
+         * Cada fila representa una versión distinta con sus materiales.
+         * Mantiene el mismo esquema esperado por la vista `catalogodisenos.php`:
+         *   id (del diseño), nombre, descripcion, version, materiales[]
+         * 
+         * @return array
+         */
+        public function getCatalogoDisenosTodasVersiones(): array
+        {
+            $db = $this->db;
+
+            // Consulta base: una fila por versión
+            $sql = "SELECT d.id,
+                           d.codigo,
+                           d.nombre,
+                           d.descripcion,
+                           dv.id   AS disenoVersionId,
+                           dv.version,
+                           dv.fecha,
+                           dv.aprobado,
+                           GROUP_CONCAT(
+                             CONCAT(
+                               COALESCE(lm.articuloId, 'Art'),
+                               ' x ',
+                               COALESCE(lm.cantidadPorUnidad, 0)
+                             )
+                             SEPARATOR '||'
+                           ) AS materiales_concat
+                    FROM diseno d
+                    LEFT JOIN diseno_version dv ON dv.disenoId = d.id
+                    LEFT JOIN lista_materiales lm ON lm.disenoVersionId = dv.id
+                    WHERE dv.id IS NOT NULL
+                    GROUP BY d.id, d.codigo, d.nombre, d.descripcion, dv.id, dv.version, dv.fecha, dv.aprobado
+                    ORDER BY d.id, dv.fecha DESC, dv.id DESC";
+
+            try {
+                $result = $db->query($sql)->getResultArray();
+            } catch (\Throwable $e) {
+                // Fallback sin guiones bajos / variantes de nombres
+                $sql2 = "SELECT d.id,
+                                 d.codigo,
+                                 d.nombre,
+                                 d.descripcion,
+                                 dv.id   AS disenoVersionId,
+                                 dv.version,
+                                 dv.fecha,
+                                 dv.aprobado,
+                                 GROUP_CONCAT(CONCAT(COALESCE(lm.articuloId,'Art'),' x ',COALESCE(lm.cantidadPorUnidad,0)) SEPARATOR '||') AS materiales_concat
+                          FROM diseno d
+                          LEFT JOIN disenoversion dv ON dv.disenoId = d.id
+                          LEFT JOIN listamateriales lm ON lm.disenoVersionId = dv.id
+                          WHERE dv.id IS NOT NULL
+                          GROUP BY d.id, d.codigo, d.nombre, d.descripcion, dv.id, dv.version, dv.fecha, dv.aprobado
+                          ORDER BY d.id, dv.fecha DESC, dv.id DESC";
+                try {
+                    $result = $db->query($sql2)->getResultArray();
+                } catch (\Throwable $e2) {
+                    return [];
+                }
+            }
+
+            // Normalizar materiales a arreglo de strings legibles
+            foreach ($result as &$row) {
+                $row['materiales'] = [];
+                if (!empty($row['materiales_concat'])) {
+                    $parts = explode('||', (string)$row['materiales_concat']);
+                    foreach ($parts as $p) { if ($p !== '') { $row['materiales'][] = $p; } }
+                }
+                unset($row['materiales_concat']);
+            }
+
+            return $result;
+        }
     
         /**
          * getDisenoDetalle

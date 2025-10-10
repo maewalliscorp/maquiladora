@@ -663,7 +663,8 @@ class Modulos extends BaseController
     {
         // Conectar a BD y traer catálogo real
         $disenoModel = new \App\Models\DisenoModel();
-        $disenos = $disenoModel->getCatalogoDisenos();
+        // Mostrar todas las versiones (quitar filtro de "versión reciente")
+        $disenos = $disenoModel->getCatalogoDisenosTodasVersiones();
 
         return view('modulos/catalogodisenos', $this->payload([
             'title'      => 'Módulo 2 · Catálogo de Diseños',
