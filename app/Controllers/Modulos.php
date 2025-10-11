@@ -912,16 +912,12 @@ class Modulos extends BaseController
     }
     public function m1_ordenesclientes()
     {
-        // Datos de ejemplo; la vista puede usarlos o seguir con DataTables
-        $lista = [
-            ['cliente' => 'Textiles MX',   'pedido' => 'PED-1001', 'op' => 'OP-0005', 'producto' => 'Camiseta básica',    'cantidad' => 500,  'estatus' => 'En producción', 'fecha' => '2025-09-22'],
-            ['cliente' => 'Fábrica Sur',   'pedido' => 'PED-1002', 'op' => 'OP-0006', 'producto' => 'Pantalón vaquero',   'cantidad' => 300,  'estatus' => 'Planificada',    'fecha' => '2025-09-23'],
-            ['cliente' => 'Industrias PZ', 'pedido' => 'PED-1003', 'op' => 'OP-0007', 'producto' => 'Chamarra deportiva', 'cantidad' => 150,  'estatus' => 'En producción', 'fecha' => '2025-09-24'],
-        ];
+        $pedidoModel = new \App\Models\PedidoModel();
+        $pedidos = $pedidoModel->getListadoPedidos();
 
         return view('modulos/ordenesclientes', $this->payload([
             'title'      => 'Módulo 1 · Órdenes de Clientes',
-            'lista'      => $lista,
+            'pedidos'    => $pedidos,
             'notifCount' => 0,
         ]));
     }

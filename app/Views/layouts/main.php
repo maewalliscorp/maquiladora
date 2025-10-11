@@ -70,15 +70,15 @@
                 <h6 class="text-muted small mb-2">GESTIÓN PRINCIPAL</h6>
                 <div class="row g-1 mb-3">
                     <div class="col-4">
-                        <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo1/pedidos') ?>">
-                            <i class="bi bi-bag"></i>
-                            <small>Pedidos</small>
+                        <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo2/catalogodisenos') ?>">
+                            <i class="bi bi-brush"></i>
+                            <small>Diseños</small>
                         </a>
                     </div>
                     <div class="col-4">
-                        <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo1/produccion') ?>">
-                            <i class="bi bi-gear"></i>
-                            <small>Producción</small>
+                        <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo1/pedidos') ?>">
+                            <i class="bi bi-bag"></i>
+                            <small>Pedidos</small>
                         </a>
                     </div>
                     <div class="col-4">
@@ -88,21 +88,28 @@
                         </a>
                     </div>
                     <div class="col-4">
+                        <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo1/produccion') ?>">
+                            <i class="bi bi-gear"></i>
+                            <small>Producción</small>
+                        </a>
+                    </div>
+                    <div class="col-4">
                         <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/ordenesclientes') ?>">
                             <i class="bi bi-people"></i>
                             <small>Clientes</small>
                         </a>
                     </div>
-                    <div class="col-4">
-                        <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo2/catalogodisenos') ?>">
-                            <i class="bi bi-brush"></i>
-                            <small>Diseños</small>
-                        </a>
-                    </div>
+
                     <div class="col-4">
                         <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('muestras') ?>">
                             <i class="bi bi-palette2"></i>
                             <small>Muestras</small>
+                        </a>
+                    </div>
+                    <div class="col-4">
+                        <a class="btn btn-outline-success w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/inspeccion') ?>">
+                            <i class="bi bi-search"></i>
+                            <small>Inspección</small>
                         </a>
                     </div>
                 </div>
@@ -110,12 +117,7 @@
                 <!-- Control de Calidad -->
                 <h6 class="text-muted small mb-2">CONTROL DE CALIDAD</h6>
                 <div class="row g-1 mb-3">
-                    <div class="col-4">
-                        <a class="btn btn-outline-success w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/inspeccion') ?>">
-                            <i class="bi bi-search"></i>
-                            <small>Inspección</small>
-                        </a>
-                    </div>
+
                     <div class="col-4">
                         <a class="btn btn-outline-success w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/wip') ?>">
                             <i class="bi bi-diagram-3"></i>
@@ -128,12 +130,7 @@
                             <small>Incidencias</small>
                         </a>
                     </div>
-                    <div class="col-4">
-                        <a class="btn btn-outline-success w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/reportes') ?>">
-                            <i class="bi bi-bar-chart-line"></i>
-                            <small>Reportes</small>
-                        </a>
-                    </div>
+
                     <div class="col-4">
                         <a class="btn btn-outline-success w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/desperdicios') ?>">
                             <i class="bi bi-recycle"></i>
@@ -197,6 +194,12 @@
                 <h6 class="text-muted small mb-2">ADMINISTRACIÓN</h6>
                 <div class="row g-1 mb-3">
                     <div class="col-4">
+                        <a class="btn btn-outline-success w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/reportes') ?>">
+                            <i class="bi bi-bar-chart-line"></i>
+                            <small>Reportes</small>
+                        </a>
+                    </div>
+                    <div class="col-4">
                         <a class="btn btn-outline-dark w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo11/usuarios') ?>">
                             <i class="bi bi-shield-lock"></i>
                             <small>Usuarios</small>
@@ -254,20 +257,18 @@
                         <span class="visually-hidden">Accesos rápidos</span>
                     </a>
                     <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="quickMenu" style="min-width: 280px;">
+                        <a class="dropdown-item" href="<?= base_url('modulo2/catalogodisenos') ?>"><i class="bi bi-brush me-2"></i>Catálogo de Diseños</a>
                         <a class="dropdown-item" href="<?= base_url('modulo1/pedidos') ?>"><i class="bi bi-bag me-2"></i>Pedidos</a>
-                        <a class="dropdown-item" href="<?= base_url('modulo1/produccion') ?>"><i class="bi bi-gear-wide-connected me-2"></i>Producción</a>
                         <a class="dropdown-item" href="<?= base_url('modulo1/ordenes') ?>"><i class="bi bi-card-checklist me-2"></i>Órdenes</a>
+                        <a class="dropdown-item" href="<?= base_url('modulo1/produccion') ?>"><i class="bi bi-gear-wide-connected me-2"></i>Producción</a>
                         <a class="dropdown-item" href="<?= base_url('modulo3/ordenesclientes') ?>"><i class="bi bi-people me-2"></i>Órdenes Clientes</a>
 
                         <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="<?= base_url('modulo2/catalogodisenos') ?>"><i class="bi bi-brush me-2"></i>Catálogo de Diseños</a>
                         <a class="dropdown-item" href="<?= base_url('muestras') ?>"><i class="bi bi-palette2 me-2"></i>Muestras</a>
-
-                        <div class="dropdown-divider"></div>
                         <a class="dropdown-item" href="<?= base_url('modulo3/inspeccion') ?>"><i class="bi bi-search me-2"></i>Inspección</a>
+                        <div class="dropdown-divider"></div>
                         <a class="dropdown-item" href="<?= base_url('modulo3/wip') ?>"><i class="bi bi-diagram-3 me-2"></i>WIP</a>
                         <a class="dropdown-item" href="<?= base_url('modulo3/incidencias') ?>"><i class="bi bi-exclamation-triangle me-2"></i>Incidencias</a>
-                        <a class="dropdown-item" href="<?= base_url('modulo3/reportes') ?>"><i class="bi bi-bar-chart-line me-2"></i>Reportes</a>
 
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item" href="<?= base_url('modulo3/mrp') ?>"><i class="bi bi-diagram-2 me-2"></i>MRP</a>
@@ -283,6 +284,7 @@
                         <a class="dropdown-item" href="<?= base_url('modulo3/logistica_documentos') ?>"><i class="bi bi-file-earmark-text me-2"></i>Docs. Embarque</a>
 
                         <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="<?= base_url('modulo3/reportes') ?>"><i class="bi bi-bar-chart-line me-2"></i>Reportes</a>
                         <a class="dropdown-item" href="<?= base_url('modulo11/usuarios') ?>"><i class="bi bi-shield-lock me-2"></i>Gestión Usuarios</a>
                     </div>
                 </li>
