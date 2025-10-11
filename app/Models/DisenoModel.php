@@ -346,9 +346,10 @@
                                         $nombre = 'Art ' . $rLM['articuloId'];
                                     }
                                     $detallados[] = [
-                                        'nombre'   => $nombre ?: 'Material',
-                                        'cantidad' => $rLM['cantidadPorUnidad'] ?? null,
-                                        'merma'    => $rLM['mermaPct'] ?? null,
+                                        'articuloId'        => isset($rLM['articuloId']) ? (int)$rLM['articuloId'] : null,
+                                        'nombre'            => $nombre ?: 'Material',
+                                        'cantidadPorUnidad' => $rLM['cantidadPorUnidad'] ?? null,
+                                        'mermaPct'          => $rLM['mermaPct'] ?? null,
                                     ];
                                 }
                                 break; // ya lo logramos con esta tabla
@@ -357,7 +358,15 @@
                     }
 
                     if ($detallados) {
-                        $row['materiales'] = $detallados; // sustituir por lista detallada
+                        // Mantener 'materiales' legible y además devolver materialesDet con IDs
+                        $row['materiales'] = array_map(function($r){
+                            return [
+                                'nombre'   => $r['nombre'],
+                                'cantidad' => $r['cantidadPorUnidad'],
+                                'merma'    => $r['mermaPct'],
+                            ];
+                        }, $detallados);
+                        $row['materialesDet'] = $detallados;
                     }
                 }
             } catch (\Throwable $e) {

@@ -15,6 +15,136 @@ class Modulos extends BaseController
         return array_merge($base, $data);
     }
 
+    /**
+     * Actualizar un diseño y su última versión.
+     * Entrada (POST): codigo?, nombre?, descripcion?, version?, fecha?, notas?, archivoCadUrl?, archivoPatronUrl?, aprobado?, materials?[]
+     * - Si se incluye archivoCadFile/archivoPatronFile, se actualiza la URL correspondiente.
+     * - Reemplaza por completo la lista de materiales de la última versión si viene 'materials'.
+     * Respuesta: JSON { ok: bool, message }
+     */
+    public function m2_actualizar($id = null)
+    {
+        if ($this->request->getMethod() !== 'post') {
+            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+        }
+        $id = (int)($id ?? 0);
+        if ($id <= 0) {
+            return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
+        }
+
+        $db = \Config\Database::connect();
+
+        // Datos a actualizar
+        $dataDiseno = [];
+        $dataVersion = [];
+        $mapGet = function(string $k) { return trim((string)($this->request->getPost($k) ?? '')); };
+        foreach (['codigo','nombre','descripcion'] as $k) {
+            $v = $mapGet($k); if ($v !== '') { $dataDiseno[$k] = $v; }
+        }
+        foreach (['version','fecha','notas','archivoCadUrl','archivoPatronUrl'] as $k) {
+            $v = $mapGet($k); if ($v !== '') { $dataVersion[$k] = $v; }
+        }
+        if ($this->request->getPost('aprobado') !== null) {
+            $dataVersion['aprobado'] = (int)(bool)$this->request->getPost('aprobado');
+        }
+
+        // Manejo de archivos subidos (opcional)
+        try {
+            $cadFile = $this->request->getFile('archivoCadFile');
+            if ($cadFile && $cadFile->isValid() && !$cadFile->hasMoved()) {
+                $dir = FCPATH . 'uploads/cad/'; if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
+                $new = $cadFile->getRandomName();
+                $cadFile->move($dir, $new);
+                $dataVersion['archivoCadUrl'] = 'uploads/cad/' . $new;
+            }
+        } catch (\Throwable $e) { /* ignore */ }
+        try {
+            $patFile = $this->request->getFile('archivoPatronFile');
+            if ($patFile && $patFile->isValid() && !$patFile->hasMoved()) {
+                $dir2 = FCPATH . 'uploads/patron/'; if (!is_dir($dir2)) { @mkdir($dir2, 0755, true); }
+                $new2 = $patFile->getRandomName();
+                $patFile->move($dir2, $new2);
+                $dataVersion['archivoPatronUrl'] = 'uploads/patron/' . $new2;
+            }
+        } catch (\Throwable $e) { /* ignore */ }
+
+        $db->transStart();
+        try {
+            // Update diseno
+            if (!empty($dataDiseno)) {
+                foreach (['diseno','Diseno'] as $t) {
+                    try { $db->table($t)->where('id', $id)->update($dataDiseno); break; } catch (\Throwable $e) { /* next */ }
+                }
+            }
+
+            // Obtener última versión de este diseño
+            $dvId = null;
+            try {
+                $dvId = $db->query(
+                    "SELECT dv.id FROM diseno_version dv WHERE dv.disenoId = ? ORDER BY dv.fecha DESC, dv.id DESC LIMIT 1",
+                    [$id]
+                )->getRow('id');
+            } catch (\Throwable $e) {
+                try {
+                    $dvId = $db->query(
+                        "SELECT dv.id FROM disenoversion dv WHERE dv.disenoId = ? ORDER BY dv.fecha DESC, dv.id DESC LIMIT 1",
+                        [$id]
+                    )->getRow('id');
+                } catch (\Throwable $e2) { $dvId = null; }
+            }
+
+            if (!$dvId) { throw new \Exception('No se encontró la versión a actualizar'); }
+
+            // Update versión
+            if (!empty($dataVersion)) {
+                foreach (['diseno_version','disenoversion'] as $t) {
+                    try { $db->table($t)->where('id', (int)$dvId)->update($dataVersion); break; } catch (\Throwable $e) { /* next */ }
+                }
+            }
+
+            // Reemplazar materiales si vienen
+            $materialsRaw = $this->request->getPost('materials');
+            if ($materialsRaw) {
+                $materials = is_array($materialsRaw) ? $materialsRaw : json_decode((string)$materialsRaw, true);
+                if (is_array($materials)) {
+                    $lmTables = ['lista_materiales','listamateriales','ListaMateriales'];
+                    // Borrar actuales
+                    foreach ($lmTables as $t) {
+                        try { $db->table($t)->where('disenoVersionId', (int)$dvId)->delete(); break; } catch (\Throwable $e) { /* next */ }
+                    }
+                    // Insertar nuevos
+                    foreach ($materials as $m) {
+                        $artId = isset($m['articuloId']) ? (int)$m['articuloId'] : (int)($m['id'] ?? 0);
+                        if ($artId <= 0) { continue; }
+                        $cant  = isset($m['cantidadPorUnidad']) ? (float)$m['cantidadPorUnidad'] : (float)($m['cantidad'] ?? 0);
+                        $merma = isset($m['mermaPct']) ? (float)$m['mermaPct'] : (isset($m['merma']) ? (float)$m['merma'] : null);
+                        $rowLM = [
+                            'disenoVersionId'   => (int)$dvId,
+                            'articuloId'        => $artId,
+                            'cantidadPorUnidad' => $cant,
+                            'mermaPct'          => $merma,
+                        ];
+                        $inserted = false;
+                        foreach ($lmTables as $t) {
+                            try { $db->table($t)->insert($rowLM); $inserted = true; break; } catch (\Throwable $e) { /* next */ }
+                        }
+                        if (!$inserted) {
+                            try { $db->query('INSERT INTO lista_materiales (disenoVersionId, articuloId, cantidadPorUnidad, mermaPct) VALUES (?,?,?,?)', [(int)$dvId, $artId, $cant, $merma]); } catch (\Throwable $e) {}
+                        }
+                    }
+                }
+            }
+
+            $db->transComplete();
+            if ($db->transStatus() === false) { throw new \Exception('Error en la transacción'); }
+
+            return $this->response->setJSON(['ok' => true, 'message' => 'Diseño actualizado']);
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => 'Error al actualizar: ' . $e->getMessage()]);
+        }
+    }
+
     /** Alias a dashboard(). */
     public function index()
     {
@@ -899,43 +1029,6 @@ class Modulos extends BaseController
         ]));
     }
 
-    public function m2_actualizar($id = null)
-    {
-        // Validar que se proporcione un ID
-        if (!$id) {
-            return redirect()->to('/modulo2/catalogodisenos')->with('error', 'ID de diseño no válido');
-        }
-
-        // Obtener datos del formulario
-        $data = [
-            'nombre' => $this->request->getPost('nombre'),
-            'descripcion' => $this->request->getPost('descripcion'),
-            'materiales' => $this->request->getPost('materiales'),
-            'cortes' => $this->request->getPost('cortes'),
-        ];
-
-        // Procesar archivo si se subió uno nuevo
-        $file = $this->request->getFile('archivo');
-        if ($file && $file->isValid() && !$file->hasMoved()) {
-            // Crear directorio si no existe
-            $uploadPath = WRITEPATH . 'uploads/disenos/';
-            if (!is_dir($uploadPath)) {
-                mkdir($uploadPath, 0755, true);
-            }
-
-            // Generar nombre único para el archivo
-            $newName = $file->getRandomName();
-            $file->move($uploadPath, $newName);
-
-            // Guardar la ruta del archivo
-            $data['archivo'] = 'uploads/disenos/' . $newName;
-        }
-
-        // Aquí iría la lógica para actualizar en la base de datos
-        // Por ahora, solo simulamos la actualización
-
-        return redirect()->to('/modulo2/catalogodisenos')->with('success', 'Diseño actualizado correctamente');
-    }
 
     /* =========================================================
      *                       MÓDULO 11 - USUARIOS

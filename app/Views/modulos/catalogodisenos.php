@@ -55,11 +55,18 @@
                                         data-bs-target="#disenoModal">
                                     <i class="bi bi-eye"></i> Ver
                                 </button>
-                                <a href="<?= base_url('modulo2/editardiseno/' . $d['id']) ?>"
-                                   class="btn btn-sm btn-outline-primary me-1 btn-accion" title="Editar"
-                                   data-id="<?= (int)$d['id'] ?>">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary me-1 btn-editar-modal"
+                                        title="Editar"
+                                        data-id="<?= (int)$d['id'] ?>"
+                                        data-codigo="<?= isset($d['codigo']) ? esc($d['codigo']) : '' ?>"
+                                        data-nombre="<?= esc($d['nombre']) ?>"
+                                        data-descripcion="<?= esc($d['descripcion']) ?>"
+                                        data-version="<?= esc($d['version']) ?>"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#editarDisenoModal">
                                     <i class="bi bi-pencil"></i>
-                                </a>
+                                </button>
                                 <button class="btn btn-sm btn-outline-danger btn-accion" title="Eliminar"
                                         data-id="<?= (int)$d['id'] ?>">
                                     <i class="bi bi-trash"></i>
@@ -128,21 +135,28 @@
                             </div>
                             <div class="col-12 mt-3">
                                 <label class="form-label">Materiales (desde artículos)</label>
-                                <select id="selectArticulos" class="form-select" multiple size="6"></select>
-                                <small class="text-muted">Selecciona uno o varios. Luego indica cantidades abajo.</small>
+                                <input type="text" id="buscarArticulo" class="form-control mb-2" placeholder="Buscar por nombre, unidad o SKU..." />
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <div class="fw-semibold small mb-1">Disponibles</div>
+                                        <div id="listaDisponibles" class="border rounded p-2" style="max-height: 220px; overflow:auto;"></div>
+                                    </div>
+                                </div>
+                                <small class="text-muted">Marca los materiales; aparecerán abajo para capturar cantidades.</small>
                             </div>
                             <div class="col-12">
                                 <div class="table-responsive mt-2">
                                     <table class="table table-sm align-middle">
                                         <thead>
                                             <tr>
-                                                <th style="width:60%">Artículo</th>
+                                                <th style="width:5%"></th>
+                                                <th style="width:55%">Artículo</th>
                                                 <th style="width:20%">Cantidad por unidad</th>
                                                 <th style="width:20%">Merma % (opc)</th>
                                             </tr>
                                         </thead>
                                         <tbody id="tblMaterialesBody">
-                                            <tr class="text-muted" id="rowMaterialesEmpty"><td colspan="3">Sin materiales seleccionados</td></tr>
+                                            <tr class="text-muted" id="rowMaterialesEmpty"><td colspan="4">Sin materiales seleccionados</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -155,6 +169,106 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" id="btnGuardarDiseno" class="btn btn-primary">
                         <i class="bi bi-save"></i> Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Bootstrap: Editar Diseño -->
+    <div class="modal fade" id="editarDisenoModal" tabindex="-1" aria-labelledby="editarDisenoLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editarDisenoLabel">Editar diseño</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEditarDiseno">
+                        <input type="hidden" name="id" id="e-id" />
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Código</label>
+                                <input type="text" name="codigo" id="e-codigo" class="form-control" />
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label">Nombre<span class="text-danger">*</span></label>
+                                <input type="text" name="nombre" id="e-nombre" class="form-control" required />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Descripción</label>
+                                <textarea name="descripcion" id="e-descripcion" class="form-control" rows="2"></textarea>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Versión<span class="text-danger">*</span></label>
+                                <input type="text" name="version" id="e-version" class="form-control" placeholder="v1.0" required />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Fecha</label>
+                                <input type="date" name="fecha" id="e-fecha" class="form-control" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Notas</label>
+                                <input type="text" name="notas" id="e-notas" class="form-control" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Archivo CAD (subir cualquier formato)</label>
+                                <input type="file" name="archivoCadFile" class="form-control" />
+                                <small class="text-muted">Opcional. Vacío conserva el actual.</small>
+                                <input type="text" name="archivoCadUrl" id="e-archivoCadUrl" class="form-control mt-1" placeholder="/archivos/cad/archivo.dxf" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Archivo Patrón (subir cualquier formato)</label>
+                                <input type="file" name="archivoPatronFile" class="form-control" />
+                                <small class="text-muted">Opcional. Vacío conserva el actual.</small>
+                                <input type="text" name="archivoPatronUrl" id="e-archivoPatronUrl" class="form-control mt-1" placeholder="/archivos/patron/archivo.pdf" />
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="1" id="e-aprobadoCheck" name="aprobado">
+                                    <label class="form-check-label" for="e-aprobadoCheck">Aprobado</label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 mt-2">
+                                <div id="e-materialesSummary" class="alert alert-secondary py-2 d-none"></div>
+                            </div>
+
+                            <div class="col-12 mt-2">
+                                <label class="form-label">Materiales (agregar/quitar)</label>
+                                <input type="text" id="e-buscarArticulo" class="form-control mb-2" placeholder="Buscar por nombre, unidad o SKU..." />
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <div id="e-listaDisponibles" class="border rounded p-2" style="max-height: 220px; overflow:auto;"></div>
+                                    </div>
+                                </div>
+                                <small class="text-muted">Marca para agregar; aparecerán abajo para capturar cantidades.</small>
+                            </div>
+                            <div class="col-12">
+                                <div class="table-responsive mt-2">
+                                    <table class="table table-sm align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th style="width:5%"></th>
+                                                <th style="width:55%">Artículo</th>
+                                                <th style="width:20%">Cantidad por unidad</th>
+                                                <th style="width:20%">Merma % (opc)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="e-tblMaterialesBody">
+                                            <tr class="text-muted" id="e-rowMaterialesEmpty"><td colspan="4">Sin materiales seleccionados</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="editarDisenoAlert" class="alert alert-danger mt-3 d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" id="btnActualizarDiseno" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Guardar cambios
                     </button>
                 </div>
             </div>
@@ -281,106 +395,6 @@
                     }).catch(() => {
                         el.innerHTML = '<div class="p-3 text-muted">No fue posible descargar el DXF.</div>';
                     });
-
-            // Cargar artículos al abrir el modal (una sola vez por sesión)
-            let articulosCache = null;
-            const renderMateriales = () => {
-                const $sel = $('#selectArticulos');
-                const selected = $sel.val() || [];
-                const $tb = $('#tblMaterialesBody');
-                $tb.empty();
-                if (selected.length === 0) {
-                    $tb.append('<tr class="text-muted" id="rowMaterialesEmpty"><td colspan="3">Sin materiales seleccionados</td></tr>');
-                    return;
-                }
-                selected.forEach(id => {
-                    const art = (articulosCache || []).find(a => String(a.id) === String(id));
-                    const nombre = art ? (art.nombre + (art.unidadMedida ? ' ('+art.unidadMedida+')' : '')) : ('ID ' + id);
-                    const row = `
-                        <tr data-id="${id}">
-                            <td>${nombre}</td>
-                            <td><input type="number" min="0" step="0.0001" class="form-control form-control-sm inp-cant" placeholder="0" /></td>
-                            <td><input type="number" min="0" step="0.01" class="form-control form-control-sm inp-merma" placeholder="0" /></td>
-                        </tr>`;
-                    $tb.append(row);
-                });
-            };
-
-            function cargarArticulos(){
-                const url = '<?= base_url('modulo2/articulos/json') ?>';
-                const $sel = $('#selectArticulos');
-                $sel.empty().append('<option disabled>Cargando artículos…</option>');
-                return $.getJSON(url)
-                    .done(function(resp){
-                        articulosCache = (resp && resp.items) ? resp.items : [];
-                        $sel.empty();
-                        if (!articulosCache || articulosCache.length === 0) {
-                            $sel.append('<option disabled>No hay artículos disponibles</option>');
-                            return;
-                        }
-                        articulosCache.forEach(a => {
-                            const label = (a.nombre || ('ID '+a.id)) + (a.unidadMedida ? ' ('+a.unidadMedida+')' : '') + (a.sku ? ' • ' + a.sku : '');
-                            $sel.append('<option value="'+a.id+'">'+label+'</option>');
-                        });
-                    })
-                    .fail(function(xhr){
-                        $sel.empty().append('<option disabled>Error cargando artículos</option>');
-                        console.error('Error articulos/json', xhr && (xhr.responseText || xhr.statusText));
-                    });
-            }
-
-            $('#nuevoDisenoModal').on('shown.bs.modal', function(){
-                if (articulosCache === null) {
-                    cargarArticulos();
-                }
-            });
-
-            $(document).on('change', '#selectArticulos', renderMateriales);
-
-            // Guardar nuevo diseño por AJAX (multipart, con archivos)
-            $('#btnGuardarDiseno').on('click', function(){
-                const $alert = $('#nuevoDisenoAlert');
-                $alert.addClass('d-none').text('');
-
-                const formEl = document.getElementById('formNuevoDiseno');
-                const fd = new FormData(formEl);
-
-                // Construir materials JSON a partir de la tabla
-                const materials = [];
-                $('#tblMaterialesBody tr').each(function(){
-                    const id = $(this).data('id');
-                    if (!id) return;
-                    const cant = parseFloat($(this).find('.inp-cant').val() || '0');
-                    const merma = $(this).find('.inp-merma').val();
-                    const mermaNum = merma === '' ? null : parseFloat(merma);
-                    materials.push({ articuloId: parseInt(id,10), cantidadPorUnidad: isNaN(cant)?0:cant, mermaPct: (mermaNum===null||isNaN(mermaNum))?null:mermaNum });
-                });
-                if (materials.length > 0) {
-                    fd.append('materials', JSON.stringify(materials));
-                }
-
-                $.ajax({
-                    url: '<?= base_url('modulo2/disenos/crear') ?>',
-                    method: 'POST',
-                    data: fd,
-                    contentType: false,
-                    processData: false,
-                }).done(function(resp){
-                    if (resp && resp.ok) {
-                        const modalEl = document.getElementById('nuevoDisenoModal');
-                        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-                        modal.hide();
-                        window.location.reload();
-                    } else {
-                        $alert.removeClass('d-none').text(resp && resp.message ? resp.message : 'No se pudo guardar.');
-                    }
-                }).fail(function(xhr){
-                    let msg = 'Error al guardar.';
-                    if (xhr && xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
-                    $alert.removeClass('d-none').text(msg);
-                });
-            });
-                    return;
                 }
                 // Fallback final
                 el.innerHTML = 'Vista previa DXF no disponible en este navegador.';
@@ -388,7 +402,372 @@
                 el.innerHTML = 'Error cargando DXF.';
             }
         }
+        // =============================
+        // Editar Diseño: lógica
+        // =============================
+        let eSeleccionados = new Set();
+
+        function e_labelArticulo(a){
+            return (a.nombre || ('ID '+a.id)) + (a.unidadMedida ? ' ('+a.unidadMedida+')' : '') + (a.sku ? ' • ' + a.sku : '');
+        }
+
+        function e_pintarDisponibles(filtro = ''){
+            const $disp = $('#e-listaDisponibles');
+            $disp.empty();
+            const q = (filtro||'').toLowerCase();
+            let count = 0;
+            (articulosCache||[]).forEach(a => {
+                if (eSeleccionados.has(String(a.id))) return;
+                const hay = [a.nombre, a.unidadMedida, a.sku].filter(Boolean).join(' ').toLowerCase();
+                if (q && !hay.includes(q)) return;
+                const item = '<label class="form-check d-flex align-items-center gap-2 mb-1">'
+                    + '<input class="form-check-input e-chk-disp" type="checkbox" value="'+a.id+'" />'
+                    + '<span>'+e_labelArticulo(a)+'</span>'
+                    + '</label>';
+                $disp.append(item);
+                count++;
+            });
+            if (count === 0) {
+                $disp.html('<div class="text-muted px-2">Sin coincidencias</div>');
+            }
+        }
+
+        function e_renderMateriales(){
+            const ids = Array.from(eSeleccionados);
+            const $tb = $('#e-tblMaterialesBody');
+            $tb.empty();
+            if (ids.length === 0){
+                $tb.append('<tr class="text-muted" id="e-rowMaterialesEmpty"><td colspan="4">Sin materiales seleccionados</td></tr>');
+                return;
+            }
+            ids.forEach(id => {
+                const art = (articulosCache||[]).find(a => String(a.id)===String(id));
+                const nombre = art ? e_labelArticulo(art) : ('ID '+id);
+                const row = `
+                    <tr data-id="${id}">
+                        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger e-btn-del-row" title="Quitar"><i class="bi bi-x"></i></button></td>
+                        <td>${nombre}</td>
+                        <td><input type="number" min="0" step="0.0001" class="form-control form-control-sm e-inp-cant" placeholder="0" /></td>
+                        <td><input type="number" min="0" step="0.01" class="form-control form-control-sm e-inp-merma" placeholder="0" /></td>
+                    </tr>`;
+                $tb.append(row);
+            });
+        }
+
+        // Abrir modal Editar y cargar datos
+        $(document).on('click', '.btn-editar-modal', function(){
+            const id = $(this).data('id');
+            // reset
+            eSeleccionados = new Set();
+            $('#formEditarDiseno')[0].reset();
+            $('#e-id').val(id);
+            $('#e-materialesSummary').addClass('d-none').empty();
+            $('#e-tblMaterialesBody').html('<tr class="text-muted" id="e-rowMaterialesEmpty"><td colspan="4">Sin materiales seleccionados</td></tr>');
+
+            // Abrir modal de forma explícita (compatibilidad con DataTables)
+            const modalEl = document.getElementById('editarDisenoModal');
+            const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            modal.show();
+
+            // Prefill rápido con data-* del botón
+            const $btn = $(this);
+            if ($btn.data('codigo') !== undefined) $('#e-codigo').val($btn.data('codigo'));
+            if ($btn.data('nombre') !== undefined) $('#e-nombre').val($btn.data('nombre'));
+            if ($btn.data('descripcion') !== undefined) $('#e-descripcion').val($btn.data('descripcion'));
+            if ($btn.data('version') !== undefined) $('#e-version').val($btn.data('version'));
+
+            if (articulosCache === null) { cargarArticulos(); }
+            e_pintarDisponibles();
+
+            $.getJSON('<?= base_url('modulo2/diseno') ?>/' + id + '/json')
+                .done(function (data) {
+                    console.log('editar json ok', data);
+                    $('#e-codigo').val(data.codigo||'');
+                    $('#e-nombre').val(data.nombre||'');
+                    $('#e-descripcion').val(data.descripcion||'');
+                    $('#e-version').val(data.version||'');
+                    if (data.fecha) { $('#e-fecha').val(String(data.fecha).slice(0,10)); }
+                    $('#e-notas').val(data.notas||'');
+                    $('#e-archivoCadUrl').val(data.archivoCadUrl||'');
+                    $('#e-archivoPatronUrl').val(data.archivoPatronUrl||'');
+                    const apr = data.aprobado;
+                    $('#e-aprobadoCheck').prop('checked', apr === 1 || apr === true || apr === '1');
+
+                    // Resumen de materiales existentes (si no hay IDs)
+                    const mats = data.materiales || [];
+                    if (mats.length > 0) {
+                        let html = '<div class="small"><strong>Materiales actuales:</strong><ul class="mb-0">';
+                        mats.forEach(m => {
+                            if (typeof m === 'string') html += '<li>'+m+'</li>';
+                            else html += '<li>'+(m.nombre||'Material') + (m.cantidad? (' x '+m.cantidad):'') + (m.merma? (' • merma '+m.merma+'%'):'') + '</li>';
+                        });
+                        html += '</ul></div>';
+                        $('#e-materialesSummary').removeClass('d-none').html(html);
+                    }
+
+                    // Si viene materialesDet con IDs, preseleccionar y prellenar tabla
+                    const det = data.materialesDet || [];
+                    if (det.length > 0) {
+                        $('#e-materialesSummary').addClass('d-none').empty(); // ocultar resumen si podemos editar
+                        eSeleccionados = new Set(det.map(r => String(r.articuloId)));
+                        e_renderMateriales();
+                        // setear cantidades/merma en inputs
+                        det.forEach(r => {
+                            const tr = $('#e-tblMaterialesBody tr[data-id="'+String(r.articuloId)+'"]');
+                            if (tr.length) {
+                                if (r.cantidadPorUnidad !== undefined && r.cantidadPorUnidad !== null) {
+                                    tr.find('.e-inp-cant').val(r.cantidadPorUnidad);
+                                }
+                                if (r.mermaPct !== undefined && r.mermaPct !== null) {
+                                    tr.find('.e-inp-merma').val(r.mermaPct);
+                                }
+                            }
+                        });
+                        // repintar disponibles para ocultar los ya seleccionados
+                        const q = ($('#e-buscarArticulo').val()||'').toString().toLowerCase().trim();
+                        e_pintarDisponibles(q);
+                    }
+                })
+                .fail(function(xhr){
+                    console.error('editar json fail', xhr);
+                    $('#editarDisenoAlert').removeClass('d-none').text('No fue posible cargar los datos');
+                });
+        });
+
+        // Búsqueda en editar
+        $(document).on('input', '#e-buscarArticulo', function(){
+            const q = ($(this).val()||'').toString().toLowerCase().trim();
+            e_pintarDisponibles(q);
+        });
+
+        // Checkbox disponibles (editar)
+        $(document).on('change', '#e-listaDisponibles .e-chk-disp', function(){
+            const id = String(this.value);
+            if (this.checked) eSeleccionados.add(id); else eSeleccionados.delete(id);
+            e_renderMateriales();
+            if (!this.checked) {
+                const q = ($('#e-buscarArticulo').val()||'').toString().toLowerCase().trim();
+                e_pintarDisponibles(q);
+            }
+        });
+
+        // Quitar fila individual (editar)
+        $(document).on('click', '.e-btn-del-row', function(){
+            const $tr = $(this).closest('tr');
+            const id = String($tr.data('id'));
+            $tr.remove();
+            eSeleccionados.delete(id);
+            const q = ($('#e-buscarArticulo').val()||'').toString().toLowerCase().trim();
+            e_pintarDisponibles(q);
+            if ($('#e-tblMaterialesBody tr[data-id]').length === 0) {
+                $('#e-tblMaterialesBody').html('<tr class="text-muted" id="e-rowMaterialesEmpty"><td colspan="4">Sin materiales seleccionados</td></tr>');
+            }
+        });
+
+        // Guardar cambios
+        $('#btnActualizarDiseno').on('click', function(){
+            const id = $('#e-id').val();
+            const $alert = $('#editarDisenoAlert');
+            $alert.addClass('d-none').text('');
+            const formEl = document.getElementById('formEditarDiseno');
+            const fd = new FormData(formEl);
+
+            // construir materials desde tabla de editar
+            const materials = [];
+            $('#e-tblMaterialesBody tr').each(function(){
+                const idm = $(this).data('id');
+                if (!idm) return;
+                const cant = parseFloat($(this).find('.e-inp-cant').val() || '0');
+                const merma = $(this).find('.e-inp-merma').val();
+                const mermaNum = merma === '' ? null : parseFloat(merma);
+                materials.push({ articuloId: parseInt(idm,10), cantidadPorUnidad: isNaN(cant)?0:cant, mermaPct: (mermaNum===null||isNaN(mermaNum))?null:mermaNum });
+            });
+            if (materials.length > 0) fd.append('materials', JSON.stringify(materials));
+
+            $.ajax({
+                url: '<?= base_url('modulo2/actualizar') ?>/'+id,
+                method: 'POST',
+                data: fd,
+                contentType: false,
+                processData: false,
+            }).done(function(resp){
+                if (resp && (resp.ok || resp.success)) {
+                    const modalEl = document.getElementById('editarDisenoModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    modal.hide();
+                    window.location.reload();
+                } else {
+                    $alert.removeClass('d-none').text(resp && (resp.message||resp.error) ? (resp.message||resp.error) : 'No se pudo actualizar.');
+                }
+            }).fail(function(xhr){
+                let msg = 'Error al actualizar.';
+                if (xhr && xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                $alert.removeClass('d-none').text(msg);
+            });
+        });
+
+        // =============================
+        // Materiales para Nuevo Diseño
+        // =============================
+        // Cargar artículos al abrir el modal (una sola vez por sesión)
+        let articulosCache = null;
+        const seleccionados = new Set(); // ids marcados
+
+        const renderMateriales = () => {
+            // usa Set de seleccionados
+            const selected = Array.from(seleccionados);
+            const $tb = $('#tblMaterialesBody');
+            $tb.empty();
+            if (selected.length === 0) {
+                $tb.append('<tr class="text-muted" id="rowMaterialesEmpty"><td colspan="4">Sin materiales seleccionados</td></tr>');
+                return;
+            }
+            selected.forEach(id => {
+                const art = (articulosCache || []).find(a => String(a.id) === String(id));
+                const nombre = art ? (art.nombre + (art.unidadMedida ? ' ('+art.unidadMedida+')' : '')) : ('ID ' + id);
+                const row = `
+                    <tr data-id="${id}">
+                        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-del-row" title="Quitar"><i class="bi bi-x"></i></button></td>
+                        <td>${nombre}</td>
+                        <td><input type="number" min="0" step="0.0001" class="form-control form-control-sm inp-cant" placeholder="0" /></td>
+                        <td><input type="number" min="0" step="0.01" class="form-control form-control-sm inp-merma" placeholder="0" /></td>
+                    </tr>`;
+                $tb.append(row);
+            });
+        };
+
+        function cargarArticulos(){
+            const url = '<?= base_url('modulo2/articulos/json') ?>';
+            const $disp = $('#listaDisponibles');
+            $disp.html('<div class="text-muted px-2">Cargando artículos…</div>');
+            return $.getJSON(url)
+                .done(function(resp){
+                    articulosCache = (resp && resp.items) ? resp.items : [];
+                    console.log('articulos/json OK. items =', articulosCache);
+                    pintarDisponibles();
+                })
+                .fail(function(xhr){
+                    $disp.html('<div class="text-danger px-2">Error cargando artículos</div>');
+                    console.error('Error articulos/json', xhr && (xhr.responseText || xhr.statusText), xhr);
+                });
+        }
+
+        function labelArticulo(a){
+            return (a.nombre || ('ID '+a.id)) + (a.unidadMedida ? ' ('+a.unidadMedida+')' : '') + (a.sku ? ' • ' + a.sku : '');
+        }
+
+        function pintarDisponibles(filtro = ''){
+            const $disp = $('#listaDisponibles');
+            $disp.empty();
+            const idsSeleccionados = seleccionados;
+            const q = (filtro||'').toLowerCase();
+            let count = 0;
+            (articulosCache||[]).forEach(a => {
+                if (idsSeleccionados.has(String(a.id))) return; // no mostrar ya seleccionados
+                const hay = [a.nombre, a.unidadMedida, a.sku].filter(Boolean).join(' ').toLowerCase();
+                if (q && !hay.includes(q)) return;
+                const item = '<label class="form-check d-flex align-items-center gap-2 mb-1">'
+                    + '<input class="form-check-input chk-disp" type="checkbox" value="'+a.id+'" />'
+                    + '<span>'+labelArticulo(a)+'</span>'
+                    + '</label>';
+                $disp.append(item);
+                count++;
+            });
+            if (count === 0) {
+                $disp.html('<div class="text-muted px-2">Sin coincidencias</div>');
+            }
+        }
+
+        // Eventos del modal/materiales
+        $('#nuevoDisenoModal').on('shown.bs.modal', function(){
+            if (articulosCache === null) {
+                cargarArticulos();
+            }
+        });
+
+        // Búsqueda
+        $(document).on('input', '#buscarArticulo', function(){
+            const q = ($(this).val() || '').toString().toLowerCase().trim();
+            pintarDisponibles(q);
+        });
+
+        // Check/uncheck: agrega/quita al Set y pinta tabla
+        $(document).on('change', '#listaDisponibles .chk-disp', function(){
+            const id = String(this.value);
+            if (this.checked) seleccionados.add(id); else seleccionados.delete(id);
+            renderMateriales();
+            // si lo desmarcan, que vuelva a aparecer en la lista (se repinta con filtro actual)
+            if (!this.checked) {
+                const q = ($('#buscarArticulo').val()||'').toString().toLowerCase().trim();
+                pintarDisponibles(q);
+            }
+        });
+
+        // (bloque select-based obsoleto eliminado)
+
+        // Quitar fila individual y deseleccionar en el select
+        $(document).on('click', '.btn-del-row', function(){
+            const $tr = $(this).closest('tr');
+            const id = String($tr.data('id'));
+            $tr.remove();
+            // mover de vuelta a disponibles
+            const $sel = $('#listaSeleccionados');
+            // eliminar del listado de seleccionados y repintar disponibles
+            const opt = $sel.find('option[value="'+id+'"]');
+            if (opt.length) { opt.remove(); }
+            pintarDisponibles($('#buscarArticulo').val()||'');
+            if ($('#tblMaterialesBody tr[data-id]').length === 0) {
+                $('#tblMaterialesBody').html('<tr class="text-muted" id="rowMaterialesEmpty"><td colspan="4">Sin materiales seleccionados</td></tr>');
+            }
+        });
+
+        // Guardar nuevo diseño por AJAX (multipart, con archivos)
+        $('#btnGuardarDiseno').on('click', function(){
+            const $alert = $('#nuevoDisenoAlert');
+            $alert.addClass('d-none').text('');
+
+            const formEl = document.getElementById('formNuevoDiseno');
+            const fd = new FormData(formEl);
+
+            // Construir materials JSON a partir de la tabla
+            const materials = [];
+            $('#tblMaterialesBody tr').each(function(){
+                const id = $(this).data('id');
+                if (!id) return;
+                const cant = parseFloat($(this).find('.inp-cant').val() || '0');
+                const merma = $(this).find('.inp-merma').val();
+                const mermaNum = merma === '' ? null : parseFloat(merma);
+                materials.push({ articuloId: parseInt(id,10), cantidadPorUnidad: isNaN(cant)?0:cant, mermaPct: (mermaNum===null||isNaN(mermaNum))?null:mermaNum });
+            });
+            if (materials.length > 0) {
+                fd.append('materials', JSON.stringify(materials));
+            }
+
+            $.ajax({
+                url: '<?= base_url('modulo2/disenos/crear') ?>',
+                method: 'POST',
+                data: fd,
+                contentType: false,
+                processData: false,
+            }).done(function(resp){
+                if (resp && resp.ok) {
+                    const modalEl = document.getElementById('nuevoDisenoModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    modal.hide();
+                    window.location.reload();
+                } else {
+                    $alert.removeClass('d-none').text(resp && resp.message ? resp.message : 'No se pudo guardar.');
+                }
+            }).fail(function(xhr){
+                let msg = 'Error al guardar.';
+                if (xhr && xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                $alert.removeClass('d-none').text(msg);
+            });
+        });
+
         $(document).ready(function () {
+            // Precarga artículos
+            if (articulosCache === null) cargarArticulos();
             $('#tablaDisenos').DataTable({
                 language: {
                     "sProcessing":     "Procesando...",
