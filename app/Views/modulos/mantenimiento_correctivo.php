@@ -157,7 +157,7 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                                         data-descripcion="<?= esc($descripcion, 'attr') ?>"
                                         data-cierre="<?= esc($cierre, 'attr') ?>"
                                         data-horas="<?= esc($horas, 'attr') ?>">
-                                    <i class="bi bi-eye me-1"></i> Ver
+                                    <i class="bi bi-eye me-1"></i>
                                 </button>
 
                                 <!-- Editar -->
@@ -171,7 +171,7 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                                         data-estatus="<?= esc($estado, 'attr') ?>"
                                         data-descripcion="<?= esc($descripcion, 'attr') ?>"
                                         data-cierre="<?= esc($cierre, 'attr') ?>">
-                                    <i class="bi bi-pencil me-1"></i> Editar
+                                    <i class="bi bi-pencil me-1"></i>
                                 </button>
                             </div>
                         </td>
@@ -183,7 +183,7 @@ $rows    = is_array($rows ?? null) ? $rows : [];
     </div>
 </div>
 
-<!-- ====================== MODAL VISTA (solo lectura, sin botón Editar) ====================== -->
+<!-- ====================== MODAL VISTA ====================== -->
 <div class="modal fade" id="modalVista" tabindex="-1" aria-labelledby="modalVistaLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">

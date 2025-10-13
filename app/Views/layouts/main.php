@@ -121,7 +121,7 @@
                     <div class="col-4">
                         <a class="btn btn-outline-success w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/wip') ?>">
                             <i class="bi bi-diagram-3"></i>
-                            <small>WIP</small>
+                            <small>Trabajo en proceso</small>
                         </a>
                     </div>
                     <div class="col-4">
@@ -145,7 +145,7 @@
                     <div class="col-4">
                         <a class="btn btn-outline-info w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/mrp') ?>">
                             <i class="bi bi-diagram-2"></i>
-                            <small>MRP</small>
+                            <small>Planificacion Materiales</small>
                         </a>
                     </div>
                 </div>
@@ -259,7 +259,7 @@
                     <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="quickMenu" style="min-width: 280px;">
                         <a class="dropdown-item" href="<?= base_url('modulo2/catalogodisenos') ?>"><i class="bi bi-brush me-2"></i>Catálogo de Diseños</a>
                         <a class="dropdown-item" href="<?= base_url('modulo1/pedidos') ?>"><i class="bi bi-bag me-2"></i>Pedidos</a>
-                        <a class="dropdown-item" href="<?= base_url('modulo1/ordenes') ?>"><i class="bi bi-card-checklist me-2"></i>Órdenes</a>
+                        <a class="dropdown-item" href="<?= base_url('modulo1/ordenes') ?>"><i class="bi bi-card-checklist me-2"></i>Órdenes en proceso</a>
                         <a class="dropdown-item" href="<?= base_url('modulo1/produccion') ?>"><i class="bi bi-gear-wide-connected me-2"></i>Producción</a>
                         <a class="dropdown-item" href="<?= base_url('modulo3/ordenesclientes') ?>"><i class="bi bi-people me-2"></i>Órdenes Clientes</a>
 
@@ -267,11 +267,11 @@
                         <a class="dropdown-item" href="<?= base_url('muestras') ?>"><i class="bi bi-palette2 me-2"></i>Muestras</a>
                         <a class="dropdown-item" href="<?= base_url('modulo3/inspeccion') ?>"><i class="bi bi-search me-2"></i>Inspección</a>
                         <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="<?= base_url('modulo3/wip') ?>"><i class="bi bi-diagram-3 me-2"></i>WIP</a>
+                        <!--<a class="dropdown-item" href="<?= base_url('modulo3/wip') ?>"><i class="bi bi-diagram-3 me-2"></i>Trabajo en proceso</a>-->
                         <a class="dropdown-item" href="<?= base_url('modulo3/incidencias') ?>"><i class="bi bi-exclamation-triangle me-2"></i>Incidencias</a>
 
                         <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="<?= base_url('modulo3/mrp') ?>"><i class="bi bi-diagram-2 me-2"></i>MRP</a>
+                        <a class="dropdown-item" href="<?= base_url('modulo3/mrp') ?>"><i class="bi bi-diagram-2 me-2"></i>Planificacion materiales</a>
                         <a class="dropdown-item" href="<?= base_url('modulo3/desperdicios') ?>"><i class="bi bi-recycle me-2"></i>Desperdicios</a>
 
                         <div class="dropdown-divider"></div>

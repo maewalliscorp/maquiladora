@@ -179,13 +179,13 @@
                                         data-ubicacion="<?= esc($ubicacion, 'attr') ?>"
                                         data-estado="<?= esc($estado, 'attr') ?>"
                                 >
-                                    <i class="bi bi-eye me-1"></i> Ver
+                                    <i class="bi bi-eye me-1"></i>
                                 </button>
 
                                 <!-- Editar -->
                                 <a class="btn btn-sm btn-outline-primary <?= $id ? '' : 'disabled' ?>"
                                    href="<?= $id ? base_url('modulo3/maquinaria/editar/'.$id) : 'javascript:void(0)' ?>">
-                                    <i class="bi bi-pencil me-1"></i> Editar
+                                    <i class="bi bi-pencil me-1"></i>
                                 </a>
                             </div>
                         </td>
