@@ -6,72 +6,62 @@ use CodeIgniter\Model;
 
 class UsuarioModel extends Model
 {
-    protected $table            = 'usuario';
+    protected $table            = 'users';
     protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
     protected $returnType       = 'array';
-    protected $useSoftDeletes   = false;
     protected $protectFields    = true;
 
     protected $allowedFields = [
-        'usuario',
+        'username',
+        'correo',
         'password',
-        'activo',
-        'fechaAlta',
-        'ultimoAcceso',
-        'idmaquiladora',
+        'maquiladoraIdFK',
+        'status',
+        'status_message',
+        'active',
+        'last_active',
+        'created_at',
+        'updated_at',
+        'deleted_at'
     ];
 
-    // Dates
-    protected $useTimestamps = false;
-    protected $dateFormat    = 'datetime';
+    // Fechas automáticas
+    protected $useTimestamps = true;
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';
     protected $deletedField  = 'deleted_at';
 
-    // Validation rules
+    // Reglas de validación básicas
     protected $validationRules = [
-        'usuario'       => 'required|min_length[3]|max_length[100]',
-        'password'      => 'required|min_length[6]',
-        'activo'        => 'required|in_list[0,1]', // estado: 0 = inactivo, 1 = activo
-        'fechaAlta'     => 'permit_empty|valid_date',
-        'ultimoAcceso'  => 'permit_empty|valid_date',
-        'idmaquiladora' => 'permit_empty|integer',
+        'username' => 'required|min_length[3]|max_length[30]',
+        'correo'   => 'required|valid_email',
+        'password' => 'required|min_length[6]',
     ];
 
     protected $validationMessages = [
-        'usuario' => [
-            'required'   => 'El usuario es obligatorio',
-            'min_length' => 'El usuario debe tener al menos 3 caracteres',
-            'max_length' => 'El usuario no puede superar los 100 caracteres',
+        'username' => [
+            'required'   => 'El nombre de usuario es obligatorio.',
+            'min_length' => 'Debe tener al menos 3 caracteres.',
+            'max_length' => 'No puede superar los 30 caracteres.',
+        ],
+        'correo' => [
+            'required'    => 'El correo es obligatorio.',
+            'valid_email' => 'El formato del correo no es válido.',
         ],
         'password' => [
-            'required'   => 'La contraseña es obligatoria',
-            'min_length' => 'La contraseña debe tener al menos 6 caracteres',
-        ],
-        'activo' => [
-            'required' => 'El campo activo es obligatorio',
-            'in_list'  => 'El valor de activo debe ser 0 o 1',
-        ],
-        'fechaAlta' => [
-            'valid_date' => 'La fecha de alta no es válida',
-        ],
-        'ultimoAcceso' => [
-            'valid_date' => 'La fecha de último acceso no es válida',
-        ],
-        'idmaquiladora' => [
-            'integer'  => 'El id de la maquiladora debe ser un número entero',
+            'required'   => 'La contraseña es obligatoria.',
+            'min_length' => 'Debe tener al menos 6 caracteres.',
         ],
     ];
 
-    protected $skipValidation       = false;
-    protected $cleanValidationRules = true;
-
-    // Callbacks
     protected $allowCallbacks = true;
     protected $beforeInsert   = ['hashPassword'];
     protected $beforeUpdate   = ['hashPassword'];
 
+    /**
+     * Hashea la contraseña antes de guardar
+     */
     protected function hashPassword(array $data)
     {
         if (isset($data['data']['password'])) {
@@ -80,9 +70,12 @@ class UsuarioModel extends Model
         return $data;
     }
 
-    public function authenticate($usuario, $password)
+    /**
+     * Autenticación de usuario
+     */
+    public function authenticate($correo, $password)
     {
-        $user = $this->where('usuario', $usuario)->first();
+        $user = $this->where('correo', $correo)->first();
 
         if ($user && password_verify($password, $user['password'])) {
             return $user;
@@ -92,50 +85,14 @@ class UsuarioModel extends Model
     }
 
     /**
-     * Obtiene todos los usuarios con sus datos de empleado asociados
-     */
-    public function getUsuariosConEmpleados()
-    {
-        return $this->select('usuario.*, empleado.noEmpleado, empleado.nombre, empleado.apellido, empleado.email, empleado.telefono, empleado.domicilio, empleado.puesto, empleado.activo as empleado_activo')
-                    ->join('empleado', 'empleado.idusuario = usuario.id', 'left')
-                    ->findAll();
-    }
-
-    /**
-     * Obtiene un usuario específico con sus datos de empleado
-     */
-    public function getUsuarioConEmpleado($id)
-    {
-        return $this->select('usuario.*, empleado.noEmpleado, empleado.nombre, empleado.apellido, empleado.email, empleado.telefono, empleado.domicilio, empleado.puesto, empleado.activo as empleado_activo')
-                    ->join('empleado', 'empleado.idusuario = usuario.id', 'left')
-                    ->where('usuario.id', $id)
-                    ->first();
-    }
-
-    /**
-     * Obtiene usuarios activos con sus empleados
-     */
-    public function getUsuariosActivos()
-    {
-        return $this->select('usuario.*, empleado.noEmpleado, empleado.nombre, empleado.apellido, empleado.email, empleado.telefono, empleado.domicilio, empleado.puesto, empleado.activo as empleado_activo')
-                    ->join('empleado', 'empleado.idusuario = usuario.id', 'left')
-                    ->where('usuario.activo', 1)
-                    ->findAll();
-    }
-
-    /**
-     * Busca usuarios por nombre de usuario o datos de empleado
+     * Busca usuarios por nombre o correo
      */
     public function buscarUsuarios($termino)
     {
-        return $this->select('usuario.*, empleado.noEmpleado, empleado.nombre, empleado.apellido, empleado.email, empleado.telefono, empleado.domicilio, empleado.puesto, empleado.activo as empleado_activo')
-                    ->join('empleado', 'empleado.idusuario = usuario.id', 'left')
-                    ->groupStart()
-                        ->like('usuario.usuario', $termino)
-                        ->orLike('empleado.nombre', $termino)
-                        ->orLike('empleado.apellido', $termino)
-                        ->orLike('empleado.noEmpleado', $termino)
-                    ->groupEnd()
-                    ->findAll();
+        return $this->groupStart()
+            ->like('username', $termino)
+            ->orLike('correo', $termino)
+            ->groupEnd()
+            ->findAll();
     }
 }

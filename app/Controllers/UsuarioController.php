@@ -14,24 +14,30 @@ class UsuarioController extends Controller
 
     public function authenticate()
     {
-        $usuario  = $this->request->getPost('usuario');
+        // Recibir datos del formulario
+        $correo   = $this->request->getPost('correo');
         $password = $this->request->getPost('password');
 
+        // Cargar modelo
         $usuarioModel = new UsuarioModel();
-        $user = $usuarioModel->authenticate($usuario, $password);
+        $user = $usuarioModel->where('correo', $correo)->first();
 
-        if ($user) {
-            // Crear sesión mínima
+        // Verificar usuario y contraseña
+        if ($user && password_verify($password, $user['password'])) {
+            // Crear sesión
             session()->set([
                 'user_id'   => $user['id'],
-                'user_name' => $user['usuario'],
+                'user_name' => $user['nombre'] ?? $user['correo'],
                 'logged_in' => true
             ]);
 
             return redirect()->to('/dashboard');
         }
 
-        return redirect()->to('/login')->with('error', 'Credenciales inválidas.');
+        // Error si las credenciales no coinciden
+        return redirect()
+            ->to('/login')
+            ->with('error', 'Correo o contraseña incorrectos.');
     }
 
     public function logout()

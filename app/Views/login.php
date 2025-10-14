@@ -25,7 +25,7 @@
     <!-- Panel derecho -->
     <div class="w-50 bg-secondary d-flex justify-content-center align-items-center">
         <div class="login-card" style="max-width: 380px; width: 100%;">
-            <h3 class="mb-4 fw-bold text-center">Inicio de Sesión</h3>
+            <h3 class="mb-4 fw-bold text-center text-light">Inicio de Sesión</h3>
 
             <?php if (session()->getFlashdata('error')): ?>
                 <div class="alert alert-danger" role="alert">
@@ -34,16 +34,21 @@
             <?php endif; ?>
 
             <form action="<?= base_url('login') ?>" method="post">
-                <label for="usuario" class="form-label text-light">Usuario</label>
-                <input type="text" id="usuario" name="usuario" class="form-control mb-3" placeholder="Usuario" required>
+                <!-- Cambiado a correo -->
+                <label for="correo" class="form-label text-light">Correo electrónico</label>
+                <input type="email" id="correo" name="correo" class="form-control mb-3"
+                       placeholder="ejemplo@correo.com" required>
 
                 <label for="password" class="form-label text-light">Contraseña</label>
-                <input type="password" id="password" name="password" class="form-control mb-3" placeholder="Contraseña"
-                       required>
+                <input type="password" id="password" name="password" class="form-control mb-3"
+                       placeholder="Contraseña" required>
 
                 <button type="submit" class="mt-4 btn btn-primary border border-black w-100">Ingresar</button>
-                <div class="mt-3 text-center ">
-                    <a href="<?= base_url('register') ?>" class="text-light link-light link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover">¿No tienes cuenta? Regístrate</a>
+
+                <div class="mt-3 text-center">
+                    <a href="<?= base_url('register') ?>" class="text-light link-light link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover">
+                        ¿No tienes cuenta? Regístrate
+                    </a>
                 </div>
             </form>
 
