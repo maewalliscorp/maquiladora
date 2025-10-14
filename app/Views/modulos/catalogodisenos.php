@@ -53,7 +53,7 @@
                                         data-imagen="<?= isset($d['imagen']) ? esc($d['imagen']) : '' ?>"
                                         data-bs-toggle="modal"
                                         data-bs-target="#disenoModal">
-                                    <i class="bi bi-eye"></i> Ver
+                                    <i class="bi bi-eye"></i>
                                 </button>
                                 <button type="button"
                                         class="btn btn-sm btn-outline-primary me-1 btn-editar-modal"
