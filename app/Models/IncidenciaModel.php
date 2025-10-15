@@ -5,12 +5,14 @@ use CodeIgniter\Model;
 
 class IncidenciaModel extends Model
 {
-    protected $table            = 'incidencia';   // nombre de tabla
-    protected $primaryKey       = 'id';
-    protected $returnType       = 'array';
-    protected $useTimestamps    = false;
+    protected $table         = 'incidencia';
+    protected $primaryKey    = 'id';
+    protected $returnType    = 'array';
+    protected $useTimestamps = false;
 
+    // Campos reales de la tabla (según tu diagrama)
     protected $allowedFields = [
-        'op', 'tipo', 'fecha', 'descripcion'
+        'fecha', 'tipo', 'prioridad', 'descripcion', 'accion',
+        'empleadoFK', 'ordenProduccionFK'
     ];
 }
