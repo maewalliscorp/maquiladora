@@ -58,56 +58,78 @@ class UsuarioController extends Controller
     }
 
     public function register()
-    {
-        // Si es una solicitud POST, procesar el registro
-        if ($this->request->getMethod() === 'post') {
-            // Validar los datos del formulario
-            $rules = [
-                'username' => 'required|min_length[3]|max_length[50]|is_unique[usuarios.username]',
-                'email' => 'required|valid_email|is_unique[usuarios.correo]',
-                'password' => 'required|min_length[6]',
-                'confirm_password' => 'matches[password]',
-                'maquiladoraIdFK' => 'permit_empty|integer'
-            ];
+{
+    // Si es una solicitud POST, procesar el registro
+    if ($this->request->getMethod() === 'post') {
+        // Validar los datos del formulario
+        $rules = [
+            'username' => 'required|min_length[3]|max_length[50]|is_unique[users.username]',
+            'email' => 'required|valid_email|is_unique[users.correo]',
+            'password' => 'required|min_length[6]',
+            'confirm_password' => 'matches[password]',
+            'maquiladoraIdFK' => 'permit_empty|integer'
+        ];
 
-            if (!$this->validate($rules)) {
-                return redirect()->back()->withInput()->with('error', $this->validator->listErrors());
-            }
+        // Mensajes de validación personalizados
+        $messages = [
+            'username' => [
+                'is_unique' => 'Este nombre de usuario ya está registrado.'
+            ],
+            'email' => [
+                'is_unique' => 'Este correo electrónico ya está registrado.'
+            ]
+        ];
 
-            // Obtener los datos del formulario
-            $userData = [
-                'username' => $this->request->getPost('username'),
-                'correo' => $this->request->getPost('email'),
-                'password' => password_hash($this->request->getPost('password'), PASSWORD_DEFAULT),
-                'maquiladoraIdFK' => $this->request->getPost('maquiladoraIdFK') ?: null,
-                'active' => 0, // Usuario inactivo hasta que sea aprobado
-                'created_at' => date('Y-m-d H:i:s')
-            ];
-
-            // Guardar el usuario en la base de datos
-            $usuarioModel = new UsuarioModel();
-            try {
-                $usuarioModel->insert($userData);
-                return redirect()->to('/login')->with('message', 'Registro exitoso. Tu cuenta está pendiente de aprobación.');
-            } catch (\Exception $e) {
-                log_message('error', 'Error al registrar usuario: ' . $e->getMessage());
-                return redirect()->back()->withInput()->with('error', 'Ocurrió un error al registrar el usuario. Por favor, inténtalo de nuevo.');
-            }
+        if (!$this->validate($rules, $messages)) {
+            return redirect()->back()->withInput()->with('error', $this->validator->listErrors());
         }
-        
-        // Mostrar el formulario de registro
-        return view('register');
+
+        // Obtener los datos del formulario
+        $userData = [
+            'username' => $this->request->getPost('username'),
+            'correo' => $this->request->getPost('email'),
+            'password' => password_hash($this->request->getPost('password'), PASSWORD_DEFAULT),
+            'maquiladoraIdFK' => $this->request->getPost('maquiladoraIdFK') ?: null,
+            'active' => 0, // Usuario inactivo hasta que sea aprobado
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+
+        // Guardar el usuario en la base de datos
+        $usuarioModel = new UsuarioModel();
+        try {
+            $usuarioModel->insert($userData);
+            return redirect()->to('/login')->with('message', 'Registro exitoso. Tu cuenta está pendiente de aprobación.');
+        } catch (\Exception $e) {
+            log_message('error', 'Error al registrar usuario: ' . $e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'Ocurrió un error al registrar el usuario. Por favor, inténtalo de nuevo. Error: ' . $e->getMessage());
+        }
     }
+    
+    // Mostrar el formulario de registro
+    return view('register');
+}
 
     public function getMaquiladoras()
-    {
+{
+    try {
         $db = \Config\Database::connect();
         $query = $db->table('maquiladora')
                     ->select('idmaquiladora as id, Nombre_Maquila as nombre')
-                    ->where('activo', 1)
                     ->orderBy('Nombre_Maquila', 'ASC')
                     ->get();
         
-        return $this->response->setJSON($query->getResultArray());
+        $maquiladoras = $query->getResultArray();
+        
+        return $this->response->setJSON([
+            'status' => 'success',
+            'data' => $maquiladoras
+        ]);
+    } catch (\Exception $e) {
+        log_message('error', 'Error al obtener maquiladoras: ' . $e->getMessage());
+        return $this->response->setJSON([
+            'status' => 'error',
+            'message' => 'Error al cargar las maquiladoras'
+        ])->setStatusCode(500);
     }
+}
 }

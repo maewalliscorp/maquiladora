@@ -5,6 +5,43 @@ use App\Controllers\BaseController;
 
 class Api extends BaseController
 {
+    protected $maquiladoraModel;
+
+    public function __construct()
+    {
+        $this->maquiladoraModel = new \App\Models\MaquiladoraModel();
+    }
+
+    /**
+     * Obtiene la lista de maquiladoras activas para el formulario de registro
+     */
+    public function maquiladoras()
+    {
+        try {
+            $db = \Config\Database::connect();
+            
+            // Consulta directa para asegurarnos de obtener los datos correctos
+            $query = $db->query("SELECT idmaquiladora, nombre FROM maquiladora WHERE activa = 1 ORDER BY nombre ASC");
+            $maquiladoras = $query->getResultArray();
+            
+            if (empty($maquiladoras)) {
+                throw new \Exception('No se encontraron maquiladoras activas');
+            }
+            
+            return $this->response->setJSON([
+                'status' => 'success',
+                'data' => $maquiladoras
+            ]);
+            
+        } catch (\Exception $e) {
+            log_message('error', 'Error al obtener maquiladoras: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'Error al cargar las maquiladoras: ' . $e->getMessage()
+            ])->setStatusCode(500);
+        }
+    }
+
     public function dashboard()
     {
         $db     = \Config\Database::connect();
