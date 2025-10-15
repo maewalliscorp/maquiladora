@@ -26,11 +26,14 @@ $routes->setAutoRoute(false); // todo debe declararse explícitamente
 /* --------------------------------------------------------------------
  * Auth
  * ------------------------------------------------------------------*/
-$routes->get('/login',     'UsuarioController::login');
-$routes->post('/login',    'UsuarioController::authenticate');
-$routes->get('/logout',    'UsuarioController::logout');
-$routes->get('/register',  'UsuarioController::register');
+$routes->get('/register', 'UsuarioController::register', ['as' => 'register']);
 $routes->post('/register', 'UsuarioController::register');
+$routes->get('/login', 'UsuarioController::login', ['as' => 'login']);
+$routes->post('/login', 'UsuarioController::authenticate');
+$routes->get('/logout', 'UsuarioController::logout');
+
+// API Endpoints
+$routes->get('api/maquiladoras', 'UsuarioController::getMaquiladoras');
 
 /* --------------------------------------------------------------------
  * Home

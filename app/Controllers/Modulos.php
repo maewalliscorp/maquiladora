@@ -1029,20 +1029,36 @@ class Modulos extends BaseController
     /* =========================================================
      *                       MÓDULO 11 - USUARIOS
      * ========================================================= */
+public function m11_usuarios()
+{
+    $usuarioModel = new \App\Models\UsuarioModel();
 
-    public function m11_usuarios()
-    {
-        $usuarioModel = new \App\Models\UsuarioModel();
+    // Obtener todos los usuarios (excepto eliminados lógicamente)
+    $usuarios = $usuarioModel->where('deleted_at', null)->findAll();
 
-        // Obtener usuarios con datos de empleado desde la base de datos
-        $usuarios = $usuarioModel->getUsuariosConEmpleados();
-
-        return view('modulos/usuarios', $this->payload([
-            'title'      => 'Módulo 11 · Gestión de Usuarios',
-            'usuarios'   => $usuarios,
-            'notifCount' => 0,
-        ]));
+    // Formatear los datos para la vista
+    $usuariosFormateados = [];
+    foreach ($usuarios as $usuario) {
+        $usuariosFormateados[] = [
+            'id' => $usuario['id'],
+            'noEmpleado' => $usuario['id'], // Usar ID como número de empleado temporal
+            'nombre' => $usuario['username'] ?? 'Sin nombre',
+            'apellido' => '', // No hay campo apellido en la tabla
+            'email' => $usuario['correo'] ?? 'Sin correo',
+            'puesto' => 'Usuario', // Valor por defecto
+            'idmaquiladora' => $usuario['maquiladoraIdFK'] ?? 'Sin asignar',
+            'activo' => $usuario['active'] ?? 1,
+            'fechaAlta' => $usuario['created_at'] ?? date('Y-m-d H:i:s'),
+            'ultimoAcceso' => $usuario['last_active'] ?? 'Nunca'
+        ];
     }
+
+    return view('modulos/usuarios', $this->payload([
+        'title'      => 'Gestión de Usuarios',
+        'usuarios'   => $usuariosFormateados,
+        'notifCount' => 0,
+    ]));
+}
 
     public function m11_agregar_usuario()
     {
@@ -1091,7 +1107,6 @@ class Modulos extends BaseController
                 $empleadoData = [
                     'noEmpleado' => $this->request->getPost('noEmpleado'),
                     'nombre' => $this->request->getPost('nombre'),
-                    'apellido' => $this->request->getPost('apellido'),
                     'email' => $this->request->getPost('email'),
                     'telefono' => $this->request->getPost('telefono'),
                     'domicilio' => $this->request->getPost('domicilio'),
@@ -1124,6 +1139,233 @@ class Modulos extends BaseController
             'title'      => 'Módulo 11 · Agregar Usuario',
             'notifCount' => 0,
         ]));
+    }
+
+    /**
+     * Obtiene los datos de un usuario para edición (llamada AJAX)
+     */
+    public function obtener_usuario($id = null)
+    {
+        try {
+            // Verificar que sea una petición AJAX
+            if (!$this->request->isAJAX()) {
+                throw new \RuntimeException('Método no permitido');
+            }
+            
+            // Validar ID
+            $id = (int)$id;
+            if ($id <= 0) {
+                throw new \InvalidArgumentException('ID de usuario inválido');
+            }
+            
+            // Cargar modelo de usuarios
+            $usuarioModel = new \App\Models\UsuarioModel();
+            
+            // Buscar usuario
+            $usuario = $usuarioModel->find($id);
+            
+            if (!$usuario) {
+                throw new \RuntimeException('Usuario no encontrado');
+            }
+            
+            $db = \Config\Database::connect();
+            
+            // Datos básicos del usuario
+            $usuarioData = [
+                'id' => $usuario['id'] ?? null,
+                'username' => $usuario['username'] ?? '',
+                'email' => $usuario['correo'] ?? '',
+                'rol_actual' => 'Usuario',
+                'rol_id' => null,
+                'maquiladoraIdFK' => $usuario['maquiladoraIdFK'] ?? null,
+                'activo' => $usuario['active'] ?? 1,
+                'roles' => [],
+                'maquiladoras' => []
+            ];
+
+            // Configurar roles por defecto
+            $usuarioData['roles'] = [
+                ['id' => 1, 'name' => 'Administrador'],
+                ['id' => 2, 'name' => 'Usuario'],
+                ['id' => 3, 'name' => 'Invitado']
+            ];
+            
+            // Establecer un rol por defecto
+            $usuarioData['rol_id'] = 2; // Usuario por defecto
+            $usuarioData['rol_actual'] = 'Usuario';
+
+            // Obtener maquiladoras si la tabla existe
+            if ($db->tableExists('maquiladoras')) {
+                try {
+                    $usuarioData['maquiladoras'] = $db->table('maquiladoras')
+                        ->select('id, nombre')
+                        ->get()
+                        ->getResultArray();
+                } catch (\Exception $e) {
+                    log_message('error', 'Error al obtener maquiladoras: ' . $e->getMessage());
+                    // Si hay error, usar un array vacío
+                    $usuarioData['maquiladoras'] = [];
+                }
+            } else {
+                $usuarioData['maquiladoras'] = [];
+            }
+
+            // Si no hay maquiladoras, agregar una opción por defecto
+            if (empty($usuarioData['maquiladoras'])) {
+                $usuarioData['maquiladoras'] = [
+                    ['id' => 1, 'nombre' => 'Maquiladora Principal']
+                ];
+            }
+            
+            return $this->response->setJSON([
+                'success' => true,
+                'data' => $usuarioData
+            ]);
+            
+        } catch (\Exception $e) {
+            log_message('error', 'Error en obtener_usuario: ' . $e->getMessage());
+            
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'Error al obtener los datos del usuario: ' . $e->getMessage(),
+                'trace' => ENVIRONMENT === 'development' ? $e->getTrace() : null
+            ]);
+        }
+    }
+
+    /**
+     * Actualiza los datos de un usuario (llamada AJAX)
+     */
+    public function actualizar_usuario()
+    {
+        if (!$this->request->isAJAX()) {
+            return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Método no permitido']);
+        }
+        
+        $id = (int)$this->request->getPost('id');
+        $nombre = trim($this->request->getPost('nombre'));
+        $email = trim($this->request->getPost('email'));
+        $rol = $this->request->getPost('rol');
+        $maquiladoraId = $this->request->getPost('idmaquiladora');
+        $activo = (int)$this->request->getPost('activo');
+        $password = $this->request->getPost('password');
+        
+        // Validar datos
+        if (empty($nombre) || empty($email)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Nombre y correo son obligatorios']);
+        }
+        
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'El formato del correo no es válido']);
+        }
+        
+        // Cargar modelo de usuarios
+        $usuarioModel = new \App\Models\UsuarioModel();
+        
+        // Verificar si el usuario existe
+        $usuario = $usuarioModel->find($id);
+        if (!$usuario) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Usuario no encontrado']);
+        }
+        
+        // Verificar si el correo ya existe (excepto para el usuario actual)
+        $existeCorreo = $usuarioModel->where('correo', $email)
+                                    ->where('id !=', $id)
+                                    ->first();
+        if ($existeCorreo) {
+            return $this->response->setJSON(['success' => false, 'message' => 'El correo electrónico ya está en uso']);
+        }
+        
+        // Actualizar datos del usuario
+        $data = [
+            'username' => $nombre,
+            'correo' => $email,
+            'maquiladoraIdFK' => !empty($maquiladoraId) ? (int)$maquiladoraId : null,
+            'active' => $activo,
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+        
+        // Actualizar contraseña si se proporcionó
+        if (!empty($password)) {
+            if (strlen($password) < 8) {
+                return $this->response->setJSON(['success' => false, 'message' => 'La contraseña debe tener al menos 8 caracteres']);
+            }
+            $data['password'] = password_hash($password, PASSWORD_DEFAULT);
+        }
+        
+        // Iniciar transacción
+        $db = \Config\Database::connect();
+        $db->transStart();
+        
+        try {
+            // Actualizar datos del usuario
+            $usuarioModel->update($id, $data);
+            
+            // Actualizar rol del usuario si se proporcionó
+            if (!empty($rol)) {
+                $builder = $db->table('auth_groups_users');
+                
+                // Verificar si el rol existe
+                $rolExiste = $db->table('auth_groups')
+                              ->where('id', $rol)
+                              ->countAllResults() > 0;
+                
+                if ($rolExiste) {
+                    // Eliminar roles existentes
+                    $builder->where('user_id', $id)->delete();
+                    
+                    // Agregar nuevo rol
+                    $builder->insert([
+                        'group_id' => (int)$rol,
+                        'user_id' => $id,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ]);
+                }
+            }
+            
+            $db->transComplete();
+            
+            if ($db->transStatus() === false) {
+                throw new \Exception('Error al actualizar el usuario en la base de datos');
+            }
+            
+            // Obtener datos actualizados del usuario para la respuesta
+            $usuarioActualizado = $usuarioModel->find($id);
+            $builder = $db->table('auth_groups_users')->where('user_id', $id);
+            $roles = $builder->get()->getResultArray();
+            $rolNombre = 'Usuario';
+            
+            if (!empty($roles)) {
+                $rol = $db->table('auth_groups')
+                         ->where('id', $roles[0]['group_id'])
+                         ->get()
+                         ->getRowArray();
+                if ($rol) {
+                    $rolNombre = $rol['name'];
+                }
+            }
+            
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'Usuario actualizado correctamente',
+                'data' => [
+                    'id' => $usuarioActualizado['id'],
+                    'username' => $usuarioActualizado['username'],
+                    'email' => $usuarioActualizado['correo'],
+                    'rol' => $rolNombre,
+                    'maquiladoraIdFK' => $usuarioActualizado['maquiladoraIdFK'],
+                    'activo' => $usuarioActualizado['active']
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            $db->transRollback();
+            log_message('error', 'Error al actualizar usuario: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Error al actualizar el usuario: ' . $e->getMessage()
+            ]);
+        }
     }
 
     public function m11_editar_usuario($id = null)

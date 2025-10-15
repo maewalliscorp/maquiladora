@@ -297,7 +297,6 @@
                         <span class="badge rounded-pill bg-white text-dark border me-lg-2">
                             <i class="bi bi-person-circle me-1"></i>
                             <?= esc(session()->get('user_name') ?? 'Usuario') ?>
-                            <small class="ms-1">(<?= esc(session()->get('user_role') ?? 'admin') ?>)</small>
                         </span>
                     </a>
                     <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userMenu">

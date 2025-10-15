@@ -33,7 +33,7 @@ abstract class BaseController extends Controller
      * class instantiation. These helpers will be available
      * to all other controllers that extend BaseController.
      *
-     * @var list<string>
+     * @var array
      */
     protected $helpers = [];
 
@@ -48,11 +48,53 @@ abstract class BaseController extends Controller
      */
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
     {
-        // Do Not Edit This Line
+        $this->helpers = array_merge($this->helpers, ['form', 'url', 'html']);
         parent::initController($request, $response, $logger);
 
-        // Preload any models, libraries, etc, here.
+        // Escribir en el log
+        log_message('info', 'Inicializando controlador: ' . get_class($this));
 
-        // E.g.: $this->session = service('session');
+        // Prevenir almacenamiento en caché
+        $this->response->setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        $this->response->setHeader('Pragma', 'no-cache');
+        $this->response->setHeader('Expires', '0');
+
+        // Verificar autenticación para todas las rutas excepto las de autenticación
+        $this->checkAuth();
+    }
+
+    /**
+     * Verifica si el usuario está autenticado
+     */
+    protected function checkAuth()
+    {
+        // Obtener la instancia del router
+        $router = service('router');
+        $currentRoute = $router->controllerName() . '/' . $router->methodName();
+        
+        // Rutas que no requieren autenticación
+        $publicRoutes = [
+            'Login::index', 
+            'Login::authenticate',
+            'Register::index',
+            'Register::register',
+            'Api::maquiladoras'
+        ];
+        
+        // Si es una ruta pública, no verificar autenticación
+        if (in_array($currentRoute, $publicRoutes)) {
+            return;
+        }
+
+        // Verificar si el usuario está autenticado
+        if (!session()->get('logged_in')) {
+            // Guardar la URL actual para redirigir después del login
+            session()->set('redirect_url', current_url());
+            
+            // Redirigir al login
+            return redirect()->to('/login')
+                ->with('error', 'Por favor inicia sesión para continuar.')
+                ->send();
+        }
     }
 }
