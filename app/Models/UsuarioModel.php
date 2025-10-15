@@ -26,6 +26,24 @@ class UsuarioModel extends Model
         'deleted_at'
     ];
 
+    // Desactivar protección de campos para inserciones masivas
+    protected $allowCallbacks = true;
+
+    // Callbacks para antes de insertar
+    protected $beforeInsert = ['hashPassword'];
+    protected $beforeUpdate = ['hashPassword'];
+
+    /**
+     * Hashea la contraseña antes de insertar/actualizar
+     */
+    protected function hashPassword(array $data)
+    {
+        if (isset($data['data']['password'])) {
+            $data['data']['password'] = password_hash($data['data']['password'], PASSWORD_DEFAULT);
+        }
+        return $data;
+    }
+
     // Fechas automáticas
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';
@@ -55,20 +73,6 @@ class UsuarioModel extends Model
         ],
     ];
 
-    protected $allowCallbacks = true;
-    protected $beforeInsert   = ['hashPassword'];
-    protected $beforeUpdate   = ['hashPassword'];
-
-    /**
-     * Hashea la contraseña antes de guardar
-     */
-    protected function hashPassword(array $data)
-    {
-        if (isset($data['data']['password'])) {
-            $data['data']['password'] = password_hash($data['data']['password'], PASSWORD_DEFAULT);
-        }
-        return $data;
-    }
 
     /**
      * Autenticación de usuario

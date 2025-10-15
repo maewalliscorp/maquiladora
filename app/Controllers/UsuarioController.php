@@ -58,77 +58,158 @@ class UsuarioController extends Controller
     }
 
     public function register()
-{
-    // Si es una solicitud POST, procesar el registro
-    if ($this->request->getMethod() === 'post') {
-        // Validar los datos del formulario
-        $rules = [
-            'username' => 'required|min_length[3]|max_length[50]|is_unique[users.username]',
-            'email' => 'required|valid_email|is_unique[users.correo]',
-            'password' => 'required|min_length[6]',
-            'confirm_password' => 'matches[password]',
-            'maquiladoraIdFK' => 'permit_empty|integer'
-        ];
+    {
+        // Si es una petición POST, procesar el formulario
+        if ($this->request->getMethod() === 'post') {
+            log_message('debug', 'Inicio del proceso de registro');
+            
+            // Validación de datos
+            $rules = [
+                'username' => 'required|min_length[3]|is_unique[users.username]',
+                'email' => 'required|valid_email|is_unique[users.correo]',
+                'password' => 'required|min_length[6]',
+                'confirm_password' => 'matches[password]',
+                'maquiladoraIdFK' => 'required|integer'
+            ];
+            
+            $messages = [
+                'username' => [
+                    'required' => 'El nombre de usuario es obligatorio',
+                    'min_length' => 'El nombre de usuario debe tener al menos 3 caracteres',
+                    'is_unique' => 'Este nombre de usuario ya está en uso'
+                ],
+                'email' => [
+                    'required' => 'El correo electrónico es obligatorio',
+                    'valid_email' => 'Por favor ingresa un correo electrónico válido',
+                    'is_unique' => 'Este correo electrónico ya está registrado'
+                ],
+                'password' => [
+                    'required' => 'La contraseña es obligatoria',
+                    'min_length' => 'La contraseña debe tener al menos 6 caracteres'
+                ],
+                'confirm_password' => [
+                    'matches' => 'Las contraseñas no coinciden'
+                ],
+                'maquiladoraIdFK' => [
+                    'required' => 'Debes seleccionar una maquiladora',
+                    'integer' => 'La maquiladora seleccionada no es válida'
+                ]
+            ];
 
-        // Mensajes de validación personalizados
-        $messages = [
-            'username' => [
-                'is_unique' => 'Este nombre de usuario ya está registrado.'
-            ],
-            'email' => [
-                'is_unique' => 'Este correo electrónico ya está registrado.'
-            ]
-        ];
+            if (!$this->validate($rules, $messages)) {
+                $errors = $this->validator->getErrors();
+                log_message('debug', 'Errores de validación: ' . print_r($errors, true));
+                return redirect()->back()
+                    ->withInput()
+                    ->with('errors', $errors);
+            }
 
-        if (!$this->validate($rules, $messages)) {
-            return redirect()->back()->withInput()->with('error', $this->validator->listErrors());
+            // Verificar duplicados manualmente
+            $usuarioModel = new UsuarioModel();
+            $existingUser = $usuarioModel->where('correo', $this->request->getPost('email'))
+                                       ->orWhere('username', $this->request->getPost('username'))
+                                       ->first();
+            
+            if ($existingUser) {
+                $errorMsg = $existingUser['correo'] === $this->request->getPost('email') 
+                    ? 'Este correo electrónico ya está registrado' 
+                    : 'Este nombre de usuario ya está en uso';
+                
+                log_message('warning', 'Intento de registro con datos duplicados: ' . $errorMsg);
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', $errorMsg);
+            }
+
+            // Obtener los datos del formulario
+            $userData = [
+                'username' => trim($this->request->getPost('username')),
+                'correo' => strtolower(trim($this->request->getPost('email'))),
+                'password' => $this->request->getPost('password'), // Será hasheado por el modelo
+                'maquiladoraIdFK' => (int)$this->request->getPost('maquiladoraIdFK'),
+                'active' => 1,
+                'status' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            log_message('debug', 'Datos del usuario a registrar: ' . print_r($userData, true));
+            
+            try {
+                // Insertar el usuario (el modelo se encarga del hash de la contraseña)
+                $usuarioModel->protect(false);
+                $saved = $usuarioModel->save($userData);
+                $userId = $usuarioModel->getInsertID();
+                $usuarioModel->protect(true);
+                
+                if (!$saved) {
+                    throw new \Exception('No se pudo guardar el usuario en la base de datos');
+                }
+                
+                log_message('info', 'Usuario registrado exitosamente con ID: ' . $userId);
+                
+                // Limpiar datos sensibles antes de redirigir
+                unset($userData['password']);
+                
+                return redirect()->to('/login')
+                    ->with('message', '¡Registro exitoso! Ahora puedes iniciar sesión.');
+                
+            } catch (\Exception $e) {
+                $errorMsg = 'Error al registrar usuario: ' . $e->getMessage();
+                log_message('error', $errorMsg);
+                log_message('error', 'Trace: ' . $e->getTraceAsString());
+                
+                // Verificar si es un error de duplicado
+                if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                    $errorMsg = 'El correo electrónico o nombre de usuario ya está registrado';
+                }
+                
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'Ocurrió un error al registrar el usuario. ' . $errorMsg);
+            }
         }
-
-        // Obtener los datos del formulario
-        $userData = [
-            'username' => $this->request->getPost('username'),
-            'correo' => $this->request->getPost('email'),
-            'password' => password_hash($this->request->getPost('password'), PASSWORD_DEFAULT),
-            'maquiladoraIdFK' => $this->request->getPost('maquiladoraIdFK') ?: null,
-            'active' => 0, // Usuario inactivo hasta que sea aprobado
-            'created_at' => date('Y-m-d H:i:s')
-        ];
-
-        // Guardar el usuario en la base de datos
-        $usuarioModel = new UsuarioModel();
-        try {
-            $usuarioModel->insert($userData);
-            return redirect()->to('/login')->with('message', 'Registro exitoso. Tu cuenta está pendiente de aprobación.');
-        } catch (\Exception $e) {
-            log_message('error', 'Error al registrar usuario: ' . $e->getMessage());
-            return redirect()->back()->withInput()->with('error', 'Ocurrió un error al registrar el usuario. Por favor, inténtalo de nuevo. Error: ' . $e->getMessage());
-        }
+        
+        // Mostrar el formulario de registro
+        return view('register');
     }
-    
-    // Mostrar el formulario de registro
-    return view('register');
-}
 
     public function getMaquiladoras()
 {
     try {
-        $db = \Config\Database::connect();
-        $query = $db->table('maquiladora')
-                    ->select('idmaquiladora as id, Nombre_Maquila as nombre')
-                    ->orderBy('Nombre_Maquila', 'ASC')
-                    ->get();
+        log_message('debug', 'Iniciando getMaquiladoras');
         
-        $maquiladoras = $query->getResultArray();
+        $db = \Config\Database::connect();
+        log_message('debug', 'Conexión a la base de datos establecida');
+        
+        $query = $db->table('maquiladora')
+                   ->select('idmaquiladora as id, Nombre_Maquila as nombre')
+                   ->orderBy('Nombre_Maquila', 'ASC');
+        
+        log_message('debug', 'Consulta SQL: ' . $db->getLastQuery());
+        
+        $maquiladoras = $query->get()->getResultArray();
+        
+        log_message('debug', 'Maquiladoras encontradas: ' . count($maquiladoras));
+        
+        if (empty($maquiladoras)) {
+            log_message('warning', 'No se encontraron maquiladoras en la base de datos');
+        }
         
         return $this->response->setJSON([
             'status' => 'success',
             'data' => $maquiladoras
         ]);
+        
     } catch (\Exception $e) {
-        log_message('error', 'Error al obtener maquiladoras: ' . $e->getMessage());
+        $errorMessage = 'Error al obtener maquiladoras: ' . $e->getMessage();
+        log_message('error', $errorMessage);
+        log_message('error', $e->getTraceAsString());
+        
         return $this->response->setJSON([
             'status' => 'error',
-            'message' => 'Error al cargar las maquiladoras'
+            'message' => 'Error al cargar las maquiladoras',
+            'debug' => (ENVIRONMENT === 'development') ? $e->getMessage() : null
         ])->setStatusCode(500);
     }
 }
