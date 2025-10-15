@@ -1,4 +1,10 @@
 <?= $this->extend('layouts/main') ?>
+
+<?= $this->section('styles') ?>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
 
 <!-- Encabezado con botón Agregar al lado derecho -->
@@ -66,8 +72,9 @@
 
                         <div class="col-md-4">
                             <label for="ubicacion" class="form-label fw-semibold text-dark">Ubicación</label>
+                            <!-- FIX: se corrigió el value mal cerrado -->
                             <input id="ubicacion" name="ubicacion" class="form-control"
-                                   value"><?= esc(old('ubicacion')) ?>" placeholder="Línea 2">
+                                   value="<?= esc(old('ubicacion')) ?>" placeholder="Línea 2">
                         </div>
 
                         <div class="col-md-4">
@@ -120,7 +127,7 @@
 <div class="card shadow-sm">
     <div class="card-header"><strong>Listado</strong></div>
     <div class="card-body table-responsive">
-        <table class="table table-striped align-middle mb-0">
+        <table id="tablaMaquinaria" class="table table-striped align-middle mb-0">
             <thead class="table-primary">
             <tr>
                 <th>Código</th>
@@ -137,7 +144,6 @@
             <?php if (!empty($maq) && is_array($maq)): ?>
                 <?php foreach ($maq as $m): ?>
                     <?php
-                    // Normaliza fecha de compra
                     $compra = '';
                     if (!empty($m['compra'])) {
                         $ts = strtotime($m['compra']);
@@ -199,8 +205,31 @@
     </div>
 </div>
 
+<?= $this->endSection() ?>
+
+<?= $this->section('scripts') ?>
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<!-- Buttons (exportación) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+
+<!-- ===== Separación precisa de botones (global) ===== -->
 <script>
-    (function(){
+    // Evita 'btn-group' y usa utilidades de Bootstrap con gap
+    $.fn.dataTable.Buttons.defaults.dom.container.className =
+        'dt-buttons d-inline-flex flex-wrap gap-2';
+</script>
+
+<script>
+    (function () {
         // Rellena fecha por defecto al abrir el modal de "Agregar"
         const addModal = document.getElementById('maqModal');
         if (addModal) {
@@ -238,7 +267,41 @@
                 vEstado.appendChild(span);
             });
         }
+
+        // ===== DataTable de maquinaria con botones separados =====
+        const langES = {
+            sProcessing:"Procesando...",
+            sLengthMenu:"Mostrar _MENU_ registros",
+            sZeroRecords:"No se encontraron resultados",
+            sEmptyTable:"Sin datos",
+            sInfo:"Mostrando _START_–_END_ de _TOTAL_",
+            sInfoEmpty:"Mostrando 0–0 de 0",
+            sInfoFiltered:"(filtrado de _MAX_)",
+            sSearch:"Buscar:",
+            oPaginate:{ sFirst:"Primero", sLast:"Último", sNext:"Siguiente", sPrevious:"Anterior" },
+            buttons:{ copy:"Copiar" }
+        };
+
+        const hoy = new Date().toISOString().slice(0,10);
+
+        $('#tablaMaquinaria').DataTable({
+            language: langES,
+            columnDefs: [
+                { targets: -1, orderable:false, searchable:false } // Acciones
+            ],
+            dom:
+                "<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
+                "<'row'<'col-12'tr>>" +
+                "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+            buttons: [
+                { extend:'copy',  text:'Copy',  exportOptions:{ columns: ':not(:last-child)' } },
+                { extend:'csv',   text:'CSV',   filename:'maquinaria_'+hoy, exportOptions:{ columns: ':not(:last-child)' } },
+                { extend:'excel', text:'Excel', filename:'maquinaria_'+hoy, exportOptions:{ columns: ':not(:last-child)' } },
+                { extend:'pdf',   text:'PDF',   filename:'maquinaria_'+hoy, title:'Inventario de Maquinaria',
+                    orientation:'landscape', pageSize:'A4', exportOptions:{ columns: ':not(:last-child)' } },
+                { extend:'print', text:'Print', exportOptions:{ columns: ':not(:last-child)' } }
+            ]
+        });
     })();
 </script>
-
 <?= $this->endSection() ?>

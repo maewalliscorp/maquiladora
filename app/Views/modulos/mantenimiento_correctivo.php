@@ -2,11 +2,22 @@
 
 <?= $this->section('head') ?>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+
+<style>
+    /* Separar botones de DataTables (corrige el btn-group) */
+    .dt-buttons.btn-group .btn{
+        margin-left: 0 !important;
+        margin-right: .5rem;           /* espacio entre botones */
+        border-radius: .375rem !important;
+    }
+    .dt-buttons.btn-group .btn:last-child{ margin-right: 0; }
+</style>
 <?= $this->endSection() ?>
 
 <?php
 $tableId = $tableId ?? 'tablaMtto';
-$columns = $columns ?? ['Folio','Apertura','Máquina','Tipo','Estatus','Descripción','Cierre','Horas','Acciones']; // Acciones al final
+$columns = $columns ?? ['Folio','Apertura','Máquina','Tipo','Estatus','Descripción','Cierre','Horas','Acciones'];
 $rows    = is_array($rows ?? null) ? $rows : [];
 ?>
 
@@ -30,7 +41,7 @@ $rows    = is_array($rows ?? null) ? $rows : [];
     <div class="alert alert-danger mb-3"><?= esc(session()->getFlashdata('error')) ?></div>
 <?php endif; ?>
 
-<!-- ====================== MODAL CREAR (centrado) ====================== -->
+<!-- ====================== MODAL CREAR ====================== -->
 <div class="modal fade" id="modalMtto" tabindex="-1" aria-labelledby="modalMttoLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -125,7 +136,7 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                     $folio       = $r['Folio']        ?? '';
                     $apertura    = $r['Apertura']     ?? '';
                     $maquina     = $r['Maquina']      ?? '';
-                    $maquinaId   = $r['MaquinaId']    ?? ''; // si lo tienes
+                    $maquinaId   = $r['MaquinaId']    ?? '';
                     $tipo        = $r['Tipo']         ?? '';
                     $descripcion = $r['Descripcion']  ?? '';
                     $cierre      = $r['Cierre']       ?? '';
@@ -140,11 +151,8 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                         <td class="text-start"><?= esc($descripcion) ?></td>
                         <td><?= esc($cierre ?: '-') ?></td>
                         <td><?= number_format((float)$horas, 2) ?></td>
-
-                        <!-- ▶︎ Última columna: Acciones -->
                         <td class="text-end">
                             <div class="btn-group" role="group" aria-label="Acciones">
-                                <!-- Ver -->
                                 <button type="button"
                                         class="btn btn-sm btn-outline-info btn-ver"
                                         data-bs-toggle="modal" data-bs-target="#modalVista"
@@ -159,8 +167,6 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                                         data-horas="<?= esc($horas, 'attr') ?>">
                                     <i class="bi bi-eye me-1"></i>
                                 </button>
-
-                                <!-- Editar -->
                                 <button type="button"
                                         class="btn btn-sm btn-outline-primary btn-editar"
                                         data-bs-toggle="modal" data-bs-target="#modalEditar"
@@ -275,20 +281,52 @@ $rows    = is_array($rows ?? null) ? $rows : [];
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<!-- Export helpers -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+<!-- DataTables Buttons -->
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+
 <script>
     (function(){
-        // DataTables: desactivar ordenar/buscar en la última columna (Acciones)
-        $('#<?= esc($tableId) ?>').DataTable({
-            language:{
-                sEmptyTable:"Sin datos", sZeroRecords:"No se encontraron resultados",
-                sInfo:"Mostrando _START_–_END_ de _TOTAL_", sInfoEmpty:"Mostrando 0–0 de 0",
-                sInfoFiltered:"(filtrado de _MAX_)", sSearch:"Buscar:",
-                oPaginate:{sFirst:"Primero",sLast:"Último",sNext:"Siguiente",sPrevious:"Anterior"}
-            },
-            columnDefs: [{ targets: -1, orderable:false, searchable:false }]
+        const tableSelector = '#<?= esc($tableId) ?>';
+
+        const langES = {
+            sEmptyTable:"Sin datos", sZeroRecords:"No se encontraron resultados",
+            sInfo:"Mostrando _START_–_END_ de _TOTAL_", sInfoEmpty:"Mostrando 0–0 de 0",
+            sInfoFiltered:"(filtrado de _MAX_)", sSearch:"Buscar:",
+            oPaginate:{sFirst:"Primero",sLast:"Último",sNext:"Siguiente",sPrevious:"Anterior"}
+        };
+
+        const fecha = new Date().toISOString().slice(0,10);
+        const fileName = 'mantenimiento_correctivo_' + fecha;
+
+        $(tableSelector).DataTable({
+            language: langES,
+            columnDefs: [{ targets: -1, orderable:false, searchable:false }],
+            // Botones a la izquierda, buscador a la derecha
+            dom:
+                "<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
+                "<'row'<'col-12'tr>>" +
+                "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+            buttons: [
+                { extend:'copy',  text:'Copy',  exportOptions:{ columns: ':not(:last-child)' } },
+                { extend:'csv',   text:'CSV',   filename:fileName, exportOptions:{ columns: ':not(:last-child)' } },
+                { extend:'excel', text:'Excel', filename:fileName, exportOptions:{ columns: ':not(:last-child)' } },
+                { extend:'pdf',   text:'PDF',   filename:fileName, title:fileName,
+                    orientation:'landscape', pageSize:'A4',
+                    exportOptions:{ columns: ':not(:last-child)' } },
+                { extend:'print', text:'Print', exportOptions:{ columns: ':not(:last-child)' } }
+            ]
         });
 
-        // Autollenar fecha apertura al abrir "Crear"
+        // ====== Modales ======
         const crear = document.getElementById('modalMtto');
         if (crear) {
             crear.addEventListener('show.bs.modal', () => {
@@ -300,14 +338,12 @@ $rows    = is_array($rows ?? null) ? $rows : [];
             });
         }
 
-        // Utilidad para normalizar datetime-local
         function toLocalInputValue(dt) {
             if (!dt) return '';
             if (dt.includes('T')) return dt.slice(0,16);
             return dt.replace(' ', 'T').slice(0,16);
         }
 
-        // Modal VER (solo lectura)
         document.querySelectorAll('.btn-ver').forEach(btn=>{
             btn.addEventListener('click', ()=>{
                 const d = btn.dataset;
@@ -322,22 +358,19 @@ $rows    = is_array($rows ?? null) ? $rows : [];
             });
         });
 
-        // Modal EDITAR
         document.querySelectorAll('.btn-editar').forEach(btn=>{
             btn.addEventListener('click', ()=>{
                 const d = btn.dataset;
-
                 const form = document.getElementById('formEditar');
                 form.action = '<?= site_url("mantenimiento/correctivo/actualizar") ?>' + '/' + (d.id || '');
-
-                document.getElementById('e-id').value          = d.id || '';
-                document.getElementById('e-apertura').value    = toLocalInputValue(d.apertura || '');
-                document.getElementById('e-maquinaId').value   = d.maquinaid || ''; // usa MaquinaId si lo mandas desde backend
+                document.getElementById('e-id').value            = d.id || '';
+                document.getElementById('e-apertura').value      = toLocalInputValue(d.apertura || '');
+                document.getElementById('e-maquinaId').value     = d.maquinaid || '';
                 document.getElementById('e-responsableId').value = '';
-                document.getElementById('e-tipo').value        = d.tipo || 'Correctivo';
-                document.getElementById('e-estatus').value     = d.estatus || 'Abierta';
-                document.getElementById('e-descripcion').value = d.descripcion || '';
-                document.getElementById('e-cierre').value      = toLocalInputValue(d.cierre || '');
+                document.getElementById('e-tipo').value          = d.tipo || 'Correctivo';
+                document.getElementById('e-estatus').value       = d.estatus || 'Abierta';
+                document.getElementById('e-descripcion').value   = d.descripcion || '';
+                document.getElementById('e-cierre').value        = toLocalInputValue(d.cierre || '');
             });
         });
     })();

@@ -2,6 +2,7 @@
 
 <?= $this->section('styles') ?>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 <style>
     .table td, .table th{ padding:.85rem .8rem; }
     .table.tbl-head thead th{
@@ -30,13 +31,12 @@
 
 <div class="row g-3">
 
-    <!-- ===== Requerimientos (apilado) ===== -->
+    <!-- ===== Requerimientos ===== -->
     <div class="col-12">
         <div class="card shadow-sm">
             <div class="card-header">
                 <strong>Cálculo automático de necesidades</strong>
             </div>
-
             <div class="card-body">
                 <?php
                 if (!isset($reqs) || !is_array($reqs) || !count($reqs)) {
@@ -56,7 +56,7 @@
                             <th>Necesidad</th>
                             <th>Stock</th>
                             <th>A comprar</th>
-                            <th>Acciones</th> <!-- ← combinado -->
+                            <th>Acciones</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -100,13 +100,12 @@
         </div>
     </div>
 
-    <!-- ===== OCs sugeridas (apilado) ===== -->
+    <!-- ===== OCs sugeridas ===== -->
     <div class="col-12">
         <div class="card shadow-sm">
             <div class="card-header">
                 <strong>Órdenes de Compra sugeridas</strong>
             </div>
-
             <div class="card-body">
                 <?php
                 if (!isset($ocs) || !is_array($ocs) || !count($ocs)) {
@@ -124,7 +123,7 @@
                             <th>Material</th>
                             <th>Cantidad</th>
                             <th>ETA</th>
-                            <th>Acciones</th> <!-- ← combinado -->
+                            <th>Acciones</th>
                             <th>Generar</th>
                         </tr>
                         </thead>
@@ -169,18 +168,21 @@
                         </tbody>
                     </table>
                 </div>
+
             </div>
         </div>
     </div>
 
 </div>
 
-<!-- ===== Modales (sin cambios) ===== -->
+<!-- ===== Modales ===== -->
+
 <!-- Ver Requerimiento -->
 <div class="modal fade" id="reqViewModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content text-dark">
-            <div class="modal-header"><h5 class="modal-title">Detalle del requerimiento</h5>
+            <div class="modal-header">
+                <h5 class="modal-title">Detalle del requerimiento</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -261,7 +263,8 @@
 <div class="modal fade" id="ocViewModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content text-dark">
-            <div class="modal-header"><h5 class="modal-title">Detalle de OC sugerida</h5>
+            <div class="modal-header">
+                <h5 class="modal-title">Detalle de OC sugerida</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -328,32 +331,87 @@
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
+<!-- Buttons -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+
+<!-- ===== Separación precisa de botones (global) ===== -->
+<script>
+    // Hace que el contenedor de Buttons no use 'btn-group' y tenga gap entre botones.
+    $.fn.dataTable.Buttons.defaults.dom.container.className =
+        'dt-buttons d-inline-flex flex-wrap gap-2';
+</script>
+
 <script>
     $(function () {
         const langES = {
-            sProcessing:"Procesando...", sLengthMenu:"Mostrar _MENU_", sZeroRecords:"No se encontraron resultados",
-            sEmptyTable:"Sin datos", sInfo:"Mostrando _START_–_END_ de _TOTAL_", sInfoEmpty:"Mostrando 0–0 de 0",
-            sInfoFiltered:"(filtrado de _MAX_)", sSearch:"Buscar:",
-            oPaginate:{ sFirst:"Primero", sLast:"Último", sNext:"Siguiente", sPrevious:"Anterior" }
+            sProcessing:"Procesando...",
+            sLengthMenu:"Mostrar _MENU_ registros",
+            sZeroRecords:"No se encontraron resultados",
+            sEmptyTable:"Ningún dato disponible en esta tabla",
+            sInfo:"Mostrando registros del _START_ al _END_ de _TOTAL_",
+            sInfoEmpty:"Mostrando registros del 0 al 0 de un total de 0 registros",
+            sInfoFiltered:"(filtrado de un total de _MAX_ registros)",
+            sSearch:"Buscar:",
+            sLoadingRecords:"Cargando...",
+            oPaginate:{ sFirst:"Primero", sLast:"Último", sNext:"Siguiente", sPrevious:"Anterior" },
+            buttons:{ copy:"Copiar" }
         };
 
-        // Reqs: ahora la columna de Acciones es el índice 5
+        const hoy = new Date().toISOString().slice(0,10);
+
+        // ===== Requerimientos =====
         $('#tablaReqs').DataTable({
             language: langES,
-            order: [[0,'asc']],
-            columnDefs: [{ orderable:false, searchable:false, targets:[5] }],
-            pageLength: 5, lengthMenu: [5,10,25,50]
+            columnDefs: [
+                { targets: -1, orderable: false, searchable: false } // Acciones
+            ],
+            dom:
+                "<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
+                "<'row'<'col-12'tr>>" +
+                "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+            buttons: [
+                { extend:'copy',  text:'Copy',  exportOptions:{ columns: ':not(:last-child)' } },
+                { extend:'csv',   text:'CSV',   filename:'mrp_reqs_'+hoy,   exportOptions:{ columns: ':not(:last-child)' } },
+                { extend:'excel', text:'Excel', filename:'mrp_reqs_'+hoy,   exportOptions:{ columns: ':not(:last-child)' } },
+                { extend:'pdf',   text:'PDF',   filename:'mrp_reqs_'+hoy,   title:'Requerimientos',
+                    orientation:'landscape', pageSize:'A4', exportOptions:{ columns: ':not(:last-child)' } },
+                { extend:'print', text:'Print', exportOptions:{ columns: ':not(:last-child)' } }
+            ]
         });
 
-        // OCs: Acciones=4, Generar=5
+        // ===== OCs sugeridas =====
         $('#tablaOCs').DataTable({
             language: langES,
-            order: [[3,'asc']],
-            columnDefs: [{ orderable:false, searchable:false, targets:[4,5] }],
-            pageLength: 5, lengthMenu: [5,10,25,50]
+            columnDefs: [
+                { targets: [-1,-2], orderable: false, searchable: false } // Acciones y Generar
+            ],
+            dom:
+                "<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
+                "<'row'<'col-12'tr>>" +
+                "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+            buttons: [
+                // Exportar SOLO las primeras 4 columnas (Proveedor, Material, Cantidad, ETA)
+                { extend:'copy',  text:'Copy',  exportOptions:{ columns:[0,1,2,3] } },
+                { extend:'csv',   text:'CSV',   filename:'mrp_ocs_'+hoy,   exportOptions:{ columns:[0,1,2,3] } },
+                { extend:'excel', text:'Excel', filename:'mrp_ocs_'+hoy,   exportOptions:{ columns:[0,1,2,3] } },
+                { extend:'pdf',   text:'PDF',   filename:'mrp_ocs_'+hoy,   title:'Órdenes de compra sugeridas',
+                    orientation:'landscape', pageSize:'A4', exportOptions:{ columns:[0,1,2,3] } },
+                { extend:'print', text:'Print', exportOptions:{ columns:[0,1,2,3] } }
+            ]
         });
 
-        // Ver requerimiento
+        // ----- Lógica de modales (demo) -----
+        $('#btnCalcular').on('click', ()=>alert('Calcular (demo)'));
+        $('#btnImportBOM').on('click', ()=>alert('Importar BOM (demo)'));
+        $('#btnGenTodas').on('click', ()=>alert('Generar todas (demo)'));
+        $(document).on('click', '.gen-oc', function(){ alert('Generar OC #' + this.dataset.id + ' (demo)'); });
+
         $(document).on('click', '.ver-req', function(){
             const g = a => this.getAttribute(a) || '-';
             $('#rv-mat').text(g('data-mat'));
@@ -362,8 +420,6 @@
             $('#rv-stk').text(g('data-stock'));
             $('#rv-comp').text(g('data-comprar'));
         });
-
-        // Editar/Agregar requerimiento
         $(document).on('click', '.edit-req', function(){
             $('#formReq').attr('action', '#');
             $('#req-id').val(this.dataset.id || '');
@@ -374,14 +430,13 @@
             $('#req-comp').val(this.dataset.comprar || '');
         });
         document.getElementById('reqEditModal').addEventListener('show.bs.modal', e=>{
-            if (!e.relatedTarget.classList.contains('edit-req')) {
+            if (!e.relatedTarget || !e.relatedTarget.classList.contains('edit-req')) {
                 $('#formReq').attr('action', '#');
                 ['req-id','req-oc','req-mat','req-u','req-nec','req-stk','req-comp'].forEach(id=>$('#'+id).val(''));
                 $('#req-bom').val('BOM-TSHIRT-001');
             }
         });
 
-        // Ver OC
         $(document).on('click', '.ver-oc', function(){
             const g = a => this.getAttribute(a) || '-';
             $('#ov-prov').text(g('data-prov'));
@@ -389,8 +444,6 @@
             $('#ov-cant').text(`${g('data-cant')} ${g('data-u')}`);
             $('#ov-eta').text(g('data-eta'));
         });
-
-        // Editar/Agregar OC
         $(document).on('click', '.edit-oc', function(){
             $('#formOC').attr('action', '#');
             $('#oc-id').val(this.dataset.id || '');
@@ -401,17 +454,11 @@
             $('#oc-eta').val(this.dataset.eta || '');
         });
         document.getElementById('ocEditModal').addEventListener('show.bs.modal', e=>{
-            if (!e.relatedTarget.classList.contains('edit-oc')) {
+            if (!e.relatedTarget || !e.relatedTarget.classList.contains('edit-oc')) {
                 $('#formOC').attr('action', '#');
                 ['oc-id','oc-prov','oc-mat','oc-cant','oc-u','oc-eta'].forEach(id=>$('#'+id).val(''));
             }
         });
-
-        // Botones demo
-        $('#btnCalcular').on('click', ()=>alert('Calcular (demo)'));
-        $('#btnImportBOM').on('click', ()=>alert('Importar BOM (demo)'));
-        $('#btnGenTodas').on('click', ()=>alert('Generar todas (demo)'));
-        $(document).on('click', '.gen-oc', function(){ alert('Generar OC #' + this.dataset.id + ' (demo)'); });
     });
 </script>
 <?= $this->endSection() ?>
