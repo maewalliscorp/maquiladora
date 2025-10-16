@@ -3,6 +3,28 @@
 <?= $this->section('styles') ?>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+
+<style>
+    /* Botones de exportación separados */
+    .dt-buttons.btn-group .btn{
+        margin-right:.5rem;border-radius:.375rem!important
+    }
+    .dt-buttons.btn-group .btn:last-child{margin-right:0}
+
+    /* Centrar SIEMPRE la última columna (Acciones) y evitar saltos */
+    #tablaMaquinaria.tabla-acciones-centradas th:last-child,
+    #tablaMaquinaria.tabla-acciones-centradas td:last-child{
+        text-align:center!important;white-space:nowrap
+    }
+
+    /* Botones de acciones separados (no btn-group) */
+    #tablaMaquinaria.tabla-acciones-centradas td:last-child .acciones-wrap{
+        display:inline-flex;align-items:center;gap:.5rem
+    }
+    #tablaMaquinaria.tabla-acciones-centradas td:last-child .acciones-wrap .btn{
+        padding:.25rem .45rem;border-radius:.5rem;line-height:1
+    }
+</style>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
@@ -72,7 +94,6 @@
 
                         <div class="col-md-4">
                             <label for="ubicacion" class="form-label fw-semibold text-dark">Ubicación</label>
-                            <!-- FIX: se corrigió el value mal cerrado -->
                             <input id="ubicacion" name="ubicacion" class="form-control"
                                    value="<?= esc(old('ubicacion')) ?>" placeholder="Línea 2">
                         </div>
@@ -127,7 +148,7 @@
 <div class="card shadow-sm">
     <div class="card-header"><strong>Listado</strong></div>
     <div class="card-body table-responsive">
-        <table id="tablaMaquinaria" class="table table-striped align-middle mb-0">
+        <table id="tablaMaquinaria" class="table table-striped align-middle mb-0 tabla-acciones-centradas">
             <thead class="table-primary">
             <tr>
                 <th>Código</th>
@@ -137,7 +158,7 @@
                 <th>Compra</th>
                 <th>Ubicación</th>
                 <th>Estado</th>
-                <th class="text-end">Acciones</th>
+                <th>Acciones</th>
             </tr>
             </thead>
             <tbody>
@@ -168,12 +189,14 @@
                         <td><?= esc($compra) ?></td>
                         <td><?= esc($ubicacion) ?></td>
                         <td><span class="badge <?= esc($badgeClass,'attr') ?>"><?= esc($estado) ?></span></td>
-                        <td class="text-end">
-                            <div class="btn-group" role="group" aria-label="Acciones">
+                        <td class="text-center">
+                            <!-- Botones separados -->
+                            <div class="acciones-wrap">
                                 <!-- Ver -->
                                 <button
                                         type="button"
                                         class="btn btn-sm btn-outline-info"
+                                        title="Ver"
                                         data-bs-toggle="modal"
                                         data-bs-target="#verModal"
                                         data-id="<?= esc($id) ?>"
@@ -185,13 +208,14 @@
                                         data-ubicacion="<?= esc($ubicacion, 'attr') ?>"
                                         data-estado="<?= esc($estado, 'attr') ?>"
                                 >
-                                    <i class="bi bi-eye me-1"></i>
+                                    <i class="bi bi-eye"></i>
                                 </button>
 
                                 <!-- Editar -->
                                 <a class="btn btn-sm btn-outline-primary <?= $id ? '' : 'disabled' ?>"
+                                   title="Editar"
                                    href="<?= $id ? base_url('modulo3/maquinaria/editar/'.$id) : 'javascript:void(0)' ?>">
-                                    <i class="bi bi-pencil me-1"></i>
+                                    <i class="bi bi-pencil"></i>
                                 </a>
                             </div>
                         </td>
@@ -221,16 +245,15 @@
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
 
-<!-- ===== Separación precisa de botones (global) ===== -->
+<!-- Contenedor de botones de exportación con separación (global) -->
 <script>
-    // Evita 'btn-group' y usa utilidades de Bootstrap con gap
     $.fn.dataTable.Buttons.defaults.dom.container.className =
         'dt-buttons d-inline-flex flex-wrap gap-2';
 </script>
 
 <script>
     (function () {
-        // Rellena fecha por defecto al abrir el modal de "Agregar"
+        // Rellena fecha por defecto al abrir "Agregar"
         const addModal = document.getElementById('maqModal');
         if (addModal) {
             addModal.addEventListener('show.bs.modal', () => {
@@ -242,13 +265,11 @@
             });
         }
 
-        // Pinta datos en el modal de "Ver"
+        // Pinta datos en el modal "Ver"
         const verModal = document.getElementById('verModal');
         if (verModal) {
             verModal.addEventListener('show.bs.modal', function (event) {
-                const btn = event.relatedTarget;
-                if (!btn) return;
-
+                const btn = event.relatedTarget; if (!btn) return;
                 const q = (id) => this.querySelector(id);
 
                 q('#v-codigo').textContent     = btn.getAttribute('data-codigo')     || '-';
@@ -259,8 +280,7 @@
                 q('#v-ubicacion').textContent  = btn.getAttribute('data-ubicacion')  || '-';
 
                 const estado = btn.getAttribute('data-estado') || 'Operativa';
-                const vEstado = q('#v-estado');
-                vEstado.innerHTML = '';
+                const vEstado = q('#v-estado'); vEstado.innerHTML = '';
                 const span = document.createElement('span');
                 span.className = 'badge ' + (estado === 'Operativa' ? 'bg-success' : 'bg-warning text-dark');
                 span.textContent = estado;
@@ -268,7 +288,7 @@
             });
         }
 
-        // ===== DataTable de maquinaria con botones separados =====
+        // DataTable
         const langES = {
             sProcessing:"Procesando...",
             sLengthMenu:"Mostrar _MENU_ registros",
@@ -287,7 +307,7 @@
         $('#tablaMaquinaria').DataTable({
             language: langES,
             columnDefs: [
-                { targets: -1, orderable:false, searchable:false } // Acciones
+                { targets: -1, orderable:false, searchable:false, className:'text-center' } // Acciones
             ],
             dom:
                 "<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +

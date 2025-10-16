@@ -5,13 +5,32 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 
 <style>
-    /* Separar botones de DataTables (corrige el btn-group) */
+    /* Separar botones de DataTables (export) */
     .dt-buttons.btn-group .btn{
         margin-left: 0 !important;
-        margin-right: .5rem;           /* espacio entre botones */
+        margin-right: .5rem;
         border-radius: .375rem !important;
     }
     .dt-buttons.btn-group .btn:last-child{ margin-right: 0; }
+
+    /* Centrar SIEMPRE la última columna (Acciones) */
+    .tabla-acciones-centradas th:last-child,
+    .tabla-acciones-centradas td:last-child{
+        text-align:center !important;
+        white-space:nowrap; /* evita wraps raros */
+    }
+
+    /* Estilo de los botones de acciones: cuadrados, separados */
+    .tabla-acciones-centradas td:last-child .acciones-wrap{
+        display:inline-flex;            /* se centra dentro del td */
+        align-items:center;
+        gap:.5rem;                      /* separación entre botones */
+    }
+    .tabla-acciones-centradas td:last-child .acciones-wrap .btn{
+        padding:.25rem .45rem;          /* tamaño compacto */
+        border-radius:.5rem;
+        line-height:1;
+    }
 </style>
 <?= $this->endSection() ?>
 
@@ -23,7 +42,6 @@ $rows    = is_array($rows ?? null) ? $rows : [];
 
 <?= $this->section('content') ?>
 
-<!-- Título + botón Agregar a la derecha -->
 <div class="d-flex align-items-center justify-content-between mb-3">
     <div class="d-flex align-items-center">
         <h1 class="me-3">Mantenimiento Correctivo</h1>
@@ -122,7 +140,7 @@ $rows    = is_array($rows ?? null) ? $rows : [];
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table id="<?= esc($tableId) ?>" class="table table-striped table-bordered align-middle">
+            <table id="<?= esc($tableId) ?>" class="table table-striped table-bordered align-middle tabla-acciones-centradas">
                 <thead class="table-primary">
                 <tr><?php foreach ($columns as $c): ?><th><?= esc($c) ?></th><?php endforeach; ?></tr>
                 </thead>
@@ -151,10 +169,12 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                         <td class="text-start"><?= esc($descripcion) ?></td>
                         <td><?= esc($cierre ?: '-') ?></td>
                         <td><?= number_format((float)$horas, 2) ?></td>
-                        <td class="text-end">
-                            <div class="btn-group" role="group" aria-label="Acciones">
+                        <td class="text-center">
+                            <!-- SIN btn-group: botones separados -->
+                            <div class="acciones-wrap">
                                 <button type="button"
                                         class="btn btn-sm btn-outline-info btn-ver"
+                                        title="Ver"
                                         data-bs-toggle="modal" data-bs-target="#modalVista"
                                         data-id="<?= esc($folio, 'attr') ?>"
                                         data-apertura="<?= esc($apertura, 'attr') ?>"
@@ -165,10 +185,11 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                                         data-descripcion="<?= esc($descripcion, 'attr') ?>"
                                         data-cierre="<?= esc($cierre, 'attr') ?>"
                                         data-horas="<?= esc($horas, 'attr') ?>">
-                                    <i class="bi bi-eye me-1"></i>
+                                    <i class="bi bi-eye"></i>
                                 </button>
                                 <button type="button"
                                         class="btn btn-sm btn-outline-primary btn-editar"
+                                        title="Editar"
                                         data-bs-toggle="modal" data-bs-target="#modalEditar"
                                         data-id="<?= esc($folio, 'attr') ?>"
                                         data-apertura="<?= esc($apertura, 'attr') ?>"
@@ -177,7 +198,7 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                                         data-estatus="<?= esc($estado, 'attr') ?>"
                                         data-descripcion="<?= esc($descripcion, 'attr') ?>"
                                         data-cierre="<?= esc($cierre, 'attr') ?>">
-                                    <i class="bi bi-pencil me-1"></i>
+                                    <i class="bi bi-pencil"></i>
                                 </button>
                             </div>
                         </td>
@@ -309,8 +330,9 @@ $rows    = is_array($rows ?? null) ? $rows : [];
 
         $(tableSelector).DataTable({
             language: langES,
-            columnDefs: [{ targets: -1, orderable:false, searchable:false }],
-            // Botones a la izquierda, buscador a la derecha
+            columnDefs: [
+                { targets: -1, orderable:false, searchable:false, className: 'text-center' }
+            ],
             dom:
                 "<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
                 "<'row'<'col-12'tr>>" +

@@ -20,7 +20,7 @@ class MantenimientoCorrectivo extends BaseController
             'title'   => 'Mantenimiento Correctivo',
             'tableId' => 'tablaMtto',
             // ▶︎ Vista pasa al final
-            'columns' => ['Folio','Apertura','Máquina','Tipo','Estatus','Descripción','Cierre','Horas','Vista'],
+            'columns' => ['Folio','Apertura','Máquina','Tipo','Estatus','Descripción','Cierre','Horas','Acciones'],
             'rows'    => $rows,
         ]);
     }

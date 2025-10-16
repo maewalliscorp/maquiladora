@@ -45,7 +45,6 @@ $routes->get('/dashboard', 'Modulos::dashboard');
  * API (Dashboard, etc.)
  * ------------------------------------------------------------------*/
 $routes->group('api', static function ($routes) {
-    // Usa tu controlador app/Controllers/Api.php -> método dashboard()
     $routes->get('dashboard', 'Api::dashboard'); // ?range=30
 });
 
@@ -91,7 +90,7 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->post('ordenes/estatus',     'Produccion::actualizarEstatus');
     $routes->get('ordenes/(:num)/json',  'Produccion::orden_json/$1');
 
-    // Endpoints usados por los modales en vista modulos/m1_ordenes.php
+    // Endpoints para modales
     $routes->get('ordenes/folio/(:segment)/json', 'Produccion::orden_json_folio/$1');
     $routes->get('ordenes/(:num)/asignaciones',   'Produccion::asignaciones/$1');
     $routes->post('ordenes/asignaciones/agregar', 'Produccion::asignaciones_agregar');
@@ -106,7 +105,7 @@ $routes->group('modulo1', [], function ($routes) {
 /* --------------------------------------------------------------------
  * Diag rápidos
  * ------------------------------------------------------------------*/
-$routes->get('diag/ping', function () { return 'OK DIAG PING'; });
+$routes->get('diag/ping', fn () => 'OK DIAG PING');
 $routes->get('diag/agregar', function () {
     return view('modulos/agregar_pedido', ['title'=>'Diag · Agregar Pedido', 'notifCount'=>0]);
 });
@@ -146,9 +145,9 @@ $routes->group('modulo3', [], function ($routes) {
     $routes->post('wip/actualizar/(:num)',  'Wip::actualizar/$1');
 
     // Inspección
-    $routes->get('incidencias',                 'Incidencias::index');
-    $routes->post('incidencias/crear',          'Incidencias::store');
-    $routes->get('incidencias/eliminar/(:num)', 'Incidencias::delete/$1');
+    $routes->get ('incidencias',                 'Incidencias::index');
+    $routes->post('incidencias/crear',           'Incidencias::store');
+    $routes->get ('incidencias/eliminar/(:num)', 'Incidencias::delete/$1');
 
     $routes->get('reportes',        'Modulos::reportes');
     $routes->get('notificaciones',  'Modulos::notificaciones');
@@ -157,19 +156,17 @@ $routes->group('modulo3', [], function ($routes) {
     $routes->post('inspeccion/evaluar/(:num)', 'Inspeccion::guardarEvaluacion/$1');
 
     // Alias MRP → nuevo controlador Mrp
-    $routes->get('mrp', function () { return redirect()->to(site_url('mrp')); });
+    $routes->get('mrp', fn () => redirect()->to(site_url('mrp')));
 
     // Alias Calidad/Desperdicios
-    $routes->get('desperdicios', function () { return redirect()->to(site_url('calidad/desperdicios')); });
+    $routes->get('desperdicios', fn () => redirect()->to(site_url('calidad/desperdicios')));
 
     // Inventario / Mantenimiento
     $routes->get('mantenimiento_inventario', 'Maquinaria::index');
     $routes->get('mantenimiento_preventivo', 'Modulos::mantenimientoPreventivo');
 
     // Compat mantenimiento correctivo viejo
-    $routes->get('mantenimiento_correctivo', function () {
-        return redirect()->to(site_url('modulo3/mantenimiento/correctivo'));
-    });
+    $routes->get('mantenimiento_correctivo', fn () => redirect()->to(site_url('modulo3/mantenimiento/correctivo')));
 
     // CRUD Maquinaria
     $routes->get ('maquinaria',               'Maquinaria::index');
@@ -185,13 +182,28 @@ $routes->group('modulo3', [], function ($routes) {
         $r->post('correctivo/actualizar/(:num)', 'MantenimientoCorrectivo::actualizar/$1');
     });
 
-    // Logística
-    $routes->get('logistica_preparacion', 'Modulos::logisticaPreparacion');
-    $routes->get('logistica_gestion',     'Modulos::logisticaGestion');
-    $routes->get('logistica_documentos',  'Modulos::logisticaDocumentos');
+    /* =========================
+     * LOGÍSTICA · PACKING
+     * ========================= */
+    // Vista principal
+    $routes->get('logistica_preparacion', 'LogisticaController::preparacion');
+
+    // Endpoints de embarque
+    $routes->post('embarques/crear',                'LogisticaController::crearEmbarque');
+    $routes->post('embarques/(:num)/agregar-orden', 'LogisticaController::agregarOrden/$1');
+    $routes->get ('embarques/(:num)/packing-list',  'LogisticaController::packingList/$1'); // placeholder
+    $routes->get ('embarques/(:num)/etiquetas',     'LogisticaController::etiquetas/$1');   // placeholder
+
+    // Acciones por pedido (botones Ver / Editar)
+    $routes->get ('ordenes/(:num)/json',   'LogisticaController::ordenJson/$1');   // Ver (modal)
+    $routes->post('ordenes/(:num)/editar', 'LogisticaController::ordenEditar/$1'); // Editar (modal)
+
+    // (Opcional) vistas extra
+    $routes->get('logistica_gestion',    'LogisticaController::gestion');
+    $routes->get('logistica_documentos', 'LogisticaController::documentos');
 
     // Órdenes de clientes (enlace del menú)
-    $routes->get('ordenesclientes',       'Modulos::m1_ordenesclientes');
+    $routes->get('ordenesclientes', 'Modulos::m1_ordenesclientes');
 });
 
 /* --------------------------------------------------------------------
