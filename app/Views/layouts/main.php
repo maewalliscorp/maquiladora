@@ -34,8 +34,9 @@
         </div>
 
         <div class="collapse navbar-collapse" id="topnav">
-            <!-- Menú móvil COMPLETO con Bootstrap puro -->
+            <!-- Menú móvil -->
             <div class="d-lg-none">
+
                 <!-- Acciones principales -->
                 <div class="row g-1 mb-3">
                     <div class="col-4">
@@ -59,8 +60,8 @@
                             <small>Alertas</small>
                             <?php if (isset($notifCount) && $notifCount > 0): ?>
                                 <span class="position-absolute top-0 end-0 badge rounded-pill bg-danger">
-                                <?= esc($notifCount) ?>
-                            </span>
+                                    <?= esc($notifCount) ?>
+                                </span>
                             <?php endif; ?>
                         </a>
                     </div>
@@ -99,7 +100,6 @@
                             <small>Clientes</small>
                         </a>
                     </div>
-
                     <div class="col-4">
                         <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('muestras') ?>">
                             <i class="bi bi-palette2"></i>
@@ -117,7 +117,6 @@
                 <!-- Control de Calidad -->
                 <h6 class="text-muted small mb-2">CONTROL DE CALIDAD</h6>
                 <div class="row g-1 mb-3">
-
                     <div class="col-4">
                         <a class="btn btn-outline-success w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/wip') ?>">
                             <i class="bi bi-diagram-3"></i>
@@ -130,7 +129,6 @@
                             <small>Incidencias</small>
                         </a>
                     </div>
-
                     <div class="col-4">
                         <a class="btn btn-outline-success w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/desperdicios') ?>">
                             <i class="bi bi-recycle"></i>
@@ -188,6 +186,14 @@
                             <small>Documentos</small>
                         </a>
                     </div>
+                    <!-- INVENTARIO DE ALMACÉN (nuevo) -->
+                    <div class="col-4">
+                        <a class="btn btn-outline-secondary w-100 d-flex flex-column align-items-center p-2"
+                           href="<?= base_url('almacen/inventario') ?>">
+                            <i class="bi bi-boxes"></i>
+                            <small>Inventario Almacén</small>
+                        </a>
+                    </div>
                 </div>
 
                 <!-- Administración -->
@@ -215,9 +221,9 @@
                 </div>
             </div>
 
-            <!-- Menú para escritorio (se mantiene igual) -->
+            <!-- Menú para escritorio -->
             <ul class="navbar-nav ms-auto d-none d-lg-flex align-items-lg-center">
-                <!-- Inicio (icono) -->
+                <!-- Inicio -->
                 <li class="nav-item">
                     <a class="nav-link text-dark" href="<?= base_url('dashboard') ?>"
                        title="Inicio" data-bs-toggle="tooltip" data-bs-placement="bottom" aria-label="Inicio">
@@ -226,7 +232,7 @@
                     </a>
                 </li>
 
-                <!-- Perfil (icono) -->
+                <!-- Perfil -->
                 <li class="nav-item ms-lg-2">
                     <a class="nav-link text-dark" href="<?= base_url('modulo1/perfilempleado') ?>"
                        title="Perfil" data-bs-toggle="tooltip" aria-label="Perfil">
@@ -235,7 +241,7 @@
                     </a>
                 </li>
 
-                <!-- Notificaciones (icono con badge) -->
+                <!-- Notificaciones -->
                 <li class="nav-item ms-lg-2">
                     <a class="nav-link text-dark position-relative d-inline-block"
                        href="<?= base_url('modulo3/notificaciones') ?>"
@@ -248,7 +254,7 @@
                     </a>
                 </li>
 
-                <!-- Accesos rápidos (dropdown) -->
+                <!-- Accesos rápidos -->
                 <li class="nav-item dropdown ms-lg-2">
                     <a class="nav-link dropdown-toggle text-dark d-flex align-items-center"
                        href="#" id="quickMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false"
@@ -282,6 +288,8 @@
                         <a class="dropdown-item" href="<?= base_url('modulo3/logistica_preparacion') ?>"><i class="bi bi-box-seam me-2"></i>Prep. Envíos</a>
                         <a class="dropdown-item" href="<?= base_url('modulo3/logistica_gestion') ?>"><i class="bi bi-truck me-2"></i>Gestión Envíos</a>
                         <a class="dropdown-item" href="<?= base_url('modulo3/logistica_documentos') ?>"><i class="bi bi-file-earmark-text me-2"></i>Docs. Embarque</a>
+                        <!-- INVENTARIO DE ALMACÉN (nuevo) -->
+                        <a class="dropdown-item" href="<?= base_url('almacen/inventario') ?>"><i class="bi bi-boxes me-2"></i>Inventario Almacén</a>
 
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item" href="<?= base_url('modulo3/reportes') ?>"><i class="bi bi-bar-chart-line me-2"></i>Reportes</a>
@@ -289,7 +297,7 @@
                     </div>
                 </li>
 
-                <!-- Usuario (dropdown) -->
+                <!-- Usuario -->
                 <li class="nav-item dropdown ms-lg-2">
                     <a class="nav-link dropdown-toggle text-dark d-flex align-items-center"
                        href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false"
@@ -330,12 +338,7 @@
 
         // Envolver automáticamente todas las tablas en .table-responsive si aún no lo están
         document.querySelectorAll('table').forEach(tbl => {
-            // Agregar clases Bootstrap por defecto si no existen
-            tbl.classList.add('table');
-            tbl.classList.add('table-striped');
-            tbl.classList.add('table-hover');
-            tbl.classList.add('align-middle');
-
+            tbl.classList.add('table','table-striped','table-hover','align-middle');
             const parent = tbl.parentElement;
             if (!parent || !parent.classList || !parent.classList.contains('table-responsive')) {
                 const wrapper = document.createElement('div');

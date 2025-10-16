@@ -32,8 +32,16 @@ $routes->get('/login', 'UsuarioController::login', ['as' => 'login']);
 $routes->post('/login', 'UsuarioController::authenticate');
 $routes->get('/logout', 'UsuarioController::logout');
 
-// API Endpoints
+// API Endpoints sueltos
 $routes->get('api/maquiladoras', 'UsuarioController::getMaquiladoras');
+
+/* =========================
+ * Inventario de Almacenes
+ * ========================= */
+$routes->get('almacen/inventario',                 'AlmacenController::inventario');          // Vista principal
+$routes->get('api/almacenes',                      'AlmacenController::apiAlmacenes');        // Spinner de almacenes
+$routes->get('api/inventario',                     'AlmacenController::apiInventario');       // Data de inventario
+$routes->get('api/inventario/movimientos/(:num)',  'AlmacenController::apiMovimientos/$1');  // Historial por artículo (opcional)
 
 /* --------------------------------------------------------------------
  * Home
@@ -149,10 +157,10 @@ $routes->group('modulo3', [], function ($routes) {
     $routes->post('incidencias/crear',           'Incidencias::store');
     $routes->get ('incidencias/eliminar/(:num)', 'Incidencias::delete/$1');
 
-    $routes->get('reportes', 'Modulos::reportes');
-    $routes->get('notificaciones', 'Modulos::notificaciones');
+    $routes->get('reportes',        'Modulos::reportes');
+    $routes->get('notificaciones',  'Modulos::notificaciones');
 
-    // Grupo de rutas para Inspección
+    // Grupo Inspección detallado
     $routes->group('inspeccion', function($routes) {
         $routes->get('/', 'Inspeccion::index');
         $routes->get('nueva', 'Inspeccion::nueva');
@@ -161,8 +169,6 @@ $routes->group('modulo3', [], function ($routes) {
         $routes->get('editar/(:num)', 'Inspeccion::editar/$1');
         $routes->post('actualizar/(:num)', 'Inspeccion::actualizar/$1');
         $routes->get('eliminar/(:num)', 'Inspeccion::eliminar/$1');
-        
-        // Ruta para la evaluación de inspección (si es necesaria)
         $routes->get('evaluar/(:num)', 'Inspeccion::evaluar/$1');
         $routes->post('evaluar/guardar/(:num)', 'Inspeccion::guardarEvaluacion/$1');
     });
@@ -197,23 +203,21 @@ $routes->group('modulo3', [], function ($routes) {
     /* =========================
      * LOGÍSTICA · PACKING
      * ========================= */
-    // Vista principal
     $routes->get('logistica_preparacion', 'LogisticaController::preparacion');
 
     // Endpoints de embarque
     $routes->post('embarques/crear',                'LogisticaController::crearEmbarque');
     $routes->post('embarques/(:num)/agregar-orden', 'LogisticaController::agregarOrden/$1');
-    $routes->get ('embarques/(:num)/packing-list',  'LogisticaController::packingList/$1'); // placeholder
-    $routes->get ('embarques/(:num)/etiquetas',     'LogisticaController::etiquetas/$1');   // placeholder
+    $routes->get ('embarques/(:num)/packing-list',  'LogisticaController::packingList/$1');
+    $routes->get ('embarques/(:num)/etiquetas',     'LogisticaController::etiquetas/$1');
 
-    // Acciones por pedido (botones Ver / Editar)
-    $routes->get ('ordenes/(:num)/json',   'LogisticaController::ordenJson/$1');   // Ver (modal)
-    $routes->post('ordenes/(:num)/editar', 'LogisticaController::ordenEditar/$1'); // Editar (modal)
+    // Acciones por pedido
+    $routes->get ('ordenes/(:num)/json',   'LogisticaController::ordenJson/$1');
+    $routes->post('ordenes/(:num)/editar', 'LogisticaController::ordenEditar/$1');
 
     /* =========================
      * LOGÍSTICA · GESTIÓN (Tracking)
      * ========================= */
-    // Vista de gestión
     $routes->get('logistica_gestion', 'LogisticaController::gestion');
 
     // CRUD envíos (tabla guia_envio)
@@ -257,7 +261,7 @@ $routes->group('calidad', [], function ($routes) {
 });
 
 /* --------------------------------------------------------------------
- * MRP (nuevo controlador)
+ * MRP
  * ------------------------------------------------------------------*/
 $routes->group('mrp', [], function ($r) {
     $r->get('/',   'Mrp::index');
