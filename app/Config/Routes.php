@@ -198,8 +198,19 @@ $routes->group('modulo3', [], function ($routes) {
     $routes->get ('ordenes/(:num)/json',   'LogisticaController::ordenJson/$1');   // Ver (modal)
     $routes->post('ordenes/(:num)/editar', 'LogisticaController::ordenEditar/$1'); // Editar (modal)
 
-    // (Opcional) vistas extra
-    $routes->get('logistica_gestion',    'LogisticaController::gestion');
+    /* =========================
+     * LOGÍSTICA · GESTIÓN (Tracking)
+     * ========================= */
+    // Vista de gestión
+    $routes->get('logistica_gestion', 'LogisticaController::gestion');
+
+    // CRUD envíos (tabla guia_envio)
+    $routes->post('envios/crear',           'LogisticaController::crearEnvio');
+    $routes->get ('envios/(:num)/json',     'LogisticaController::envioJson/$1');
+    $routes->post('envios/(:num)/editar',   'LogisticaController::editarEnvio/$1');
+    $routes->post('envios/(:num)/eliminar', 'LogisticaController::eliminarEnvio/$1');
+
+    // Documentos (opcional)
     $routes->get('logistica_documentos', 'LogisticaController::documentos');
 
     // Órdenes de clientes (enlace del menú)
