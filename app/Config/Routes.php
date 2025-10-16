@@ -210,8 +210,15 @@ $routes->group('modulo3', [], function ($routes) {
     $routes->post('envios/(:num)/editar',   'LogisticaController::editarEnvio/$1');
     $routes->post('envios/(:num)/eliminar', 'LogisticaController::eliminarEnvio/$1');
 
-    // Documentos (opcional)
-    $routes->get('logistica_documentos', 'LogisticaController::documentos');
+    /* =========================
+     * LOGÍSTICA · DOCUMENTOS
+     * ========================= */
+    $routes->get ('logistica_documentos',        'LogisticaController::documentos');
+    $routes->post('documentos/crear',            'LogisticaController::crearDocumento');
+    $routes->get ('documentos/(:num)/json',      'LogisticaController::docJson/$1');
+    $routes->post('documentos/(:num)/editar',    'LogisticaController::editarDocumento/$1');
+    $routes->post('documentos/(:num)/eliminar',  'LogisticaController::eliminarDocumento/$1');
+    $routes->get ('documentos/(:num)/pdf',       'LogisticaController::descargarPdf/$1');
 
     // Órdenes de clientes (enlace del menú)
     $routes->get('ordenesclientes', 'Modulos::m1_ordenesclientes');
