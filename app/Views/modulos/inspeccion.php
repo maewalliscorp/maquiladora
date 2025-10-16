@@ -217,23 +217,58 @@
                         <textarea class="form-control" name="observaciones" id="observaciones_text" rows="3"
                                   placeholder="Ingrese las observaciones de la inspección"></textarea>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-bordered table-hover">
-                            <thead class="table-light">
-                            <tr>
-                                <th width="15%">Tipo</th>
-                                <th>Descripción</th>
-                                <th width="10%" class="text-center">Cantidad</th>
-                                <th>Acción Correctiva</th>
-                                <th width="5%" class="text-center">Acción</th>
-                            </tr>
-                            </thead>
-                            <tbody id="tablaDefectos">
-                            <!-- Los nuevos defectos se agregarán aquí dinámicamente -->
-                            </tbody>
-                        </table>
+                    <!-- Checkbox para reproceso -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="requiere_reproceso" id="requiereReproceso">
+                            <label class="form-check-label fw-bold" for="requiereReproceso">
+                                Requiere Reproceso
+                            </label>
+                        </div>
                     </div>
+
+                    <!-- Campos que se muestran al marcar el checkbox -->
+                    <div id="camposReproceso" style="display: none;" class="border p-3 rounded mb-3">
+                        <div class="mb-3">
+                            <label for="accionesReproceso" class="form-label">Acciones a Tomar</label>
+                            <textarea class="form-control" id="accionesReproceso" name="acciones_reproceso" rows="3"
+                                      placeholder="Describa las acciones necesarias para el reproceso"></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="cantidadReproceso" class="form-label">Cantidad</label>
+                                <input type="number" class="form-control" id="cantidadReproceso"
+                                       name="cantidad_reproceso" min="1" value="1">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="fechaReproceso" class="form-label">Fecha Límite</label>
+                                <?php
+                                $today = date('Y-m-d');
+                                $tomorrow = date('Y-m-d', strtotime('+1 day'));
+                                ?>
+                                <input type="date" class="form-control" id="fechaReproceso" name="fecha_reproceso"
+                                       min="<?= $today ?>" value="<?= $tomorrow ?>">
+                            </div>
+                        </div>
+                    </div>
+
                     <input type="hidden" name="defectos" id="defectosJson" value="[]">
+
+                    <script>
+                        // Mostrar/ocultar campos de reproceso
+                        document.getElementById('requiereReproceso').addEventListener('change', function() {
+                            const camposReproceso = document.getElementById('camposReproceso');
+                            camposReproceso.style.display = this.checked ? 'block' : 'none';
+
+                            // Limpiar campos si se desmarca
+                            if (!this.checked) {
+                                document.getElementById('accionesReproceso').value = '';
+                                document.getElementById('cantidadReproceso').value = '1';
+                                document.getElementById('fechaReproceso').value = '';
+                            }
+                        });
+                    </script>
                 </div>
             </div>
             <div class="modal-footer">
