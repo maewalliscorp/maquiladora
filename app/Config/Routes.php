@@ -59,9 +59,8 @@ $routes->group('api', static function ($routes) {
 /* --------------------------------------------------------------------
  * Muestras (prototipos)
  * ------------------------------------------------------------------*/
-$routes->get('muestras',                'Modulos::muestras');
-$routes->get('muestras/evaluar/(:num)', 'Modulos::muestras_evaluar/$1');
-$routes->post('muestras/guardar',       'Modulos::muestras_guardarEvaluacion');
+$routes->get('muestras', 'Muestras::index');
+$routes->post('muestras/data', 'Muestras::data');
 
 /* --------------------------------------------------------------------
  * Legacy (compat enlaces antiguos)
