@@ -16,35 +16,47 @@ class Inspeccion extends BaseController
         $this->inspeccionModel = new InspeccionModel();
         helper(['form', 'url']);
     }
-public function index()
-{
-    $inspecciones = $this->inspeccionModel->select('*')
-        ->orderBy('fecha', 'DESC')
-        ->orderBy('id', 'DESC')
-        ->findAll();
+    public function index()
+    {
+        $db = db_connect();
+        $builder = $db->table('inspeccion i')
+            ->select('i.*, pi.tipo as punto_inspeccion')
+            ->join('punto_inspeccion pi', 'pi.id = i.puntoInspeccionId', 'left')
+            ->orderBy('i.fecha', 'DESC')
+            ->orderBy('i.id', 'DESC');
 
-    $lista = [];
-    $n = 1;
+        $inspecciones = $builder->get()->getResultArray();
 
-    foreach ($inspecciones as $row) {
-        $lista[] = [
-            'num' => $n++,
-            'id' => $row['id'] ?? '',
-            'numero_inspeccion' => 'INSP-' . str_pad($row['id'], 5, '0', STR_PAD_LEFT),
-            'ordenProduccionId' => $row['ordenProduccionId'] ?? 'N/A',
-            'puntoInspeccionId' => $row['puntoInspeccionId'] ?? 'N/A',
-            'inspectorId' => $row['inspectorId'] ?? 'N/A',
-            'fecha' => $row['fecha'] ?? null,
-            'resultado' => $row['resultado'] ?? 'Pendiente',
-            'observaciones' => $row['observaciones'] ?? ''
-        ];
+        $lista = [];
+        $n = 1;
+
+        foreach ($inspecciones as $row) {
+            $lista[] = [
+                'num' => $n++,
+                'id' => $row['id'] ?? '',
+                'numero_inspeccion' => 'INSP-' . str_pad($row['id'], 5, '0', STR_PAD_LEFT),
+                'ordenProduccionId' => $row['ordenProduccionId'] ?? 'N/A',
+                'puntoInspeccionId' => $row['punto_inspeccion'] ?? 'N/A',
+                'inspectorId' => $row['inspectorId'] ?? 'N/A',
+                'fecha' => $row['fecha'] ?? null,
+                'resultado' => $row['resultado'] ?? 'Pendiente',
+                'observaciones' => $row['observaciones'] ?? ''
+            ];
+        }
+
+        // Obtener la lista de puntos de inspección para el dropdown
+        $puntosInspeccion = $db->table('punto_inspeccion')
+            ->select('id, tipo')
+            ->orderBy('tipo', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        return view('modulos/inspeccion', [
+            'title' => 'Inspecciones',
+            'lista' => $lista,
+            'puntosInspeccion' => $puntosInspeccion
+        ]);
     }
-
-    return view('modulos/inspeccion', [
-        'title' => 'Inspecciones',
-        'lista' => $lista,
-    ]);
-}
 
     public function nueva()
     {
@@ -57,7 +69,7 @@ public function index()
     public function ver($id)
     {
         $inspeccion = $this->inspeccionModel->getDetalle($id);
-        
+
         if (!$inspeccion) {
             throw new PageNotFoundException('No se encontró la inspección solicitada');
         }
@@ -71,7 +83,7 @@ public function index()
     public function editar($id)
     {
         $inspeccion = $this->inspeccionModel->find($id);
-        
+
         if (!$inspeccion) {
             throw new PageNotFoundException('No se encontró la inspección solicitada');
         }
@@ -80,6 +92,53 @@ public function index()
             'title' => 'Editar Inspección',
             'inspeccion' => $inspeccion,
             'validation' => \Config\Services::validation()
+        ]);
+    }
+
+    public function actualizarPunto()
+    {
+        if (!$this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Solicitud no válida'
+            ]);
+        }
+
+        $id = $this->request->getPost('id');
+        $puntoInspeccionId = $this->request->getPost('puntoInspeccionId');
+
+        if (empty($id) || empty($puntoInspeccionId)) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Datos incompletos'
+            ]);
+        }
+
+        // Obtener el tipo de punto de inspección
+        $punto = $this->db->table('punto_inspeccion')
+            ->select('tipo')
+            ->where('id', $puntoInspeccionId)
+            ->get()
+            ->getRowArray();
+
+        if (!$punto) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Punto de inspección no encontrado'
+            ]);
+        }
+
+        // Actualizar la inspección
+        $this->db->table('inspeccion')
+            ->where('id', $id)
+            ->update([
+                'puntoInspeccionId' => $puntoInspeccionId,
+                'fecha_actualizacion' => date('Y-m-d H:i:s')
+            ]);
+
+        return $this->response->setJSON([
+            'success' => true,
+            'punto_tipo' => $punto['tipo']
         ]);
     }
 
@@ -107,7 +166,7 @@ public function index()
         ];
 
         $this->inspeccionModel->insert($data);
-        
+
         return redirect()->to(base_url('inspeccion'))
             ->with('success', 'Inspección registrada correctamente.');
     }
@@ -140,7 +199,7 @@ public function index()
         ];
 
         $this->inspeccionModel->update($id, $data);
-        
+
         return redirect()->to(base_url('inspeccion'))
             ->with('success', 'Inspección actualizada correctamente.');
     }
@@ -152,7 +211,7 @@ public function index()
         }
 
         $this->inspeccionModel->delete($id);
-        
+
         return redirect()->to(base_url('inspeccion'))
             ->with('success', 'Inspección eliminada correctamente.');
     }
@@ -201,7 +260,7 @@ public function index()
         // Obtener los datos del formulario
         $data = $this->request->getPost();
         $defectos = json_decode($this->request->getPost('defectos') ?? '[]', true);
-        
+
         // Validar los datos
         $rules = [
             'resultado' => 'required|in_list[aprobado,rechazado,pendiente]',
@@ -239,7 +298,7 @@ public function index()
             if (!empty($defectos) && $data['resultado'] === 'rechazado') {
                 // Eliminar defectos existentes
                 $db->table('inspeccion_defecto')->where('inspeccion_id', $id)->delete();
-                
+
                 // Insertar nuevos defectos
                 foreach ($defectos as $defecto) {
                     $db->table('inspeccion_defecto')->insert([
@@ -266,7 +325,7 @@ public function index()
 
         } catch (\Exception $e) {
             $db->transRollback();
-            
+
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Error al guardar la evaluación: ' . $e->getMessage()
@@ -285,7 +344,7 @@ public function index()
             ->where('nombre', $tipo)
             ->get()
             ->getRowArray();
-            
+
         return $defecto ? (int)$defecto['id'] : null;
     }
 
@@ -296,36 +355,26 @@ public function index()
     public function json($id = null)
     {
         $model = new InspeccionModel();
-        
+
         if ($id === null) {
-            // Si no hay ID, devolver todas las inspecciones
+            // Obtener todas las inspecciones con información relacionada
+            $inspecciones = $model->getListadoCompleto();
+
             return $this->response->setJSON([
                 'success' => true,
-                'data' => $model->getListadoCompleto()
+                'data' => $inspecciones
             ]);
         } else {
-            // Obtener los detalles de la inspección específica
-            $inspeccion = $model->find($id);
-            
+            // Obtener los detalles de la inspección específica con información relacionada
+            $inspeccion = $model->getDetalle($id);
+
             if (!$inspeccion) {
                 return $this->response->setJSON([
                     'success' => false,
                     'message' => 'Inspección no encontrada'
                 ])->setStatusCode(404);
             }
-            
-            // Obtener los defectos de la inspección
-            $db = \Config\Database::connect();
-            $defectos = $db->table('inspeccion_defecto id')
-                ->select('d.nombre as tipo, id.descripcion, id.cantidad, id.accion_correctiva')
-                ->join('defecto d', 'd.id = id.defecto_id')
-                ->where('id.inspeccion_id', $id)
-                ->get()
-                ->getResultArray();
-            
-            // Agregar los defectos a los datos de la inspección
-            $inspeccion['defectos'] = $defectos;
-            
+
             return $this->response->setJSON([
                 'success' => true,
                 'data' => $inspeccion
