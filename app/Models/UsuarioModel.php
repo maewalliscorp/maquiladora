@@ -71,8 +71,7 @@ class UsuarioModel extends Model
         return $data;
     }
 
-    // Desactivar protección de campos para inserciones masivas
-    protected $allowCallbacks = true;
+
 
     // Reglas de validación
     protected $validationRules = [
@@ -81,7 +80,7 @@ class UsuarioModel extends Model
         'password' => 'required|min_length[6]',
         'maquiladoraIdFK' => 'required|integer',
         'active' => 'permit_empty|in_list[0,1]',
-        'status' => 'permit_empty|in_list[0,1]'
+        'status' => 'permit_empty|in_list[0,1]',
         'maquiladoraIdFK' => 'required|integer'
     ];
 
