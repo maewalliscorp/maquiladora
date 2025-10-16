@@ -84,9 +84,9 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="maquiladora" class="form-label">Maquiladora *</label>
+                            <label for="maquiladoraIdFK" class="form-label">Maquiladora *</label>
                             <div class="input-group">
-                                <select class="form-select" id="maquiladora" name="maquiladoraIdFK" required>
+                                <select class="form-select" id="maquiladoraIdFK" name="maquiladoraIdFK" required>
                                     <option value="">Cargando maquiladoras...</option>
                                 </select>
                                 <span class="input-group-text p-0" id="maquiladoraSpinner">
@@ -162,34 +162,36 @@
                     maquiladoraSelect.disabled = true;
                     
                     // Hacer la petición a la API con cabeceras para evitar caché
-                    const apiUrl = '<?= base_url('usuario/maquiladoras') ?>';
+                    const apiUrl = '<?= base_url('api/maquiladoras') ?>';
                     console.log('Solicitando maquiladoras a:', apiUrl);
                     
                     const response = await fetch(apiUrl, {
                         headers: {
+                            'Accept': 'application/json',
                             'X-Requested-With': 'XMLHttpRequest',
                             'Cache-Control': 'no-cache, no-store, must-revalidate',
                             'Pragma': 'no-cache',
                             'Expires': '0'
-                        }
+                        },
+                        credentials: 'same-origin' // Incluir cookies si es necesario
                     });
                     
                     console.log('Respuesta recibida:', response.status, response.statusText);
                     
-                    if (!response.ok) {
-                        let errorMessage = `Error HTTP ${response.status}`;
-                        try {
-                            const errorData = await response.json();
-                            errorMessage += `: ${errorData.message || response.statusText}`;
-                        } catch (e) {
-                            const errorText = await response.text();
-                            errorMessage += `: ${errorText || response.statusText}`;
-                        }
-                        throw new Error(errorMessage);
+                    // Verificar si la respuesta es JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        const text = await response.text();
+                        console.error('La respuesta no es JSON:', text);
+                        throw new Error('Formato de respuesta inesperado del servidor');
                     }
                     
                     const result = await response.json();
-                    console.log('Datos recibidos:', result);
+                    console.log('Datos recibidos (sin procesar):', JSON.stringify(result, null, 2));
+                    
+                    if (!response.ok) {
+                        throw new Error(result.message || `Error HTTP ${response.status}: ${response.statusText}`);
+                    }
                     
                     // Limpiar opciones existentes
                     maquiladoraSelect.innerHTML = '';
@@ -200,32 +202,49 @@
                     defaultOption.disabled = true;
                     maquiladoraSelect.add(defaultOption);
                     
-                    if (result.status === 'success' && Array.isArray(result.data)) {
-                        if (result.data.length === 0) {
-                            // Si no hay maquiladoras, mostrar mensaje
-                            const noDataOption = new Option('No hay maquiladoras disponibles', '');
-                            noDataOption.disabled = true;
-                            maquiladoraSelect.add(noDataOption);
-                            
-                            maquiladoraError.textContent = 'No hay maquiladoras disponibles para registrar.';
-                            maquiladoraError.classList.remove('d-none');
-                        } else {
-                            // Agregar cada maquiladora al select
-                            result.data.forEach(maq => {
-                                const option = new Option(maq.nombre, maq.id);
-                                maquiladoraSelect.add(option);
-                            });
-                            console.log(`Se cargaron ${result.data.length} maquiladoras`);
+                    // Verificar la estructura de los datos
+                    if (result && Array.isArray(result)) {
+                        // Si la respuesta es directamente un array
+                        if (result.length === 0) {
+                            throw new Error('No hay maquiladoras disponibles');
                         }
-                    } else {
-                        throw new Error(result.message || 'Formato de respuesta inesperado');
+                        result.forEach(maq => {
+                            const option = new Option(maq.Nombre_Maquila || maq.nombre || 'Sin nombre', 
+                                                    maq.idmaquiladora || maq.id || '');
+                            maquiladoraSelect.add(option);
+                        });
+                        console.log(`Se cargaron ${result.length} maquiladoras`);
+                    } 
+                    else if (result.status === 'success' && Array.isArray(result.data)) {
+                        // Si la respuesta tiene formato {status: 'success', data: [...]}
+                        if (result.data.length === 0) {
+                            throw new Error('No hay maquiladoras disponibles');
+                        }
+                        result.data.forEach(maq => {
+                            const option = new Option(maq.Nombre_Maquila || maq.nombre || 'Sin nombre', 
+                                                    maq.idmaquiladora || maq.id || '');
+                            maquiladoraSelect.add(option);
+                        });
+                        console.log(`Se cargaron ${result.data.length} maquiladoras`);
+                    } 
+                    else {
+                        console.error('Formato de respuesta inesperado:', result);
+                        throw new Error('Formato de respuesta inesperado del servidor');
                     }
                     
                 } catch (error) {
-                    console.error('Error al cargar maquiladoras:', error);
+                    console.error('Error en loadMaquiladoras:', error);
                     
-                    // Mostrar mensaje de error
-                    maquiladoraError.textContent = `Error al cargar las maquiladoras. ${error.message || 'Por favor, intente recargar la página.'}`;
+                    // Mostrar mensaje de error detallado
+                    let errorMessage = 'Error al cargar las maquiladoras. ';
+                    if (error instanceof Error) {
+                        errorMessage += error.message;
+                        console.error('Stack trace:', error.stack);
+                    } else {
+                        errorMessage += 'Por favor, intente recargar la página.';
+                    }
+                    
+                    maquiladoraError.textContent = errorMessage;
                     maquiladoraError.classList.remove('d-none');
                     
                     // Restablecer el select con un mensaje de error

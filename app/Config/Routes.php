@@ -149,11 +149,23 @@ $routes->group('modulo3', [], function ($routes) {
     $routes->post('incidencias/crear',           'Incidencias::store');
     $routes->get ('incidencias/eliminar/(:num)', 'Incidencias::delete/$1');
 
-    $routes->get('reportes',        'Modulos::reportes');
-    $routes->get('notificaciones',  'Modulos::notificaciones');
-    $routes->get('inspeccion',                 'Inspeccion::index');
-    $routes->get('inspeccion/evaluar/(:num)',  'Inspeccion::evaluar/$1');
-    $routes->post('inspeccion/evaluar/(:num)', 'Inspeccion::guardarEvaluacion/$1');
+    $routes->get('reportes', 'Modulos::reportes');
+    $routes->get('notificaciones', 'Modulos::notificaciones');
+
+    // Grupo de rutas para Inspección
+    $routes->group('inspeccion', function($routes) {
+        $routes->get('/', 'Inspeccion::index');
+        $routes->get('nueva', 'Inspeccion::nueva');
+        $routes->post('guardar', 'Inspeccion::guardar');
+        $routes->get('ver/(:num)', 'Inspeccion::ver/$1');
+        $routes->get('editar/(:num)', 'Inspeccion::editar/$1');
+        $routes->post('actualizar/(:num)', 'Inspeccion::actualizar/$1');
+        $routes->get('eliminar/(:num)', 'Inspeccion::eliminar/$1');
+        
+        // Ruta para la evaluación de inspección (si es necesaria)
+        $routes->get('evaluar/(:num)', 'Inspeccion::evaluar/$1');
+        $routes->post('evaluar/guardar/(:num)', 'Inspeccion::guardarEvaluacion/$1');
+    });
 
     // Alias MRP → nuevo controlador Mrp
     $routes->get('mrp', fn () => redirect()->to(site_url('mrp')));

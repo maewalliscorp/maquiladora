@@ -6,92 +6,330 @@ use CodeIgniter\Exceptions\PageNotFoundException;
 
 class Inspeccion extends BaseController
 {
-    public function index()
+    /**
+     * Muestra la lista de inspecciones registradas.
+     */
+    protected $inspeccionModel;
+
+    public function __construct()
     {
-        $m    = new InspeccionModel();
-        $rows = $m->getListado();
+        $this->inspeccionModel = new InspeccionModel();
+        helper(['form', 'url']);
+    }
+public function index()
+{
+    $inspecciones = $this->inspeccionModel->select('*')
+        ->orderBy('fecha', 'DESC')
+        ->orderBy('id', 'DESC')
+        ->findAll();
 
-        $lista = [];
-        $n = 1;
-        foreach ($rows as $r) {
-            // Si venimos del fallback, empresa/descripcion/estatus podrían venir vacíos
-            $empresa     = $r['empresa']     ?? '';
-            $descripcion = $r['descripcion'] ?? '';
-            $estatus     = $r['estatus']     ?? '';
+    $lista = [];
+    $n = 1;
 
-            // Rellenos amigables en caso de fallback
-            if ($empresa === '' && !empty($r['ordenProduccionId'])) {
-                $empresa = '—';
-            }
-            if ($descripcion === '' && !empty($r['ordenProduccionId'])) {
-                $descripcion = 'OP #' . $r['ordenProduccionId'];
-            }
-            if ($estatus === '' && !empty($r['resultado'])) {
-                $estatus = $r['resultado']; // algo informativo
-            }
+    foreach ($inspecciones as $row) {
+        $lista[] = [
+            'num' => $n++,
+            'id' => $row['id'] ?? '',
+            'numero_inspeccion' => 'INSP-' . str_pad($row['id'], 5, '0', STR_PAD_LEFT),
+            'ordenProduccionId' => $row['ordenProduccionId'] ?? 'N/A',
+            'puntoInspeccionId' => $row['puntoInspeccionId'] ?? 'N/A',
+            'inspectorId' => $row['inspectorId'] ?? 'N/A',
+            'fecha' => $row['fecha'] ?? null,
+            'resultado' => $row['resultado'] ?? 'Pendiente',
+            'observaciones' => $row['observaciones'] ?? ''
+        ];
+    }
 
-            $lista[] = [
-                'num'         => $n++,
-                'id'          => $r['id'],
-                'empresa'     => $empresa,
-                'descripcion' => $descripcion,
-                'estatus'     => $estatus,
-                'fecha'       => $r['fecha'] ?? null,
-                'resultado'   => $r['resultado'] ?? null,
-            ];
-        }
+    return view('modulos/inspeccion', [
+        'title' => 'Inspecciones',
+        'lista' => $lista,
+    ]);
+}
 
-        return view('modulos/inspeccion', [
-            'title' => 'Inspección',
-            'lista' => $lista,
+    public function nueva()
+    {
+        return view('modulos/inspeccion_form', [
+            'title' => 'Nueva Inspección',
+            'validation' => \Config\Services::validation()
         ]);
     }
 
+    public function ver($id)
+    {
+        $inspeccion = $this->inspeccionModel->getDetalle($id);
+        
+        if (!$inspeccion) {
+            throw new PageNotFoundException('No se encontró la inspección solicitada');
+        }
+
+        return view('modulos/inspeccion_ver', [
+            'title' => 'Detalles de Inspección',
+            'inspeccion' => $inspeccion
+        ]);
+    }
+
+    public function editar($id)
+    {
+        $inspeccion = $this->inspeccionModel->find($id);
+        
+        if (!$inspeccion) {
+            throw new PageNotFoundException('No se encontró la inspección solicitada');
+        }
+
+        return view('modulos/inspeccion_form', [
+            'title' => 'Editar Inspección',
+            'inspeccion' => $inspeccion,
+            'validation' => \Config\Services::validation()
+        ]);
+    }
+
+    public function guardar()
+    {
+        $rules = [
+            'orden_produccion_id' => 'required',
+            'punto_inspeccion_id' => 'required',
+            'fecha' => 'required|valid_date',
+            'inspector_id' => 'required',
+        ];
+
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        $data = [
+            'ordenProduccionId' => $this->request->getPost('orden_produccion_id'),
+            'puntoInspeccionId' => $this->request->getPost('punto_inspeccion_id'),
+            'inspectorId' => $this->request->getPost('inspector_id'),
+            'fecha' => $this->request->getPost('fecha'),
+            'resultado' => $this->request->getPost('resultado') ?? 'Pendiente',
+            'observaciones' => $this->request->getPost('observaciones'),
+            'fecha_creacion' => date('Y-m-d H:i:s')
+        ];
+
+        $this->inspeccionModel->insert($data);
+        
+        return redirect()->to(base_url('inspeccion'))
+            ->with('success', 'Inspección registrada correctamente.');
+    }
+
+    public function actualizar($id)
+    {
+        if (!$this->inspeccionModel->find($id)) {
+            throw new PageNotFoundException('No se encontró la inspección solicitada');
+        }
+
+        $rules = [
+            'orden_produccion_id' => 'required',
+            'punto_inspeccion_id' => 'required',
+            'fecha' => 'required|valid_date',
+            'inspector_id' => 'required',
+        ];
+
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        $data = [
+            'ordenProduccionId' => $this->request->getPost('orden_produccion_id'),
+            'puntoInspeccionId' => $this->request->getPost('punto_inspeccion_id'),
+            'inspectorId' => $this->request->getPost('inspector_id'),
+            'fecha' => $this->request->getPost('fecha'),
+            'resultado' => $this->request->getPost('resultado') ?? 'Pendiente',
+            'observaciones' => $this->request->getPost('observaciones'),
+            'fecha_actualizacion' => date('Y-m-d H:i:s')
+        ];
+
+        $this->inspeccionModel->update($id, $data);
+        
+        return redirect()->to(base_url('inspeccion'))
+            ->with('success', 'Inspección actualizada correctamente.');
+    }
+
+    public function eliminar($id)
+    {
+        if (!$this->inspeccionModel->find($id)) {
+            throw new PageNotFoundException('No se encontró la inspección solicitada');
+        }
+
+        $this->inspeccionModel->delete($id);
+        
+        return redirect()->to(base_url('inspeccion'))
+            ->with('success', 'Inspección eliminada correctamente.');
+    }
+
+    /**
+     * Muestra el detalle y formulario de evaluación de una inspección.
+     */
     public function evaluar(int $id)
     {
-        $m  = new InspeccionModel();
-        $i  = $m->getDetalle($id);
-        if (!$i) {
+        $model = new InspeccionModel();
+        $inspeccion = $model->getDetalle($id);
+
+        if (!$inspeccion) {
             throw new PageNotFoundException('Inspección no encontrada');
         }
 
         return view('modulos/inspeccion_evaluar', [
             'title' => 'Evaluación de inspección',
-            'i'     => $i,
+            'i'     => $inspeccion,
         ]);
     }
 
+    /**
+     * Guarda la evaluación de una inspección, incluyendo sus defectos
+     */
     public function guardarEvaluacion(int $id)
     {
-        $m   = new InspeccionModel();
-        $row = $m->find($id);
-        if (!$row) throw new PageNotFoundException('Inspección no encontrada');
-
-        $data = $this->request->getPost(['resultado','observaciones','fecha']);
-
-        if (empty($data['fecha'])) {
-            $data['fecha'] = date('Y-m-d');
-        } elseif (strpos($data['fecha'], '/') !== false) {
-            [$d,$mth,$y] = explode('/', $data['fecha']);
-            if (@checkdate((int)$mth,(int)$d,(int)$y)) {
-                $data['fecha'] = sprintf('%04d-%02d-%02d', $y,$mth,$d);
-            }
+        // Solo permitir peticiones AJAX
+        if (!$this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Método no permitido'
+            ])->setStatusCode(405);
         }
 
-        $m->update($id, [
-            'resultado'     => $data['resultado'] ?? null,
-            'observaciones' => $data['observaciones'] ?? null,
-            'fecha'         => $data['fecha'],
-        ]);
+        $model = new InspeccionModel();
+        $inspeccion = $model->find($id);
 
-        return redirect()->to(base_url('modulo3/inspeccion'))
-            ->with('success', 'Evaluación guardada correctamente.');
+        if (!$inspeccion) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Inspección no encontrada'
+            ])->setStatusCode(404);
+        }
+
+        // Obtener los datos del formulario
+        $data = $this->request->getPost();
+        $defectos = json_decode($this->request->getPost('defectos') ?? '[]', true);
+        
+        // Validar los datos
+        $rules = [
+            'resultado' => 'required|in_list[aprobado,rechazado,pendiente]',
+            'fecha'     => 'required|valid_date',
+        ];
+
+        if (!$this->validate($rules)) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $this->validator->getErrors()
+            ])->setStatusCode(400);
+        }
+
+        // Validar que si es rechazado, tenga al menos un defecto
+        if (($data['resultado'] === 'rechazado') && empty($defectos)) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Debe registrar al menos un defecto para una inspección rechazada'
+            ])->setStatusCode(400);
+        }
+
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        try {
+            // Actualizar la inspección
+            $model->update($id, [
+                'resultado'     => $data['resultado'],
+                'observaciones' => $data['observaciones'] ?? null,
+                'fecha'         => $data['fecha'],
+            ]);
+
+            // Si hay defectos, guardarlos
+            if (!empty($defectos) && $data['resultado'] === 'rechazado') {
+                // Eliminar defectos existentes
+                $db->table('inspeccion_defecto')->where('inspeccion_id', $id)->delete();
+                
+                // Insertar nuevos defectos
+                foreach ($defectos as $defecto) {
+                    $db->table('inspeccion_defecto')->insert([
+                        'inspeccion_id'    => $id,
+                        'defecto_id'       => $this->getDefectoIdByTipo($defecto['tipo']),
+                        'descripcion'      => $defecto['descripcion'],
+                        'cantidad'         => $defecto['cantidad'],
+                        'accion_correctiva' => $defecto['accion_correctiva'],
+                        'fecha_registro'   => date('Y-m-d H:i:s')
+                    ]);
+                }
+            }
+
+            $db->transComplete();
+
+            if ($db->transStatus() === false) {
+                throw new \Exception('Error al guardar los datos');
+            }
+
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'Evaluación guardada correctamente'
+            ]);
+
+        } catch (\Exception $e) {
+            $db->transRollback();
+            
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Error al guardar la evaluación: ' . $e->getMessage()
+            ])->setStatusCode(500);
+        }
     }
 
-    // Debug opcional (útil ahora mismo)
-    public function json()
+    /**
+     * Obtiene el ID de un defecto por su tipo
+     */
+    private function getDefectoIdByTipo(string $tipo): ?int
     {
-        $m = new InspeccionModel();
-        return $this->response->setJSON($m->getListado());
+        $db = \Config\Database::connect();
+        $defecto = $db->table('defecto')
+            ->select('id')
+            ->where('nombre', $tipo)
+            ->get()
+            ->getRowArray();
+            
+        return $defecto ? (int)$defecto['id'] : null;
+    }
+
+    /**
+     * Endpoint para obtener los datos de inspecciones en formato JSON
+     * Si se proporciona un ID, devuelve los detalles de esa inspección con sus defectos
+     */
+    public function json($id = null)
+    {
+        $model = new InspeccionModel();
+        
+        if ($id === null) {
+            // Si no hay ID, devolver todas las inspecciones
+            return $this->response->setJSON([
+                'success' => true,
+                'data' => $model->getListadoCompleto()
+            ]);
+        } else {
+            // Obtener los detalles de la inspección específica
+            $inspeccion = $model->find($id);
+            
+            if (!$inspeccion) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Inspección no encontrada'
+                ])->setStatusCode(404);
+            }
+            
+            // Obtener los defectos de la inspección
+            $db = \Config\Database::connect();
+            $defectos = $db->table('inspeccion_defecto id')
+                ->select('d.nombre as tipo, id.descripcion, id.cantidad, id.accion_correctiva')
+                ->join('defecto d', 'd.id = id.defecto_id')
+                ->where('id.inspeccion_id', $id)
+                ->get()
+                ->getResultArray();
+            
+            // Agregar los defectos a los datos de la inspección
+            $inspeccion['defectos'] = $defectos;
+            
+            return $this->response->setJSON([
+                'success' => true,
+                'data' => $inspeccion
+            ]);
+        }
     }
 }
