@@ -70,9 +70,6 @@
         <h1 class="me-3">Muestras</h1>
         <span class="badge bg-primary">Gestión de Muestras</span>
     </div>
-    <a href="<?= base_url('muestras/nueva') ?>" class="btn btn-primary">
-        <i class="fas fa-plus me-1"></i> Nueva Muestra
-    </a>
 </div>
 
 <?php if(session('message')): ?>
@@ -84,62 +81,129 @@
 
 <div class="card shadow-sm">
     <div class="card-header bg-white">
-        <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Listado de Muestras</h5>
-            <div class="d-flex">
-                <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="refreshTable">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-            </div>
-        </div>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table id="tablaMuestras" class="table table-hover table-striped align-middle" style="width:100%">
+            <table id="tablaMuestrasDecision" class="table table-hover table-striped align-middle" style="width:100%">
                 <thead class="table-light">
                 <tr>
                     <th>ID</th>
-                    <th>Código Prototipo</th>
+                    <th>Cliente ID</th>
+                    <th>Prototipo ID</th>
+                    <th>Fecha Aprobación</th>
                     <th>Solicitante</th>
                     <th>Fecha Solicitud</th>
-                    <th>Fecha Envío</th>
+                    <th>Decisión</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
                 </thead>
                 <tbody>
-                <?php foreach ($muestras as $muestra): ?>
-                    <tr>
-                        <td><?= $muestra['muestraId'] ?></td>
-                        <td><?= esc($muestra['codigoPrototipo']) ?></td>
-                        <td><?= esc($muestra['solicitadaPor']) ?></td>
-                        <td><?= $muestra['fechaSolicitud'] ? date('d/m/Y', strtotime($muestra['fechaSolicitud'])) : 'N/A' ?></td>
-                        <td><?= $muestra['fechaEnvio'] ? date('d/m/Y', strtotime($muestra['fechaEnvio'])) : 'Pendiente' ?></td>
-                        <td>
-                            <?php
-                            $badgeClass = 'secondary';
-                            if ($muestra['estado'] === 'Aprobada') $badgeClass = 'success';
-                            elseif ($muestra['estado'] === 'Pendiente') $badgeClass = 'warning';
-                            elseif ($muestra['estado'] === 'Rechazada') $badgeClass = 'danger';
-                            ?>
-                            <span class="badge bg-<?= $badgeClass ?>"><?= $muestra['estado'] ?: 'Pendiente' ?></span>
-                        </td>
-                        <td>
-                            <div class="btn-group" role="group">
+                <?php if (!empty($muestrasDecision)): ?>
+                    <?php foreach ($muestrasDecision as $row): ?>
+                        <tr data-comentarios="<?= esc($row['comentarios'] ?? '') ?>"
+                            data-observaciones="<?= esc($row['observaciones'] ?? '') ?>">
+                            <td><?= $row['id'] ?></td>
+                            <td><?= esc($row['clienteId']) ?></td>
+                            <td><?= esc($row['prototipoId']) ?></td>
+                            <td><?= !empty($row['fecha']) ? date('d/m/Y', strtotime($row['fecha'])) : 'N/A' ?></td>
+                            <td><?= esc($row['solicitadaPor']) ?></td>
+                            <td><?= !empty($row['fechaSolicitud']) ? date('d/m/Y', strtotime($row['fechaSolicitud'])) : 'N/A' ?></td>
+                            <td><?= esc($row['decision']) ?></td>
+                            <td><?= esc($row['estado']) ?></td>
+                            <td>
                                 <button type="button"
-                                        class="btn btn-sm btn-primary btn-evaluar"
+                                        class="btn btn-sm btn-outline-secondary me-2 btn-ver"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#verModal"
+                                        data-id="<?= $row['id'] ?>"
+                                        title="Ver detalles">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary btn-evaluar"
                                         data-bs-toggle="modal"
                                         data-bs-target="#evaluarModal"
-                                        data-id="<?= $muestra['muestraId'] ?>"
+                                        data-id="<?= $row['id'] ?>"
                                         title="Evaluar muestra">
-                                    <i class="fas fa-clipboard-check me-1"></i>
+                                    <i class="fas fa-clipboard-check"></i>
                                 </button>
-                            </div>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para ver muestra (solo lectura) -->
+<div class="modal fade" id="verModal" tabindex="-1" aria-labelledby="verModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="verModalLabel">Ver Detalles de Muestra</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Cliente ID</label>
+                        <p class="form-control-plaintext" id="verClienteId">-</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Prototipo ID</label>
+                        <p class="form-control-plaintext" id="verPrototipoId">-</p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Fecha Aprobación</label>
+                        <p class="form-control-plaintext" id="verFecha">-</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Solicitante</label>
+                        <p class="form-control-plaintext" id="verSolicitadaPor">-</p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Fecha Solicitud</label>
+                        <p class="form-control-plaintext" id="verFechaSolicitud">-</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Decisión</label>
+                        <p class="form-control-plaintext" id="verDecision">-</p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Estado</label>
+                        <p class="form-control-plaintext" id="verEstado">-</p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Comentarios</label>
+                        <p class="form-control-plaintext bg-light p-2 rounded" id="verComentarios">-</p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Observaciones</label>
+                        <p class="form-control-plaintext bg-light p-2 rounded" id="verObservaciones">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
         </div>
     </div>
 </div>
@@ -148,55 +212,78 @@
 <div class="modal fade" id="evaluarModal" tabindex="-1" aria-labelledby="evaluarModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
+            <div class="modal-header">
                 <h5 class="modal-title" id="evaluarModalLabel">Evaluar Muestra</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body" id="modalEvaluarContent">
-                <div class="container-fluid">
+                <form id="formEvaluarMuestra">
+                    <input type="hidden" id="muestraId" name="muestraId">
+
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <h6 class="text-muted">ID de Muestra</h6>
-                            <p id="muestraId">-</p>
+                            <label for="clienteId" class="form-label">Cliente ID</label>
+                            <input type="text" class="form-control" id="clienteId" name="clienteId">
                         </div>
                         <div class="col-md-6">
-                            <h6 class="text-muted">Estado</h6>
-                            <span id="estadoBadge" class="badge bg-secondary">-</span>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3" id="clienteRow" style="display: none;">
-                        <div class="col-12">
-                            <h6 class="text-muted">Cliente</h6>
-                            <p id="clienteNombre">-</p>
+                            <label for="prototipoId" class="form-label">Prototipo ID</label>
+                            <input type="text" class="form-control" id="prototipoId" name="prototipoId">
                         </div>
                     </div>
 
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <h6 class="text-muted">Fecha de Aprobación</h6>
-                            <p id="fechaAprobacion">-</p>
+                            <label for="fecha" class="form-label">Fecha Aprobación</label>
+                            <input type="date" class="form-control" id="fecha" name="fecha">
                         </div>
                         <div class="col-md-6">
-                            <h6 class="text-muted">Decisión</h6>
-                            <p id="decision">-</p>
+                            <label for="solicitadaPor" class="form-label">Solicitante</label>
+                            <input type="text" class="form-control" id="solicitadaPor" name="solicitadaPor">
                         </div>
                     </div>
 
-                    <div class="row mb-3" id="observacionesRow" style="display: none;">
-                        <div class="col-12">
-                            <h6 class="text-muted">Observaciones</h6>
-                            <p id="observaciones" class="p-2 bg-light rounded">-</p>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="fechaSolicitud" class="form-label">Fecha Solicitud</label>
+                            <input type="date" class="form-control" id="fechaSolicitud" name="fechaSolicitud">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="decision" class="form-label">Decisión</label>
+                            <select class="form-select" id="decision" name="decision">
+                                <option value="">Seleccionar...</option>
+                                <option value="Aprobada">Aprobada</option>
+                                <option value="Rechazada">Rechazada</option>
+                                <option value="Pendiente">Pendiente</option>
+                            </select>
                         </div>
                     </div>
 
-                    <div class="row mb-3" id="comentariosRow" style="display: none;">
-                        <div class="col-12">
-                            <h6 class="text-muted">Comentarios</h6>
-                            <p id="comentarios" class="p-2 bg-light rounded">-</p>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="estado" class="form-label">Estado</label>
+                            <select class="form-select" id="estado" name="estado">
+                                <option value="">Seleccionar...</option>
+                                <option value="Aprobada">Aprobada</option>
+                                <option value="Rechazada">Rechazada</option>
+                                <option value="Pendiente">Pendiente</option>
+                            </select>
                         </div>
                     </div>
-                </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label for="comentarios" class="form-label">Comentarios</label>
+                            <textarea class="form-control" id="comentarios" name="comentarios" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label for="observaciones" class="form-label">Observaciones</label>
+                            <textarea class="form-control" id="observaciones" name="observaciones" rows="3"></textarea>
+                        </div>
+                    </div>
+                </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -228,154 +315,128 @@
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
 
+        // Cargar los datos en el modal de Ver (solo lectura)
+        $('#verModal').on('show.bs.modal', function (event) {
+            const button = $(event.relatedTarget);
+            const row = button.closest('tr');
+
+            // Obtener los datos de la fila
+            const clienteId = row.find('td:eq(1)').text().trim();
+            const prototipoId = row.find('td:eq(2)').text().trim();
+            const fecha = row.find('td:eq(3)').text().trim();
+            const solicitadaPor = row.find('td:eq(4)').text().trim();
+            const fechaSolicitud = row.find('td:eq(5)').text().trim();
+            const decision = row.find('td:eq(6)').text().trim();
+            const estado = row.find('td:eq(7)').text().trim();
+            const comentarios = row.data('comentarios') || '-';
+            const observaciones = row.data('observaciones') || '-';
+
+            // Poblar el modal de solo lectura
+            $('#verClienteId').text(clienteId);
+            $('#verPrototipoId').text(prototipoId);
+            $('#verFecha').text(fecha);
+            $('#verSolicitadaPor').text(solicitadaPor);
+            $('#verFechaSolicitud').text(fechaSolicitud);
+            $('#verDecision').text(decision);
+            $('#verEstado').text(estado);
+            $('#verComentarios').text(comentarios);
+            $('#verObservaciones').text(observaciones);
+        });
+
         // Cargar los datos de la muestra en el modal
         $('#evaluarModal').on('show.bs.modal', function (event) {
             const button = $(event.relatedTarget);
-            const muestraId = button.data('id');
-            const modal = $(this);
+            const row = button.closest('tr');
 
-            // Mostrar indicador de carga
-            modal.find('#modalEvaluarContent').addClass('loading');
+            // Obtener los datos de la fila
+            const id = row.find('td:eq(0)').text().trim();
+            const clienteId = row.find('td:eq(1)').text().trim();
+            const prototipoId = row.find('td:eq(2)').text().trim();
+            const fecha = row.find('td:eq(3)').text().trim();
+            const solicitadaPor = row.find('td:eq(4)').text().trim();
+            const fechaSolicitud = row.find('td:eq(5)').text().trim();
+            const decision = row.find('td:eq(6)').text().trim();
+            const estado = row.find('td:eq(7)').text().trim();
+            const comentarios = row.data('comentarios') || '';
+            const observaciones = row.data('observaciones') || '';
 
-            // Cargar los datos de evaluación vía AJAX
-            console.log('Solicitando datos para muestra ID:', muestraId);
-            $.get(`<?= base_url('muestras/evaluar/') ?>${muestraId}`)
-                .done(function(response) {
-                    console.log('Respuesta recibida:', response);
+            // Función para convertir fecha de d/m/Y a Y-m-d
+            function convertirFecha(fechaStr) {
+                if (!fechaStr || fechaStr === 'N/A' || fechaStr === 'Pendiente') return '';
+                const partes = fechaStr.split('/');
+                if (partes.length === 3) {
+                    return `${partes[2]}-${partes[1]}-${partes[0]}`;
+                }
+                return '';
+            }
 
-                    if (!response) {
-                        throw new Error('La respuesta del servidor está vacía');
-                    }
+            console.log('Datos cargados:', {id, clienteId, prototipoId, fecha, solicitadaPor, fechaSolicitud, decision, estado, comentarios, observaciones});
+            console.log('Estado value:', estado, 'Length:', estado.length);
 
-                    // Asegurarse de que response es un objeto
-                    const data = typeof response === 'string' ? JSON.parse(response) : response;
-                    const evaluacion = data.evaluacion || data; // Manejar ambos formatos de respuesta
+            // Poblar el formulario
+            $('#muestraId').val(id);
+            $('#clienteId').val(clienteId);
+            $('#prototipoId').val(prototipoId);
+            $('#fecha').val(convertirFecha(fecha));
+            $('#solicitadaPor').val(solicitadaPor);
+            $('#fechaSolicitud').val(convertirFecha(fechaSolicitud));
+            $('#decision').val(decision);
+            $('#comentarios').val(comentarios);
+            $('#observaciones').val(observaciones);
 
-                    if (!evaluacion) {
-                        throw new Error('No se encontraron datos de evaluación');
-                    }
-
-                    console.log('Datos de evaluación:', evaluacion);
-
-                    // Actualizar los campos del modal
-                    $('#muestraId').text(evaluacion.muestraId || muestraId);
-
-                    // Actualizar estado con badge
-                    const estado = evaluacion.estado || 'Pendiente';
-                    let badgeClass = 'secondary';
-                    if (estado === 'Aprobada') badgeClass = 'success';
-                    else if (estado === 'Pendiente') badgeClass = 'warning';
-                    else if (estado === 'Rechazada') badgeClass = 'danger';
-
-                    $('#estadoBadge')
-                        .removeClass('bg-success bg-warning bg-danger bg-secondary')
-                        .addClass(`bg-${badgeClass}`)
-                        .text(estado);
-
-                    // Actualizar cliente si existe
-                    if (evaluacion.clienteNombre) {
-                        $('#clienteNombre').text(evaluacion.clienteNombre);
-                        $('#clienteRow').show();
-                    } else {
-                        $('#clienteRow').hide();
-                    }
-
-                    // Actualizar fecha de aprobación
-                    $('#fechaAprobacion').text(
-                        evaluacion.fechaAprobacion
-                            ? new Date(evaluacion.fechaAprobacion).toLocaleString()
-                            : 'Pendiente'
-                    );
-
-                    // Actualizar decisión
-                    const decision = evaluacion.decision || '';
-                    $('#decision').text(decision ? decision.charAt(0).toUpperCase() + decision.slice(1) : 'Pendiente');
-
-                    // Actualizar observaciones si existen
-                    if (evaluacion.observaciones) {
-                        $('#observaciones').html(String(evaluacion.observaciones).replace(/\n/g, '<br>'));
-                        $('#observacionesRow').show();
-                    } else {
-                        $('#observacionesRow').hide();
-                    }
-
-                    // Actualizar comentarios si existen
-                    if (evaluacion.comentarios) {
-                        $('#comentarios').html(String(evaluacion.comentarios).replace(/\n/g, '<br>'));
-                        $('#comentariosRow').show();
-                    } else {
-                        $('#comentariosRow').hide();
-                    }
-
-                    // Mostrar el botón de guardar si es necesario
-                    $('#btnGuardarEvaluacion').toggle(estado === 'Pendiente');
-
-                })
-                .fail(function(xhr, status, error) {
-                    console.error('Error en la petición AJAX:', {
-                        status: status,
-                        error: error,
-                        response: xhr.responseText
-                    });
-
-                    let errorMessage = 'Error al cargar la información de la muestra';
-                    try {
-                        const errorResponse = JSON.parse(xhr.responseText);
-                        errorMessage = errorResponse.error || errorMessage;
-                    } catch (e) {
-                        errorMessage = xhr.responseText || errorMessage;
-                    }
-
-                    // Mostrar mensaje de error en el modal
-                    $('#modalEvaluarContent').html(`
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        ${errorMessage}
-                        <div class="mt-2 small">Código de error: ${xhr.status}</div>
-                    </div>
-                    <div class="text-center mt-3">
-                        <button class="btn btn-primary" data-bs-dismiss="modal">Cerrar</button>
-                    </div>
-                `);
-                })
-                .always(function() {
-                    modal.find('#modalEvaluarContent').removeClass('loading');
-                });
+            // Establecer el estado con un pequeño delay para asegurar que el DOM esté listo
+            setTimeout(function() {
+                $('#estado').val(estado);
+                console.log('Estado después de set:', $('#estado').val());
+            }, 50);
         });
 
         // Limpiar el modal al cerrarlo
         $('#evaluarModal').on('hidden.bs.modal', function () {
-            // Restablecer los campos
-            $('#muestraId, #clienteNombre, #fechaAprobacion, #decision, #observaciones, #comentarios')
-                .text('-');
-
-            // Ocultar secciones opcionales
-            $('#clienteRow, #observacionesRow, #comentariosRow').hide();
-
-            // Restablecer el badge de estado
-            $('#estadoBadge')
-                .removeClass('bg-success bg-warning bg-danger')
-                .addClass('bg-secondary')
-                .text('-');
+            $('#formEvaluarMuestra')[0].reset();
         });
 
         // Manejar el clic en el botón Guardar Cambios
         $('#btnGuardarEvaluacion').on('click', function() {
-            // Aquí irá la lógica para guardar los cambios
-            alert('Función de guardar cambios se implementará aquí');
+            const formData = {
+                id: $('#muestraId').val(),
+                clienteId: $('#clienteId').val(),
+                prototipoId: $('#prototipoId').val(),
+                fecha: $('#fecha').val(),
+                solicitadaPor: $('#solicitadaPor').val(),
+                fechaSolicitud: $('#fechaSolicitud').val(),
+                decision: $('#decision').val(),
+                estado: $('#estado').val(),
+                comentarios: $('#comentarios').val(),
+                observaciones: $('#observaciones').val()
+            };
+
+            console.log('Guardando datos:', formData);
+
+            // Aquí puedes agregar la llamada AJAX para guardar
+            $.ajax({
+                url: '<?= base_url('muestras/guardar') ?>',
+                method: 'POST',
+                data: formData,
+                success: function(response) {
+                    alert('Datos guardados correctamente');
+                    $('#evaluarModal').modal('hide');
+                    location.reload(); // Recargar la página para ver los cambios
+                },
+                error: function(xhr) {
+                    alert('Error al guardar: ' + (xhr.responseJSON?.message || 'Error desconocido'));
+                }
+            });
         });
 
         // Fecha actual para nombres de archivos exportados
         const hoy = new Date().toISOString().slice(0,10);
 
-        // Inicializar DataTable con botones de exportación
-        const table = $('#tablaMuestras').DataTable({
+        // Inicializar DataTable para la tabla de muestras con decisión
+        $('#tablaMuestrasDecision').DataTable({
             language: {
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
             },
-            columnDefs: [
-                { targets: -1, orderable: false, searchable: false } // Deshabilitar ordenamiento en columna de acciones
-            ],
             pageLength: 10,
             responsive: true,
             order: [[0, 'desc']],
@@ -385,18 +446,13 @@
                 "<'row'<'col-12'tr>>" +
                 "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
             buttons: [
-                { extend:'copy',  text:'Copiar', exportOptions:{ columns: ':not(:last-child)' } },
-                { extend:'csv',   text:'CSV',   filename:'muestras_'+hoy, exportOptions:{ columns: ':not(:last-child)' } },
-                { extend:'excel', text:'Excel', filename:'muestras_'+hoy, exportOptions:{ columns: ':not(:last-child)' } },
-                { extend:'pdf',   text:'PDF',   filename:'muestras_'+hoy, title:'Listado de Muestras',
-                    orientation:'landscape', pageSize:'A4', exportOptions:{ columns: ':not(:last-child)' } },
-                { extend:'print', text:'Imprimir', exportOptions:{ columns: ':not(:last-child)' } }
+                { extend:'copy',  text:'Copiar', exportOptions:{ columns: ':visible' } },
+                { extend:'csv',   text:'CSV',   filename:'muestras_decision_'+hoy },
+                { extend:'excel', text:'Excel', filename:'muestras_decision_'+hoy },
+                { extend:'pdf',   text:'PDF',   filename:'muestras_decision_'+hoy, title:'Muestras con Decisión',
+                    orientation:'landscape', pageSize:'A4' },
+                { extend:'print', text:'Imprimir' }
             ]
-        });
-
-        // Botón de actualizar
-        $('#refreshTable').on('click', function() {
-            table.ajax.reload(null, false); // false = no reinicia la paginación
         });
     });
 </script>

@@ -66,6 +66,7 @@ $routes->group('api', static function ($routes) {
  * ------------------------------------------------------------------*/
 $routes->get('muestras', 'Muestras::index');
 $routes->post('muestras/data', 'Muestras::data');
+$routes->get('muestras/evaluar/(:num)', 'Muestras::evaluar/$1');
 
 /* --------------------------------------------------------------------
  * Legacy (compat enlaces antiguos)

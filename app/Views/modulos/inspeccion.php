@@ -175,7 +175,12 @@
                                         data-fecha-reproceso="<?= $item['fechaReproceso'] ?? '' ?>">
                                     <i class="fas fa-edit"></i>
                                 </button>
-
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger btn-eliminar"
+                                        title="Eliminar"
+                                        data-id="<?= $item['inspeccionId'] ?? $item['id'] ?>">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                             </td>
                         </tr>
                     <?php endforeach; ?>

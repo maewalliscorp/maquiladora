@@ -17,7 +17,8 @@ class Muestras extends BaseController
     {
         $data = [
             'title' => 'Gestión de Muestras',
-            'muestras' => $this->muestraModel->getMuestrasConPrototipo()
+            'muestras' => $this->muestraModel->getMuestrasConPrototipo(),
+            'muestrasDecision' => $this->muestraModel->getMuestrasConDecision()
         ];
 
         return view('modulos/muestras', $data);
@@ -35,36 +36,27 @@ class Muestras extends BaseController
             'data' => $data
         ]);
     }
-    public function evaluar($id)
+    public function evaluar($id = null)
     {
-        if (!$this->request->isAJAX()) {
-            return $this->response->setJSON([
-                'success' => false,
-                'error' => 'Solicitud no válida'
-            ])->setStatusCode(400);
+        if (!$id) {
+            return $this->response->setJSON(['error' => 'ID de muestra no proporcionado'])->setStatusCode(400);
         }
 
-        try {
-            $evaluacion = $this->muestraModel->getEvaluacionMuestra($id);
+        // Cargar el modelo de Muestras
+        $muestraModel = new \App\Models\MuestraModel();
+        $muestra = $muestraModel->find($id);
 
-            if (empty($evaluacion)) {
-                return $this->response->setJSON([
-                    'success' => false,
-                    'error' => 'Muestra no encontrada'
-                ])->setStatusCode(404);
-            }
-
-            return $this->response->setJSON([
-                'success' => true,
-                'data' => $evaluacion
-            ]);
-
-        } catch (\Exception $e) {
-            log_message('error', 'Error en Muestras::evaluar - ' . $e->getMessage());
-            return $this->response->setJSON([
-                'success' => false,
-                'error' => 'Error al obtener los datos de la muestra'
-            ])->setStatusCode(500);
+        if (!$muestra) {
+            return $this->response->setJSON(['error' => 'Muestra no encontrada'])->setStatusCode(404);
         }
+
+        // Devuelve los datos en formato JSON
+        return $this->response->setJSON([
+            'evaluacion' => [
+                'muestraId' => $muestra['id'],
+                'estado' => $muestra['estado'] ?? 'Pendiente',
+                // Agrega aquí los demás campos que necesites
+            ]
+        ]);
     }
 }

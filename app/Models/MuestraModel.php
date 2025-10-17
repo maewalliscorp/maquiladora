@@ -37,6 +37,7 @@ class MuestraModel extends Model
 
         return $query->getResultArray();
     }
+
     public function getEvaluacionMuestra($muestraId)
     {
         $db = \Config\Database::connect();
@@ -60,5 +61,31 @@ class MuestraModel extends Model
     ", [$muestraId]);
 
         return $query->getRowArray();
+    }
+
+    public function getMuestrasConDecision()
+    {
+        $db = \Config\Database::connect();
+
+        $sql = "
+            SELECT 
+                m.id,
+                a.clienteId,
+                m.prototipoId,
+                a.fecha,
+                m.solicitadaPor,
+                m.fechaSolicitud,
+                m.fechaEnvio,
+                a.decision,
+                m.estado,
+                a.comentarios,
+                m.observaciones
+            FROM muestra m
+            INNER JOIN aprobacion_muestra a ON m.id = a.id
+            WHERE a.decision IS NOT NULL
+        ";
+
+        $query = $db->query($sql);
+        return $query->getResultArray();
     }
 }
