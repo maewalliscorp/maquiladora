@@ -20,21 +20,30 @@ class Inspeccion extends BaseController
     {
         $db = db_connect();
         $builder = $db->table('inspeccion i')
-            ->select('i.*, pi.tipo as punto_inspeccion')
+            ->select('i.id AS inspeccionId, i.ordenProduccionId, i.puntoInspeccionId, i.resultado, i.observaciones, i.inspectorId, i.fecha,')
+            ->select('pi.tipo as punto_inspeccion, r.id AS reprocesoId, r.accion, r.cantidad, r.fecha AS fechaReproceso')
             ->join('punto_inspeccion pi', 'pi.id = i.puntoInspeccionId', 'left')
-            ->orderBy('i.fecha', 'DESC')
-            ->orderBy('i.id', 'DESC');
+            ->join('reproceso r', 'i.id = r.inspeccionId', 'left')
+            ->orderBy('i.id', 'DESC')
+            ->orderBy('r.fecha', 'DESC');
 
         $inspecciones = $builder->get()->getResultArray();
 
         $lista = [];
         $n = 1;
+        $processedIds = [];
 
         foreach ($inspecciones as $row) {
-            $lista[] = [
+            // Si ya procesamos esta inspección, la saltamos
+            if (in_array($row['inspeccionId'], $processedIds)) {
+                continue;
+            }
+
+            $item = [
                 'num' => $n++,
-                'id' => $row['id'] ?? '',
-                'numero_inspeccion' => 'INSP-' . str_pad($row['id'], 5, '0', STR_PAD_LEFT),
+                'id' => $row['inspeccionId'] ?? '',
+                'inspeccionId' => $row['inspeccionId'] ?? '',
+                'numero_inspeccion' => 'INSP-' . str_pad($row['inspeccionId'], 5, '0', STR_PAD_LEFT),
                 'ordenProduccionId' => $row['ordenProduccionId'] ?? 'N/A',
                 'puntoInspeccionId' => $row['punto_inspeccion'] ?? 'N/A',
                 'inspectorId' => $row['inspectorId'] ?? 'N/A',
@@ -42,6 +51,17 @@ class Inspeccion extends BaseController
                 'resultado' => $row['resultado'] ?? 'Pendiente',
                 'observaciones' => $row['observaciones'] ?? ''
             ];
+
+            // Si hay información de reproceso, la agregamos
+            if (!empty($row['reprocesoId'])) {
+                $item['reprocesoId'] = $row['reprocesoId'];
+                $item['accion'] = $row['accion'] ?? '';
+                $item['cantidad'] = $row['cantidad'] ?? 0;
+                $item['fechaReproceso'] = $row['fechaReproceso'] ?? null;
+            }
+
+            $lista[] = $item;
+            $processedIds[] = $row['inspeccionId'];
         }
 
         // Obtener la lista de puntos de inspección para el dropdown

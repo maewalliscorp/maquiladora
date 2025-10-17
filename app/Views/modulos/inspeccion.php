@@ -91,11 +91,12 @@
                 <tr>
                     <th>No.</th>
                     <th>No. Inspección</th>
-                    <th>Orden Producción</th>
+                    <th>Orden</th>
                     <th>Punto Inspección</th>
-                    <th>Inspector</th>
+                    <th>Observaciones</th>
                     <th>Fecha</th>
                     <th>Resultado</th>
+                    <th>Reproceso</th>
                     <th>Acciones</th>
                 </tr>
                 </thead>
@@ -108,17 +109,17 @@
                             <td><?= esc($item['ordenProduccionId']) ?></td>
                             <td>
                                 <select class="form-select form-select-sm punto-inspeccion-select"
-                                        data-inspeccion-id="<?= $item['id'] ?>"
+                                        data-inspeccion-id="<?= $item['inspeccionId'] ?? $item['id'] ?>"
                                         style="min-width: 150px;">
                                     <?php foreach ($puntosInspeccion as $punto): ?>
                                         <option value="<?= $punto['id'] ?>"
-                                                <?= ($item['puntoInspeccionId'] == $punto['tipo']) ? 'selected' : '' ?>>
+                                                <?= (($item['puntoInspeccionId'] ?? '') == $punto['tipo']) ? 'selected' : '' ?>>
                                             <?= esc($punto['tipo']) ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
                             </td>
-                            <td><?= esc($item['inspectorId']) ?></td>
+                            <td class="small"><?= esc($item['observaciones'] ?? 'Sin observaciones') ?></td>
                             <td><?= !empty($item['fecha']) ? date('d/m/Y', strtotime($item['fecha'])) : 'N/A' ?></td>
                             <td>
                                 <?php
@@ -134,23 +135,47 @@
                                 ?>
                                 <span class="badge bg-<?= $badgeClass ?>"><?= esc(ucfirst($resultado)) ?></span>
                             </td>
+                            <td>
+                                <?php if (!empty($item['reprocesoId'])): ?>
+                                    <div class="small">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-tools text-primary me-1"></i>
+                                            <span class="fw-medium"><?= esc($item['accion'] ?? 'Sin acción definida') ?></span>
+                                        </div>
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-boxes text-info me-1"></i>
+                                            <span>Cantidad: <?= $item['cantidad'] ?? 0 ?></span>
+                                        </div>
+                                        <?php if (!empty($item['fechaReproceso'])): ?>
+                                            <div class="d-flex align-items-center">
+                                                <i class="far fa-calendar-alt text-success me-1"></i>
+                                                <span><?= date('d/m/Y', strtotime($item['fechaReproceso'])) ?></span>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <span class="text-muted small">Sin reproceso</span>
+                                <?php endif; ?>
+                            </td>
                             <td class="text-nowrap">
                                 <button type="button"
                                         class="btn btn-accion btn-evaluar"
                                         title="Evaluar"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#evaluarModal"
-                                        data-id="<?= $item['id'] ?>"
-                                        data-inspeccion="<?= esc($item['numero_inspeccion'], 'attr') ?>"
+                                        data-id="<?= $item['inspeccionId'] ?? $item['id'] ?>"
+                                        data-inspeccion="<?= esc($item['numero_inspeccion'] ?? 'N/A', 'attr') ?>"
                                         data-orden-produccion="<?= esc($item['ordenProduccionId'] ?? 'N/A', 'attr') ?>"
                                         data-punto-inspeccion="<?= esc($item['puntoInspeccionId'] ?? 'N/A', 'attr') ?>"
-                                        data-inspector="<?= esc($item['inspectorId'] ?? 'N/A', 'attr') ?>"
                                         data-fecha="<?= !empty($item['fecha']) ? date('d/m/Y', strtotime($item['fecha'])) : 'N/A' ?>"
                                         data-resultado="<?= strtolower($item['resultado'] ?? 'pendiente') ?>"
                                         data-observaciones="<?= esc($item['observaciones'] ?? '', 'attr') ?>"
-                                        data-defectos="<?= !empty($item['defectos']) ? esc(json_encode($item['defectos']), 'attr') : '[]' ?>">
-                                    <i class="fas fa-clipboard-check"></i>
+                                        data-defectos="<?= esc(json_encode($item['defectos'] ?? []), 'attr') ?>"
+                                        data-reproceso-id="<?= $item['reprocesoId'] ?? '' ?>"
+                                        data-accion-reproceso="<?= esc($item['accion'] ?? '', 'attr') ?>"
+                                        data-cantidad-reproceso="<?= $item['cantidad'] ?? '0' ?>"
+                                        data-fecha-reproceso="<?= $item['fechaReproceso'] ?? '' ?>">
+                                    <i class="fas fa-edit"></i>
                                 </button>
+
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -168,9 +193,9 @@
     <div class="modal fade" id="evaluarModal" tabindex="-1" aria-labelledby="evaluarModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
+                <div class="modal-header">
                     <h5 class="modal-title" id="evaluarModalLabel">Evaluar Inspección</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <?= form_open('inspeccion/evaluar', ['id' => 'formEvaluar']) ?>
                 <div class="modal-body">
@@ -217,21 +242,14 @@
                         <textarea class="form-control" name="observaciones" id="observaciones_text" rows="3"
                                   placeholder="Ingrese las observaciones de la inspección"></textarea>
                     </div>
-                    <!-- Checkbox para reproceso -->
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="requiere_reproceso" id="requiereReproceso">
-                            <label class="form-check-label fw-bold" for="requiereReproceso">
-                                Requiere Reproceso
-                            </label>
-                        </div>
-                    </div>
 
-                    <!-- Campos que se muestran al marcar el checkbox -->
-                    <div id="camposReproceso" style="display: none;" class="border p-3 rounded mb-3">
+                    <!-- Sección de Reproceso -->
+                    <div class="mb-3">
+                        <h5 class="fw-bold mb-3">Información de Reproceso</h5>
+                        <input type="hidden" name="reproceso_id" id="reprocesoId">
                         <div class="mb-3">
-                            <label for="accionesReproceso" class="form-label">Acciones a Tomar</label>
-                            <textarea class="form-control" id="accionesReproceso" name="acciones_reproceso" rows="3"
+                            <label for="accionReproceso" class="form-label">Acción de Reproceso</label>
+                            <textarea class="form-control" id="accionReproceso" name="accion_reproceso" rows="3"
                                       placeholder="Describa las acciones necesarias para el reproceso"></textarea>
                         </div>
 
@@ -239,49 +257,30 @@
                             <div class="col-md-6 mb-3">
                                 <label for="cantidadReproceso" class="form-label">Cantidad</label>
                                 <input type="number" class="form-control" id="cantidadReproceso"
-                                       name="cantidad_reproceso" min="1" value="1">
+                                       name="cantidad_reproceso" min="1" value="0">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="fechaReproceso" class="form-label">Fecha Límite</label>
-                                <?php
-                                $today = date('Y-m-d');
-                                $tomorrow = date('Y-m-d', strtotime('+1 day'));
-                                ?>
-                                <input type="date" class="form-control" id="fechaReproceso" name="fecha_reproceso"
-                                       min="<?= $today ?>" value="<?= $tomorrow ?>">
+                                <label for="fechaReproceso" class="form-label">Fecha de Reproceso</label>
+                                <input type="date" class="form-control" id="fechaReproceso" name="fecha_reproceso">
                             </div>
                         </div>
                     </div>
 
                     <input type="hidden" name="defectos" id="defectosJson" value="[]">
-
-                    <script>
-                        // Mostrar/ocultar campos de reproceso
-                        document.getElementById('requiereReproceso').addEventListener('change', function() {
-                            const camposReproceso = document.getElementById('camposReproceso');
-                            camposReproceso.style.display = this.checked ? 'block' : 'none';
-
-                            // Limpiar campos si se desmarca
-                            if (!this.checked) {
-                                document.getElementById('accionesReproceso').value = '';
-                                document.getElementById('cantidadReproceso').value = '1';
-                                document.getElementById('fechaReproceso').value = '';
-                            }
-                        });
-                    </script>
                 </div>
+
+                <!-- Botones en el footer correcto -->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> Cerrar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Guardar Cambios
+                    </button>
+                </div>
+                <?= form_close() ?>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-1"></i> Cerrar
-                </button>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save me-1"></i> Guardar Cambios
-                </button>
-            </div>
-            <?= form_close() ?>
         </div>
-    </div>
     </div>
 
 <?= $this->endSection() ?>
@@ -477,72 +476,139 @@
                 });
                 $('#defectosJson').val(JSON.stringify(defectos));
             }
-        });
 
-        // Manejar la carga de datos en el modal de evaluación
-        $('.btn-evaluar').on('click', function() {
-            // Obtener los datos de la inspección del botón
-            const $btn = $(this);
-            const id = $btn.data('id');
-            const numeroInspeccion = $btn.data('inspeccion');
-            const ordenProduccion = $btn.data('orden-produccion');
-            const puntoInspeccion = $btn.data('punto-inspeccion');
-            const inspector = $btn.data('inspector');
-            const fecha = $btn.data('fecha');
-            const resultado = $btn.data('resultado');
-            const observaciones = $btn.data('observaciones') || '';
-
-            // Llenar el formulario con los datos
-            $('#inspeccion_id').val(id);
-
-            // Actualizar la información de visualización
-            $('#numero_inspeccion_display').text(numeroInspeccion);
-            $('#orden_produccion_display').text(ordenProduccion);
-            $('#punto_inspeccion_display').text(puntoInspeccion);
-            $('#fecha_display').text(fecha);
-
-            // Establecer valores del formulario
-            $('#resultado_select').val(resultado);
-            $('#observaciones_text').val(observaciones);
-
-            // Cargar defectos existentes si los hay
-            if (resultado === 'rechazado' && $btn.data('defectos')) {
-                const defectosExistentes = JSON.parse($btn.data('defectos'));
-                defectos.length = 0; // Limpiar array actual
-                defectos.push(...defectosExistentes);
-                actualizarTablaDefectos();
-            } else {
-                defectos.length = 0; // Limpiar array de defectos
-                $('#tablaDefectos').empty();
+            // Función para formatear la fecha para el input date
+            function formatDateForInput(dateString) {
+                if (!dateString) return '';
+                const date = new Date(dateString);
+                return date.toISOString().split('T')[0];
             }
 
-            // Mostrar/ocultar la sección de defectos según el resultado
-            if (resultado === 'rechazado') {
-                $('#defectosContainer').show();
-            } else {
-                $('#defectosContainer').hide();
-            }
-        });
+            // Manejar la carga de datos en el modal de evaluación
+            $(document).on('click', '.btn-evaluar', function(e) {
+                e.preventDefault();
 
-        // Mostrar/ocultar la sección de defectos cuando cambia el resultado
-        $('#resultado_select').on('change', function() {
-            if ($(this).val() === 'rechazado') {
-                $('#defectosContainer').show();
-            } else {
-                $('#defectosContainer').hide();
-            }
-        });
+                // Obtener el botón que disparó el evento
+                const $boton = $(this);
 
-        // Inicializar el array de defectos
-        const defectos = [];
+                // Obtener los datos usando attr('data-*') en lugar de data()
+                const inspeccionId = $boton.attr('data-id');
+                const numeroInspeccion = $boton.attr('data-inspeccion');
+                const ordenProduccion = $boton.attr('data-orden-produccion');
+                const puntoInspeccion = $boton.attr('data-punto-inspeccion');
+                const fecha = $boton.attr('data-fecha');
+                const resultado = $boton.attr('data-resultado');
+                const observaciones = $boton.attr('data-observaciones');
 
-        // Función para actualizar la tabla de defectos
-        function actualizarTablaDefectos() {
-            const tbody = $('#tablaDefectos');
-            tbody.empty();
+                // Mostrar los datos en la consola para depuración
+                console.log('Datos obtenidos del botón:', {
+                    inspeccionId,
+                    numeroInspeccion,
+                    ordenProduccion,
+                    puntoInspeccion,
+                    fecha,
+                    resultado,
+                    observaciones
+                });
 
-            defectos.forEach((defecto, index) => {
-                const tr = $(`
+                // Llenar el formulario con los datos básicos
+                if (inspeccionId) $('#inspeccion_id').val(inspeccionId);
+                if (numeroInspeccion) $('#numero_inspeccion_display').text(numeroInspeccion);
+                if (ordenProduccion) $('#orden_produccion_display').text(ordenProduccion);
+                if (puntoInspeccion) $('#punto_inspeccion_display').text(puntoInspeccion);
+                if (fecha) $('#fecha_display').text(fecha);
+                if (resultado) $('#resultado_select').val(resultado).trigger('change');
+                if (observaciones) $('#observaciones_text').val(observaciones);
+
+                // Manejar datos de reproceso
+                const reprocesoId = $boton.attr('data-reproceso-id');
+                const accionReproceso = $boton.attr('data-accion-reproceso') || '';
+                const cantidadReproceso = $boton.attr('data-cantidad-reproceso') || '0';
+                const fechaReproceso = $boton.attr('data-fecha-reproceso');
+
+                if (reprocesoId) {
+                    $('#reprocesoId').val(reprocesoId);
+                    $('#accionReproceso').val(accionReproceso);
+                    $('#cantidadReproceso').val(cantidadReproceso);
+
+                    // Establecer la fecha de reproceso si existe
+                    if (fechaReproceso) {
+                        $('#fechaReproceso').val(formatDateForInput(fechaReproceso));
+                    }
+
+                    $('.reproceso-section').show();
+                } else {
+                    $('.reproceso-section').hide();
+                }
+
+                // Manejar defectos
+                try {
+                    const defectosStr = $boton.attr('data-defectos');
+                    if (defectosStr) {
+                        const defectosData = JSON.parse(defectosStr);
+                        console.log('Datos de defectos:', defectosData);
+                        // Aquí puedes manejar los defectos si es necesario
+                    }
+                } catch (e) {
+                    console.error('Error al procesar defectos:', e);
+                }
+
+                // Manejar datos de reproceso
+                const $seccionReproceso = $('.reproceso-section');
+                if (reprocesoId) {
+                    $('#reprocesoId').val(reprocesoId);
+                    $('#accionReproceso').val(accionReproceso);
+                    $('#cantidadReproceso').val(cantidadReproceso || '0');
+
+                    // Establecer la fecha de reproceso si existe, de lo contrario, establecer la fecha actual
+                    const fechaHoy = new Date().toISOString().split('T')[0];
+                    $('#fechaReproceso').val(fechaReproceso ? formatDateForInput(fechaReproceso) : fechaHoy);
+
+                    $seccionReproceso.show();
+                } else {
+                    $seccionReproceso.hide();
+                }
+
+                // Limpiar y cargar defectos si existen
+                defectos = [];
+                try {
+                    const defectosStr = $boton.attr('data-defectos');
+                    if (defectosStr) {
+                        defectos = JSON.parse(defectosStr);
+                        console.log('Datos de defectos:', defectos);
+                        actualizarTablaDefectos();
+                    } else {
+                        $('#tablaDefectos').empty();
+                    }
+                } catch (e) {
+                    console.error('Error al procesar defectos:', e);
+                    $('#tablaDefectos').empty();
+                }
+
+                // Mostrar el modal
+                const modal = new bootstrap.Modal(document.getElementById('evaluarModal'));
+                modal.show();
+            });
+
+            // Manejar el evento de cambio en el select de resultado
+            $('#resultado_select').on('change', function() {
+                if ($(this).val() === 'rechazado') {
+                    $('#defectosContainer').show();
+                } else {
+                    $('#defectosContainer').hide();
+                }
+            });
+
+            // Inicializar el array de defectos
+            let defectos = [];
+
+            // Función para actualizar la tabla de defectos
+            function actualizarTablaDefectos() {
+                const tbody = $('#tablaDefectos');
+                tbody.empty();
+
+                defectos.forEach((defecto, index) => {
+                    const tr = $(`
                 <tr>
                     <td>${defecto.tipo ? defecto.tipo.charAt(0).toUpperCase() + defecto.tipo.slice(1) : ''}</td>
                     <td>${defecto.descripcion || ''}</td>
@@ -557,169 +623,168 @@
                 </tr>
             `);
 
-                tbody.append(tr);
-            });
-
-            // Actualizar el campo oculto con el JSON de los defectos
-            $('#defectosJson').val(JSON.stringify(defectos));
-        }
-
-        // Agregar un nuevo defecto
-        $('#agregarDefecto').on('click', function() {
-            const tipo = $('#tipo_defecto').val();
-            const descripcion = $('textarea[name="descripcion_defecto"]').val();
-            const cantidad = $('input[name="cantidad_defectos"]').val();
-            const accion = $('input[name="accion_correctiva"]').val();
-
-            if (tipo && descripcion && cantidad) {
-                const defecto = {
-                    tipo: tipo,
-                    descripcion: descripcion,
-                    cantidad: cantidad,
-                    accion_correctiva: accion || ''
-                };
-
-                defectos.push(defecto);
-                actualizarTablaDefectos();
-
-                // Limpiar campos
-                $('#tipo_defecto').val('');
-                $('textarea[name="descripcion_defecto"]').val('');
-                $('input[name="cantidad_defectos"]').val('1');
-                $('input[name="accion_correctiva"]').val('');
-
-                // Enfocar el primer campo para facilitar la entrada rápida
-                $('#tipo_defecto').focus();
-            } else {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Campos requeridos',
-                    text: 'Por favor complete los campos obligatorios: Tipo de Defecto, Descripción y Cantidad',
-                    confirmButtonColor: '#0d6efd'
+                    tbody.append(tr);
                 });
-            }
-        });
 
-        // Eliminar defecto
-        $(document).on('click', '.btn-eliminar-defecto', function() {
-            const index = $(this).data('index');
-            defectos.splice(index, 1);
-            actualizarTablaDefectos();
-        });
-
-        // Limpiar el modal cuando se cierre
-        $('#evaluarModal').on('hidden.bs.modal', function () {
-            defectos.length = 0; // Vaciar el array de defectos
-            $('#tablaDefectos').empty();
-            $('#defectosJson').val('[]');
-            $('form#formEvaluar')[0].reset();
-            $('#defectosContainer').hide();
-        });
-
-        // Manejar el envío del formulario
-        $('#formEvaluar').on('submit', function(e) {
-            e.preventDefault();
-
-            // Validar que si es rechazado, tenga al menos un defecto
-            if ($('#resultado_select').val() === 'rechazado' && defectos.length === 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Defectos requeridos',
-                    text: 'Debe registrar al menos un defecto para una inspección rechazada',
-                    confirmButtonColor: '#0d6efd'
-                });
-                return false;
+                // Actualizar el campo oculto con el JSON de los defectos
+                $('#defectosJson').val(JSON.stringify(defectos));
             }
 
-            // Mostrar indicador de carga
-            const submitBtn = $(this).find('button[type="submit"]');
-            const originalText = submitBtn.html();
-            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...');
+            // Agregar un nuevo defecto
+            $('#agregarDefecto').on('click', function() {
+                const tipo = $('#tipo_defecto').val();
+                const descripcion = $('textarea[name="descripcion_defecto"]').val();
+                const cantidad = $('input[name="cantidad_defectos"]').val();
+                const accion = $('input[name="accion_correctiva"]').val();
 
-            // Enviar el formulario vía AJAX
-            $.ajax({
-                url: $(this).attr('action'),
-                type: 'POST',
-                data: $(this).serialize(),
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: '¡Éxito!',
-                            text: response.message || 'La inspección se ha guardado correctamente',
-                            confirmButtonColor: '#198754',
-                            allowOutsideClick: false
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                location.reload();
-                            }
-                        });
-                    } else {
-                        throw new Error(response.message || 'Error al guardar la inspección');
-                    }
-                },
-                error: function(xhr) {
-                    let errorMessage = 'Error al procesar la solicitud';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
+                if (tipo && descripcion && cantidad) {
+                    const defecto = {
+                        tipo: tipo,
+                        descripcion: descripcion,
+                        cantidad: cantidad,
+                        accion_correctiva: accion || ''
+                    };
+
+                    defectos.push(defecto);
+                    actualizarTablaDefectos();
+
+                    // Limpiar campos
+                    $('#tipo_defecto').val('');
+                    $('textarea[name="descripcion_defecto"]').val('');
+                    $('input[name="cantidad_defectos"]').val('1');
+                    $('input[name="accion_correctiva"]').val('');
+
+                    // Enfocar el primer campo para facilitar la entrada rápida
+                    $('#tipo_defecto').focus();
+                } else {
                     Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: errorMessage,
-                        confirmButtonColor: '#dc3545'
+                        icon: 'warning',
+                        title: 'Campos requeridos',
+                        text: 'Por favor complete los campos obligatorios: Tipo de Defecto, Descripción y Cantidad',
+                        confirmButtonColor: '#0d6efd'
                     });
-                },
-                complete: function() {
-                    submitBtn.prop('disabled', false).html(originalText);
                 }
             });
-        });
-        // Manejar el cambio de punto de inspección
-        $(document).on('change', '.punto-inspeccion-select', function() {
-            const select = $(this);
-            const inspeccionId = select.data('inspeccion-id');
-            const nuevoPuntoId = select.val();
 
-            // Mostrar indicador de carga
-            const originalHtml = select.html();
-            select.prop('disabled', true).addClass('opacity-75');
+            // Eliminar defecto
+            $(document).on('click', '.btn-eliminar-defecto', function() {
+                const index = $(this).data('index');
+                defectos.splice(index, 1);
+                actualizarTablaDefectos();
+            });
 
-            // Enviar la actualización al servidor
-            $.ajax({
-                url: '<?= base_url('inspeccion/actualizar-punto') ?>',
-                method: 'POST',
-                data: {
-                    id: inspeccionId,
-                    puntoInspeccionId: nuevoPuntoId,
-                    <?= csrf_token()?>: '<?= csrf_hash()?>'
-                },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        // Actualizar el texto mostrado en la tabla
-                        select.find('option:selected').text(response.punto_tipo);
+            // Limpiar el modal cuando se cierre
+            $('#evaluarModal').on('hidden.bs.modal', function () {
+                defectos.length = 0; // Vaciar el array de defectos
+                $('#tablaDefectos').empty();
+                $('#defectosJson').val('[]');
+            }); // <-- Faltaba este cierre
 
-                        // Mostrar notificación de éxito
-                        const toast = new bootstrap.Toast(document.querySelector('.toast'));
-                        $('.toast .toast-body').text('Punto de inspección actualizado correctamente');
-                        $('.toast').toast('show');
-                    } else {
-                        // Mostrar error
-                        alert('Error al actualizar el punto de inspección: ' + (response.message || 'Error desconocido'));
-                        // Recargar la página para restaurar los valores
-                        location.reload();
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error en la petición AJAX:', error);
-                    alert('Error al conectar con el servidor');
-                    location.reload();
-                },
-                complete: function() {
-                    select.prop('disabled', false).removeClass('opacity-75');
+            // Manejar el envío del formulario
+            $('#formEvaluar').on('submit', function(e) {
+                e.preventDefault();
+
+                // Validar que si es rechazado, tenga al menos un defecto
+                if ($('#resultado_select').val() === 'rechazado' && defectos.length === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Defectos requeridos',
+                        text: 'Debe registrar al menos un defecto para una inspección rechazada',
+                        confirmButtonColor: '#0d6efd'
+                    });
+                    return false;
                 }
+
+                // Mostrar indicador de carga
+                const submitBtn = $(this).find('button[type="submit"]');
+                const originalText = submitBtn.html();
+                submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...');
+
+                // Enviar el formulario vía AJAX
+                $.ajax({
+                    url: $(this).attr('action'),
+                    type: 'POST',
+                    data: $(this).serialize(),
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Éxito!',
+                                text: response.message || 'La inspección se ha guardado correctamente',
+                                confirmButtonColor: '#198754',
+                                allowOutsideClick: false
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    location.reload();
+                                }
+                            });
+                        } else {
+                            throw new Error(response.message || 'Error al guardar la inspección');
+                        }
+                    },
+                    error: function(xhr) {
+                        let errorMessage = 'Error al procesar la solicitud';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: errorMessage,
+                            confirmButtonColor: '#dc3545'
+                        });
+                    },
+                    complete: function() {
+                        submitBtn.prop('disabled', false).html(originalText);
+                    }
+                });
+            });
+            // Manejar el cambio de punto de inspección
+            $(document).on('change', '.punto-inspeccion-select', function() {
+                const select = $(this);
+                const inspeccionId = select.data('inspeccion-id');
+                const nuevoPuntoId = select.val();
+
+                // Mostrar indicador de carga
+                const originalHtml = select.html();
+                select.prop('disabled', true).addClass('opacity-75');
+
+                // Enviar la actualización al servidor
+                $.ajax({
+                    url: '<?= base_url('inspeccion/actualizar-punto') ?>',
+                    method: 'POST',
+                    data: {
+                        id: inspeccionId,
+                        puntoInspeccionId: nuevoPuntoId,
+                        <?= csrf_token()?>: '<?= csrf_hash()?>'
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            // Actualizar el texto mostrado en la tabla
+                            select.find('option:selected').text(response.punto_tipo);
+
+                            // Mostrar notificación de éxito
+                            const toast = new bootstrap.Toast(document.querySelector('.toast'));
+                            $('.toast .toast-body').text('Punto de inspección actualizado correctamente');
+                            $('.toast').toast('show');
+                        } else {
+                            // Mostrar error
+                            alert('Error al actualizar el punto de inspección: ' + (response.message || 'Error desconocido'));
+                            // Recargar la página para restaurar los valores
+                            location.reload();
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error en la petición AJAX:', error);
+                        alert('Error al conectar con el servidor');
+                        location.reload();
+                    },
+                    complete: function() {
+                        select.prop('disabled', false).removeClass('opacity-75');
+                    }
+                });
             });
         });
     </script>
