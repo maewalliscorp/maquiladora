@@ -14,7 +14,7 @@ class MantenimientoCorrectivo extends BaseController
         $this->db = Database::connect();
     }
 
-    /** Verifica si una columna existe en una tabla */
+    /** Verifica si una columna existe en una tabla (para consultas defensivas) */
     private function tableHas(string $table, string $col): bool
     {
         foreach ($this->db->getFieldData($table) as $f) {
@@ -23,12 +23,11 @@ class MantenimientoCorrectivo extends BaseController
         return false;
     }
 
-    /** Catálogo de máquinas con selección de columnas defensiva */
+    /** Catálogo de máquinas: selecciona solo columnas existentes */
     private function catalogoMaquinas(): array
     {
         $tbl = 'maquina';
         $select = ['id']; // siempre
-        // agrega solo si existen estas columnas
         foreach (['codigo','clave','serie','modelo','nombre','descripcion'] as $c) {
             if ($this->tableHas($tbl, $c)) $select[] = $c;
         }
@@ -39,7 +38,7 @@ class MantenimientoCorrectivo extends BaseController
             ->get()->getResultArray();
     }
 
-    /** Catálogo de empleados con selección de columnas defensiva */
+    /** Catálogo de empleados: selecciona solo columnas existentes */
     private function catalogoEmpleados(): array
     {
         $tbl = 'empleado';
@@ -58,7 +57,6 @@ class MantenimientoCorrectivo extends BaseController
             $builder->orderBy('apellidos', 'ASC');
         }
 
-        // filtra solo activos si existe la columna
         if ($this->tableHas($tbl, 'activo')) {
             $builder->where('activo', 1);
         }
@@ -144,6 +142,33 @@ class MantenimientoCorrectivo extends BaseController
 
         return redirect()->to(site_url('mantenimiento/correctivo'))
             ->with($ok ? 'success' : 'error', $ok ? 'Orden actualizada.' : 'No se pudo actualizar.');
+    }
+
+    /** Elimina orden + su detalle (transacción) */
+    public function eliminar($id)
+    {
+        $id = (int)$id;
+        if (!$id) {
+            return redirect()->back()->with('error', 'ID inválido.');
+        }
+
+        try {
+            $this->db->transStart();
+            // Primero detalle (si no hay ON DELETE CASCADE)
+            $this->db->table('mtto_detectado')->where('otMttoId', $id)->delete();
+            // Luego la orden
+            $this->db->table('mtto')->where('id', $id)->delete();
+            $this->db->transComplete();
+
+            if ($this->db->transStatus() === false) {
+                return redirect()->back()->with('error', 'No se pudo eliminar la orden.');
+            }
+
+            return redirect()->to(site_url('mantenimiento/correctivo'))
+                ->with('success', 'Orden eliminada correctamente.');
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Error: '.$e->getMessage());
+        }
     }
 
     /** Diagnóstico rápido (opcional) */

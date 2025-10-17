@@ -233,6 +233,15 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
                                         data-cierre="<?= esc($cierre, 'attr') ?>">
                                     <i class="bi bi-pencil"></i>
                                 </button>
+
+                                <!-- Eliminar -->
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger btn-eliminar"
+                                        title="Eliminar"
+                                        data-bs-toggle="modal" data-bs-target="#modalEliminar"
+                                        data-id="<?= esc($folio, 'attr') ?>">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -358,6 +367,31 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
     </div>
 </div>
 
+<!-- ====================== MODAL ELIMINAR ====================== -->
+<div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-semibold text-dark" id="modalEliminarLabel">Eliminar orden</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="formEliminar" method="post">
+                <?= csrf_field() ?>
+                <div class="modal-body">
+                    <p class="mb-0">
+                        Esta acción es <strong>permanente</strong>.<br>
+                        ¿Deseas eliminar la orden de mantenimiento <strong>#<span id="del-id"></span></strong>?
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-danger" type="submit">Eliminar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -462,6 +496,16 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
                 document.getElementById('e-estatus').value       = d.estatus || 'Abierta';
                 document.getElementById('e-descripcion').value   = d.descripcion || '';
                 document.getElementById('e-cierre').value        = toLocalInputValue(d.cierre || '');
+            });
+        });
+
+        // ELIMINAR
+        document.querySelectorAll('.btn-eliminar').forEach(btn=>{
+            btn.addEventListener('click', ()=>{
+                const id = btn.dataset.id || '';
+                document.getElementById('del-id').textContent = id;
+                const form = document.getElementById('formEliminar');
+                form.action = '<?= site_url("mantenimiento/correctivo/eliminar") ?>' + '/' + id;
             });
         });
     })();
