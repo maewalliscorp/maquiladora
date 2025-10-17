@@ -1,4 +1,6 @@
 <?php
+// app/Models/MttoModel.php
+// app/Models/MttoModel.php
 namespace App\Models;
 
 use CodeIgniter\Model;
@@ -15,7 +17,6 @@ class MttoModel extends Model
         'descripcion', 'fechaApertura', 'fechaCierre'
     ];
 
-    /** Listado con join y horas acumuladas del detalle */
     public function getListado(): array
     {
         $db = $this->db;
@@ -25,6 +26,8 @@ class MttoModel extends Model
                 'm.id AS Folio',
                 'm.fechaApertura AS Apertura',
                 'COALESCE(mx.codigo, m.maquinaId) AS Maquina',
+                'm.maquinaId AS MaquinaId',
+                'm.responsableId AS ResponsableId',
                 'm.tipo AS Tipo',
                 'm.estatus AS Estatus',
                 'm.descripcion AS Descripcion',
@@ -34,7 +37,7 @@ class MttoModel extends Model
             ->join('maquina mx', 'mx.id = m.maquinaId', 'left')
             ->join('mtto_detectado d', 'd.otMttoId = m.id', 'left')
             ->groupBy([
-                'm.id','m.fechaApertura','mx.codigo','m.maquinaId',
+                'm.id','m.fechaApertura','mx.codigo','m.maquinaId','m.responsableId',
                 'm.tipo','m.estatus','m.descripcion','m.fechaCierre'
             ])
             ->orderBy('m.fechaApertura', 'DESC');
@@ -42,7 +45,6 @@ class MttoModel extends Model
         return $builder->get()->getResultArray();
     }
 
-    /** Listado sin join (fallback) */
     public function getListadoSimple(): array
     {
         return $this->db->table('mtto m')
@@ -50,6 +52,8 @@ class MttoModel extends Model
                 'm.id AS Folio',
                 'm.fechaApertura AS Apertura',
                 'COALESCE(mx.codigo, m.maquinaId) AS Maquina',
+                'm.maquinaId AS MaquinaId',
+                'm.responsableId AS ResponsableId',
                 'm.tipo AS Tipo',
                 'm.estatus AS Estatus',
                 'm.descripcion AS Descripcion',
@@ -60,7 +64,6 @@ class MttoModel extends Model
             ->get()->getResultArray();
     }
 
-    /** Inserta el detalle inicial opcional */
     public function insertDetalle(int $mttoId, ?string $accion, ?string $repuestos, ?float $horas): bool
     {
         if (!$mttoId) return false;
@@ -80,3 +83,5 @@ class MttoModel extends Model
         ]);
     }
 }
+
+

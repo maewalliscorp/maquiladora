@@ -28,9 +28,9 @@ $routes->setAutoRoute(false); // todo debe declararse explícitamente
  * ------------------------------------------------------------------*/
 $routes->get('/register', 'UsuarioController::register', ['as' => 'register']);
 $routes->post('/register', 'UsuarioController::register');
-$routes->get('/login', 'UsuarioController::login', ['as' => 'login']);
-$routes->post('/login', 'UsuarioController::authenticate');
-$routes->get('/logout', 'UsuarioController::logout');
+$routes->get('/login',     'UsuarioController::login',   ['as' => 'login']);
+$routes->post('/login',    'UsuarioController::authenticate');
+$routes->get('/logout',    'UsuarioController::logout');
 
 // API Endpoints sueltos
 $routes->get('api/maquiladoras', 'UsuarioController::getMaquiladoras');
@@ -64,8 +64,8 @@ $routes->group('api', static function ($routes) {
 /* --------------------------------------------------------------------
  * Muestras (prototipos)
  * ------------------------------------------------------------------*/
-$routes->get('muestras', 'Muestras::index');
-$routes->post('muestras/data', 'Muestras::data');
+$routes->get('muestras',            'Muestras::index');
+$routes->post('muestras/data',      'Muestras::data');
 $routes->get('muestras/evaluar/(:num)', 'Muestras::evaluar/$1');
 
 /* --------------------------------------------------------------------
@@ -206,9 +206,10 @@ $routes->group('modulo3', [], function ($routes) {
     });
 
     /* =========================
-     * LOGÍSTICA · PACKING
+     * LOGÍSTICA · PACKING / PREPARACIÓN
      * ========================= */
     $routes->get('logistica_preparacion', 'LogisticaController::preparacion');
+    $routes->get('preparacion',           'LogisticaController::preparacion'); // alias opcional
 
     // Endpoints de embarque
     $routes->post('embarques/crear',                'LogisticaController::crearEmbarque');
@@ -216,7 +217,7 @@ $routes->group('modulo3', [], function ($routes) {
     $routes->get ('embarques/(:num)/packing-list',  'LogisticaController::packingList/$1');
     $routes->get ('embarques/(:num)/etiquetas',     'LogisticaController::etiquetas/$1');
 
-    // Acciones por pedido
+    // Acciones por pedido (OC)
     $routes->get ('ordenes/(:num)/json',   'LogisticaController::ordenJson/$1');
     $routes->post('ordenes/(:num)/editar', 'LogisticaController::ordenEditar/$1');
 
@@ -224,6 +225,7 @@ $routes->group('modulo3', [], function ($routes) {
      * LOGÍSTICA · GESTIÓN (Tracking)
      * ========================= */
     $routes->get('logistica_gestion', 'LogisticaController::gestion');
+    $routes->get('gestion',           'LogisticaController::gestion'); // alias opcional
 
     // CRUD envíos (tabla guia_envio)
     $routes->post('envios/crear',           'LogisticaController::crearEnvio');
@@ -234,12 +236,16 @@ $routes->group('modulo3', [], function ($routes) {
     /* =========================
      * LOGÍSTICA · DOCUMENTOS
      * ========================= */
-    $routes->get ('logistica_documentos',        'LogisticaController::documentos');
-    $routes->post('documentos/crear',            'LogisticaController::crearDocumento');
-    $routes->get ('documentos/(:num)/json',      'LogisticaController::docJson/$1');
-    $routes->post('documentos/(:num)/editar',    'LogisticaController::editarDocumento/$1');
-    $routes->post('documentos/(:num)/eliminar',  'LogisticaController::eliminarDocumento/$1');
-    $routes->get ('documentos/(:num)/pdf',       'LogisticaController::descargarPdf/$1');
+    // Página de listado (coincide con tu vista y JS: site_url('modulo3/documentos'))
+    $routes->get ('documentos',                 'LogisticaController::documentos');          // alias principal
+    $routes->get ('logistica_documentos',       'LogisticaController::documentos');         // compat
+
+    // Endpoints CRUD documentos (doc_embarque)
+    $routes->post('documentos/crear',           'LogisticaController::crearDocumento');
+    $routes->get ('documentos/(:num)/json',     'LogisticaController::docJson/$1');
+    $routes->post('documentos/(:num)/editar',   'LogisticaController::editarDocumento/$1');
+    $routes->post('documentos/(:num)/eliminar', 'LogisticaController::eliminarDocumento/$1');
+    $routes->get ('documentos/(:num)/pdf',      'LogisticaController::descargarPdf/$1');
 
     // Órdenes de clientes (enlace del menú)
     $routes->get('ordenesclientes', 'Modulos::m1_ordenesclientes');

@@ -10,39 +10,22 @@ $embarques = $embarques ?? [];
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 <style>
     .btn-icon{ padding:.25rem .45rem; border-width:2px; }
-
-    /* Botonera tipo pastillas separadas */
-    div.dt-buttons{
-        display:flex !important;
-        gap:.65rem;
-        flex-wrap:wrap;
-        background:transparent !important;
-        border:0 !important;
-        border-radius:0 !important;
-        box-shadow:none !important;
-        padding:0 !important;
-    }
+    div.dt-buttons{ display:flex !important; gap:.65rem; flex-wrap:wrap; background:transparent !important; border:0 !important; border-radius:0 !important; box-shadow:none !important; padding:0 !important; }
     div.dt-buttons > .btn:not(:first-child){ margin-left:0 !important; }
     div.dt-buttons > .btn{ border-radius:.65rem !important; padding:.45rem 1rem !important; }
 </style>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
-
-<!-- Header -->
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div class="d-flex align-items-center">
         <h1 class="me-3">Documentos de Embarque</h1>
         <span class="badge bg-secondary">Docs</span>
     </div>
-
     <div class="d-flex gap-2">
-        <!-- Abrir modal Generación rápida -->
         <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#generarModal">
             <i class="bi bi-files me-1"></i> Agregar doc
         </button>
-
-        <!-- Abrir modal Agregar (form completo) -->
         <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#agregarModal">
             <i class="bi bi-plus-circle me-1"></i> Agregar
         </button>
@@ -62,10 +45,9 @@ $embarques = $embarques ?? [];
     </div>
 <?php endif; ?>
 
-<!-- ===== MODAL: Generación rápida ===== -->
+<!-- MODAL: Generación rápida -->
 <div class="modal fade" id="generarModal" tabindex="-1" aria-labelledby="generarModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="generarModalLabel">Generación de documentos</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -89,18 +71,14 @@ $embarques = $embarques ?? [];
                         <button name="tipo" value="Aduanas"      class="btn btn-outline-primary" type="submit">Aduanas</button>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                </div>
+                <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
             </form>
-        </div>
-    </div>
+        </div></div>
 </div>
 
-<!-- ===== MODAL: Agregar (form completo) ===== -->
+<!-- MODAL: Agregar -->
 <div class="modal fade" id="agregarModal" tabindex="-1" aria-labelledby="agregarModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="agregarModalLabel">Agregar documento</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -161,14 +139,12 @@ $embarques = $embarques ?? [];
                     <button class="btn btn-primary" type="submit">Guardar</button>
                 </div>
             </form>
-        </div>
-    </div>
+        </div></div>
 </div>
 
-<!-- ===== MODAL: Ver ===== -->
+<!-- MODAL: Ver -->
 <div class="modal fade" id="verModal" tabindex="-1" aria-labelledby="verModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="verModalLabel">Detalle de documento</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -184,17 +160,13 @@ $embarques = $embarques ?? [];
                     <dd class="col-8" id="v-pdf"><a id="v-pdf-a" href="#" target="_blank">—</a></dd>
                 </dl>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-            </div>
-        </div>
-    </div>
+            <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
+        </div></div>
 </div>
 
-<!-- ===== MODAL: Editar ===== -->
+<!-- MODAL: Editar -->
 <div class="modal fade" id="editarModal" tabindex="-1" aria-labelledby="editarModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="editarModalLabel">Editar documento</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -254,11 +226,10 @@ $embarques = $embarques ?? [];
                     <button class="btn btn-primary" type="submit">Guardar</button>
                 </div>
             </form>
-        </div>
-    </div>
+        </div></div>
 </div>
 
-<!-- ===== Tabla ===== -->
+<!-- Tabla -->
 <div class="card shadow-sm">
     <div class="card-header"><strong>Documentos generados</strong></div>
     <div class="card-body p-0">
@@ -312,7 +283,6 @@ $embarques = $embarques ?? [];
         </table>
     </div>
 </div>
-
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -326,11 +296,12 @@ $embarques = $embarques ?? [];
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+<!-- Asegura Bootstrap Bundle en tu layout. Si no, descomenta: -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script> -->
 
 <script>
     (function(){
         const base = "<?= site_url('modulo3/documentos') ?>";
-
         $.fn.dataTable.Buttons.defaults.dom.container.className = 'dt-buttons';
 
         const langES = {
@@ -344,8 +315,7 @@ $embarques = $embarques ?? [];
 
         $('#tablaDocs').DataTable({
             language: langES,
-            dom: "<'row px-3 pt-3'<'col-sm-6'B><'col-sm-6'f>>" + "t" +
-                "<'row p-3'<'col-sm-6'i><'col-sm-6'p>>",
+            dom: "<'row px-3 pt-3'<'col-sm-6'B><'col-sm-6'f>>t<'row p-3'<'col-sm-6'i><'col-sm-6'p>>",
             buttons: [
                 { extend:'copy',  text:'Copy',  className:'btn btn-secondary' },
                 { extend:'csv',   text:'CSV',   className:'btn btn-secondary' },
