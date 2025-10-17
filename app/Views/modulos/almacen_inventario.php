@@ -9,14 +9,8 @@
     .badge-pill { border-radius: 1rem; padding:.35rem .6rem; }
     .thead-toolbar th{ background:#f0f6ff; }
     .img-thumb{ width:42px; height:42px; object-fit:cover; border-radius:.5rem; border:1px solid #e5e7eb; }
-
-    /* === Estilo de botones como la captura (relleno gris, separados, bordes suaves) === */
-    .dt-buttons { gap: .5rem; flex-wrap: wrap; }
-    .dt-buttons.btn-group > .btn {
-        border-radius: .65rem !important; /* NO pill */
-        margin-left: 0 !important;        /* anula el -1px de .btn-group */
-        padding: .40rem .85rem !important;
-    }
+    .dt-buttons { gap:.5rem; flex-wrap:wrap; }
+    .dt-buttons.btn-group>.btn{ border-radius:.65rem!important; margin-left:0!important; padding:.40rem .85rem!important; }
 </style>
 <?= $this->endSection() ?>
 
@@ -27,24 +21,20 @@
         <h1 class="me-3">Inventario de Almacenes</h1>
         <span class="badge bg-primary">Logística / Almacén</span>
     </div>
-    <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#agregarModal">
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#agregarModal">
         <i class="bi bi-plus-circle me-1"></i> Agregar
     </button>
 </div>
 
 <div class="card shadow-sm">
-    <div class="card-header">
-        <strong>Existencias por ubicación</strong>
-    </div>
+    <div class="card-header"><strong>Existencias por ubicación</strong></div>
     <div class="card-body">
         <table id="tablaInventario" class="table table-striped table-bordered text-center align-middle w-100">
             <thead>
             <tr class="thead-toolbar">
                 <th colspan="10" class="text-start">
                     <div class="row g-2 align-items-center">
-                        <div class="col-auto">
-                            <label for="selectAlmacen" class="col-form-label fw-semibold">Almacén:</label>
-                        </div>
+                        <div class="col-auto"><label for="selectAlmacen" class="col-form-label fw-semibold">Almacén:</label></div>
                         <div class="col-12 col-sm-4 col-md-3">
                             <select id="selectAlmacen" class="form-select">
                                 <option value="">Todos</option>
@@ -53,9 +43,7 @@
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-auto small text-muted">
-                            Exporta con Copy / CSV / Excel / PDF / Print
-                        </div>
+                        <div class="col-auto small text-muted">Exporta con Copy / CSV / Excel / PDF / Print</div>
                     </div>
                 </th>
             </tr>
@@ -77,10 +65,9 @@
     </div>
 </div>
 
-<!-- Modal Detalle (Ver) -->
+<!-- Modal VER -->
 <div class="modal fade" id="detalleModal" tabindex="-1" aria-labelledby="detalleModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content">
             <div class="modal-header">
                 <h5 id="detalleModalLabel" class="modal-title">Detalle de inventario</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -112,14 +99,12 @@
                         </div>
                     </div>
                 </div>
-
                 <hr>
                 <div class="d-flex justify-content-between align-items-center">
                     <div>Cantidad: <strong id="dCant"></strong> (Mín: <span id="dMin"></span>, Máx: <span id="dMax"></span>)</div>
                     <div id="dEstado"></div>
                 </div>
 
-                <!-- Tabla de lotes -->
                 <div class="mt-3">
                     <h6 class="mb-2">Lotes del artículo</h6>
                     <div class="table-responsive">
@@ -130,7 +115,6 @@
                     </div>
                 </div>
 
-                <!-- Historial de movimientos -->
                 <div id="historialWrap" class="mt-3 d-none">
                     <h6 class="mb-2">Últimos movimientos</h6>
                     <div class="table-responsive">
@@ -141,42 +125,110 @@
                     </div>
                 </div>
             </div>
-
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
-        </div>
-    </div>
+        </div></div>
 </div>
 
-<!-- Modal Agregar (demo UI) -->
+<!-- Modal AGREGAR -->
 <div class="modal fade" id="agregarModal" tabindex="-1" aria-labelledby="agregarModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content">
             <div class="modal-header">
                 <h5 id="agregarModalLabel" class="modal-title"><i class="bi bi-plus-circle me-2"></i>Agregar existencias</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <form id="formAgregar" class="row g-3">
-                    <div class="col-md-6"><label class="form-label">Artículo (ID o SKU)</label><input type="text" class="form-control" required></div>
-                    <div class="col-md-6"><label class="form-label">Ubicación (ID)</label><input type="number" class="form-control" required></div>
-                    <div class="col-md-6"><label class="form-label">Lote (opcional)</label><input type="text" class="form-control"></div>
-                    <div class="col-md-3"><label class="form-label">Cantidad</label><input type="number" class="form-control" min="0" step="0.01" required></div>
-                    <div class="col-md-3"><label class="form-label">Unidad</label><input type="text" class="form-control" placeholder="pzas"></div>
-                </form>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Almacén</label>
+                        <select id="agAlmacen" class="form-select">
+                            <option value="">Seleccione...</option>
+                            <?php foreach (($almacenes ?? []) as $a): ?>
+                                <option value="<?= (int)$a['id'] ?>"><?= esc($a['codigo'].' - '.$a['nombre']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Ubicación</label>
+                        <select id="agUbicacion" class="form-select"><option value="">Seleccione...</option></select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">ID Artículo (opcional)</label>
+                        <input type="number" id="agArticuloId" class="form-control" placeholder="Si lo conoces, úsalo.">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">SKU (opcional)</label>
+                        <input type="text" id="agSku" class="form-control" placeholder="Ej. TELA-NG-0001">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Nombre del artículo</label>
+                        <input type="text" id="agNombre" class="form-control" placeholder="Si no hay ID ni SKU, se usará este nombre">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Unidad</label>
+                        <input type="text" id="agUM" class="form-control" placeholder="MTS, KG, PZ...">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Cantidad</label>
+                        <input type="number" id="agCantidad" class="form-control" step="0.01">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Stock Mín.</label>
+                        <input type="number" id="agMin" class="form-control" step="0.01">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Stock Máx.</label>
+                        <input type="number" id="agMax" class="form-control" step="0.01">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Lote (opcional)</label>
+                        <input type="text" id="agLote" class="form-control" placeholder="Código de lote">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Notas de lote (opcional)</label>
+                        <input type="text" id="agNotas" class="form-control" placeholder="Observaciones">
+                    </div>
+
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="agPer">
+                            <label class="form-check-label" for="agPer">Producto perecedero (capturar fechas)</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">F. Fabricación</label>
+                        <input type="date" id="agFab" class="form-control" disabled>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">F. Caducidad</label>
+                        <input type="date" id="agCad" class="form-control" disabled>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Operación</label>
+                        <select id="agOperacion" class="form-select">
+                            <option value="sumar">Sumar</option>
+                            <option value="restar">Restar</option>
+                            <option value="reemplazar">Reemplazar</option>
+                        </select>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" type="button" data-bs-dismiss="modal">Guardar (demo)</button>
+                <button class="btn btn-primary" type="button" id="btnGuardarAgregar">Guardar</button>
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
             </div>
-        </div>
-    </div>
+        </div></div>
 </div>
 
-<!-- Modal Editar -->
+<!-- Modal EDITAR -->
 <div class="modal fade" id="editarModal" tabindex="-1" aria-labelledby="editarModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content">
             <div class="modal-header">
                 <h5 id="editarModalLabel" class="modal-title"><i class="bi bi-pencil-square me-2"></i>Editar registro</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -199,8 +251,7 @@
                 </form>
             </div>
             <div class="modal-footer"><button class="btn btn-primary" type="button" id="btnGuardarEdit">Guardar cambios</button></div>
-        </div>
-    </div>
+        </div></div>
 </div>
 
 <?= $this->endSection() ?>
@@ -219,7 +270,6 @@
 
 <script>
     (function(){
-        // Español
         const langES = {
             sProcessing:"Procesando...", sLengthMenu:"Mostrar _MENU_", sZeroRecords:"No se encontraron resultados",
             sEmptyTable:"Sin datos", sInfo:"Mostrando _START_–_END_ de _TOTAL_", sInfoEmpty:"Mostrando 0–0 de 0",
@@ -227,16 +277,15 @@
             buttons:{ copy:"Copy", csv:"CSV", excel:"Excel", pdf:"PDF", print:"Print" }
         };
 
-        const $sel = $('#selectAlmacen');
-        const $tabla = $('#tablaInventario');
-
-        // Defaults de Buttons para aspecto "relleno gris" y separados.
         $.extend(true, $.fn.dataTable.Buttons.defaults, {
             dom: {
                 container: { className: 'dt-buttons btn-group d-inline-flex flex-wrap gap-2' },
-                button:    { className: 'btn btn-secondary' } // Relleno gris
+                button:    { className: 'btn btn-secondary' }
             }
         });
+
+        const $sel = $('#selectAlmacen');
+        const $tabla = $('#tablaInventario');
 
         const dt = $tabla.DataTable({
             language: langES,
@@ -261,9 +310,9 @@
                 {data:'sku'},
                 {data:'articuloNombre'},
                 {data:'unidadMedida'},
-                {data:'cantidad'},
-                {data:'stockMin'},
-                {data:'stockMax'},
+                {data:'cantidad', render:(v)=> parseFloat(v).toFixed(2)},
+                {data:'stockMin',  render:(v)=> v==null?'':parseFloat(v).toFixed(2)},
+                {data:'stockMax',  render:(v)=> v==null?'':parseFloat(v).toFixed(2)},
                 {data:null, render:(row)=>{
                         const st = row.estadoCaducidad;
                         let cls='bg-secondary', txt='Sin fecha';
@@ -276,17 +325,17 @@
                 {data:null, orderable:false, searchable:false, render:(row)=>{
                         const payload = encodeURIComponent(JSON.stringify(row));
                         return `
-            <div class="btn-group" role="group">
-              <button class="btn btn-sm btn-outline-info btn-icon btn-ver" title="Ver" data-row="${payload}">
-                <i class="bi bi-eye"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-primary btn-icon btn-edit" title="Editar" data-row="${payload}">
-                <i class="bi bi-pencil-square"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-danger btn-icon btn-del" title="Eliminar" data-row="${payload}">
-                <i class="bi bi-trash"></i>
-              </button>
-            </div>`;
+        <div class="btn-group" role="group">
+          <button class="btn btn-sm btn-outline-info btn-icon btn-ver" title="Ver" data-row="${payload}">
+            <i class="bi bi-eye"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-primary btn-icon btn-edit" title="Editar" data-row="${payload}">
+            <i class="bi bi-pencil-square"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-danger btn-icon btn-del" title="Eliminar" data-row="${payload}">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>`;
                     }
                 }
             ],
@@ -295,7 +344,7 @@
 
         $sel.on('change', ()=> dt.ajax.reload());
 
-        // ----- VER -----
+        /* ===== VER ===== */
         $(document).on('click','.btn-ver', function(){
             const row = JSON.parse(decodeURIComponent(this.dataset.row));
             const fmt = v => v ? String(v).slice(0,10) : '-';
@@ -323,7 +372,6 @@
             if(st==='caducado'){ cls='bg-danger'; txt='Caducado'; }
             $('#dEstado').html(`<span class="badge badge-pill ${cls}">${txt}</span>`);
 
-            // Lotes (API con fallback al lote de la fila)
             $('#tbodyLotes').html('<tr><td colspan="4" class="text-muted">Cargando...</td></tr>');
             const qs = new URLSearchParams({ articuloId: row.articuloId, almacenId: row.almacenId || '', ubicacionId: row.ubicacionId || '' }).toString();
 
@@ -334,47 +382,36 @@
                     let html = '';
                     if (Array.isArray(data) && data.length){
                         html = data.map(l => `
-            <tr>
-              <td>${l.loteCodigo ?? '-'}</td>
-              <td>${fmt2(l.fechaFabricacion)}</td>
-              <td>${fmt2(l.fechaCaducidad)}</td>
-              <td>${l.diasCaduca ?? '-'}</td>
-            </tr>`).join('');
+        <tr>
+          <td>${l.loteCodigo ?? '-'}</td>
+          <td>${fmt2(l.fechaFabricacion)}</td>
+          <td>${fmt2(l.fechaCaducidad)}</td>
+          <td>${l.diasCaduca ?? '-'}</td>
+        </tr>`).join('');
                     } else {
                         html = `
-            <tr>
-              <td>${row.loteCodigo ?? '-'}</td>
-              <td>${fmt(row.fechaFabricacion)}</td>
-              <td>${fmt(row.fechaCaducidad)}</td>
-              <td>${row.diasCaduca ?? '-'}</td>
-            </tr>`;
+        <tr>
+          <td>${row.loteCodigo ?? '-'}</td>
+          <td>${fmt(row.fechaFabricacion)}</td>
+          <td>${fmt(row.fechaCaducidad)}</td>
+          <td>${row.diasCaduca ?? '-'}</td>
+        </tr>`;
                     }
                     $('#tbodyLotes').html(html);
-                })
-                .catch(()=>{
-                    const html = `
-          <tr>
-            <td>${row.loteCodigo ?? '-'}</td>
-            <td>${fmt(row.fechaFabricacion)}</td>
-            <td>${fmt(row.fechaCaducidad)}</td>
-            <td>${row.diasCaduca ?? '-'}</td>
-          </tr>`;
-                    $('#tbodyLotes').html(html);
-                });
+                }).catch(()=>{});
 
-            // Historial (opcional)
             $('#tbodyMovs').empty(); $('#historialWrap').addClass('d-none');
             fetch("<?= site_url('api/inventario/movimientos') ?>/"+row.articuloId+"?loteId="+(row.loteId||'')+"&ubicacionId="+(row.ubicacionId||''))
                 .then(r=>r.json()).then(({data})=>{
                 if(Array.isArray(data) && data.length){
                     const html = data.map(m=>(
                         `<tr>
-              <td>${(m.fecha||'').replace('T',' ').slice(0,19)}</td>
-              <td>${m.tipo||''}</td>
-              <td>${m.cantidad||''}</td>
-              <td>${(m.refTipo||'')}-${(m.refId||'')}</td>
-              <td>${m.notas||''}</td>
-            </tr>`
+          <td>${(m.fecha||'').replace('T',' ').slice(0,19)}</td>
+          <td>${m.tipo||''}</td>
+          <td>${m.cantidad||''}</td>
+          <td>${(m.refTipo||'')}-${(m.refId||'')}</td>
+          <td>${m.notas||''}</td>
+        </tr>`
                     )).join('');
                     $('#tbodyMovs').html(html);
                     $('#historialWrap').removeClass('d-none');
@@ -384,7 +421,7 @@
             new bootstrap.Modal(document.getElementById('detalleModal')).show();
         });
 
-        // ----- EDITAR -----
+        /* ===== EDITAR ===== */
         $(document).on('click','.btn-edit', async function(){
             const row = JSON.parse(decodeURIComponent(this.dataset.row));
             const fmt = v => v ? String(v).slice(0,10) : '';
@@ -404,7 +441,6 @@
             $('#eFechaCad').val(fmt(row.fechaCaducidad));
             $('#eNotas').val(row.loteNotas || '');
 
-            // Ubicaciones del almacén
             const sel = $('#eUbicacionId').empty();
             try{
                 const res = await fetch("<?= site_url('api/ubicaciones') ?>?almacenId="+(row.almacenId||''));
@@ -451,12 +487,101 @@
             }catch(e){ alert('Error al guardar'); }
         });
 
-        // Eliminar (UI demo)
-        $(document).on('click','.btn-del', function(){
-            if(confirm('¿Eliminar este registro?')){
-                dt.row($(this).closest('tr')).remove().draw(false);
+        /* ===== ELIMINAR ===== */
+        $(document).on('click','.btn-del', async function(){
+            const row = JSON.parse(decodeURIComponent(this.dataset.row));
+            if(!confirm('¿Eliminar este registro?')) return;
+            try{
+                const res = await fetch("<?= site_url('api/inventario/eliminar') ?>/"+row.stockId, { method:'DELETE' });
+                const js  = await res.json();
+                if(js.ok) dt.ajax.reload(null,false);
+                else alert(js.message || 'No se pudo eliminar');
+            }catch(e){ alert('Error al eliminar'); }
+        });
+
+        /* ===== AGREGAR ===== */
+        const $m   = $('#agregarModal');
+        const $alm = $('#agAlmacen');
+        const $ubi = $('#agUbicacion');
+        const $artId = $('#agArticuloId');
+        const $sku   = $('#agSku');
+        const $nom   = $('#agNombre');
+        const $um    = $('#agUM');
+        const $cant  = $('#agCantidad');
+        const $min   = $('#agMin');
+        const $max   = $('#agMax');
+        const $lote  = $('#agLote');
+        const $notas = $('#agNotas');
+        const $per   = $('#agPer');
+        const $fab   = $('#agFab');
+        const $cad   = $('#agCad');
+        const $op    = $('#agOperacion');
+
+        function toggleFechas(){
+            const on = $per.is(':checked');
+            $fab.prop('disabled', !on);
+            $cad.prop('disabled', !on);
+        }
+        $per.on('change', toggleFechas); toggleFechas();
+
+        async function loadUbicaciones(almacenId){
+            $ubi.empty().append(new Option('Cargando...', ''));
+            try{
+                const r = await fetch("<?= site_url('api/ubicaciones') ?>?almacenId="+(almacenId||''));
+                const js = await r.json();
+                $ubi.empty().append(new Option('Seleccione...', ''));
+                (js.data||[]).forEach(u => $ubi.append(new Option(u.codigo, u.id)));
+            }catch(_){
+                $ubi.empty().append(new Option('Error', ''));
+            }
+        }
+        $alm.on('change', ()=> loadUbicaciones($alm.val()));
+
+        $m.on('show.bs.modal', ()=>{
+            if ($sel.val()) $alm.val($sel.val());
+            $alm.trigger('change');
+            $op.val('sumar');
+        });
+
+        function toFloat(v){ return (v===''||v==null) ? null : parseFloat(v); }
+
+        $('#btnGuardarAgregar').on('click', async ()=>{
+            const payload = {
+                articuloId:  parseInt($artId.val(),10) || null,
+                sku:         ($sku.val()||'').trim(),
+                articuloTexto: ($nom.val()||'').trim(),
+                unidadMedida:  ($um.val()||'').trim(),
+                ubicacionId:   parseInt($ubi.val(),10) || 0,
+                cantidad:      toFloat($cant.val()),
+                stockMin:      toFloat($min.val()),
+                stockMax:      toFloat($max.val()),
+                loteCodigo:    ($lote.val()||'').trim(),
+                loteNotas:     ($notas.val()||'').trim(),
+                fechaFabricacion: $per.is(':checked') ? ($fab.val()||null) : null,
+                fechaCaducidad:   $per.is(':checked') ? ($cad.val()||null) : null,
+                operacion:        $op.val(),
+                autoCrear:        true
+            };
+
+            if (!payload.ubicacionId){ alert('Selecciona una ubicación.'); return; }
+            if (payload.cantidad===null){ alert('Captura la cantidad.'); return; }
+            if (!payload.articuloId && !payload.sku && !payload.articuloTexto){
+                alert('Proporciona ID, SKU o nombre del artículo.'); return;
+            }
+
+            try{
+                const res = await fetch("<?= site_url('api/inventario/agregar') ?>", {
+                    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+                });
+                const js = await res.json();
+                if (!res.ok || !js.ok){ alert(js.message || 'No se pudo guardar'); return; }
+                bootstrap.Modal.getInstance($m[0]).hide();
+                dt.ajax.reload(null, false);
+            }catch(e){
+                alert('Error de red al guardar');
             }
         });
+
     })();
 </script>
 <?= $this->endSection() ?>

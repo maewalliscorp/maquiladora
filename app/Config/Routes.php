@@ -40,8 +40,13 @@ $routes->get('api/maquiladoras', 'UsuarioController::getMaquiladoras');
  * ========================= */
 $routes->get('almacen/inventario',                 'AlmacenController::inventario');          // Vista principal
 $routes->get('api/almacenes',                      'AlmacenController::apiAlmacenes');        // Spinner de almacenes
+$routes->get('api/ubicaciones',                    'AlmacenController::apiUbicaciones');      // Combo ubicaciones por almacén
 $routes->get('api/inventario',                     'AlmacenController::apiInventario');       // Data de inventario
-$routes->get('api/inventario/movimientos/(:num)',  'AlmacenController::apiMovimientos/$1');  // Historial por artículo (opcional)
+$routes->get('api/inventario/lotes',               'AlmacenController::apiLotes');            // Lotes por artículo
+$routes->get('api/inventario/movimientos/(:num)',  'AlmacenController::apiMovimientos/$1');   // Historial por artículo
+$routes->post('api/inventario/agregar',            'AlmacenController::apiAgregar');          // Crear / upsert stock
+$routes->post('api/inventario/editar',             'AlmacenController::apiEditar');           // Editar stock/artículo/lote
+$routes->delete('api/inventario/eliminar/(:num)',  'AlmacenController::apiEliminar/$1');      // Eliminar stock
 
 /* --------------------------------------------------------------------
  * Home
