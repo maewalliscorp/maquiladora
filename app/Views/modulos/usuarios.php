@@ -86,7 +86,7 @@
                             data-id="<?= $usuario['id'] ?>">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <button onclick="eliminarUsuario(<?= $usuario['id'] ?>)" 
+                        <button onclick="confirmarEliminarUsuario(<?= $usuario['id'] ?>, '<?= esc($usuario['nombre']) ?>')" 
                                 class="btn btn-sm btn-outline-danger btn-accion" title="Eliminar Usuario">
                             <i class="bi bi-trash"></i>
                         </button>
@@ -210,6 +210,8 @@
                 pageLength: 10,
                 responsive: true
             });
+            // Exponer la instancia para usarla fuera del ready
+            window.usuariosTable = table;
         });
 
         // Función para abrir el modal de edición con los datos del usuario
@@ -480,11 +482,103 @@
             });
         });
 
-        function eliminarUsuario(id) {
-            if (confirm('¿Está seguro de que desea eliminar este usuario?')) {
-                // Pendiente: implementar con backend cuando la BD esté lista
-                alert("Función de eliminación pendiente de implementar con backend.");
+        // Modal de confirmación de eliminación
+        const modalEliminarHtml = `
+        <div class=\"modal fade\" id=\"modalConfirmarEliminar\" tabindex=\"-1\" aria-hidden=\"true\">
+          <div class=\"modal-dialog modal-dialog-centered\">
+            <div class="modal-content">
+              <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirmar eliminación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+              </div>
+              <div class="modal-body">
+                <p id="textoConfirmacion"></p>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnEliminarConfirmado">Eliminar</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+
+        if (!document.getElementById('modalConfirmarEliminar')) {
+            document.body.insertAdjacentHTML('beforeend', modalEliminarHtml);
+        }
+
+        function confirmarEliminarUsuario(id, nombre) {
+            const modalEl = document.getElementById('modalConfirmarEliminar');
+            const texto = modalEl.querySelector('#textoConfirmacion');
+            texto.textContent = `¿Desea eliminar al usuario "${nombre}" (ID ${id})?`;
+            const modal = new bootstrap.Modal(modalEl);
+
+            // Remover handlers previos
+            const btn = modalEl.querySelector('#btnEliminarConfirmado');
+            const nuevoBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(nuevoBtn, btn);
+            nuevoBtn.addEventListener('click', function(){ eliminarUsuario(id, modal, nombre); });
+
+            modal.show();
+        }
+
+        function eliminarUsuario(id, modalInstance, nombre) {
+            $.ajax({
+                url: '<?= base_url('modulo11/eliminar_usuario') ?>',
+                method: 'POST',
+                data: { id: id },
+                dataType: 'json',
+                success: function(resp){
+                    if (resp && resp.success) {
+                        if (modalInstance) modalInstance.hide();
+                        // Remover fila de la tabla (usando DataTable API)
+                        const row = $("#tablaUsuarios tbody tr").filter(function(){
+                            return $(this).find('td:first').text().trim() == String(id);
+                        });
+                        if (row.length && window.usuariosTable) {
+                            window.usuariosTable.row(row).remove().draw(false);
+                        }
+                        // Mostrar toast de confirmación
+                        showToast(resp.message || `Usuario "${nombre}" eliminado.`, 'success');
+                    } else {
+                        showToast(resp.message || 'No se pudo eliminar', 'danger');
+                    }
+                },
+                error: function(xhr){
+                    let msg = 'Error al eliminar';
+                    try { const j = JSON.parse(xhr.responseText); if (j.message) msg = j.message; } catch(e){}
+                    showToast(msg, 'danger');
+                }
+            });
+        }
+
+        // Toast helper
+        function ensureToastContainer() {
+            if (!document.getElementById('toastContainer')) {
+                const container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.className = 'toast-container position-fixed top-50 start-50 translate-middle p-3';
+                container.style.zIndex = '1080';
+                document.body.appendChild(container);
             }
+            return document.getElementById('toastContainer');
+        }
+
+        function showToast(message, type) {
+            const container = ensureToastContainer();
+            const toastEl = document.createElement('div');
+            toastEl.className = `toast align-items-center text-bg-${type} border-0`;
+            toastEl.role = 'alert';
+            toastEl.ariaLive = 'assertive';
+            toastEl.ariaAtomic = 'true';
+            toastEl.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>`;
+            container.appendChild(toastEl);
+            const bsToast = new bootstrap.Toast(toastEl, { delay: 2500 });
+            bsToast.show();
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
         }
 
         function verDetalles(id) {

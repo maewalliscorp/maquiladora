@@ -16,6 +16,167 @@ class Modulos extends BaseController
     }
 
     /**
+     * Obtener datos de un usuario (JSON) + catálogos (roles, maquiladoras)
+     */
+    public function m11_obtener_usuario($id = null)
+    {
+        $id = (int)($id ?? 0);
+        if ($id <= 0) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'message' => 'ID inválido',
+            ]);
+        }
+
+        $db = \Config\Database::connect();
+        try {
+            // Usuario base
+            $user = $db->table('users')->where('id', $id)->get()->getRowArray();
+            if (!$user) {
+                return $this->response->setStatusCode(404)->setJSON([
+                    'success' => false,
+                    'message' => 'Usuario no encontrado',
+                ]);
+            }
+
+            // Rol actual y listado de roles
+            $rolActual = null;
+            try {
+                $map = $db->table('usuario_rol')->where('usuarioIdFK', $id)->get()->getRowArray();
+                $rolActual = $map['rolIdFK'] ?? null;
+            } catch (\Throwable $e) { $rolActual = null; }
+
+            // Alias a 'name' para coincidir con el JS de la vista
+            $roles = $db->table('rol')->select('id, nombre as name')->orderBy('nombre','ASC')->get()->getResultArray();
+
+            // Maquiladoras
+            $maqs = $db->table('maquiladora')->select('idmaquiladora as id, Nombre_Maquila as nombre')
+                    ->orderBy('Nombre_Maquila','ASC')->get()->getResultArray();
+
+            $out = [
+                'id' => (int)$user['id'],
+                'username' => $user['username'] ?? '',
+                'email' => $user['correo'] ?? '',
+                'maquiladoraIdFK' => $user['maquiladoraIdFK'] ?? null,
+                'activo' => (int)($user['active'] ?? 1),
+                'rol_id' => $rolActual,
+                'roles' => $roles,
+                'maquiladoras' => $maqs,
+            ];
+
+            return $this->response->setJSON(['success' => true, 'data' => $out]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'Error al obtener usuario: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Actualizar datos de usuario: nombre, correo, rol, maquiladora, activo y password (opcional)
+     * Entrada POST: id, nombre, email, rol, idmaquiladora, activo, password?
+     */
+    public function m11_actualizar_usuario()
+    {
+        // Aceptar la petición sin forzar método (la ruta es POST, pero algunos entornos envían como AJAX genérico)
+        $id = (int)($this->request->getPost('id') ?? $this->request->getVar('id'));
+        if ($id <= 0) {
+            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'ID inválido']);
+        }
+
+        $nombre = trim((string)($this->request->getPost('nombre') ?? $this->request->getVar('nombre') ?? ''));
+        $email  = trim((string)($this->request->getPost('email')  ?? $this->request->getVar('email')  ?? ''));
+        $rolId  = $this->request->getPost('rol') ?? $this->request->getVar('rol');
+        $maqId  = $this->request->getPost('idmaquiladora') ?? $this->request->getVar('idmaquiladora');
+        $activo = (int)($this->request->getPost('activo') ?? $this->request->getVar('activo') ?? 1);
+        $pwd    = (string)($this->request->getPost('password') ?? $this->request->getVar('password') ?? '');
+
+        $db = \Config\Database::connect();
+        $db->transStart();
+        try {
+            // Actualizar tabla users
+            $upd = [
+                'username' => $nombre,
+                'correo'   => $email,
+                'active'   => $activo,
+            ];
+            if ($maqId !== null && $maqId !== '') {
+                $upd['maquiladoraIdFK'] = (int)$maqId;
+            }
+            if ($pwd !== '') {
+                $upd['password'] = password_hash($pwd, PASSWORD_BCRYPT, ['cost'=>10]);
+            }
+            $db->table('users')->where('id', $id)->update($upd);
+
+            // Upsert en usuario_rol
+            $exists = $db->table('usuario_rol')->where('usuarioIdFK', $id)->get()->getRowArray();
+            if ($rolId !== null && $rolId !== '') {
+                if ($exists) {
+                    $db->table('usuario_rol')->where('usuarioIdFK', $id)->update(['rolIdFK' => (int)$rolId]);
+                } else {
+                    $db->table('usuario_rol')->insert(['usuarioIdFK' => $id, 'rolIdFK' => (int)$rolId]);
+                }
+            }
+
+            $db->transComplete();
+            if ($db->transStatus() === false) {
+                throw new \Exception('Error en la transacción');
+            }
+
+            return $this->response->setJSON(['success' => true, 'message' => 'Usuario actualizado correctamente']);
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'Error al actualizar: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Eliminar usuario (lógica): marca deleted_at o, si no existe, active=0
+     * Entrada: POST id
+     * Salida: JSON { success, message }
+     */
+    public function m11_eliminar_usuario()
+    {
+        // Aceptar la petición sin forzar método, la ruta ya limita a POST
+        $id = (int)($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
+        if ($id <= 0) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false, 'message' => 'ID inválido'
+            ]);
+        }
+
+        $db = \Config\Database::connect();
+        try {
+            // Intentar soft delete con deleted_at
+            $ok = false;
+            try {
+                $ok = $db->table('users')->where('id', $id)
+                    ->update(['deleted_at' => date('Y-m-d H:i:s')]);
+            } catch (\Throwable $e) {
+                $ok = false;
+            }
+            if (!$ok) {
+                // Fallback: desactivar
+                $db->table('users')->where('id', $id)->update(['active' => 0]);
+            }
+
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'Usuario eliminado correctamente'
+            ]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'Error al eliminar: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Actualizar un diseño y su última versión.
      * Entrada (POST): codigo?, nombre?, descripcion?, version?, fecha?, notas?, archivoCadUrl?, archivoPatronUrl?, aprobado?, materials?[]
      * - Si se incluye archivoCadFile/archivoPatronFile, se actualiza la URL correspondiente.

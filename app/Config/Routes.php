@@ -26,14 +26,20 @@ $routes->setAutoRoute(false); // todo debe declararse explícitamente
 /* --------------------------------------------------------------------
  * Auth
  * ------------------------------------------------------------------*/
-$routes->get('/register', 'UsuarioController::register', ['as' => 'register']);
-$routes->post('/register', 'UsuarioController::register');
-$routes->get('/login',     'UsuarioController::login',   ['as' => 'login']);
-$routes->post('/login',    'UsuarioController::authenticate');
-$routes->get('/logout',    'UsuarioController::logout');
+$routes->get('/register',        'UsuarioController::index', ['as' => 'register']);
+$routes->post('/register/store', 'UsuarioController::store');
+$routes->get('/login',           'UsuarioController::login',   ['as' => 'login']);
+$routes->post('/login',          'UsuarioController::authenticate');
+$routes->get('/logout',          'UsuarioController::logout');
+
 
 // API sueltos
 $routes->get('api/maquiladoras', 'UsuarioController::getMaquiladoras');
+
+// Módulo 11 - Usuarios (acciones AJAX)
+$routes->post('modulo11/eliminar_usuario', 'Modulos::m11_eliminar_usuario');
+$routes->get('modulo11/obtener_usuario/(:num)', 'Modulos::m11_obtener_usuario/$1');
+$routes->post('modulo11/actualizar_usuario', 'Modulos::m11_actualizar_usuario');
 
 /* =========================
  * Inventario de Almacenes
