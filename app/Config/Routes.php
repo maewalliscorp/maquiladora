@@ -303,6 +303,9 @@ $routes->group('mrp', [], function ($r) {
  * Módulo 11 · Usuarios
  * ------------------------------------------------------------------*/
 $routes->group('modulo11', [], function ($routes) {
+    $routes->get('roles', 'Modulos::m11_roles');
+    $routes->post('roles/actualizar', 'Modulos::m11_roles_actualizar');
+    $routes->post('roles/agregar', 'Modulos::m11_roles_agregar');
     $routes->get('usuarios',                 'Modulos::m11_usuarios');
     $routes->get('usuarios/agregar',         'Modulos::m11_agregar_usuario');
     $routes->post('usuarios/agregar',        'Modulos::m11_agregar_usuario');

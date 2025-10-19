@@ -23,7 +23,6 @@
                     <th>NOMBRE</th>
                     <th>EMAIL</th>
                     <th>PUESTO</th>
-                    <th>MAQUILADORA</th>
                     <th>ESTATUS</th>
                     <th>FECHA REGISTRO</th>
                     <th>ÚLTIMO ACCESO</th>
@@ -40,11 +39,6 @@
                     <td>
                         <span class="rol-badge rol-<?= strtolower(str_replace(' ', '', $usuario['puesto'])) ?>">
                             <?= $usuario['puesto'] ?>
-                        </span>
-                    </td>
-                    <td>
-                        <span class="badge bg-info text-dark">
-                            <?= $usuario['idmaquiladora'] ? 'ID: ' . $usuario['idmaquiladora'] : 'Sin asignar' ?>
                         </span>
                     </td>
                     <td>
@@ -287,12 +281,13 @@
                                 if (usuario.roles && Array.isArray(usuario.roles) && usuario.roles.length > 0) {
                                     console.log('[DEBUG] Cargando roles:', usuario.roles);
                                     usuario.roles.forEach(rol => {
-                                        const selected = (rol.id == (usuario.rol_id || 2)); // 2 = Usuario por defecto
-                                        $rolSelect.append(new Option(rol.name, rol.id, false, selected));
+                                        // No forzar selección por defecto aquí
+                                        $rolSelect.append(new Option(rol.name, rol.id, false, false));
                                     });
                                 } else {
-                                    console.warn('[WARN] No se encontraron roles, usando valores por defecto');
-                                    $rolSelect.append(new Option('Usuario', 2, true, true));
+                                    console.warn('[WARN] No se encontraron roles');
+                                    // Dejar el select vacío y deshabilitado si no hay catálogo
+                                    $rolSelect.prop('disabled', true);
                                 }
                                 
                                 // Cargar maquiladoras
@@ -315,7 +310,14 @@
                                 }
                                 
                                 // Establecer valores seleccionados
-                                if (usuario.rol_id) $rolSelect.val(usuario.rol_id);
+                                if (usuario.rol_id) { 
+                                    $rolSelect.val(usuario.rol_id);
+                                } else {
+                                    // Si no hay rol asignado, seleccionar el primero disponible si existe
+                                    if ($rolSelect[0].options.length > 0) {
+                                        $rolSelect.prop('selectedIndex', 0);
+                                    }
+                                }
                                 if (usuario.maquiladoraIdFK) $maquiladoraSelect.val(usuario.maquiladoraIdFK);
                                 
                                 // Estado activo/inactivo
@@ -403,6 +405,13 @@
             const $submitBtn = $form.find('button[type="submit"]');
             const originalBtnText = $submitBtn.html();
             
+            // Validar ID de usuario
+            const idVal = parseInt($('#editar_id').val(), 10) || 0;
+            if (idVal <= 0) {
+                alert('Error: ID de usuario inválido. Cierre y vuelva a abrir el modal.');
+                return false;
+            }
+
             // Validar contraseña si se proporcionó
             const password = $('#editar_password').val();
             if (password && password.length < 8) {
@@ -422,7 +431,7 @@
             
             // Preparar los datos del formulario
             const formData = new FormData();
-            formData.append('id', $('#editar_id').val());
+            formData.append('id', String(idVal));
             formData.append('nombre', $('#editar_nombre').val().trim());
             formData.append('email', $('#editar_email').val().trim());
             formData.append('rol', rol);

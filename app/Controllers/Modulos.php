@@ -107,28 +107,39 @@ class Modulos extends BaseController
                 $upd['password'] = password_hash($pwd, PASSWORD_BCRYPT, ['cost'=>10]);
             }
             $db->table('users')->where('id', $id)->update($upd);
+            
+            // Actualizar rol: borrar asignaciones previas del usuario y dejar solo una
+            if ($rolId !== null && $rolId !== '' && (int)$rolId > 0) {
+                $db->table('usuario_rol')->where('usuarioIdFK', $id)->delete();
+
+                // Como la PK incluye 'id' y no es autoincrement, generamos uno único (MAX(id)+1)
+                $nextId = 1;
+                try {
+                    $rowNext = $db->query('SELECT COALESCE(MAX(id),0)+1 AS nextId FROM usuario_rol')->getRowArray();
+                    if ($rowNext && isset($rowNext['nextId'])) { $nextId = (int)$rowNext['nextId']; }
+                } catch (\Throwable $e) { $nextId = time(); }
+
+                $okRole = $db->table('usuario_rol')->insert([
+                    'id'           => $nextId,
+                    'usuarioIdFK'  => $id,
+                    'rolIdFK'      => (int)$rolId,
+                ]);
+                if (!$okRole) {
+                    $dbErr = $db->error();
+                    $dbMsg = isset($dbErr['message']) && $dbErr['message'] ? $dbErr['message'] : 'No se pudo asignar el rol';
+                    throw new \Exception($dbMsg);
+                }
+            }
+
             $db->transComplete();
             if ($db->transStatus() === false) {
                 $dbErr = $db->error();
                 $dbMsg = isset($dbErr['message']) && $dbErr['message'] ? $dbErr['message'] : 'Error en la transacción';
-                try { log_message('error', 'm11_actualizar_usuario users transStatus=false: ' . $dbMsg); } catch (\Throwable $e) {}
+                try { log_message('error', 'm11_actualizar_usuario transStatus=false: ' . $dbMsg); } catch (\Throwable $e) {}
                 throw new \Exception($dbMsg);
             }
 
-            try {
-                if ($rolId !== null && $rolId !== '') {
-                    $exists = $db->table('usuario_rol')->where('usuarioIdFK', $id)->get()->getRowArray();
-                    if ($exists) {
-                        $db->table('usuario_rol')->where('usuarioIdFK', $id)->update(['rolIdFK' => (int)$rolId]);
-                    } else {
-                        $db->table('usuario_rol')->insert(['usuarioIdFK' => $id, 'rolIdFK' => (int)$rolId]);
-                    }
-                }
-            } catch (\Throwable $e) {
-                try { log_message('error', 'm11_actualizar_usuario usuario_rol: ' . $e->getMessage()); } catch (\Throwable $e2) {}
-            }
-
-            return $this->response->setJSON(['success' => true, 'message' => 'Usuario actualizado correctamente']);
+            return $this->response->setJSON(['success' => true, 'message' => 'Usuario y rol actualizados correctamente']);
         } catch (\Throwable $e) {
             try { $db->transRollback(); } catch (\Throwable $e3) {}
             $errMsg = $e->getMessage();
@@ -1196,12 +1207,121 @@ class Modulos extends BaseController
     /* =========================================================
      *                       MÓDULO 11 - USUARIOS
      * ========================================================= */
+    public function m11_roles()
+    {
+        $db = \Config\Database::connect();
+        $roles = [];
+        try {
+            $roles = $db->table('rol')->select('id, nombre, descripcion')->orderBy('id','ASC')->get()->getResultArray();
+        } catch (\Throwable $e) {
+            $roles = [];
+        }
+
+        // Diagnóstico rápido: si ?debug=1, devolver HTML mínimo
+        if ($this->request->getGet('debug')) {
+            $html = "<!doctype html><html><head><meta charset='utf-8'><title>Diag Roles</title></head><body><h1>Diag Roles</h1><pre>" .
+                htmlspecialchars(print_r($roles, true)) . "</pre></body></html>";
+            return $this->response->setHeader('Content-Type','text/html; charset=utf-8')->setBody($html);
+        }
+
+        return view('modulos/roles', $this->payload([
+            'title' => 'Gestión de Roles',
+            'roles' => $roles,
+            'notifCount' => 0,
+        ]), ['saveData' => true]);
+
+    }
+    public function m11_roles_agregar()
+{
+    $nom  = trim((string)($this->request->getPost('nombre') ?? $this->request->getVar('nombre') ?? ''));
+    $desc = trim((string)($this->request->getPost('descripcion') ?? $this->request->getVar('descripcion') ?? ''));
+
+    if ($nom === '') {
+        return $this->response->setStatusCode(400)->setJSON([
+            'success' => false,
+            'message' => 'El nombre es obligatorio'
+        ]);
+    }
+
+    $db = \Config\Database::connect();
+    try {
+        $ok = $db->table('rol')->insert([
+            'nombre' => $nom,
+            'descripcion' => $desc,
+        ]);
+        if (!$ok) {
+            $err = $db->error(); $msg = $err['message'] ?? 'No se pudo insertar';
+            throw new \Exception($msg);
+        }
+        $id = $db->insertID();
+        return $this->response->setJSON(['success' => true, 'id' => (int)$id]);
+    } catch (\Throwable $e) {
+        return $this->response->setStatusCode(500)->setJSON([
+            'success' => false,
+            'message' => 'Error: '.$e->getMessage()
+        ]);
+    }
+}
+
+    /**
+     * Actualiza un rol (POST): id, nombre, descripcion
+     * Respuesta: JSON { success, message? }
+     */
+    public function m11_roles_actualizar()
+    {
+        // Aceptar tanto POST normal como AJAX
+        $id   = (int)($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
+        $nom  = trim((string)($this->request->getPost('nombre') ?? $this->request->getVar('nombre') ?? ''));
+        $desc = trim((string)($this->request->getPost('descripcion') ?? $this->request->getVar('descripcion') ?? ''));
+
+        if ($id <= 0 || $nom === '') {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'message' => 'Datos inválidos'
+            ]);
+        }
+
+        $db = \Config\Database::connect();
+        try {
+            $ok = $db->table('rol')->where('id', $id)->update([
+                'nombre' => $nom,
+                'descripcion' => $desc,
+            ]);
+            if (!$ok) {
+                $err = $db->error();
+                $msg = $err['message'] ?? 'No se pudo actualizar';
+                throw new \Exception($msg);
+            }
+            return $this->response->setJSON(['success' => true]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ]);
+        }
+    }
 public function m11_usuarios()
 {
     $usuarioModel = new \App\Models\UsuarioModel();
 
     // Obtener todos los usuarios (excepto eliminados lógicamente)
     $usuarios = $usuarioModel->where('deleted_at', null)->findAll();
+
+    // Obtener mapa de roles por usuario
+    $rolesPorUsuario = [];
+    try {
+        $db = \Config\Database::connect();
+        $rows = $db->table('usuario_rol ur')
+            ->select('ur.usuarioIdFK as uid, r.nombre as rol')
+            ->join('rol r', 'r.id = ur.rolIdFK', 'left')
+            ->get()->getResultArray();
+        foreach ($rows as $r) {
+            if (!isset($r['uid'])) { continue; }
+            $rolesPorUsuario[(int)$r['uid']] = $r['rol'] ?? 'Usuario';
+        }
+    } catch (\Throwable $e) {
+        $rolesPorUsuario = [];
+    }
 
     // Formatear los datos para la vista
     $usuariosFormateados = [];
@@ -1212,7 +1332,8 @@ public function m11_usuarios()
             'nombre' => $usuario['username'] ?? 'Sin nombre',
             'apellido' => '', // No hay campo apellido en la tabla
             'email' => $usuario['correo'] ?? 'Sin correo',
-            'puesto' => 'Usuario', // Valor por defecto
+            // Mostrar el nombre del rol en la columna PUESTO
+            'puesto' => $rolesPorUsuario[(int)$usuario['id']] ?? 'Usuario',
             'idmaquiladora' => $usuario['maquiladoraIdFK'] ?? 'Sin asignar',
             'activo' => $usuario['active'] ?? 1,
             'fechaAlta' => $usuario['created_at'] ?? date('Y-m-d H:i:s'),

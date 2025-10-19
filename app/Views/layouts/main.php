@@ -208,6 +208,10 @@
                             <small>Reportes</small>
                         </a>
                     </div>
+                    <a class="btn btn-outline-dark w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo11/roles') ?>">
+                        <i class="bi bi-person-gear"></i>
+                        <small>Roles</small>
+                    </a>
                     <div class="col-4">
                         <a class="btn btn-outline-dark w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo11/usuarios') ?>">
                             <i class="bi bi-shield-lock"></i>
@@ -296,6 +300,7 @@
 
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item" href="<?= base_url('modulo3/reportes') ?>"><i class="bi bi-bar-chart-line me-2"></i>Reportes</a>
+                        <a class="dropdown-item" href="<?= base_url('modulo11/roles') ?>"><i class="bi bi-person-gear me-2"></i>Roles</a>
                         <a class="dropdown-item" href="<?= base_url('modulo11/usuarios') ?>"><i class="bi bi-shield-lock me-2"></i>Gestión Usuarios</a>
                     </div>
                 </li>
