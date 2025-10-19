@@ -93,9 +93,8 @@ class Modulos extends BaseController
         $pwd    = (string)($this->request->getPost('password') ?? $this->request->getVar('password') ?? '');
 
         $db = \Config\Database::connect();
-        $db->transStart();
         try {
-            // Actualizar tabla users
+            $db->transStart();
             $upd = [
                 'username' => $nombre,
                 'correo'   => $email,
@@ -108,28 +107,35 @@ class Modulos extends BaseController
                 $upd['password'] = password_hash($pwd, PASSWORD_BCRYPT, ['cost'=>10]);
             }
             $db->table('users')->where('id', $id)->update($upd);
-
-            // Upsert en usuario_rol
-            $exists = $db->table('usuario_rol')->where('usuarioIdFK', $id)->get()->getRowArray();
-            if ($rolId !== null && $rolId !== '') {
-                if ($exists) {
-                    $db->table('usuario_rol')->where('usuarioIdFK', $id)->update(['rolIdFK' => (int)$rolId]);
-                } else {
-                    $db->table('usuario_rol')->insert(['usuarioIdFK' => $id, 'rolIdFK' => (int)$rolId]);
-                }
-            }
-
             $db->transComplete();
             if ($db->transStatus() === false) {
-                throw new \Exception('Error en la transacción');
+                $dbErr = $db->error();
+                $dbMsg = isset($dbErr['message']) && $dbErr['message'] ? $dbErr['message'] : 'Error en la transacción';
+                try { log_message('error', 'm11_actualizar_usuario users transStatus=false: ' . $dbMsg); } catch (\Throwable $e) {}
+                throw new \Exception($dbMsg);
+            }
+
+            try {
+                if ($rolId !== null && $rolId !== '') {
+                    $exists = $db->table('usuario_rol')->where('usuarioIdFK', $id)->get()->getRowArray();
+                    if ($exists) {
+                        $db->table('usuario_rol')->where('usuarioIdFK', $id)->update(['rolIdFK' => (int)$rolId]);
+                    } else {
+                        $db->table('usuario_rol')->insert(['usuarioIdFK' => $id, 'rolIdFK' => (int)$rolId]);
+                    }
+                }
+            } catch (\Throwable $e) {
+                try { log_message('error', 'm11_actualizar_usuario usuario_rol: ' . $e->getMessage()); } catch (\Throwable $e2) {}
             }
 
             return $this->response->setJSON(['success' => true, 'message' => 'Usuario actualizado correctamente']);
         } catch (\Throwable $e) {
-            $db->transRollback();
+            try { $db->transRollback(); } catch (\Throwable $e3) {}
+            $errMsg = $e->getMessage();
+            try { log_message('error', 'm11_actualizar_usuario exception: ' . $errMsg); } catch (\Throwable $e2) {}
             return $this->response->setStatusCode(500)->setJSON([
                 'success' => false,
-                'message' => 'Error al actualizar: ' . $e->getMessage(),
+                'message' => 'Error al actualizar: ' . $errMsg,
             ]);
         }
     }

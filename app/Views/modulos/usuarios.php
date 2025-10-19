@@ -122,7 +122,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="editar_email" class="form-label">Correo Electrónico</label>
-                                <input type="email" class="form-control" id="editar_email" name="email" required>
+                                <input type="email" class="form-control" id="editar_email" name="email" required autocomplete="username">
                             </div>
                         </div>
                         
@@ -151,7 +151,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="editar_password" class="form-label">Nueva Contraseña</label>
-                                <input type="password" class="form-control" id="editar_password" name="password" placeholder="Dejar en blanco para no cambiar">
+                                <input type="password" class="form-control" id="editar_password" name="password" placeholder="Dejar en blanco para no cambiar" autocomplete="new-password">
                                 <div class="form-text">Mínimo 8 caracteres</div>
                             </div>
                         </div>
