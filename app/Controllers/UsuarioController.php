@@ -10,6 +10,19 @@ class UsuarioController extends Controller
 {
     public function login()
     {
+        // Forzar re-login: si ya hay sesión abierta, destruirla
+        if (session()->get('logged_in')) {
+            session()->destroy();
+            // Regenerar ID y eliminar cookie previa para evitar sesiones pegajosas
+            try { session()->regenerate(true); } catch (\Throwable $e) {}
+        }
+
+        // Evitar caché de la página de login
+        $response = service('response');
+        $response->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        $response->setHeader('Pragma', 'no-cache');
+        $response->setHeader('Expires', '0');
+
         return view('login');
     }
 
@@ -50,6 +63,7 @@ class UsuarioController extends Controller
     {
         // Destruir la sesión
         session()->destroy();
+        try { session()->regenerate(true); } catch (\Throwable $e) {}
         
         // Limpiar la caché para prevenir el retroceso después del cierre de sesión
         $response = service('response');

@@ -12,11 +12,19 @@ class AuthFilter implements FilterInterface
     {
         // Rutas que no requieren autenticación
         $uri = service('uri');
-        $currentPath = $uri->getPath();
+        $currentPath = ltrim($uri->getPath(), '/');
+        // Normaliza prefijo index.php/ si existe
+        if (strpos($currentPath, 'index.php/') === 0) {
+            $currentPath = substr($currentPath, strlen('index.php/'));
+        }
         $publicRoutes = ['login', 'register', 'auth', 'api/maquiladoras'];
         
         foreach ($publicRoutes as $route) {
             if (strpos($currentPath, $route) === 0) {
+                // Si es la página de login y existe sesión, destruirla para forzar re-autenticación
+                if ($route === 'login' && session()->get('logged_in')) {
+                    session()->destroy();
+                }
                 return;
             }
         }
@@ -40,6 +48,9 @@ class AuthFilter implements FilterInterface
 
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
     {
-        // No es necesario implementar nada aquí
+        // Refuerza no-caché en todas las respuestas protegidas
+        $response->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        $response->setHeader('Pragma', 'no-cache');
+        $response->setHeader('Expires', '0');
     }
 }

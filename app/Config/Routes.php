@@ -16,9 +16,9 @@ if (file_exists(SYSTEMPATH . 'Config/Routes.php')) {
 /* --------------------------------------------------------------------
  * Defaults
  * ------------------------------------------------------------------*/
-$routes->setDefaultNamespace('App\Controllers');
-$routes->setDefaultController('Modulos');
-$routes->setDefaultMethod('dashboard');
+$routes->setDefaultNamespace('App\\Controllers');
+$routes->setDefaultController('UsuarioController');
+$routes->setDefaultMethod('login');
 $routes->setTranslateURIDashes(false);
 $routes->set404Override();
 $routes->setAutoRoute(false); // todo debe declararse explícitamente
@@ -55,10 +55,10 @@ $routes->post  ('api/inventario/editar',             'AlmacenController::apiEdit
 $routes->delete('api/inventario/eliminar/(:num)',    'AlmacenController::apiEliminar/$1');    // Eliminar
 
 /* --------------------------------------------------------------------
- * Home
+ * Home / Auth landing
  * ------------------------------------------------------------------*/
-$routes->get('/',          'Modulos::dashboard');
-$routes->get('/dashboard', 'Modulos::dashboard');
+$routes->get('/',          'UsuarioController::login');
+$routes->get('/dashboard', 'Modulos::dashboard', ['filter' => 'auth']);
 
 /* --------------------------------------------------------------------
  * API (Dashboard, etc.)
@@ -161,7 +161,7 @@ $routes->group('mantenimiento', static function($r){
 /* --------------------------------------------------------------------
  * Módulo 3 (Dashboard, WIP, Inspección, Mantenimiento, Logística)
  * ------------------------------------------------------------------*/
-$routes->group('modulo3', [], function ($routes) {
+$routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
 
     $routes->get('/',         'Modulos::dashboard');
     $routes->get('dashboard', 'Modulos::dashboard');

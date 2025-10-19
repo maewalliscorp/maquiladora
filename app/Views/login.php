@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Login - Maquiladora</title>
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
@@ -99,6 +102,19 @@
     </div>
 
 </div>
+
+<script>
+  // Si volvemos a esta página desde el historial (bfcache), forzar recarga
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted) {
+      location.reload();
+    }
+  });
+  // Ayuda a que algunos navegadores no cacheen esta página
+  window.addEventListener('unload', function () {});
+  // Como refuerzo adicional, si detectamos que hay sesión (por error de caché), redirigimos a /logout
+  // Nota: no tenemos acceso a PHP aquí, pero si tuvieras una variable global renderizada, podríamos usarla.
+</script>
 
 </body>
 </html>

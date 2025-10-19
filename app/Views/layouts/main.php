@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title><?= esc($title ?? 'Maquiladora') ?></title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -348,6 +351,19 @@
             }
         });
     });
+</script>
+
+<script>
+    // Fuerza recarga si la página regresa desde el historial (bfcache) para que se valide sesión
+    (function () {
+        window.addEventListener('pageshow', function (e) {
+            if (e.persisted) {
+                location.reload();
+            }
+        });
+    })();
+    // Nota: dejar un listener 'unload' vacío evita algunos cachés agresivos en ciertos navegadores
+    window.addEventListener('unload', function () {});
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
