@@ -54,6 +54,12 @@ $routes->post  ('api/inventario/agregar',            'AlmacenController::apiAgre
 $routes->post  ('api/inventario/editar',             'AlmacenController::apiEditar');         // Editar
 $routes->delete('api/inventario/eliminar/(:num)',    'AlmacenController::apiEliminar/$1');    // Eliminar
 
+// ===== NUEVAS RUTAS para spinner/búsqueda y validaciones =====
+$routes->get   ('api/inventario/existe',             'AlmacenController::apiExiste');                 // Verifica duplicados exactos
+$routes->get   ('api/articulos/buscar',              'AlmacenController::apiBuscarArticulos');        // Búsqueda por id/sku/nombre
+$routes->get   ('api/articulos/detalle',             'AlmacenController::apiArticuloDetalle');        // Detalle del artículo
+$routes->get   ('api/inventario/resumen-articulo/(:num)', 'AlmacenController::apiResumenArticulo/$1'); // Resumen existencias
+
 /* --------------------------------------------------------------------
  * Home / Auth landing
  * ------------------------------------------------------------------*/

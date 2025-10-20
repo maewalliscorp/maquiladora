@@ -11,6 +11,7 @@
     .img-thumb{ width:42px; height:42px; object-fit:cover; border-radius:.5rem; border:1px solid #e5e7eb; }
     .dt-buttons { gap:.5rem; flex-wrap:wrap; }
     .dt-buttons.btn-group>.btn{ border-radius:.65rem!important; margin-left:0!important; padding:.40rem .85rem!important; }
+    .hint{ font-size:.85rem; color:#64748b; }
 </style>
 <?= $this->endSection() ?>
 
@@ -43,7 +44,7 @@
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-auto small text-muted">Exporta con Copy / CSV / Excel / PDF / Print</div>
+                        <div class="col-auto small text-muted"></div>
                     </div>
                 </th>
             </tr>
@@ -140,6 +141,17 @@
             </div>
             <div class="modal-body">
                 <div class="row g-3">
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="agExistente">
+                            <label class="form-check-label" for="agExistente">Artículo en existencia</label>
+                        </div>
+                        <div class="hint mt-1">
+                            Activa para buscar y seleccionar un artículo ya registrado.
+                            Si no existe, deja apagado para crear uno nuevo.
+                        </div>
+                    </div>
+
                     <div class="col-md-6">
                         <label class="form-label">Almacén</label>
                         <select id="agAlmacen" class="form-select">
@@ -154,17 +166,23 @@
                         <select id="agUbicacion" class="form-select"><option value="">Seleccione...</option></select>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">ID Artículo (opcional)</label>
-                        <input type="number" id="agArticuloId" class="form-control" placeholder="Si lo conoces, úsalo.">
+                    <!-- Buscador con spinner + datalist -->
+                    <input type="hidden" id="agArticuloId">
+                    <div class="col-md-8">
+                        <label class="form-label">Artículo</label>
+                        <div class="input-group align-items-center">
+                            <input type="text" id="agArticulo" class="form-control" list="dlArticulo" placeholder="Buscar por nombre o SKU...">
+                            <span class="input-group-text bg-transparent border-0" id="agArtSpin" style="display:none;">
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            </span>
+                        </div>
+                        <datalist id="dlArticulo"></datalist>
+                        <div class="hint">Escribe 3+ caracteres para buscar (coincide por nombre o SKU).</div>
                     </div>
+
                     <div class="col-md-4">
-                        <label class="form-label">SKU (opcional)</label>
-                        <input type="text" id="agSku" class="form-control" placeholder="Ej. TELA-NG-0001">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Nombre del artículo</label>
-                        <input type="text" id="agNombre" class="form-control" placeholder="Si no hay ID ni SKU, se usará este nombre">
+                        <label class="form-label">Nombre del artículo (nuevo)</label>
+                        <input type="text" id="agNombre" class="form-control" placeholder="Solo si crearás uno nuevo">
                     </div>
 
                     <div class="col-md-3">
@@ -217,6 +235,20 @@
                             <option value="reemplazar">Reemplazar</option>
                         </select>
                     </div>
+
+                    <!-- Resumen existencias del artículo -->
+                    <div class="col-12 d-none" id="agExistenciasWrap">
+                        <div class="border rounded p-2">
+                            <div class="fw-semibold mb-2">Existencias actuales del artículo</div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped mb-0">
+                                    <thead><tr><th>Almacén</th><th>Ubicación</th><th>Lote</th><th>F. Fab.</th><th>F. Cad.</th><th>Cant.</th></tr></thead>
+                                    <tbody id="agExistenciasBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
             <div class="modal-footer">
@@ -226,7 +258,7 @@
         </div></div>
 </div>
 
-<!-- Modal EDITAR -->
+<!-- Modal EDITAR (igual que antes) -->
 <div class="modal fade" id="editarModal" tabindex="-1" aria-labelledby="editarModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content">
             <div class="modal-header">
@@ -254,6 +286,23 @@
         </div></div>
 </div>
 
+<!-- Modal ERROR / AVISO (duplicados, etc.) -->
+<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="errorModalLabel" class="modal-title">Aviso</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body" id="errorModalMsg">Mensaje…</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Entendido</button>
+                <button type="button" class="btn btn-primary" id="btnUsarExistente" style="display:none">Usar artículo existente</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -267,7 +316,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
-
 <script>
     (function(){
         const langES = {
@@ -284,9 +332,105 @@
             }
         });
 
-        const $sel = $('#selectAlmacen');
+        const $sel   = $('#selectAlmacen');
         const $tabla = $('#tablaInventario');
 
+        function stockBadge(row){
+            const qty = parseFloat(row.cantidad ?? 0);
+            const hasMin = row.stockMin !== null && row.stockMin !== undefined && row.stockMin !== '';
+            const hasMax = row.stockMax !== null && row.stockMax !== undefined && row.stockMax !== '';
+            const min = hasMin ? parseFloat(row.stockMin) : null;
+            const max = hasMax ? parseFloat(row.stockMax) : null;
+
+            if(!hasMin && !hasMax) return '<span class="badge badge-pill bg-secondary">Sin rango</span>';
+            if(hasMin && qty < min) return '<span class="badge badge-pill bg-warning text-dark">Bajo</span>';
+            if(hasMax && qty > max) return '<span class="badge badge-pill bg-danger">Alto</span>';
+            return '<span class="badge badge-pill bg-success">OK</span>';
+        }
+        function caducidadBadge(row){
+            const st = row.estadoCaducidad;
+            let cls='bg-secondary', txt='Sin fecha';
+            if(st==='ok'){ cls='bg-success'; txt='OK'; }
+            if(st==='por_caducar'){ cls='bg-warning text-dark'; txt='Por caducar'; }
+            if(st==='caducado'){ cls='bg-danger'; txt='Caducado'; }
+            return `<span class="badge badge-pill ${cls}">${txt}</span>`;
+        }
+
+        // Modal de error / aviso
+        function showErrorModal(msg, title='Aviso', opts={}){
+            $('#errorModalLabel').text(title);
+            $('#errorModalMsg').html(msg);
+            const $btn = $('#btnUsarExistente');
+            if (opts.usarExistenteId){
+                $btn.show().off('click').on('click', async ()=>{
+                    $('#agExistente').prop('checked', true).trigger('change');
+                    $('#agArticuloId').val(opts.usarExistenteId).trigger('change');
+                    bootstrap.Modal.getInstance(document.getElementById('errorModal')).hide();
+                });
+            } else {
+                $btn.hide().off('click');
+            }
+            new bootstrap.Modal(document.getElementById('errorModal')).show();
+        }
+
+        // Checar existencia exacta en servidor (artículo+ubicación+lote)
+        async function existeStock(params){
+            const qs = new URLSearchParams(params).toString();
+            const r = await fetch("<?= site_url('api/inventario/existe') ?>?"+qs);
+            if(!r.ok) return null;
+            const js = await r.json();
+            return js && js.exists ? (js.data || null) : null;
+        }
+
+        // Buscar artículos por nombre/SKU (spinner + datalist)
+        async function buscarArticulos(q){
+            if(!q) return [];
+            const $spin = $('#agArtSpin'); $spin.show();
+            try{
+                const r = await fetch("<?= site_url('api/articulos/buscar') ?>?q="+encodeURIComponent(q));
+                if(!r.ok) return [];
+                const js = await r.json();
+                return Array.isArray(js.data) ? js.data : [];
+            } finally { $spin.hide(); }
+        }
+
+        // Cargar detalle del artículo seleccionado y pintar resumen
+        async function cargarArticuloDetalle({id=null, sku=null}){
+            const qs = new URLSearchParams();
+            if(id) qs.set('id', id);
+            if(sku) qs.set('sku', sku);
+
+            const r = await fetch("<?= site_url('api/articulos/detalle') ?>?"+qs.toString());
+            if(!r.ok) return null;
+            const js = await r.json();
+            if(!js || !js.data) return null;
+            const a = js.data;
+
+            // Autorrellenar
+            $('#agArticuloId').val(a.id);
+            $('#agArticulo').val(a.nombre || (a.sku?`(SKU ${a.sku})`:''));
+            $('#agNombre').val(a.nombre||'');
+            $('#agUM').val(a.unidadMedida||'');
+            if(a.stockMin!==undefined) $('#agMin').val(a.stockMin ?? '');
+            if(a.stockMax!==undefined) $('#agMax').val(a.stockMax ?? '');
+
+            // Resumen existencias
+            const rr = await fetch("<?= site_url('api/inventario/resumen-articulo') ?>/"+a.id);
+            let html = '';
+            if(rr.ok){
+                const j2 = await rr.json();
+                const rows = Array.isArray(j2.data)? j2.data : [];
+                html = rows.length
+                    ? rows.map(x=>`<tr><td>${x.almacenCodigo||''}</td><td>${x.ubicacionCodigo||''}</td><td>${x.loteCodigo||'-'}</td><td>${(x.fechaFab||'').slice(0,10)}</td><td>${(x.fechaCad||'').slice(0,10)}</td><td>${parseFloat(x.cantidad||0).toFixed(2)}</td></tr>`).join('')
+                    : '<tr><td colspan="6" class="text-muted">Sin existencias registradas.</td></tr>';
+            }
+            $('#agExistenciasBody').html(html);
+            $('#agExistenciasWrap').removeClass('d-none');
+
+            return a;
+        }
+
+        // DataTable
         const dt = $tabla.DataTable({
             language: langES,
             ajax:{
@@ -310,34 +454,25 @@
                 {data:'sku'},
                 {data:'articuloNombre'},
                 {data:'unidadMedida'},
-                {data:'cantidad', render:(v)=> parseFloat(v).toFixed(2)},
-                {data:'stockMin',  render:(v)=> v==null?'':parseFloat(v).toFixed(2)},
-                {data:'stockMax',  render:(v)=> v==null?'':parseFloat(v).toFixed(2)},
-                {data:null, render:(row)=>{
-                        const st = row.estadoCaducidad;
-                        let cls='bg-secondary', txt='Sin fecha';
-                        if(st==='ok'){ cls='bg-success'; txt='OK'; }
-                        if(st==='por_caducar'){ cls='bg-warning text-dark'; txt='Por caducar'; }
-                        if(st==='caducado'){ cls='bg-danger'; txt='Caducado'; }
-                        return `<span class="badge badge-pill ${cls}">${txt}</span>`;
-                    }
-                },
+                {data:'cantidad', render:(v)=> (v==null?'' : parseFloat(v).toFixed(2))},
+                {data:'stockMin',  render:(v)=> (v==null?'' : parseFloat(v).toFixed(2))},
+                {data:'stockMax',  render:(v)=> (v==null?'' : parseFloat(v).toFixed(2))},
+                {data:null, render:(row)=> stockBadge(row)},
                 {data:null, orderable:false, searchable:false, render:(row)=>{
                         const payload = encodeURIComponent(JSON.stringify(row));
                         return `
-        <div class="btn-group" role="group">
-          <button class="btn btn-sm btn-outline-info btn-icon btn-ver" title="Ver" data-row="${payload}">
-            <i class="bi bi-eye"></i>
-          </button>
-          <button class="btn btn-sm btn-outline-primary btn-icon btn-edit" title="Editar" data-row="${payload}">
-            <i class="bi bi-pencil-square"></i>
-          </button>
-          <button class="btn btn-sm btn-outline-danger btn-icon btn-del" title="Eliminar" data-row="${payload}">
-            <i class="bi bi-trash"></i>
-          </button>
-        </div>`;
-                    }
-                }
+          <div class="btn-group" role="group">
+            <button class="btn btn-sm btn-outline-info btn-icon btn-ver" title="Ver" data-row="${payload}">
+              <i class="bi bi-eye"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-primary btn-icon btn-edit" title="Editar" data-row="${payload}">
+              <i class="bi bi-pencil-square"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger btn-icon btn-del" title="Eliminar" data-row="${payload}">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>`;
+                    }}
             ],
             order:[[0,'asc'],[1,'asc']]
         });
@@ -365,12 +500,12 @@
             $('#dMax').text(row.stockMax ?? '-');
             $('#dImg').attr('src', row.urlImagen || "<?= base_url('img/placeholder.png') ?>");
 
-            const st = row.estadoCaducidad;
-            let cls='bg-secondary', txt='Sin fecha';
-            if(st==='ok'){ cls='bg-success'; txt='OK'; }
-            if(st==='por_caducar'){ cls='bg-warning text-dark'; txt='Por caducar'; }
-            if(st==='caducado'){ cls='bg-danger'; txt='Caducado'; }
-            $('#dEstado').html(`<span class="badge badge-pill ${cls}">${txt}</span>`);
+            const combo = `
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="small text-muted">Stock:</span> ${stockBadge(row)}
+        <span class="small text-muted ms-2">Caducidad:</span> ${caducidadBadge(row)}
+      </div>`;
+            $('#dEstado').html(combo);
 
             $('#tbodyLotes').html('<tr><td colspan="4" class="text-muted">Cargando...</td></tr>');
             const qs = new URLSearchParams({ articuloId: row.articuloId, almacenId: row.almacenId || '', ubicacionId: row.ubicacionId || '' }).toString();
@@ -382,20 +517,20 @@
                     let html = '';
                     if (Array.isArray(data) && data.length){
                         html = data.map(l => `
-        <tr>
-          <td>${l.loteCodigo ?? '-'}</td>
-          <td>${fmt2(l.fechaFabricacion)}</td>
-          <td>${fmt2(l.fechaCaducidad)}</td>
-          <td>${l.diasCaduca ?? '-'}</td>
-        </tr>`).join('');
+            <tr>
+              <td>${l.loteCodigo ?? '-'}</td>
+              <td>${fmt2(l.fechaFabricacion)}</td>
+              <td>${fmt2(l.fechaCaducidad)}</td>
+              <td>${l.diasCaduca ?? '-'}</td>
+            </tr>`).join('');
                     } else {
                         html = `
-        <tr>
-          <td>${row.loteCodigo ?? '-'}</td>
-          <td>${fmt(row.fechaFabricacion)}</td>
-          <td>${fmt(row.fechaCaducidad)}</td>
-          <td>${row.diasCaduca ?? '-'}</td>
-        </tr>`;
+            <tr>
+              <td>${row.loteCodigo ?? '-'}</td>
+              <td>${fmt(row.fechaFabricacion)}</td>
+              <td>${fmt(row.fechaCaducidad)}</td>
+              <td>${row.diasCaduca ?? '-'}</td>
+            </tr>`;
                     }
                     $('#tbodyLotes').html(html);
                 }).catch(()=>{});
@@ -406,12 +541,12 @@
                 if(Array.isArray(data) && data.length){
                     const html = data.map(m=>(
                         `<tr>
-          <td>${(m.fecha||'').replace('T',' ').slice(0,19)}</td>
-          <td>${m.tipo||''}</td>
-          <td>${m.cantidad||''}</td>
-          <td>${(m.refTipo||'')}-${(m.refId||'')}</td>
-          <td>${m.notas||''}</td>
-        </tr>`
+              <td>${(m.fecha||'').replace('T',' ').slice(0,19)}</td>
+              <td>${m.tipo||''}</td>
+              <td>${m.cantidad||''}</td>
+              <td>${(m.refTipo||'')}-${(m.refId||'')}</td>
+              <td>${m.notas||''}</td>
+            </tr>`
                     )).join('');
                     $('#tbodyMovs').html(html);
                     $('#historialWrap').removeClass('d-none');
@@ -451,7 +586,7 @@
                     if (u.id == row.ubicacionId) opt.selected = true;
                     sel.append(opt);
                 });
-            }catch(_){}
+            }catch(_){ }
 
             new bootstrap.Modal(document.getElementById('editarModal')).show();
         });
@@ -503,26 +638,13 @@
         const $m   = $('#agregarModal');
         const $alm = $('#agAlmacen');
         const $ubi = $('#agUbicacion');
-        const $artId = $('#agArticuloId');
-        const $sku   = $('#agSku');
-        const $nom   = $('#agNombre');
-        const $um    = $('#agUM');
-        const $cant  = $('#agCantidad');
-        const $min   = $('#agMin');
-        const $max   = $('#agMax');
-        const $lote  = $('#agLote');
-        const $notas = $('#agNotas');
-        const $per   = $('#agPer');
-        const $fab   = $('#agFab');
-        const $cad   = $('#agCad');
-        const $op    = $('#agOperacion');
 
         function toggleFechas(){
-            const on = $per.is(':checked');
-            $fab.prop('disabled', !on);
-            $cad.prop('disabled', !on);
+            const on = $('#agPer').is(':checked');
+            $('#agFab').prop('disabled', !on);
+            $('#agCad').prop('disabled', !on);
         }
-        $per.on('change', toggleFechas); toggleFechas();
+        $('#agPer').on('change', toggleFechas); toggleFechas();
 
         async function loadUbicaciones(almacenId){
             $ubi.empty().append(new Option('Cargando...', ''));
@@ -531,51 +653,142 @@
                 const js = await r.json();
                 $ubi.empty().append(new Option('Seleccione...', ''));
                 (js.data||[]).forEach(u => $ubi.append(new Option(u.codigo, u.id)));
-            }catch(_){
-                $ubi.empty().append(new Option('Error', ''));
-            }
+            }catch(_){ $ubi.empty().append(new Option('Error', '')); }
         }
         $alm.on('change', ()=> loadUbicaciones($alm.val()));
+
+        function setExistenteMode(on){
+            $('#agUM,#agMin,#agMax,#agNombre').prop('disabled', on);
+            $('#agArticulo').prop('disabled', !on);
+            if(!on){
+                $('#agArticulo').val(''); $('#dlArticulo').empty(); $('#agArtSpin').hide();
+                $('#agArticuloId').val('');
+                $('#agExistenciasBody').empty(); $('#agExistenciasWrap').addClass('d-none');
+            }
+        }
 
         $m.on('show.bs.modal', ()=>{
             if ($sel.val()) $alm.val($sel.val());
             $alm.trigger('change');
-            $op.val('sumar');
+            $('#agOperacion').val('sumar');
+            $('#agExistente').prop('checked', false);
+            setExistenteMode(false);
         });
 
-        function toFloat(v){ return (v===''||v==null) ? null : parseFloat(v); }
+        $('#agExistente').on('change', function(){ setExistenteMode(this.checked); });
 
+        // Sugerencias con spinner
+        $('#agArticulo').on('input', async function(){
+            if(!$('#agExistente').is(':checked')) return;
+            const q = this.value.trim();
+            if(q.length < 3 && !/^\d+$/.test(q)) { $('#dlArticulo').empty(); return; }
+
+            let lista = await buscarArticulos(q);
+
+            // Fallback: sugerir desde la tabla visible
+            if((!lista || !lista.length) && $.fn.dataTable.isDataTable('#tablaInventario')){
+                const rows = $('#tablaInventario').DataTable().rows().data().toArray();
+                const val = q.toLowerCase();
+                const uniq = new Map();
+                rows.forEach(r=>{
+                    const nombre = (r.articuloNombre||'').toLowerCase();
+                    const sku = (r.sku||'').toLowerCase();
+                    if(nombre.includes(val) || sku.includes(val)){
+                        const key = r.articuloId || r.sku || r.articuloNombre;
+                        if(!uniq.has(key)){
+                            uniq.set(key, { id: r.articuloId || null, nombre: r.articuloNombre || '', sku: r.sku || '' });
+                        }
+                    }
+                });
+                lista = Array.from(uniq.values()).slice(0,15);
+            }
+
+            const dl = $('#dlArticulo').empty();
+            (lista||[]).forEach(a=>{
+                const label = (a.nombre||'') + (a.sku ? ` (SKU: ${a.sku})` : '');
+                dl.append(`<option value="${label}" data-id="${a.id||''}"></option>`);
+            });
+        });
+
+        // Al elegir del datalist o poner un ID
+        $('#agArticulo').on('change blur', async function(){
+            if(!$('#agExistente').is(':checked')) return;
+            const v = this.value.trim();
+            let id = null;
+            if(/^\d+$/.test(v)) id = parseInt(v,10);
+            if(!id){
+                const opt = Array.from(document.querySelectorAll('#dlArticulo option')).find(o => o.value === v);
+                if(opt) id = parseInt(opt.getAttribute('data-id'),10);
+            }
+            if(id) await cargarArticuloDetalle({id});
+        });
+
+        // Guardar (con manejo de 409 duplicado)
         $('#btnGuardarAgregar').on('click', async ()=>{
+            const existente = $('#agExistente').is(':checked');
+
             const payload = {
-                articuloId:  parseInt($artId.val(),10) || null,
-                sku:         ($sku.val()||'').trim(),
-                articuloTexto: ($nom.val()||'').trim(),
-                unidadMedida:  ($um.val()||'').trim(),
-                ubicacionId:   parseInt($ubi.val(),10) || 0,
-                cantidad:      toFloat($cant.val()),
-                stockMin:      toFloat($min.val()),
-                stockMax:      toFloat($max.val()),
-                loteCodigo:    ($lote.val()||'').trim(),
-                loteNotas:     ($notas.val()||'').trim(),
-                fechaFabricacion: $per.is(':checked') ? ($fab.val()||null) : null,
-                fechaCaducidad:   $per.is(':checked') ? ($cad.val()||null) : null,
-                operacion:        $op.val(),
-                autoCrear:        true
+                articuloId:  parseInt($('#agArticuloId').val(),10) || null,
+                articuloTexto: ($('#agNombre').val()||'').trim(),
+                unidadMedida:  ($('#agUM').val()||'').trim(),
+                ubicacionId:   parseInt($('#agUbicacion').val(),10) || 0,
+                cantidad:      ($('#agCantidad').val()===''? null : parseFloat($('#agCantidad').val())),
+                stockMin:      ($('#agMin').val()===''? null : parseFloat($('#agMin').val())),
+                stockMax:      ($('#agMax').val()===''? null : parseFloat($('#agMax').val())),
+                loteCodigo:    ($('#agLote').val()||'').trim(),
+                loteNotas:     ($('#agNotas').val()||'').trim(),
+                fechaFabricacion: $('#agPer').is(':checked') ? ($('#agFab').val()||null) : null,
+                fechaCaducidad:   $('#agPer').is(':checked') ? ($('#agCad').val()||null) : null,
+                operacion:        $('#agOperacion').val(),
+                autoCrear:        !existente
             };
 
+            // Validaciones
             if (!payload.ubicacionId){ alert('Selecciona una ubicación.'); return; }
-            if (payload.cantidad===null){ alert('Captura la cantidad.'); return; }
-            if (!payload.articuloId && !payload.sku && !payload.articuloTexto){
-                alert('Proporciona ID, SKU o nombre del artículo.'); return;
+            if (payload.cantidad===null || isNaN(payload.cantidad)){ alert('Captura la cantidad.'); return; }
+            if (existente && !payload.articuloId){ alert('Activas “Artículo en existencia”: selecciona uno de la lista.'); return; }
+            if (!existente && !payload.articuloTexto){ alert('Escribe el nombre del nuevo artículo.'); return; }
+            if (payload.cantidad <= 0 && payload.operacion!=='reemplazar'){
+                alert('La cantidad debe ser > 0. Para ajustes exactos usa "Reemplazar".');
+                return;
+            }
+
+            // Reglas de existencia local
+            const ex = await existeStock({
+                ubicacionId: payload.ubicacionId,
+                articuloId: payload.articuloId || '',
+                loteCodigo: payload.loteCodigo || ''
+            });
+            if(!ex && payload.operacion==='restar'){
+                alert('No puedes restar porque el artículo aún no existe en esa ubicación/lote.');
+                return;
+            }
+            if(ex && payload.operacion==='reemplazar'){
+                const ok = confirm(`Este artículo ya existe con ${ex.cantidad} ${ex.unidadMedida||''}. ¿Deseas REEMPLAZAR por ${payload.cantidad}?`);
+                if(!ok) return;
             }
 
             try{
                 const res = await fetch("<?= site_url('api/inventario/agregar') ?>", {
                     method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
                 });
-                const js = await res.json();
-                if (!res.ok || !js.ok){ alert(js.message || 'No se pudo guardar'); return; }
-                bootstrap.Modal.getInstance($m[0]).hide();
+
+                let js = null; try { js = await res.json(); } catch(_){}
+
+                // Duplicado (409) desde el backend
+                if (res.status === 409 && js && js.code === 'duplicate') {
+                    showErrorModal(
+                        `El artículo <strong>${js.nombre || ''}</strong> ya existe (SKU: <code>${js.sku || 's/n'}</code>).<br>
+           Para modificar existencias, activa <em>“Artículo en existencia”</em> y selecciona el artículo.`,
+                        'Artículo ya en existencia',
+                        { usarExistenteId: js.articuloId || null }
+                    );
+                    return;
+                }
+
+                if (!res.ok || !js || !js.ok){ alert((js && js.message) || 'No se pudo guardar'); return; }
+
+                bootstrap.Modal.getInstance(document.getElementById('agregarModal')).hide();
                 dt.ajax.reload(null, false);
             }catch(e){
                 alert('Error de red al guardar');

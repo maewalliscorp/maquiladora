@@ -125,17 +125,42 @@ class AlmacenController extends BaseController
         $unidadMedida  = trim((string)($in['unidadMedida'] ?? ''));
         $stockMin      = $in['stockMin'] ?? null;
         $stockMax      = $in['stockMax'] ?? null;
-        $autoCrear     = $in['autoCrear'] ?? true;
+        $autoCrear     = (bool)($in['autoCrear'] ?? true);
 
         if (!$ubicacionId || $cantidad === null) {
             return $this->response->setStatusCode(422)->setJSON(['ok'=>false,'message'=>'ubicacionId y cantidad son obligatorios']);
         }
 
         $db = \Config\Database::connect();
+
+        // ===== BLOQUEO DE DUPLICADOS EN MODO CREAR (evita sumar por nombre repetido) =====
+        if ($autoCrear && !$articuloId && $sku === '' && $articuloTexto !== '') {
+            $dup = $db->table('articulo')->select('id, sku, nombre')
+                ->where('activo',1)
+                ->groupStart()
+                ->where('nombre', $articuloTexto)
+                ->orWhere('sku', $articuloTexto)
+                ->groupEnd()
+                ->get()->getRowArray();
+
+            if ($dup) {
+                return $this->response
+                    ->setStatusCode(409) // Conflict
+                    ->setJSON([
+                        'ok'         => false,
+                        'code'       => 'duplicate',
+                        'message'    => 'Artículo ya en existencia',
+                        'articuloId' => (int)$dup['id'],
+                        'sku'        => $dup['sku'],
+                        'nombre'     => $dup['nombre'],
+                    ]);
+            }
+        }
+
         $db->transStart();
 
         // 1) Resolver o crear artículo
-        $resArt = $this->inv->resolverOCrearArticulo($articuloId, $sku, $articuloTexto, $unidadMedida ?: null, $stockMin, $stockMax, (bool)$autoCrear);
+        $resArt = $this->inv->resolverOCrearArticulo($articuloId, $sku, $articuloTexto, $unidadMedida ?: null, $stockMin, $stockMax, $autoCrear);
         if (!$resArt['ok']) {
             $db->transComplete();
             return $this->response->setStatusCode(422)->setJSON(['ok'=>false,'message'=>$resArt['message'] ?? 'No se pudo resolver el artículo']);
@@ -149,16 +174,16 @@ class AlmacenController extends BaseController
         if ($stockMax !== null)   $upd['stockMax']     = $stockMax === '' ? null : (float)$stockMax;
         if ($upd) $db->table('articulo')->update($upd, ['id'=>$articuloId]);
 
-        // 2) Lote (opcional)
-        $loteId = $this->inv->findOrCreateLote(
-            $articuloId,
-            trim((string)($in['loteCodigo'] ?? '')),
-            ($in['fechaFabricacion'] ?? null) ?: null,
-            ($in['fechaCaducidad']   ?? null) ?: null,
-            ($in['loteNotas']        ?? null) ?: null
-        );
+        // 2) Lote: NO crear si viene vacío
+        $codigo = trim((string)($in['loteCodigo'] ?? ''));
+        $fab    = ($in['fechaFabricacion'] ?? null) ?: null;
+        $cad    = ($in['fechaCaducidad']   ?? null) ?: null;
+        $notas  = ($in['loteNotas']        ?? null);
 
-        // 3) Upsert de stock
+        $hayLote = ($codigo !== '') || $fab || $cad || ($notas !== null && $notas !== '');
+        $loteId  = $hayLote ? $this->inv->findOrCreateLote($articuloId, $codigo, $fab, $cad, $notas) : null;
+
+        // 3) Upsert de stock (sumar/restar/reemplazar sobre el existente)
         $resStock = $this->inv->upsertStock($articuloId, $ubicacionId, $loteId, (float)$cantidad, $operacion);
         if (!$resStock['ok']) {
             $db->transComplete();
@@ -189,5 +214,122 @@ class AlmacenController extends BaseController
         }catch (\Throwable $e){
             return $this->response->setStatusCode(500)->setJSON(['ok'=>false,'message'=>'No se pudo eliminar']);
         }
+    }
+
+    /* ===== NUEVO: verificar existencia por (artículo + ubicación + lote) ===== */
+    public function apiExiste()
+    {
+        $db = \Config\Database::connect();
+
+        $ubicacionId = (int)($this->request->getGet('ubicacionId') ?? 0);
+        $articuloId  = $this->request->getGet('articuloId');
+        $sku         = trim((string)($this->request->getGet('sku') ?? ''));
+        $loteCodigo  = trim((string)($this->request->getGet('loteCodigo') ?? ''));
+
+        if(!$ubicacionId) return $this->response->setJSON(['exists'=>false]);
+
+        // Resolver artículo
+        $artId = null;
+        if($articuloId) {
+            $artId = (int)$articuloId;
+        } elseif($sku !== '') {
+            $art = $db->table('articulo')->where('sku',$sku)->get()->getRowArray();
+            if($art) $artId = (int)$art['id'];
+        }
+        if(!$artId) return $this->response->setJSON(['exists'=>false]);
+
+        // Resolver lote (si viene código)
+        $loteId = null;
+        if($loteCodigo !== ''){
+            $l = $db->table('lote')->where(['articuloId'=>$artId,'codigo'=>$loteCodigo])->get()->getRowArray();
+            if($l) $loteId = (int)$l['id']; else return $this->response->setJSON(['exists'=>false]);
+        }
+
+        // Buscar stock exacto (nota: IS NULL cuando corresponde)
+        $b = $db->table('stock')
+            ->select('stock.id as id, stock.cantidad, a.unidadMedida')
+            ->join('articulo a','a.id=stock.articuloId','left')
+            ->where('stock.articuloId',$artId)
+            ->where('stock.ubicacionId',$ubicacionId);
+
+        if($loteId === null) {
+            $b->where('stock.loteId IS NULL', null, false);
+        } else {
+            $b->where('stock.loteId',$loteId);
+        }
+
+        $row = $b->get()->getRowArray();
+        return $this->response->setJSON([
+            'exists'=> (bool)$row,
+            'data'  => $row ? [
+                'id' => (int)$row['id'],
+                'cantidad' => (float)$row['cantidad'],
+                'unidadMedida' => $row['unidadMedida'] ?? ''
+            ] : null
+        ]);
+    }
+
+    /* ===== NUEVO: búsqueda por id/sku/nombre con existencias totales ===== */
+    public function apiBuscarArticulos()
+    {
+        $q = trim((string)($this->request->getGet('q') ?? ''));
+        if($q==='') return $this->response->setJSON(['data'=>[]]);
+
+        $db = \Config\Database::connect();
+        $b = $db->table('articulo a')
+            ->select('a.id, a.sku, a.nombre, a.unidadMedida, a.stockMin, a.stockMax, COALESCE(SUM(s.cantidad),0) AS existencias', false)
+            ->join('stock s', 's.articuloId=a.id', 'left')
+            ->groupBy('a.id')
+            ->limit(10);
+
+        $b->groupStart();
+        if(ctype_digit($q)) $b->orWhere('a.id', (int)$q);
+        $b->orLike('a.sku', $q)
+            ->orLike('a.nombre', $q);
+        $b->groupEnd();
+
+        $rows = $b->get()->getResultArray();
+        return $this->response->setJSON(['data'=>$rows]);
+    }
+
+    /* ===== NUEVO: detalle de artículo por id o sku ===== */
+    public function apiArticuloDetalle()
+    {
+        $id  = $this->request->getGet('id');
+        $sku = trim((string)($this->request->getGet('sku') ?? ''));
+
+        if(!$id && $sku==='') return $this->response->setJSON(['data'=>null]);
+
+        $db = \Config\Database::connect();
+        $b = $db->table('articulo a')
+            ->select('a.id, a.sku, a.nombre, a.unidadMedida, a.stockMin, a.stockMax, COALESCE(SUM(s.cantidad),0) AS existencias', false)
+            ->join('stock s','s.articuloId=a.id','left')
+            ->groupBy('a.id')
+            ->limit(1);
+
+        if($id) $b->where('a.id',(int)$id);
+        if($sku!=='') $b->where('a.sku',$sku);
+
+        $row = $b->get()->getRowArray();
+        return $this->response->setJSON(['data'=>$row]);
+    }
+
+    /* ===== NUEVO: resumen de existencias por artículo ===== */
+    public function apiResumenArticulo($articuloId)
+    {
+        $id = (int)$articuloId;
+        if(!$id) return $this->response->setJSON(['data'=>[]]);
+
+        $db = \Config\Database::connect();
+        $rows = $db->table('stock s')
+            ->select('al.codigo AS almacenCodigo, u.codigo AS ubicacionCodigo, l.codigo AS loteCodigo, l.fechaFabricacion AS fechaFab, l.fechaCaducidad AS fechaCad, s.cantidad')
+            ->join('ubicacion u','u.id=s.ubicacionId','left')
+            ->join('almacen al','al.id=u.almacenId','left')
+            ->join('lote l','l.id=s.loteId','left')
+            ->where('s.articuloId',$id)
+            ->orderBy('al.codigo','ASC')->orderBy('u.codigo','ASC')->orderBy('l.codigo','ASC')
+            ->get()->getResultArray();
+
+        return $this->response->setJSON(['data'=>$rows]);
     }
 }

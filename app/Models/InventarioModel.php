@@ -265,7 +265,7 @@ class InventarioModel extends Model
         return ['ok'=>false,'articuloId'=>0,'created'=>false,'message'=>'Artículo no encontrado (id, sku o nombre)'];
     }
 
-    /** Busca o crea lote. Si no hay datos, retorna null. */
+    /** Busca o crea lote. Si no hay datos, retorna null (NO crea lote vacío). */
     public function findOrCreateLote(int $articuloId, string $codigo=null, ?string $fechaFab=null, ?string $fechaCad=null, ?string $notas=null): ?int
     {
         $codigo = trim((string)$codigo);
@@ -298,39 +298,54 @@ class InventarioModel extends Model
      * Inserta o actualiza un registro de stock para (articuloId, ubicacionId, loteId)
      * $operacion: 'sumar' (default), 'restar' (no permite negativo), 'reemplazar' (setea).
      * Retorna ['ok'=>bool, 'stockId'=>int, 'cantidad'=>float, 'message'=>?].
+     *
+     * **FIX**: cuando $loteId es NULL, se usa `IS NULL` (no `= NULL`) para encontrar el existente.
      */
     public function upsertStock(int $articuloId, int $ubicacionId, ?int $loteId, float $cantidad, string $operacion='sumar'): array
     {
-        $row = $this->db->table('stock')
-            ->select('id, cantidad')->where([
-                'articuloId'=>$articuloId,
-                'ubicacionId'=>$ubicacionId,
-                'loteId'     =>$loteId
-            ])->get()->getRowArray();
+        $b = $this->db->table('stock')
+            ->select('id, cantidad')
+            ->where('articuloId', $articuloId)
+            ->where('ubicacionId', $ubicacionId);
+
+        if ($loteId === null) {
+            // MUY IMPORTANTE: comparar por IS NULL para que encuentre el registro existente sin lote
+            $b->where('loteId IS NULL', null, false);
+        } else {
+            $b->where('loteId', $loteId);
+        }
+
+        $row = $b->get()->getRowArray();
 
         if ($row) {
             $stockId = (int)$row['id'];
             $actual  = (float)$row['cantidad'];
+
             if ($operacion === 'reemplazar') {
                 $nuevo = $cantidad;
             } elseif ($operacion === 'restar') {
-                $nuevo = max(0, $actual - $cantidad);
+                $nuevo = $actual - $cantidad;
+                if ($nuevo < 0) return ['ok'=>false,'stockId'=>$stockId,'cantidad'=>$actual,'message'=>'La cantidad resultante no puede ser negativa'];
             } else { // sumar
                 $nuevo = $actual + $cantidad;
             }
+
             $this->db->table('stock')->update(['cantidad'=>$nuevo], ['id'=>$stockId]);
             return ['ok'=>true,'stockId'=>$stockId,'cantidad'=>$nuevo];
-        } else {
-            if ($operacion === 'restar') {
-                return ['ok'=>false,'stockId'=>0,'cantidad'=>0,'message'=>'No existe stock para restar'];
-            }
-            $this->db->table('stock')->insert([
-                'articuloId'=>$articuloId,
-                'ubicacionId'=>$ubicacionId,
-                'loteId'     =>$loteId ?: null,
-                'cantidad'   =>$cantidad
-            ]);
-            return ['ok'=>true,'stockId'=>(int)$this->db->insertID(),'cantidad'=>$cantidad];
         }
+
+        // No existe registro: solo crear en SUMAR o REEMPLAZAR
+        if ($operacion === 'restar') {
+            return ['ok'=>false,'stockId'=>0,'cantidad'=>0,'message'=>'No existe stock para restar en esa ubicación/lote'];
+        }
+
+        $this->db->table('stock')->insert([
+            'articuloId' => $articuloId,
+            'ubicacionId'=> $ubicacionId,
+            'loteId'     => $loteId, // puede ser NULL
+            'cantidad'   => $cantidad
+        ]);
+
+        return ['ok'=>true,'stockId'=>(int)$this->db->insertID(),'cantidad'=>$cantidad];
     }
 }
