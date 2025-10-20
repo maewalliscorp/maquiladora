@@ -173,8 +173,8 @@
                         <div class="input-group align-items-center">
                             <input type="text" id="agArticulo" class="form-control" list="dlArticulo" placeholder="Buscar por nombre o SKU...">
                             <span class="input-group-text bg-transparent border-0" id="agArtSpin" style="display:none;">
-              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            </span>
+                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            </span>
                         </div>
                         <datalist id="dlArticulo"></datalist>
                         <div class="hint">Escribe 3+ caracteres para buscar (coincide por nombre o SKU).</div>
@@ -286,7 +286,7 @@
         </div></div>
 </div>
 
-<!-- Modal ERROR / AVISO (duplicados, etc.) -->
+<!-- Modal ERROR / AVISO -->
 <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -356,7 +356,6 @@
             return `<span class="badge badge-pill ${cls}">${txt}</span>`;
         }
 
-        // Modal de error / aviso
         function showErrorModal(msg, title='Aviso', opts={}){
             $('#errorModalLabel').text(title);
             $('#errorModalMsg').html(msg);
@@ -367,13 +366,10 @@
                     $('#agArticuloId').val(opts.usarExistenteId).trigger('change');
                     bootstrap.Modal.getInstance(document.getElementById('errorModal')).hide();
                 });
-            } else {
-                $btn.hide().off('click');
-            }
+            } else { $btn.hide().off('click'); }
             new bootstrap.Modal(document.getElementById('errorModal')).show();
         }
 
-        // Checar existencia exacta en servidor (artículo+ubicación+lote)
         async function existeStock(params){
             const qs = new URLSearchParams(params).toString();
             const r = await fetch("<?= site_url('api/inventario/existe') ?>?"+qs);
@@ -382,7 +378,6 @@
             return js && js.exists ? (js.data || null) : null;
         }
 
-        // Buscar artículos por nombre/SKU (spinner + datalist)
         async function buscarArticulos(q){
             if(!q) return [];
             const $spin = $('#agArtSpin'); $spin.show();
@@ -394,7 +389,6 @@
             } finally { $spin.hide(); }
         }
 
-        // Cargar detalle del artículo seleccionado y pintar resumen
         async function cargarArticuloDetalle({id=null, sku=null}){
             const qs = new URLSearchParams();
             if(id) qs.set('id', id);
@@ -406,7 +400,6 @@
             if(!js || !js.data) return null;
             const a = js.data;
 
-            // Autorrellenar
             $('#agArticuloId').val(a.id);
             $('#agArticulo').val(a.nombre || (a.sku?`(SKU ${a.sku})`:''));
             $('#agNombre').val(a.nombre||'');
@@ -414,7 +407,6 @@
             if(a.stockMin!==undefined) $('#agMin').val(a.stockMin ?? '');
             if(a.stockMax!==undefined) $('#agMax').val(a.stockMax ?? '');
 
-            // Resumen existencias
             const rr = await fetch("<?= site_url('api/inventario/resumen-articulo') ?>/"+a.id);
             let html = '';
             if(rr.ok){
@@ -430,7 +422,7 @@
             return a;
         }
 
-        // DataTable
+        // === DataTable con paginación 10 por página y números de página ===
         const dt = $tabla.DataTable({
             language: langES,
             ajax:{
@@ -461,20 +453,23 @@
                 {data:null, orderable:false, searchable:false, render:(row)=>{
                         const payload = encodeURIComponent(JSON.stringify(row));
                         return `
-          <div class="btn-group" role="group">
-            <button class="btn btn-sm btn-outline-info btn-icon btn-ver" title="Ver" data-row="${payload}">
-              <i class="bi bi-eye"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-primary btn-icon btn-edit" title="Editar" data-row="${payload}">
-              <i class="bi bi-pencil-square"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-danger btn-icon btn-del" title="Eliminar" data-row="${payload}">
-              <i class="bi bi-trash"></i>
-            </button>
-          </div>`;
+                    <div class="btn-group" role="group">
+                      <button class="btn btn-sm btn-outline-info btn-icon btn-ver" title="Ver" data-row="${payload}">
+                        <i class="bi bi-eye"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline-primary btn-icon btn-edit" title="Editar" data-row="${payload}">
+                        <i class="bi bi-pencil-square"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger btn-icon btn-del" title="Eliminar" data-row="${payload}">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>`;
                     }}
             ],
-            order:[[0,'asc'],[1,'asc']]
+            order:[[0,'asc'],[1,'asc']],
+            pageLength: 10,
+            lengthMenu: [[10,25,50,100,-1],[10,25,50,100,'Todos']],
+            pagingType: 'numbers' // muestra 1,2,3,… en la paginación
         });
 
         $sel.on('change', ()=> dt.ajax.reload());
@@ -501,10 +496,10 @@
             $('#dImg').attr('src', row.urlImagen || "<?= base_url('img/placeholder.png') ?>");
 
             const combo = `
-      <div class="d-flex flex-wrap gap-2 align-items-center">
-        <span class="small text-muted">Stock:</span> ${stockBadge(row)}
-        <span class="small text-muted ms-2">Caducidad:</span> ${caducidadBadge(row)}
-      </div>`;
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="small text-muted">Stock:</span> ${stockBadge(row)}
+                <span class="small text-muted ms-2">Caducidad:</span> ${caducidadBadge(row)}
+              </div>`;
             $('#dEstado').html(combo);
 
             $('#tbodyLotes').html('<tr><td colspan="4" class="text-muted">Cargando...</td></tr>');
@@ -517,20 +512,20 @@
                     let html = '';
                     if (Array.isArray(data) && data.length){
                         html = data.map(l => `
-            <tr>
-              <td>${l.loteCodigo ?? '-'}</td>
-              <td>${fmt2(l.fechaFabricacion)}</td>
-              <td>${fmt2(l.fechaCaducidad)}</td>
-              <td>${l.diasCaduca ?? '-'}</td>
-            </tr>`).join('');
+                          <tr>
+                            <td>${l.loteCodigo ?? '-'}</td>
+                            <td>${fmt2(l.fechaFabricacion)}</td>
+                            <td>${fmt2(l.fechaCaducidad)}</td>
+                            <td>${l.diasCaduca ?? '-'}</td>
+                          </tr>`).join('');
                     } else {
                         html = `
-            <tr>
-              <td>${row.loteCodigo ?? '-'}</td>
-              <td>${fmt(row.fechaFabricacion)}</td>
-              <td>${fmt(row.fechaCaducidad)}</td>
-              <td>${row.diasCaduca ?? '-'}</td>
-            </tr>`;
+                          <tr>
+                            <td>${row.loteCodigo ?? '-'}</td>
+                            <td>${fmt(row.fechaFabricacion)}</td>
+                            <td>${fmt(row.fechaCaducidad)}</td>
+                            <td>${row.diasCaduca ?? '-'}</td>
+                          </tr>`;
                     }
                     $('#tbodyLotes').html(html);
                 }).catch(()=>{});
@@ -541,12 +536,12 @@
                 if(Array.isArray(data) && data.length){
                     const html = data.map(m=>(
                         `<tr>
-              <td>${(m.fecha||'').replace('T',' ').slice(0,19)}</td>
-              <td>${m.tipo||''}</td>
-              <td>${m.cantidad||''}</td>
-              <td>${(m.refTipo||'')}-${(m.refId||'')}</td>
-              <td>${m.notas||''}</td>
-            </tr>`
+                          <td>${(m.fecha||'').replace('T',' ').slice(0,19)}</td>
+                          <td>${m.tipo||''}</td>
+                          <td>${m.cantidad||''}</td>
+                          <td>${(m.refTipo||'')}-${(m.refId||'')}</td>
+                          <td>${m.notas||''}</td>
+                        </tr>`
                     )).join('');
                     $('#tbodyMovs').html(html);
                     $('#historialWrap').removeClass('d-none');
@@ -677,7 +672,6 @@
 
         $('#agExistente').on('change', function(){ setExistenteMode(this.checked); });
 
-        // Sugerencias con spinner
         $('#agArticulo').on('input', async function(){
             if(!$('#agExistente').is(':checked')) return;
             const q = this.value.trim();
@@ -685,7 +679,6 @@
 
             let lista = await buscarArticulos(q);
 
-            // Fallback: sugerir desde la tabla visible
             if((!lista || !lista.length) && $.fn.dataTable.isDataTable('#tablaInventario')){
                 const rows = $('#tablaInventario').DataTable().rows().data().toArray();
                 const val = q.toLowerCase();
@@ -710,7 +703,6 @@
             });
         });
 
-        // Al elegir del datalist o poner un ID
         $('#agArticulo').on('change blur', async function(){
             if(!$('#agExistente').is(':checked')) return;
             const v = this.value.trim();
@@ -723,7 +715,6 @@
             if(id) await cargarArticuloDetalle({id});
         });
 
-        // Guardar (con manejo de 409 duplicado)
         $('#btnGuardarAgregar').on('click', async ()=>{
             const existente = $('#agExistente').is(':checked');
 
@@ -743,7 +734,6 @@
                 autoCrear:        !existente
             };
 
-            // Validaciones
             if (!payload.ubicacionId){ alert('Selecciona una ubicación.'); return; }
             if (payload.cantidad===null || isNaN(payload.cantidad)){ alert('Captura la cantidad.'); return; }
             if (existente && !payload.articuloId){ alert('Activas “Artículo en existencia”: selecciona uno de la lista.'); return; }
@@ -753,7 +743,6 @@
                 return;
             }
 
-            // Reglas de existencia local
             const ex = await existeStock({
                 ubicacionId: payload.ubicacionId,
                 articuloId: payload.articuloId || '',
@@ -775,11 +764,10 @@
 
                 let js = null; try { js = await res.json(); } catch(_){}
 
-                // Duplicado (409) desde el backend
                 if (res.status === 409 && js && js.code === 'duplicate') {
                     showErrorModal(
                         `El artículo <strong>${js.nombre || ''}</strong> ya existe (SKU: <code>${js.sku || 's/n'}</code>).<br>
-           Para modificar existencias, activa <em>“Artículo en existencia”</em> y selecciona el artículo.`,
+                         Para modificar existencias, activa <em>“Artículo en existencia”</em> y selecciona el artículo.`,
                         'Artículo ya en existencia',
                         { usarExistenteId: js.articuloId || null }
                     );
