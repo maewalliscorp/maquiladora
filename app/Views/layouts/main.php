@@ -107,7 +107,7 @@
                     <?php endif; ?>
                     <?php if (can('menu.ordenes_clientes')): ?>
                     <div class="col-4">
-                        <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/ordenesclientes') ?>">
+                        <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('clientes') ?>">
                             <i class="bi bi-people"></i>
                             <small>Clientes</small>
                         </a>
@@ -333,7 +333,7 @@
                         <a class="dropdown-item" href="<?= base_url('modulo1/produccion') ?>"><i class="bi bi-gear-wide-connected me-2"></i>Producción</a>
                         <?php endif; ?>
                         <?php if (can('menu.ordenes_clientes')): ?>
-                        <a class="dropdown-item" href="<?= base_url('modulo3/ordenesclientes') ?>"><i class="bi bi-people me-2"></i>Órdenes Clientes</a>
+                        <a class="dropdown-item" href="<?= base_url('clientes') ?>"><i class="bi bi-people me-2"></i>Clientes</a>
                         <?php endif; ?>
                         <?php if ($secGestion && $secMuestrasInspeccion): ?>
                         <div class="dropdown-divider"></div>

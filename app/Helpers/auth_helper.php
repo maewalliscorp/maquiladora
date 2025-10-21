@@ -41,19 +41,38 @@ if (!function_exists('can_menu')) {
         if ($roleNorm === 'administrador' || $roleNorm === 'jefe') {
             return true; // todo el menú
         }
+        if ($roleNorm === 'inspector') {
+            $allowed = [
+                'menu.pedidos',
+                'menu.ordenes',
+                'menu.produccion',
+                'menu.muestras',
+                'menu.inspeccion',
+            ];
+            return in_array($perm, $allowed, true);
+        }
         if ($roleNorm === 'almacenista') {
             $allowed = [
-                'menu.planificacion_materiales',
-                'menu.desperdicios',
-                'menu.mant_correctivo',
                 'menu.inventario_almacen',
+                'menu.inv_maquinas',
+                'menu.desperdicios',
+                'menu.incidencias',
+                'menu.logistica_preparacion',
+                'menu.logistica_gestion',
+                'menu.logistica_documentos',
+                'menu.planificacion_materiales',
+                'menu.mant_correctivo',
             ];
             return in_array($perm, $allowed, true);
         }
         if ($roleNorm === 'calidad') {
             $allowed = [
-                'menu.muestras',
                 'menu.inspeccion',
+                'menu.muestras',
+                'menu.pedidos',
+                'menu.logistica_preparacion',
+                'menu.logistica_gestion',
+                'menu.logistica_documentos',
                 'menu.desperdicios',
             ];
             return in_array($perm, $allowed, true);
@@ -68,7 +87,27 @@ if (!function_exists('can_menu')) {
         if ($roleNorm === 'diseñador' || $roleNorm === 'disenador') { // soportar sin tilde
             $allowed = [
                 'menu.catalogo_disenos',
+                'menu.pedidos',
+                'menu.produccion',
                 'menu.muestras',
+                'menu.desperdicios',
+            ];
+            return in_array($perm, $allowed, true);
+        }
+        if ($roleNorm === 'envios') {
+            $allowed = [
+                'menu.logistica_preparacion',
+                'menu.logistica_gestion',
+                'menu.logistica_documentos',
+            ];
+            return in_array($perm, $allowed, true);
+        }
+        if ($roleNorm === 'rh' || $roleNorm === 'rrhh') {
+            $allowed = [
+                'menu.ordenes_clientes',
+                'menu.ordenes',
+                'menu.usuarios',
+                'menu.roles',
             ];
             return in_array($perm, $allowed, true);
         }
