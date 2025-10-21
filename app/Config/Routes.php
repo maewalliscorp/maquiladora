@@ -32,7 +32,6 @@ $routes->get('/login',           'UsuarioController::login',   ['as' => 'login']
 $routes->post('/login',          'UsuarioController::authenticate');
 $routes->get('/logout',          'UsuarioController::logout');
 
-
 // API sueltos
 $routes->get('api/maquiladoras', 'UsuarioController::getMaquiladoras');
 
@@ -44,21 +43,21 @@ $routes->post('modulo11/actualizar_usuario', 'Modulos::m11_actualizar_usuario');
 /* =========================
  * Inventario de Almacenes
  * ========================= */
-$routes->get   ('almacen/inventario',                'AlmacenController::inventario');        // Vista
-$routes->get   ('api/almacenes',                     'AlmacenController::apiAlmacenes');      // Spinner almacenes
-$routes->get   ('api/ubicaciones',                   'AlmacenController::apiUbicaciones');    // Combo ubicaciones
-$routes->get   ('api/inventario',                    'AlmacenController::apiInventario');     // Datos inventario
-$routes->get   ('api/inventario/lotes',              'AlmacenController::apiLotes');          // Lotes por artículo
-$routes->get   ('api/inventario/movimientos/(:num)', 'AlmacenController::apiMovimientos/$1'); // Historial
-$routes->post  ('api/inventario/agregar',            'AlmacenController::apiAgregar');        // Alta/upsert
-$routes->post  ('api/inventario/editar',             'AlmacenController::apiEditar');         // Editar
-$routes->delete('api/inventario/eliminar/(:num)',    'AlmacenController::apiEliminar/$1');    // Eliminar
+$routes->get   ('almacen/inventario',                'AlmacenController::inventario');
+$routes->get   ('api/almacenes',                     'AlmacenController::apiAlmacenes');
+$routes->get   ('api/ubicaciones',                   'AlmacenController::apiUbicaciones');
+$routes->get   ('api/inventario',                    'AlmacenController::apiInventario');
+$routes->get   ('api/inventario/lotes',              'AlmacenController::apiLotes');
+$routes->get   ('api/inventario/movimientos/(:num)', 'AlmacenController::apiMovimientos/$1');
+$routes->post  ('api/inventario/agregar',            'AlmacenController::apiAgregar');
+$routes->post  ('api/inventario/editar',             'AlmacenController::apiEditar');
+$routes->delete('api/inventario/eliminar/(:num)',    'AlmacenController::apiEliminar/$1');
 
 // ===== NUEVAS RUTAS para spinner/búsqueda y validaciones =====
-$routes->get   ('api/inventario/existe',             'AlmacenController::apiExiste');                 // Verifica duplicados exactos
-$routes->get   ('api/articulos/buscar',              'AlmacenController::apiBuscarArticulos');        // Búsqueda por id/sku/nombre
-$routes->get   ('api/articulos/detalle',             'AlmacenController::apiArticuloDetalle');        // Detalle del artículo
-$routes->get   ('api/inventario/resumen-articulo/(:num)', 'AlmacenController::apiResumenArticulo/$1'); // Resumen existencias
+$routes->get   ('api/inventario/existe',                 'AlmacenController::apiExiste');
+$routes->get   ('api/articulos/buscar',                  'AlmacenController::apiBuscarArticulos');
+$routes->get   ('api/articulos/detalle',                 'AlmacenController::apiArticuloDetalle');
+$routes->get   ('api/inventario/resumen-articulo/(:num)','AlmacenController::apiResumenArticulo/$1');
 
 /* --------------------------------------------------------------------
  * Home / Auth landing
@@ -161,7 +160,7 @@ $routes->group('mantenimiento', static function($r){
     $r->get ('correctivo',                   'MantenimientoCorrectivo::index');
     $r->post('correctivo/crear',             'MantenimientoCorrectivo::crear');
     $r->post('correctivo/actualizar/(:num)', 'MantenimientoCorrectivo::actualizar/$1');
-    $r->post('correctivo/eliminar/(:num)',   'MantenimientoCorrectivo::eliminar/$1'); // opcional
+    $r->post('correctivo/eliminar/(:num)',   'MantenimientoCorrectivo::eliminar/$1');
 });
 
 /* --------------------------------------------------------------------
@@ -212,7 +211,7 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->get ('maquinaria',                 'Maquinaria::index');
     $routes->post('maquinaria/guardar',         'Maquinaria::guardar');
     $routes->get ('maquinaria/editar/(:num)',   'Maquinaria::editar/$1');
-    $routes->post('maquinaria/eliminar/(:num)', 'Maquinaria::eliminar/$1'); // <-- eliminar
+    $routes->post('maquinaria/eliminar/(:num)', 'Maquinaria::eliminar/$1');
 
     // Mantenimiento Correctivo (prefijo /modulo3)
     $routes->group('mantenimiento', function($r){
@@ -227,7 +226,7 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
      * LOGÍSTICA · PREPARACIÓN / PACKING
      * ========================= */
     $routes->get('logistica_preparacion', 'LogisticaController::preparacion');
-    $routes->get('preparacion',           'LogisticaController::preparacion'); // alias
+    $routes->get('preparacion',           'LogisticaController::preparacion');
 
     // Embarques
     $routes->post('embarques/crear',                'LogisticaController::crearEmbarque');
@@ -243,7 +242,7 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
      * LOGÍSTICA · GESTIÓN (Tracking)
      * ========================= */
     $routes->get('logistica_gestion', 'LogisticaController::gestion');
-    $routes->get('gestion',           'LogisticaController::gestion'); // alias
+    $routes->get('gestion',           'LogisticaController::gestion');
 
     // CRUD envíos
     $routes->post('envios/crear',           'LogisticaController::crearEnvio');
@@ -264,6 +263,14 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->post('documentos/(:num)/eliminar', 'LogisticaController::eliminarDocumento/$1');
     $routes->get ('documentos/(:num)/pdf',      'LogisticaController::descargarPdf/$1');
 
+    /* =========================
+     * LOGÍSTICA · DOCUMENTO MANUAL (sin BD)
+     * ========================= */
+    $routes->get ('embarque/manual',        'LogisticaController::documentoManual');        // captura + vista previa
+    $routes->post('embarque/manual',        'LogisticaController::documentoManual');        // procesa POST y vuelve a la misma
+    $routes->get ('embarque/manual/print',  'LogisticaController::documentoManualPrint');   // vista SOLO documento (para imprimir)
+    $routes->post('embarque/manual/print',  'LogisticaController::documentoManualPrint');   // idem por POST
+
     // Órdenes de clientes (enlace del menú)
     $routes->get('ordenesclientes', 'Modulos::m1_ordenesclientes');
 });
@@ -276,12 +283,12 @@ $routes->group('calidad', [], function ($routes) {
 
     // Desechos
     $routes->post('desperdicios/guardar',        'Calidad::guardarDesecho');
-    $routes->get ('desperdicios/(:num)',         'Calidad::verDesecho/$1');      // JSON detalle
+    $routes->get ('desperdicios/(:num)',         'Calidad::verDesecho/$1');
     $routes->post('desperdicios/(:num)/editar',  'Calidad::editarDesecho/$1');
 
     // Reprocesos
     $routes->post('reprocesos/guardar',          'Calidad::guardarReproceso');
-    $routes->get ('reprocesos/(:num)',           'Calidad::verReproceso/$1');    // JSON detalle
+    $routes->get ('reprocesos/(:num)',           'Calidad::verReproceso/$1');
     $routes->post('reprocesos/(:num)/editar',    'Calidad::editarReproceso/$1');
 
     // Diagnóstico
@@ -298,11 +305,11 @@ $routes->group('mrp', [], function ($r) {
     // Endpoints opcionales
     $r->post('requerimientos/guardar',       'Mrp::guardarRequerimiento');
     $r->post('requerimientos/(:num)/editar', 'Mrp::editarRequerimiento/$1');
-    $r->get ('requerimientos/(:num)',        'Mrp::verReq/$1'); // JSON
+    $r->get ('requerimientos/(:num)',        'Mrp::verReq/$1');
 
     $r->post('ocs/guardar',                  'Mrp::guardarOc');
     $r->post('ocs/(:num)/editar',            'Mrp::editarOc/$1');
-    $r->get ('ocs/(:num)',                   'Mrp::verOc/$1');  // JSON
+    $r->get ('ocs/(:num)',                   'Mrp::verOc/$1');
 });
 
 /* --------------------------------------------------------------------

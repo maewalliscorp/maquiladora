@@ -31,9 +31,8 @@ class LogisticaController extends BaseController
     /** @return array<string,bool> */
     private function hasCols(string $table, array $need): array
     {
-        try {
-            $cols = array_flip($this->db()->getFieldNames($table)); // ['id'=>0, 'folio'=>1, ...]
-        } catch (\Throwable $e) { $cols = []; }
+        try { $cols = array_flip($this->db()->getFieldNames($table)); }
+        catch (\Throwable $e) { $cols = []; }
         $out = [];
         foreach ($need as $c) $out[$c] = isset($cols[$c]);
         return $out;
@@ -52,7 +51,6 @@ class LogisticaController extends BaseController
      * =======================================================*/
     public function preparacion()
     {
-        // Cargamos datos de forma tolerante
         $embarque = [];
         $clientes = [];
         $ordenes  = [];
@@ -72,7 +70,6 @@ class LogisticaController extends BaseController
             return redirect()->back()->with('error', 'La tabla "embarque" no existe.');
         }
 
-        // Validaciones solo si las columnas existen
         $need = $this->hasCols('embarque', ['folio','clienteId']);
         if (($need['folio'] && $folio === '') || ($need['clienteId'] && $clienteId <= 0)) {
             return redirect()->back()->with('error', 'Folio y Cliente son obligatorios.');
@@ -98,11 +95,8 @@ class LogisticaController extends BaseController
             return redirect()->back()->with('error', 'No hay columnas válidas para guardar en "embarque".');
         }
 
-        try {
-            $id = $m->insert($data, true);
-        } catch (\Throwable $e) {
-            return redirect()->back()->with('error', 'No se pudo crear el embarque: '.$e->getMessage());
-        }
+        try { $id = $m->insert($data, true); }
+        catch (\Throwable $e) { return redirect()->back()->with('error', 'No se pudo crear el embarque: '.$e->getMessage()); }
 
         return redirect()->back()->with('ok', 'Embarque creado #' . $id);
     }
@@ -129,7 +123,6 @@ class LogisticaController extends BaseController
             return redirect()->back()->with('error', 'El embarque no existe o no está abierto.');
         }
 
-        // Evitar duplicado si ambas columnas existen
         $dupCheck = $this->hasCols('embarque_item',['embarqueId','ordenCompraId']);
         if ($dupCheck['embarqueId'] && $dupCheck['ordenCompraId']) {
             if ($mItem->where('embarqueId', $embarqueId)->where('ordenCompraId', $ordenId)->first()) {
@@ -162,9 +155,8 @@ class LogisticaController extends BaseController
         $row  = null; $cli = null;
 
         try { $row = (new OrdenCompraModel())->find($id); } catch (\Throwable $e) {}
-        if (!$row) {
-            return $this->response->setStatusCode(404)->setJSON(['error' => 'No encontrado']);
-        }
+        if (!$row) return $this->response->setStatusCode(404)->setJSON(['error' => 'No encontrado']);
+
         try {
             if (!empty($row['clienteId'])) {
                 $cli = (new ClienteModel())->find((int)$row['clienteId']);
@@ -194,9 +186,7 @@ class LogisticaController extends BaseController
         try { $exists = (bool) $mOc->find($id); }
         catch (\Throwable $e) { $exists = false; }
 
-        if (!$exists) {
-            return redirect()->back()->with('error', 'Orden no encontrada');
-        }
+        if (!$exists) return redirect()->back()->with('error', 'Orden no encontrada');
 
         $payload = array_filter([
             'folio'     => $this->request->getPost('folio'),
@@ -212,9 +202,7 @@ class LogisticaController extends BaseController
 
         $table = property_exists($mOc, 'table') && !empty($mOc->table) ? $mOc->table : 'orden_compra';
         $data  = $this->filterToRealColumns($table, $payload);
-        if (empty($data)) {
-            return redirect()->back()->with('error', 'Ningún campo editable coincide con la tabla.');
-        }
+        if (empty($data)) return redirect()->back()->with('error', 'Ningún campo editable coincide con la tabla.');
 
         try { $mOc->update($id, $data); }
         catch (\Throwable $e) { return redirect()->back()->with('error','No se pudo actualizar: '.$e->getMessage()); }
@@ -238,11 +226,9 @@ class LogisticaController extends BaseController
 
         if (!$this->tableExists('guia_envio')) {
             $transportistas = $this->tableExists('transportista')
-                ? (new TransportistaModel())->orderBy('nombre','ASC')->findAll()
-                : [];
+                ? (new TransportistaModel())->orderBy('nombre','ASC')->findAll() : [];
             $embarques = $this->tableExists('embarque')
-                ? $db->table('embarque')->select('id, folio')->orderBy('id','DESC')->get()->getResultArray()
-                : [];
+                ? $db->table('embarque')->select('id, folio')->orderBy('id','DESC')->get()->getResultArray() : [];
 
             session()->setFlashdata('warn', 'La tabla "guia_envio" no existe (vista en modo lectura vacía).');
             return view('modulos/logistica_gestion', [
@@ -252,7 +238,7 @@ class LogisticaController extends BaseController
             ]);
         }
 
-        $has = $this->hasCols('guia_envio', ['fechaSalida','estado','numeroGuia','urlSeguimiento','embarqueId','transportistaId']);
+        $has  = $this->hasCols('guia_envio', ['fechaSalida','estado','numeroGuia','urlSeguimiento','embarqueId','transportistaId']);
         $tHas = $this->tableExists('transportista') ? $this->hasCols('transportista',['nombre']) : ['nombre'=>false];
         $eHas = $this->tableExists('embarque') ? $this->hasCols('embarque',['folio','fecha','estatus']) : ['folio'=>false,'fecha'=>false,'estatus'=>false];
 
@@ -273,11 +259,9 @@ class LogisticaController extends BaseController
         $envios = $builder->orderBy('g.id','DESC')->get()->getResultArray();
 
         $transportistas = $this->tableExists('transportista')
-            ? (new TransportistaModel())->orderBy('nombre','ASC')->findAll()
-            : [];
+            ? (new TransportistaModel())->orderBy('nombre','ASC')->findAll() : [];
         $embarques = $this->tableExists('embarque')
-            ? $db->table('embarque')->select('id, folio')->orderBy('id','DESC')->get()->getResultArray()
-            : [];
+            ? $db->table('embarque')->select('id, folio')->orderBy('id','DESC')->get()->getResultArray() : [];
 
         return view('modulos/logistica_gestion', compact('envios','transportistas','embarques'));
     }
@@ -307,9 +291,7 @@ class LogisticaController extends BaseController
             return redirect()->back()->with('error','Transportista y número de guía son obligatorios.');
         }
 
-        if (empty($data)) {
-            return redirect()->back()->with('error','No hay columnas válidas para guardar.');
-        }
+        if (empty($data)) return redirect()->back()->with('error','No hay columnas válidas para guardar.');
 
         try { $m->insert($data); }
         catch (\Throwable $e) { return redirect()->back()->with('error','No se pudo guardar: '.$e->getMessage()); }
@@ -367,9 +349,7 @@ class LogisticaController extends BaseController
             'estado'          => $this->request->getPost('estado'),
         ];
         $data = $this->filterToRealColumns($m->table ?? 'guia_envio', $input);
-        if (empty($data)) {
-            return redirect()->back()->with('error','Nada que actualizar (columnas inexistentes).');
-        }
+        if (empty($data)) return redirect()->back()->with('error','Nada que actualizar (columnas inexistentes).');
 
         try { $m->update((int)$id, $data); }
         catch (\Throwable $e) { return redirect()->back()->with('error','No se pudo actualizar: '.$e->getMessage()); }
@@ -420,16 +400,12 @@ class LogisticaController extends BaseController
         $select .= $has('fecha')      ? ', d.fecha'       : ', NULL AS fecha';
         $select .= $has('estado')     ? ', d.estado'      : ', NULL AS estado';
         $select .= $has('archivoRuta')? ', d.archivoRuta' : ', NULL AS archivoRuta';
-        // Compatibilidad con vista: también exponemos urlPdf/archivoPdf si existen; si no, NULL
         $select .= $has('urlPdf')     ? ', d.urlPdf'      : ', NULL AS urlPdf';
         $select .= $has('archivoPdf') ? ', d.archivoPdf'  : ', NULL AS archivoPdf';
-        // Join a embarque para folio
         $select .= $this->tableExists('embarque') ? ', e.folio AS embarqueFolio' : ', NULL AS embarqueFolio';
 
         $builder = $db->table('doc_embarque d')->select($select);
-        if ($this->tableExists('embarque')) {
-            $builder->join('embarque e','e.id=d.embarqueId','left');
-        }
+        if ($this->tableExists('embarque')) $builder->join('embarque e','e.id=d.embarqueId','left');
         $docs = $builder->orderBy('d.id','DESC')->get()->getResultArray();
 
         return view('modulos/logistica_documentos', [
@@ -444,14 +420,12 @@ class LogisticaController extends BaseController
             return redirect()->back()->with('error', 'La tabla "doc_embarque" no existe.');
         }
 
-        $m  = new DocumentoEnvioModel(); // <-- asegúrate que $table='doc_embarque' en el modelo
+        $m  = new DocumentoEnvioModel(); // $table='doc_embarque' en el modelo
         $db = $this->db();
 
-        // Columnas reales
         try { $real = array_flip($db->getFieldNames($m->table ?? 'doc_embarque')); }
         catch (\Throwable $e) { $real = []; }
 
-        // Entradas posibles (se filtrarán a columnas reales)
         $input = [
             'embarqueId'  => (int)$this->request->getPost('embarqueId'),
             'tipo'        => trim((string)$this->request->getPost('tipo')),
@@ -465,7 +439,6 @@ class LogisticaController extends BaseController
         $data = array_intersect_key($input, $real);
         if (isset($data['tipo']) && $data['tipo'] === '') unset($data['tipo']);
 
-        // Autogenerar número/fecha si esas columnas existen y vienen vacías
         if (isset($real['numero']) && empty($data['numero'])) {
             $pref = isset($data['tipo']) ? strtoupper(substr($data['tipo'],0,2)) : 'DO';
             $data['numero'] = $pref.'-'.date('Y').'-'.str_pad((string)rand(1,9999),4,'0',STR_PAD_LEFT);
@@ -474,9 +447,7 @@ class LogisticaController extends BaseController
             $data['fecha'] = date('Y-m-d');
         }
 
-        if (empty($data)) {
-            return redirect()->back()->with('error','No hay columnas válidas para guardar.');
-        }
+        if (empty($data)) return redirect()->back()->with('error','No hay columnas válidas para guardar.');
 
         try { $m->insert($data); }
         catch (\Throwable $e) { return redirect()->back()->with('error','No se pudo crear: '.$e->getMessage()); }
@@ -562,7 +533,6 @@ class LogisticaController extends BaseController
 
     public function descargarPdf($id)
     {
-        // Soporta archivoRuta, urlPdf o archivoPdf (si existen)
         $row = null;
         try { $row = (new DocumentoEnvioModel())->find((int)$id); } catch (\Throwable $e) {}
         if (!$row) return redirect()->back()->with('error','Documento no encontrado.');
@@ -571,11 +541,9 @@ class LogisticaController extends BaseController
         $url  = $row['urlPdf']      ?? null;
         $loc  = $row['archivoPdf']  ?? null;
 
-        // Prioridad: url externa > archivoRuta (http) > archivos locales
         if ($url) return redirect()->to($url);
         if ($ruta && preg_match('~^https?://~i', $ruta)) return redirect()->to($ruta);
 
-        // Descarga local: probamos con archivoRuta y archivoPdf
         $candidatos = [];
         if ($ruta) $candidatos[] = $ruta;
         if ($loc)  $candidatos[] = $loc;
@@ -593,5 +561,159 @@ class LogisticaController extends BaseController
         }
 
         return redirect()->back()->with('error','No hay PDF/archivo disponible para este documento.');
+    }
+
+    /* =========================================================
+     *  DOCUMENTO MANUAL (sin BD)
+     *  GET/POST /modulo3/embarque/manual
+     * =======================================================*/
+    public function documentoManual()
+    {
+        // Plantilla por defecto
+        $embarqueDefault = [
+            'folio'                => 'EMB-2025-0012',
+            'fecha'                => date('Y-m-d'),
+            'origen'               => 'Planta Textiles XYZ, Blvd. Industrial 123, Puebla, PUE, MX',
+            'destino'              => 'Comercializadora ABC, Av. Reforma 100, Cuauhtémoc, CDMX, MX',
+            'remitente'            => 'Textiles XYZ S.A. de C.V.',
+            'rfcRemitente'         => 'TXY123456789',
+            'domicilioRemitente'   => 'Blvd. Industrial 123, Puebla, PUE, MX',
+            'destinatario'         => 'Comercializadora ABC S.A. de C.V.',
+            'rfcDestinatario'      => 'ABC987654321',
+            'domicilioDestinatario'=> 'Av. Reforma 100, Cuauhtémoc, CDMX, MX',
+            'tipoTransporte'       => 'Terrestre (Camión)',
+            'transportista'        => 'Transportes Morales S.A. de C.V.',
+            'operador'             => 'Juan Pérez',
+            'placas'               => 'XYZ-123-4',
+            'referencia'           => 'OC-9981 / Pedido #45021',
+            'notas'                => 'Manipular con cuidado. No apilar más de 4 tarimas.',
+        ];
+
+        $itemsDefault = [
+            ['sku'=>'P0001','descripcion'=>'Playera algodón (talla M) color blanco','cantidad'=>120,'um'=>'pz','peso'=>0.20,'valor'=>85.00],
+            ['sku'=>'P0002','descripcion'=>'Playera algodón (talla L) color blanco','cantidad'=>80,'um'=>'pz','peso'=>0.21,'valor'=>88.50],
+            ['sku'=>'P0010','descripcion'=>'Sudadera algodón (talla M) color negro','cantidad'=>60,'um'=>'pz','peso'=>0.65,'valor'=>265.00],
+            ['sku'=>'A0100','descripcion'=>'Tarima estándar 1.2x1.0 m','cantidad'=>4,'um'=>'pza','peso'=>20.00,'valor'=>250.00],
+        ];
+
+        $embarque = $embarqueDefault;
+        $items    = $itemsDefault;
+
+        if ($this->request->getMethod() === 'post') {
+            $get = fn($k, $def='') => trim((string)$this->request->getPost($k) ?? $def);
+
+            $embarque = [
+                'folio'                 => $get('folio', $embarqueDefault['folio']),
+                'fecha'                 => $get('fecha', date('Y-m-d')),
+                'origen'                => $get('origen', $embarqueDefault['origen']),
+                'destino'               => $get('destino', $embarqueDefault['destino']),
+                'remitente'             => $get('remitente', $embarqueDefault['remitente']),
+                'rfcRemitente'          => $get('rfcRemitente', $embarqueDefault['rfcRemitente']),
+                'domicilioRemitente'    => $get('domicilioRemitente', $embarqueDefault['domicilioRemitente']),
+                'destinatario'          => $get('destinatario', $embarqueDefault['destinatario']),
+                'rfcDestinatario'       => $get('rfcDestinatario', $embarqueDefault['rfcDestinatario']),
+                'domicilioDestinatario' => $get('domicilioDestinatario', $embarqueDefault['domicilioDestinatario']),
+                'tipoTransporte'        => $get('tipoTransporte', $embarqueDefault['tipoTransporte']),
+                'transportista'         => $get('transportista', $embarqueDefault['transportista']),
+                'operador'              => $get('operador', $embarqueDefault['operador']),
+                'placas'                => $get('placas', $embarqueDefault['placas']),
+                'referencia'            => $get('referencia', $embarqueDefault['referencia']),
+                'notas'                 => $get('notas', $embarqueDefault['notas']),
+            ];
+
+            // Acepta ambos esquemas: items_*[] y (sku[], descripcion[], cantidad[], um[], pesoUnit[], valorUnit[])
+            $sku   = $this->request->getPost('items_sku')   ?? $this->request->getPost('sku')         ?? [];
+            $desc  = $this->request->getPost('items_desc')  ?? $this->request->getPost('descripcion') ?? [];
+            $cant  = $this->request->getPost('items_cant')  ?? $this->request->getPost('cantidad')    ?? [];
+            $um    = $this->request->getPost('items_um')    ?? $this->request->getPost('um')          ?? [];
+            $peso  = $this->request->getPost('items_peso')  ?? $this->request->getPost('pesoUnit')    ?? [];
+            $valor = $this->request->getPost('items_valor') ?? $this->request->getPost('valorUnit')   ?? [];
+
+            $items = [];
+            $n = max(count($sku), count($desc), count($cant), count($um), count($peso), count($valor));
+            for ($i = 0; $i < $n; $i++) {
+                $s = trim((string)($sku[$i]   ?? ''));
+                $d = trim((string)($desc[$i]  ?? ''));
+                if ($s === '' && $d === '') continue;
+
+                $items[] = [
+                    'sku'         => $s,
+                    'descripcion' => $d,
+                    'cantidad'    => (float)($cant[$i]  ?? 0),
+                    'um'          => trim((string)($um[$i] ?? 'pz')),
+                    'peso'        => (float)($peso[$i]  ?? 0),
+                    'valor'       => (float)($valor[$i] ?? 0),
+                ];
+            }
+
+            if (empty($items)) $items = $itemsDefault;
+        }
+
+        // Prefill rápido opcional vía ?folio=...
+        $folioQS = $this->request->getGet('folio');
+        if ($folioQS) $embarque['folio'] = $folioQS;
+
+        return view('modulos/embarque_documento_manual', compact('embarque','items'));
+    }
+
+    /**
+     * Vista SOLO para imprimir (GET/POST /modulo3/embarque/manual/print)
+     * - Si viene __payload (JSON) lo usa; si no, cae en defaults.
+     */
+    public function documentoManualPrint()
+    {
+        // Defaults
+        $embarque = [
+            'folio' => 'EMB-2025-0012',
+            'fecha' => date('Y-m-d'),
+        ];
+        $items = [];
+
+        // Preferir payload JSON (desde el botón Imprimir de la vista manual/logística)
+        $payload = $this->request->getPost('__payload');
+        if ($payload) {
+            try {
+                $obj = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
+                // Mapear embarque
+                $keys = ['folio','fecha','origen','destino','remitente','rfcRemitente','domicilioRemitente',
+                    'destinatario','rfcDestinatario','domicilioDestinatario','tipoTransporte',
+                    'transportista','operador','placas','referencia','notas'];
+                foreach ($keys as $k) $embarque[$k] = trim((string)($obj[$k] ?? ($embarque[$k] ?? '')));
+
+                // Items (ambos esquemas)
+                $sku   = $obj['items_sku']   ?? $obj['sku']         ?? [];
+                $desc  = $obj['items_desc']  ?? $obj['descripcion'] ?? [];
+                $cant  = $obj['items_cant']  ?? $obj['cantidad']    ?? [];
+                $um    = $obj['items_um']    ?? $obj['um']          ?? [];
+                $peso  = $obj['items_peso']  ?? $obj['pesoUnit']    ?? [];
+                $valor = $obj['items_valor'] ?? $obj['valorUnit']   ?? [];
+
+                $n = max(count($sku), count($desc), count($cant), count($um), count($peso), count($valor));
+                for ($i=0; $i<$n; $i++) {
+                    $s = trim((string)($sku[$i]   ?? ''));
+                    $d = trim((string)($desc[$i]  ?? ''));
+                    if ($s === '' && $d === '') continue;
+                    $items[] = [
+                        'sku'         => $s,
+                        'descripcion' => $d,
+                        'cantidad'    => (float)($cant[$i]  ?? 0),
+                        'um'          => trim((string)($um[$i] ?? 'pz')),
+                        'peso'        => (float)($peso[$i]  ?? 0),
+                        'valor'       => (float)($valor[$i] ?? 0),
+                    ];
+                }
+            } catch (\Throwable $e) {
+                // Si falla el JSON, seguimos con defaults mínimos
+            }
+        }
+
+        if (empty($items)) {
+            $items = [
+                ['sku'=>'P0001','descripcion'=>'Playera algodón (talla M) color blanco','cantidad'=>120,'um'=>'pz','peso'=>0.20,'valor'=>85.00],
+                ['sku'=>'P0002','descripcion'=>'Playera algodón (talla L) color blanco','cantidad'=>80,'um'=>'pz','peso'=>0.21,'valor'=>88.50],
+            ];
+        }
+
+        return view('modulos/embarque_documento_print', compact('embarque','items'));
     }
 }
