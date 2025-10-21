@@ -1,309 +1,407 @@
-<?php /** app/Views/modulos/logistica_documentos.php */ ?>
 <?= $this->extend('layouts/main') ?>
 
 <?php
-$docs       = $docs       ?? [];
-$embarques  = $embarques  ?? [];
-$req        = \Config\Services::request(); // <- usar request fuera de helpers de View
-function cur($n){ return '$'.number_format((float)$n, 2); }
+$docs      = $docs ?? [];
+$embarques = $embarques ?? [];
 ?>
 
 <?= $this->section('styles') ?>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <style>
-    .page-title { font-weight: 800; }
-    .card-shadow { box-shadow: 0 6px 18px rgba(0,0,0,.06); }
-    .chip { display:inline-block; padding:.2rem .6rem; border-radius:999px; background:#eef4ff; color:#0b5ed7; font-weight:600; }
-    .table-tight th, .table-tight td { padding:.55rem .7rem; vertical-align: middle; }
-    .muted { color:#6c757d; }
-    .actions .btn { --bs-btn-padding-y:.25rem; --bs-btn-padding-x:.5rem; }
-    @media (min-width:1200px){ .container-xl{ max-width:1240px; } }
+    .btn-icon{ padding:.25rem .45rem; border-width:2px; }
+    div.dt-buttons{
+        display:flex !important; gap:.65rem; flex-wrap:wrap;
+        background:transparent !important; border:0 !important;
+        border-radius:0 !important; box-shadow:none !important; padding:0 !important;
+    }
+    div.dt-buttons > .btn:not(:first-child){ margin-left:0 !important; }
+    div.dt-buttons > .btn{ border-radius:.65rem !important; padding:.45rem 1rem !important; }
 </style>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
-<div class="container-xl my-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h3 page-title m-0">Documentos de Embarque</h1>
-        <div class="d-flex gap-2">
 
-            <!-- Botón: Agregar (manualmente) -> lleva a la vista manual -->
-            <a href="<?= site_url('modulo3/embarque/manual') ?>" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Agregar (manualmente)
-            </a>
+<!-- (MIGAS DE PAN ELIMINADAS) -->
 
-            <!-- Botón: Crear registro rápido en doc_embarque (abre modal) -->
-            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#mdlNuevoDoc">
-                <i class="bi bi-file-earmark-plus"></i> Nuevo registro
-            </button>
-        </div>
+<!-- Encabezado con acciones -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center">
+        <h1 class="me-3">Documentos de Embarque</h1>
+        <span class="badge bg-secondary">Docs</span>
     </div>
+    <div class="d-flex gap-2">
+        <a href="<?= site_url('modulo3/embarque/manual') ?>" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Agregar (manualmente)
+        </a>
+        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#generarModal">
+            <i class="bi bi-files me-1"></i> Agregar doc
+        </button>
+        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#agregarModal">
+            <i class="bi bi-plus-circle me-1"></i> Agregar
+        </button>
+    </div>
+</div>
 
-    <?php if (session()->getFlashdata('warn')): ?>
-        <div class="alert alert-warning"><?= esc(session()->getFlashdata('warn')) ?></div>
-    <?php endif ?>
-    <?php if (session()->getFlashdata('error')): ?>
-        <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
-    <?php endif ?>
-    <?php if (session()->getFlashdata('ok')): ?>
-        <div class="alert alert-success"><?= esc(session()->getFlashdata('ok')) ?></div>
-    <?php endif ?>
+<?php if (session()->getFlashdata('ok')): ?>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-2"></i><?= esc(session()->getFlashdata('ok')) ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
+<?php if (session()->getFlashdata('error')): ?>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i><?= esc(session()->getFlashdata('error')) ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
 
-    <div class="card card-shadow">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-tight align-middle">
-                    <thead class="table-light">
-                    <tr>
-                        <th>ID</th>
-                        <th>Embarque</th>
-                        <th>Tipo</th>
-                        <th>Número</th>
-                        <th>Fecha</th>
-                        <th>Estado</th>
-                        <th>Archivo/URL</th>
-                        <th class="text-end">Acciones</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <?php if (empty($docs)): ?>
-                        <tr><td colspan="8" class="text-center text-muted">Sin documentos</td></tr>
-                    <?php else: foreach ($docs as $d): ?>
-                        <?php
-                        $id     = $d['id']              ?? null;
-                        $folio  = $d['embarqueFolio']   ?? ($d['embarque'] ?? null);
-                        $tipo   = $d['tipo']            ?? '';
-                        $num    = $d['numero']          ?? '';
-                        $fecha  = $d['fecha']           ?? '';
-                        $estado = $d['estado']          ?? '';
-                        $ruta   = $d['archivoRuta']     ?? '';
-                        $urlPdf = $d['urlPdf']          ?? '';
-                        $arch   = $d['archivoPdf']      ?? '';
-                        $canDesc = !empty($urlPdf) || !empty($ruta) || !empty($arch);
-                        ?>
-                        <tr>
-                            <td><?= esc($id) ?></td>
-                            <td>
-                                <?php if ($folio): ?>
-                                    <span class="chip"><?= esc($folio) ?></span>
-                                <?php else: ?>
-                                    <span class="text-muted">—</span>
-                                <?php endif; ?>
-                            </td>
-                            <td><?= esc($tipo ?: '—') ?></td>
-                            <td class="fw-semibold"><?= esc($num ?: '—') ?></td>
-                            <td class="text-nowrap"><?= esc($fecha ?: '—') ?></td>
-                            <td>
-                                <?php if ($estado): ?>
-                                    <span class="badge text-bg-light border"><?= esc($estado) ?></span>
-                                <?php else: ?>
-                                    <span class="text-muted">—</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <?php if ($canDesc): ?>
-                                    <a class="link-primary" href="<?= site_url('modulo3/documentos/'.$id.'/pdf') ?>">
-                                        <i class="bi bi-file-earmark-pdf"></i> Abrir/Descargar
-                                    </a>
-                                <?php else: ?>
-                                    <span class="text-muted">No adjunto</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-end actions">
-                                <!-- Editar (abre modal) -->
-                                <button
-                                        class="btn btn-sm btn-outline-secondary"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#mdlEditarDoc"
-                                        data-id="<?= esc($id) ?>"
-                                        data-tipo="<?= esc($tipo) ?>"
-                                        data-numero="<?= esc($num) ?>"
-                                        data-fecha="<?= esc($fecha) ?>"
-                                        data-estado="<?= esc($estado) ?>"
-                                        data-embarqueid="<?= esc($d['embarqueId'] ?? '') ?>"
-                                        data-archivoruta="<?= esc($ruta) ?>"
-                                        data-urlpdf="<?= esc($urlPdf) ?>"
-                                        data-archivopdf="<?= esc($arch) ?>"
-                                >
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-
-                                <!-- Eliminar -->
-                                <form class="d-inline" method="post" action="<?= site_url('modulo3/documentos/'.(int)$id.'/eliminar') ?>"
-                                      onsubmit="return confirm('¿Eliminar documento #<?= (int)$id ?>?')">
-                                    <?= csrf_field() ?>
-                                    <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                                </form>
-                            </td>
-                        </tr>
-                    <?php endforeach; endif; ?>
-                    </tbody>
-                </table>
+<!-- MODAL: Generación rápida -->
+<div class="modal fade" id="generarModal" tabindex="-1" aria-labelledby="generarModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="generarModalLabel">Generación de documentos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-        </div>
-    </div>
+            <form id="formQuick" method="post" action="<?= site_url('modulo3/documentos/crear') ?>">
+                <?= csrf_field() ?>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Embarque</label>
+                        <select class="form-select" name="embarqueId" required>
+                            <option value="">— Selecciona —</option>
+                            <?php foreach($embarques as $e): ?>
+                                <option value="<?= (int)$e['id'] ?>"><?= esc($e['folio'] ?? ('ID '.$e['id'])) ?></option>
+                            <?php endforeach ?>
+                        </select>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button name="tipo" value="Factura"      class="btn btn-outline-primary" type="submit">Factura de envío</button>
+                        <button name="tipo" value="Packing List" class="btn btn-outline-primary" type="submit">Lista de empaque</button>
+                        <button name="tipo" value="Etiqueta"     class="btn btn-outline-primary" type="submit">Etiqueta</button>
+                        <button name="tipo" value="Aduanas"      class="btn btn-outline-primary" type="submit">Aduanas</button>
+                    </div>
+                </div>
+                <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
+            </form>
+        </div></div>
 </div>
 
-<!-- ===== Modal: Nuevo Documento ===== -->
-<div class="modal fade" id="mdlNuevoDoc" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <form method="post" action="<?= site_url('modulo3/documentos/crear') ?>">
+<!-- MODAL: Agregar -->
+<div class="modal fade" id="agregarModal" tabindex="-1" aria-labelledby="agregarModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="agregarModalLabel">Agregar documento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formAgregar" method="post" action="<?= site_url('modulo3/documentos/crear') ?>">
                 <?= csrf_field() ?>
-                <div class="modal-header">
-                    <h5 class="modal-title">Nuevo documento</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                </div>
                 <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Embarque</label>
-                            <select name="embarqueId" class="form-select">
-                                <option value="">—</option>
-                                <?php foreach ($embarques as $e): ?>
-                                    <option value="<?= (int)($e['id'] ?? 0) ?>">
-                                        <?= esc($e['folio'] ?? ('ID '.$e['id'])) ?>
-                                    </option>
-                                <?php endforeach; ?>
+                    <div class="mb-2">
+                        <label class="form-label">Embarque</label>
+                        <select class="form-select" name="embarqueId" required>
+                            <option value="">— Selecciona —</option>
+                            <?php foreach($embarques as $e): ?>
+                                <option value="<?= (int)$e['id'] ?>"><?= esc($e['folio'] ?? ('ID '.$e['id'])) ?></option>
+                            <?php endforeach ?>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Tipo</label>
+                            <select name="tipo" class="form-select" required>
+                                <option value="">— Selecciona —</option>
+                                <option>Factura</option>
+                                <option>Packing List</option>
+                                <option>Etiqueta</option>
+                                <option>Aduanas</option>
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Tipo</label>
-                            <input class="form-control" name="tipo" placeholder="Ej. Carta Porte, Guía, etc.">
-                        </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6 mb-2">
                             <label class="form-label">Número</label>
-                            <input class="form-control" name="numero">
+                            <input name="numero" class="form-control" placeholder="FAC-2025-0001">
                         </div>
-                        <div class="col-md-4">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
                             <label class="form-label">Fecha</label>
-                            <input type="date" class="form-control" name="fecha" value="<?= date('Y-m-d') ?>">
+                            <input type="date" name="fecha" class="form-control" value="<?= date('Y-m-d') ?>">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6 mb-2">
                             <label class="form-label">Estado</label>
-                            <input class="form-control" name="estado" placeholder="Ej. vigente">
+                            <select name="estado" class="form-select">
+                                <option>Emitida</option>
+                                <option>Borrador</option>
+                                <option>Cancelada</option>
+                            </select>
                         </div>
-
-                        <div class="col-md-8">
-                            <label class="form-label">URL PDF</label>
-                            <input class="form-control" name="urlPdf" placeholder="https://...">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Archivo (ruta interna)</label>
-                            <input class="form-control" name="archivoPdf" placeholder="/uploads/mi-archivo.pdf">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">ArchivoRuta (alterno)</label>
-                            <input class="form-control" name="archivoRuta" placeholder="/ruta/o/url/alternativa.pdf">
-                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">URL PDF (opcional)</label>
+                        <input name="urlPdf" class="form-control" placeholder="https://...">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Archivo PDF (ruta en /writable/uploads)</label>
+                        <input name="archivoPdf" class="form-control" placeholder="facturas/FAC-2025-0001.pdf">
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button class="btn btn-primary">Guardar</button>
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button class="btn btn-primary" type="submit">Guardar</button>
                 </div>
             </form>
-        </div>
-    </div>
+        </div></div>
 </div>
 
-<!-- ===== Modal: Editar Documento ===== -->
-<div class="modal fade" id="mdlEditarDoc" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <form method="post" id="frmEditarDoc">
+<!-- MODAL: Ver -->
+<div class="modal fade" id="verModal" tabindex="-1" aria-labelledby="verModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="verModalLabel">Detalle de documento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="row mb-0">
+                    <dt class="col-4">Tipo</dt><dd class="col-8" id="v-tipo">-</dd>
+                    <dt class="col-4">Número</dt><dd class="col-8" id="v-numero">-</dd>
+                    <dt class="col-4">Fecha</dt><dd class="col-8" id="v-fecha">-</dd>
+                    <dt class="col-4">Estado</dt><dd class="col-8" id="v-estado">-</dd>
+                    <dt class="col-4">Embarque</dt><dd class="col-8" id="v-embarque">-</dd>
+                    <dt class="col-4">PDF</dt>
+                    <dd class="col-8" id="v-pdf">
+                        <a id="v-pdf-a" href="#" target="_blank" rel="noopener">—</a>
+                    </dd>
+                </dl>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
+        </div></div>
+</div>
+
+<!-- MODAL: Editar -->
+<div class="modal fade" id="editarModal" tabindex="-1" aria-labelledby="editarModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editarModalLabel">Editar documento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditar" method="post" action="#">
                 <?= csrf_field() ?>
-                <div class="modal-header">
-                    <h5 class="modal-title">Editar documento</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                </div>
                 <div class="modal-body">
-                    <input type="hidden" id="ed-id">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Embarque</label>
-                            <select name="embarqueId" id="ed-embarqueId" class="form-select">
-                                <option value="">—</option>
-                                <?php foreach ($embarques as $e): ?>
-                                    <option value="<?= (int)($e['id'] ?? 0) ?>">
-                                        <?= esc($e['folio'] ?? ('ID '.$e['id'])) ?>
-                                    </option>
-                                <?php endforeach; ?>
+                    <div class="mb-2">
+                        <label class="form-label">Embarque</label>
+                        <select class="form-select" name="embarqueId" id="e-embarqueId">
+                            <option value="">— Selecciona —</option>
+                            <?php foreach($embarques as $e): ?>
+                                <option value="<?= (int)$e['id'] ?>"><?= esc($e['folio'] ?? ('ID '.$e['id'])) ?></option>
+                            <?php endforeach ?>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Tipo</label>
+                            <select name="tipo" class="form-select" id="e-tipo">
+                                <option>Factura</option>
+                                <option>Packing List</option>
+                                <option>Etiqueta</option>
+                                <option>Aduanas</option>
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Tipo</label>
-                            <input class="form-control" id="ed-tipo" name="tipo">
-                        </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6 mb-2">
                             <label class="form-label">Número</label>
-                            <input class="form-control" id="ed-numero" name="numero">
+                            <input name="numero" id="e-numero" class="form-control">
                         </div>
-                        <div class="col-md-4">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
                             <label class="form-label">Fecha</label>
-                            <input type="date" class="form-control" id="ed-fecha" name="fecha">
+                            <input type="date" name="fecha" class="form-control" id="e-fecha">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6 mb-2">
                             <label class="form-label">Estado</label>
-                            <input class="form-control" id="ed-estado" name="estado">
+                            <select name="estado" class="form-select" id="e-estado">
+                                <option>Emitida</option>
+                                <option>Borrador</option>
+                                <option>Cancelada</option>
+                            </select>
                         </div>
-
-                        <div class="col-md-8">
-                            <label class="form-label">URL PDF</label>
-                            <input class="form-control" id="ed-urlPdf" name="urlPdf">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Archivo (ruta interna)</label>
-                            <input class="form-control" id="ed-archivoPdf" name="archivoPdf">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">ArchivoRuta (alterno)</label>
-                            <input class="form-control" id="ed-archivoRuta" name="archivoRuta">
-                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">URL PDF</label>
+                        <input name="urlPdf" id="e-urlPdf" class="form-control">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Archivo PDF</label>
+                        <input name="archivoPdf" id="e-archivoPdf" class="form-control">
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button class="btn btn-primary">Guardar cambios</button>
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button class="btn btn-primary" type="submit">Guardar</button>
                 </div>
             </form>
-        </div>
+        </div></div>
+</div>
+
+<!-- Tabla -->
+<div class="card shadow-sm">
+    <div class="card-header"><strong>Documentos generados</strong></div>
+    <div class="card-body p-0">
+        <table id="tablaDocs" class="table table-striped table-bordered m-0 align-middle">
+            <thead class="table-primary">
+            <tr>
+                <th class="text-center">Tipo</th>
+                <th class="text-center">Número</th>
+                <th class="text-center">Fecha</th>
+                <th class="text-center">Estado</th>
+                <th class="text-center">Embarque</th>
+                <th class="text-center">PDF</th>
+                <th class="text-center" style="width:220px;">Acciones</th>
+            </tr>
+            </thead>
+            <tbody>
+            <?php foreach($docs as $d): ?>
+                <?php
+                $id    = (int)($d['id'] ?? 0);
+                $url   = trim($d['urlPdf'] ?? '');
+                $arch  = trim($d['archivoPdf'] ?? '');
+                $href  = $url ? $url : ($arch ? site_url('modulo3/documentos/'.$id.'/pdf') : '#');
+                $hasPdf = $url || $arch;
+                ?>
+                <tr>
+                    <td class="text-center"><?= esc($d['tipo'] ?? '') ?></td>
+                    <td class="text-center"><?= esc($d['numero'] ?? '') ?></td>
+                    <td class="text-center"><?= esc($d['fecha'] ?? '') ?></td>
+                    <td class="text-center">
+              <span class="badge <?= ($d['estado'] ?? '')==='Emitida' ? 'bg-success' : 'bg-secondary' ?>">
+                  <?= esc($d['estado'] ?? '—') ?>
+              </span>
+                    </td>
+                    <td class="text-center"><?= esc($d['embarqueFolio'] ?? '') ?></td>
+                    <td class="text-center">
+                        <?php if ($hasPdf): ?>
+                            <a href="<?= $href ?>" target="_blank" rel="noopener">Abrir PDF</a>
+                        <?php else: ?>
+                            <span class="text-muted">—</span>
+                        <?php endif; ?>
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-outline-info btn-sm btn-icon btn-ver" data-id="<?= $id ?>" title="Ver">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm btn-icon btn-editar" data-id="<?= $id ?>" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <a class="btn btn-outline-secondary btn-sm btn-icon <?= $hasPdf ? '' : 'disabled' ?>" title="Descargar/Ver PDF"
+                               href="<?= $hasPdf ? $href : '#' ?>" <?= $hasPdf ? 'target="_blank" rel="noopener"' : '' ?>>
+                                <i class="bi bi-file-earmark-pdf"></i>
+                            </a>
+                            <form method="post" action="<?= site_url('modulo3/documentos/'.$id.'/eliminar') ?>"
+                                  class="d-inline ms-1" onsubmit="return confirm('¿Eliminar documento?');">
+                                <?= csrf_field() ?>
+                                <button class="btn btn-outline-danger btn-sm btn-icon" type="submit" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            <?php endforeach ?>
+            </tbody>
+        </table>
     </div>
 </div>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+
 <script>
     (function(){
-        // Rellena modal Editar con data-* del botón
-        const mdl = document.getElementById('mdlEditarDoc');
-        mdl?.addEventListener('show.bs.modal', (ev)=>{
-            const btn = ev.relatedTarget;
-            if(!btn) return;
-            const id   = btn.getAttribute('data-id');
-            const frm  = document.getElementById('frmEditarDoc');
-            frm.action = '<?= site_url('modulo3/documentos') ?>/' + id + '/editar';
+        const base = "<?= site_url('modulo3/documentos') ?>";
+        $.fn.dataTable.Buttons.defaults.dom.container.className = 'dt-buttons';
 
-            document.getElementById('ed-id').value = id;
-            document.getElementById('ed-tipo').value = btn.getAttribute('data-tipo') || '';
-            document.getElementById('ed-numero').value = btn.getAttribute('data-numero') || '';
-            document.getElementById('ed-fecha').value = btn.getAttribute('data-fecha') || '';
-            document.getElementById('ed-estado').value = btn.getAttribute('data-estado') || '';
-            document.getElementById('ed-embarqueId').value = btn.getAttribute('data-embarqueid') || '';
-            document.getElementById('ed-archivoRuta').value = btn.getAttribute('data-archivoruta') || '';
-            document.getElementById('ed-urlPdf').value = btn.getAttribute('data-urlpdf') || '';
-            document.getElementById('ed-archivoPdf').value = btn.getAttribute('data-archivopdf') || '';
+        const langES = {
+            sProcessing:"Procesando...", sLengthMenu:"Mostrar _MENU_ registros",
+            sZeroRecords:"No se encontraron resultados", sEmptyTable:"Ningún dato disponible",
+            sInfo:"Filas: _TOTAL_", sInfoEmpty:"Filas: 0", sInfoFiltered:"(de _MAX_)",
+            sSearch:"Buscar:", sLoadingRecords:"Cargando...",
+            oPaginate:{ sFirst:"Primero", sLast:"Último", sNext:"Siguiente", sPrevious:"Anterior" },
+            buttons:{ copy:"Copy", csv:"CSV", excel:"Excel", pdf:"PDF", print:"Print" }
+        };
+
+        $('#tablaDocs').DataTable({
+            language: langES,
+            dom: "<'row px-3 pt-3'<'col-sm-6'B><'col-sm-6'f>>t<'row p-3'<'col-sm-6'i><'col-sm-6'p>>",
+            buttons: [
+                { extend:'copy',  text:'Copy',  className:'btn btn-secondary' },
+                { extend:'csv',   text:'CSV',   className:'btn btn-secondary' },
+                { extend:'excel', text:'Excel', className:'btn btn-secondary' },
+                { extend:'pdf',   text:'PDF',   className:'btn btn-secondary' },
+                { extend:'print', text:'Print', className:'btn btn-secondary' }
+            ],
+            pageLength: 10,
+            columnDefs: [{ targets: -1, orderable:false, searchable:false }]
         });
 
-        // (Opcional) Si la página vino con __payload vía POST, validamos JSON (sin usar $this->request)
-        <?php if ($req && $req->getPost('__payload')): ?>
-        try {
-            const _payload = JSON.parse(<?= json_encode($req->getPost('__payload')) ?>);
-            // console.log('payload recibido', _payload);
-        } catch (_) {}
-        <?php endif; ?>
+        // Ver
+        document.querySelectorAll('.btn-ver').forEach(btn=>{
+            btn.addEventListener('click', async ()=>{
+                const id = btn.dataset.id;
+                const r  = await fetch(`${base}/${id}/json`);
+                if(!r.ok) return alert('No se pudo cargar el documento');
+                const d  = await r.json();
+                document.getElementById('v-tipo').textContent     = d.tipo ?? '—';
+                document.getElementById('v-numero').textContent   = d.numero ?? '—';
+                document.getElementById('v-fecha').textContent    = d.fecha ?? '—';
+                document.getElementById('v-estado').textContent   = d.estado ?? '—';
+                document.getElementById('v-embarque').textContent = d.embarqueFolio ?? '—';
+                const a   = document.getElementById('v-pdf-a');
+                const href = d.urlPdf ? d.urlPdf : (d.archivoPdf ? `${base}/${id}/pdf` : '#');
+                a.textContent = (d.urlPdf || d.archivoPdf) ? 'Abrir PDF' : '—';
+                a.href        = href;
+                if (href !== '#') { a.setAttribute('target','_blank'); a.setAttribute('rel','noopener'); }
+                new bootstrap.Modal(document.getElementById('verModal')).show();
+            });
+        });
+
+        // Editar
+        document.querySelectorAll('.btn-editar').forEach(btn=>{
+            btn.addEventListener('click', async ()=>{
+                const id = btn.dataset.id;
+                const r  = await fetch(`${base}/${id}/json`);
+                if(!r.ok) return alert('No se pudo cargar el documento');
+                const d  = await r.json();
+                document.getElementById('e-embarqueId').value = d.embarqueId ?? '';
+                document.getElementById('e-tipo').value       = d.tipo ?? 'Factura';
+                document.getElementById('e-numero').value     = d.numero ?? '';
+                document.getElementById('e-fecha').value      = (d.fecha ?? '').substring(0,10);
+                document.getElementById('e-estado').value     = d.estado ?? 'Emitida';
+                document.getElementById('e-urlPdf').value     = d.urlPdf ?? '';
+                document.getElementById('e-archivoPdf').value = d.archivoPdf ?? '';
+                document.getElementById('formEditar').action  = `${base}/${id}/editar`;
+                new bootstrap.Modal(document.getElementById('editarModal')).show();
+            });
+        });
+
+        // Focus al abrir modales de alta
+        document.getElementById('agregarModal')?.addEventListener('shown.bs.modal', ()=>{
+            document.querySelector('#formAgregar select[name="embarqueId"]')?.focus();
+        });
+        document.getElementById('generarModal')?.addEventListener('shown.bs.modal', ()=>{
+            document.querySelector('#generarModal select[name="embarqueId"]')?.focus();
+        });
     })();
 </script>
 <?= $this->endSection() ?>
