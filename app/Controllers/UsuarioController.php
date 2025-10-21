@@ -36,13 +36,27 @@ class UsuarioController extends Controller
         $usuarioModel = new UserModel();
         $user = $usuarioModel->where('correo', $correo)->first();
 
-        // Verificar usuario, contraseña y que esté activo
         if ($user && (int)($user['active'] ?? 0) === 1 && password_verify($password, $user['password'])) {
-            // Crear sesión
+            $roleIds = [];
+            $roleNames = [];
+            try {
+                $db = \Config\Database::connect();
+                $rows = $db->query(
+                    'SELECT r.id, r.nombre FROM usuario_rol ur JOIN rol r ON r.id = ur.rolIdFK WHERE ur.usuarioIdFK = ?',
+                    [$user['id']]
+                )->getResultArray();
+                foreach ($rows as $r) {
+                    if (isset($r['id'])) { $roleIds[] = (int)$r['id']; }
+                    if (isset($r['nombre'])) { $roleNames[] = (string)$r['nombre']; }
+                }
+            } catch (\Throwable $e) { /* sin roles => arrays vacíos */ }
             session()->set([
-                'user_id'   => $user['id'],
-                'user_name' => $user['username'] ?? ($user['nombre'] ?? $user['correo']),
-                'logged_in' => true
+                'user_id'     => $user['id'],
+                'user_name'   => $user['username'] ?? ($user['nombre'] ?? $user['correo']),
+                'logged_in'   => true,
+                'role_ids'    => $roleIds,
+                'role_names'  => $roleNames,
+                'primary_role'=> isset($roleNames[0]) ? (string)$roleNames[0] : null,
             ]);
 
             return redirect()->to('/dashboard');

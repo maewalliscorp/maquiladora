@@ -39,6 +39,29 @@ class AuthFilter implements FilterInterface
                 ->with('error', 'Por favor inicia sesión para continuar.');
         }
 
+        // Si se pasaron roles requeridos en $arguments, validar contra sesión
+        if (is_array($arguments) && !empty($arguments)) {
+            $requiredRoles = array_map(static function($r){ return strtolower(trim((string)$r)); }, $arguments);
+            $userRoles = session()->get('role_names') ?? [];
+            $userRolesLower = array_map(static function($r){ return strtolower((string)$r); }, (array)$userRoles);
+
+            $hasRole = false;
+            foreach ($requiredRoles as $r) {
+                if (in_array($r, $userRolesLower, true)) { $hasRole = true; break; }
+            }
+
+            if (!$hasRole) {
+                // Sin permisos: devolver 403 para APIs o redirigir con error para vistas
+                $accept = (string)($request->getHeaderLine('Accept') ?? '');
+                if (stripos($accept, 'application/json') !== false || $request->isAJAX()) {
+                    return service('response')->setStatusCode(403)->setJSON([
+                        'error' => 'No tienes permisos para acceder a este recurso.'
+                    ]);
+                }
+                return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+            }
+        }
+
         // Prevenir almacenamiento en caché
         $response = service('response');
         $response->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');

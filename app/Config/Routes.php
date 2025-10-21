@@ -315,7 +315,7 @@ $routes->group('mrp', [], function ($r) {
 /* --------------------------------------------------------------------
  * Módulo 11 · Usuarios
  * ------------------------------------------------------------------*/
-$routes->group('modulo11', [], function ($routes) {
+$routes->group('modulo11', ['filter' => 'auth:Administrador,Jefe'], function ($routes) {
     $routes->get('roles', 'Modulos::m11_roles');
     $routes->post('roles/actualizar', 'Modulos::m11_roles_actualizar');
     $routes->post('roles/agregar', 'Modulos::m11_roles_agregar');
