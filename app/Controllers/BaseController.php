@@ -48,7 +48,7 @@ abstract class BaseController extends Controller
      */
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
     {
-        $this->helpers = array_merge($this->helpers, ['form', 'url', 'html']);
+        $this->helpers = array_merge($this->helpers, ['form', 'url', 'html', 'auth']);
         parent::initController($request, $response, $logger);
 
         // Escribir en el log
