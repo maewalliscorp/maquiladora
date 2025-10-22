@@ -1,5 +1,19 @@
 <?= $this->extend('layouts/main') ?>
 
+<?= $this->section('head') ?>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+    <style>
+        /* Separación entre los botones de DataTables */
+        .dt-buttons.btn-group .btn{
+            margin-left: 0 !important;
+            margin-right: .5rem;
+            border-radius: .375rem !important;
+        }
+        .dt-buttons.btn-group .btn:last-child{ margin-right: 0; }
+    </style>
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
     <div class="d-flex align-items-center justify-content-between mb-4">
         <h1 class="me-3">Gestión de Usuarios</h1>
@@ -167,10 +181,20 @@
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <!-- DataTables Buttons dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
 
     <script>
         $(document).ready(function () {
             // Inicializar DataTable
+            const fecha = new Date().toISOString().slice(0,10);
+            const fileName = 'usuarios_' + fecha;
             var table = $('#tablaUsuarios').DataTable({
                 language: {
                     "sProcessing":     "Procesando...",
@@ -200,9 +224,27 @@
                         "colvis": "Visibilidad"
                     }
                 },
+                columnDefs: [{
+                    targets: -1,
+                    orderable: false,
+                    searchable: false
+                }],
                 order: [[0, 'asc']],
                 pageLength: 10,
-                responsive: true
+                responsive: true,
+                dom:
+                    "<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
+                    "<'row'<'col-12'tr>>" +
+                    "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                buttons: [
+                    { extend:'copy',  text:'Copiar',  exportOptions:{ columns: ':not(:last-child)' } },
+                    { extend:'csv',   text:'CSV',   filename:fileName, exportOptions:{ columns: ':not(:last-child)' } },
+                    { extend:'excel', text:'Excel', filename:fileName, exportOptions:{ columns: ':not(:last-child)' } },
+                    { extend:'pdf',   text:'PDF',   filename:fileName, title:fileName,
+                        orientation:'portrait', pageSize:'A4',
+                        exportOptions:{ columns: ':not(:last-child)' } },
+                    { extend:'print', text:'Imprimir', exportOptions:{ columns: ':not(:last-child)' } }
+                ]
             });
             // Exponer la instancia para usarla fuera del ready
             window.usuariosTable = table;
