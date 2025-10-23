@@ -12,6 +12,17 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="<?= base_url('css/maquila.css') ?>" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+
+    <style>
+        .transition { transition: all 0.3s ease; }
+        .hover-spin:hover { transform: rotate(15deg); }
+        .hover-color:hover { color: #0d6efd !important; } /* Azul Bootstrap */
+    </style>
+
 
     <?= $this->renderSection('head') ?>
 </head>
@@ -27,7 +38,7 @@
 
         <!-- Indicador de usuario en móvil -->
         <div class="d-flex align-items-center d-lg-none">
-            <span class="badge bg-light text-dark border me-2">
+            <span class="b text-dark">
                 <i class="bi bi-person-circle me-1"></i>
                 <?= esc(session()->get('user_name') ?? 'Usuario') ?>
             </span>
@@ -270,23 +281,38 @@
 
             <!-- Menú para escritorio -->
             <ul class="navbar-nav ms-auto d-none d-lg-flex align-items-lg-center">
-                <!-- Inicio -->
-                <li class="nav-item">
-                    <a class="nav-link text-dark" href="<?= base_url('dashboard') ?>"
-                       title="Inicio" data-bs-toggle="tooltip" data-bs-placement="bottom" aria-label="Inicio">
-                        <i class="bi bi-house fs-5"></i>
-                        <span class="visually-hidden">Inicio</span>
+                <!-- Usuario -->
+                <li class="nav-item dropdown ms-lg-2">
+                    <a
+                            class="nav-link d-flex align-items-center text-dark text-decoration-none position-relative"
+                            href="#"
+                            id="userMenu"
+                            role="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                            title="Menú de usuario"
+                    >
+                        <i class="fa-solid fa-user-circle me-2 fs-5 transition hover-spin hover-color"></i>
+                        <span class="d-none d-lg-inline fw-medium transition hover-color">
+      <?= esc(session()->get('user_name') ?? 'Usuario') ?>
+    </span>
                     </a>
-                </li>
 
-                <!-- Perfil -->
-                <li class="nav-item ms-lg-2">
-                    <a class="nav-link text-dark" href="<?= base_url('modulo1/perfilempleado') ?>"
-                       title="Perfil" data-bs-toggle="tooltip" aria-label="Perfil">
-                        <i class="bi bi-person-circle fs-5"></i>
-                        <span class="visually-hidden">Perfil</span>
-                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 animate__animated animate__fadeIn" aria-labelledby="userMenu">
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center" href="<?= base_url('modulo1/perfilempleado') ?>">
+                                <i class="fa-solid fa-id-badge me-2 text-primary"></i> Perfil
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center text-danger" href="<?= base_url('logout') ?>">
+                                <i class="fa-solid fa-right-from-bracket me-2"></i> Cerrar sesión
+                            </a>
+                        </li>
+                    </ul>
                 </li>
+                <!-- Perfil -->
+
 
                 <!-- Notificaciones -->
                 <li class="nav-item ms-lg-2">
@@ -400,24 +426,7 @@
                     </div>
                 </li>
 
-                <!-- Usuario -->
-                <li class="nav-item dropdown ms-lg-2">
-                    <a class="nav-link dropdown-toggle text-dark d-flex align-items-center"
-                       href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false"
-                       title="Usuario" data-bs-placement="bottom">
-                        <span class="badge rounded-pill bg-white text-dark border me-lg-2">
-                            <i class="bi bi-person-circle me-1"></i>
-                            <?= esc(session()->get('user_name') ?? 'Usuario') ?>
-                        </span>
-                    </a>
-                    <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userMenu">
-                        <a class="dropdown-item d-flex align-items-center text-dark"
-                           href="<?= base_url('logout') ?>"
-                           title="Cerrar sesión">
-                            <i class="bi bi-box-arrow-right me-2"></i> Cerrar sesión
-                        </a>
-                    </div>
-                </li>
+
             </ul>
         </div>
     </div>
@@ -425,9 +434,7 @@
 
 <main class="container py-4">
     <?= $this->renderSection('content') ?>
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 </main>
 
 <footer class="border-top py-3 bg-white">
@@ -466,7 +473,6 @@
     window.addEventListener('unload', function () {});
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <?= $this->renderSection('scripts') ?>
 </body>
 </html>
