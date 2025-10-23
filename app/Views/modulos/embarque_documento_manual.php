@@ -17,12 +17,9 @@ $e = fn($k,$d='') => esc($embarque[$k] ?? $d);
     /* ======= IMPRESIÓN SOLO DEL DOCUMENTO (CARTA) ======= */
     @page { size: Letter; margin: 25mm 30mm; } /* 2.5cm top/bottom, 3cm left/right */
     @media print {
-        /* Oculta todo excepto el área del documento */
         body * { visibility: hidden !important; }
         #printArea, #printArea * { visibility: visible !important; }
         #printArea { position: absolute; inset: 0; margin: 0; padding: 0; box-shadow:none !important; }
-
-        /* Limpia marcos/sombras del preview cuando se imprime */
         #printArea .card,
         #printArea .card-shadow { border:none !important; box-shadow:none !important; }
         #printArea .card-body { padding:0 !important; }
@@ -39,11 +36,11 @@ $e = fn($k,$d='') => esc($embarque[$k] ?? $d);
         <div class="small text-muted">Captura con formulario y previsualiza al momento.</div>
     </div>
     <div class="d-flex gap-2">
-        <a href="<?= site_url('modulo3/documentos') ?>" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Volver a documentos
-        </a>
-        <button class="btn btn-primary" id="btnPrintPopup">
+        <button class="btn btn-outline-primary" id="btnPrintPopup">
             <i class="bi bi-printer"></i> Imprimir / PDF
+        </button>
+        <button class="btn btn-success" id="btnGuardarPdf">
+            <i class="bi bi-cloud-upload"></i> Guardar PDF
         </button>
     </div>
 </div>
@@ -331,9 +328,15 @@ $e = fn($k,$d='') => esc($embarque[$k] ?? $d);
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- libs para generar PDF en el navegador -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
 <script>
     (function(){
-        const $ = (sel, ctx=document) => ctx.querySelector(sel);
+        const $  = (sel, ctx=document) => ctx.querySelector(sel);
         const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
         const fmt2 = n => (isFinite(n)? Number(n).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}) : '0.00');
         const money = n => '$' + fmt2(n);
@@ -381,13 +384,13 @@ $e = fn($k,$d='') => esc($embarque[$k] ?? $d);
                 const peso=cant*pesoU, imp=cant*valU;
                 tCant+=cant; tPeso+=peso; tImp+=imp;
                 out.push(`<tr>
-        <td>${sku}</td><td>${desc}</td>
-        <td class="text-end">${fmt2(cant)}</td><td>${um}</td>
-        <td class="text-end">${fmt2(pesoU)}</td>
-        <td class="text-end">${money(valU)}</td>
-        <td class="text-end">${fmt2(peso)}</td>
-        <td class="text-end">${money(imp)}</td>
-      </tr>`);
+                <td>${sku}</td><td>${desc}</td>
+                <td class="text-end">${fmt2(cant)}</td><td>${um}</td>
+                <td class="text-end">${fmt2(pesoU)}</td>
+                <td class="text-end">${money(valU)}</td>
+                <td class="text-end">${fmt2(peso)}</td>
+                <td class="text-end">${money(imp)}</td>
+            </tr>`);
             });
             $('#p-items').innerHTML = out.join('') || '<tr><td colspan="8" class="text-center text-muted">Sin partidas</td></tr>';
             $('#p-tcant').textContent = tCant.toLocaleString();
@@ -402,14 +405,14 @@ $e = fn($k,$d='') => esc($embarque[$k] ?? $d);
         $('#btnAddRow')?.addEventListener('click', ()=>{
             const tr=document.createElement('tr');
             tr.innerHTML = `
-      <td><input name="items_sku[]"   class="form-control form-control-sm"></td>
-      <td><input name="items_desc[]"  class="form-control form-control-sm"></td>
-      <td><input name="items_cant[]"  type="number" step="0.01" min="0" class="form-control form-control-sm text-end"></td>
-      <td><input name="items_um[]"    class="form-control form-control-sm" value="pz"></td>
-      <td><input name="items_peso[]"  type="number" step="0.0001" min="0" class="form-control form-control-sm text-end"></td>
-      <td><input name="items_valor[]" type="number" step="0.01" min="0" class="form-control form-control-sm text-end"></td>
-      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btnDel"><i class="bi bi-x"></i></button></td>
-    `;
+            <td><input name="items_sku[]"   class="form-control form-control-sm"></td>
+            <td><input name="items_desc[]"  class="form-control form-control-sm"></td>
+            <td><input name="items_cant[]"  type="number" step="0.01" min="0" class="form-control form-control-sm text-end"></td>
+            <td><input name="items_um[]"    class="form-control form-control-sm" value="pz"></td>
+            <td><input name="items_peso[]"  type="number" step="0.0001" min="0" class="form-control form-control-sm text-end"></td>
+            <td><input name="items_valor[]" type="number" step="0.01" min="0" class="form-control form-control-sm text-end"></td>
+            <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btnDel"><i class="bi bi-x"></i></button></td>
+        `;
             tbl.appendChild(tr);
         });
 
@@ -417,35 +420,140 @@ $e = fn($k,$d='') => esc($embarque[$k] ?? $d);
             if(confirm('¿Vaciar todas las partidas?')){ tbl.innerHTML=''; recalcFromForm(); }
         });
 
-        // Imprimir en popup: Carta + sin .container (ancho completo)
+        // Imprimir en popup (referencia)
         $('#btnPrintPopup')?.addEventListener('click', ()=>{
-            recalcFromForm(); // asegurar totales actualizados
+            recalcFromForm();
             const html = document.getElementById('printArea').innerHTML;
             const w = window.open('', 'PRINT', 'width=900,height=650');
             w.document.write(`<!doctype html><html><head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>Documento de Embarque</title>
-      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-      <style>
-        @page { size: Letter; margin: 25mm 30mm; }
-        html, body { background:#fff; }
-        body { margin:0; }
-        .page { width:auto; max-width:100%; margin:0; }
-        .table-tight td, .table-tight th { padding:.35rem .5rem; }
-        .table-tight th { background:#eef2f7; }
-        @media print {
-          .card, .card-shadow { border:none !important; box-shadow:none !important; }
-          .card-body { padding:0 !important; }
-        }
-      </style>
-    </head><body>
-      <div class="page">${html}</div>
-      </body></html>`);
-            w.document.close();
-            w.focus();
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Documento de Embarque</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+            <style>
+                @page { size: Letter; margin: 25mm 30mm; }
+                html, body { background:#fff; } body { margin:0; }
+                .page { width:auto; max-width:100%; margin:0; }
+                .table-tight td, .table-tight th { padding:.35rem .5rem; }
+                .table-tight th { background:#eef2f7; }
+                @media print { .card, .card-shadow { border:none !important; box-shadow:none !important; } .card-body { padding:0 !important; } }
+            </style>
+        </head><body>
+            <div class="page">${html}</div>
+        </body></html>`);
+            w.document.close(); w.focus();
             setTimeout(()=>{ w.print(); w.close(); }, 350);
         });
+
+        // ======= GENERAR PDF (desde preview) =======
+        async function generarPdfBlobDesdePreview(){
+            recalcFromForm();
+            const area = $('#printArea');
+            if(!area){ throw new Error('No se encontró el área de impresión'); }
+
+            const canvas = await html2canvas(area, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ unit: 'pt', format: 'letter' }); // 612x792pt
+            const pageW = pdf.internal.pageSize.getWidth();
+            const pageH = pdf.internal.pageSize.getHeight();
+            const marginL = 85; // ~30mm
+            const marginT = 72; // ~25mm
+            const maxW = pageW - marginL*2;
+            const maxH = pageH - marginT*2;
+
+            const imgWpx = canvas.width;
+            const imgHpx = canvas.height;
+            const ratio = Math.min(maxW / imgWpx, maxH / imgHpx);
+            const drawW = imgWpx * ratio;
+            const drawH = imgHpx * ratio;
+            const x = (pageW - drawW)/2;
+            const y = marginT;
+
+            pdf.addImage(imgData, 'JPEG', x, y, drawW, drawH, undefined, 'FAST');
+            return pdf.output('blob');
+        }
+
+        // ======= SUBIR A SUPABASE con confirmación SweetAlert2 =======
+        async function subirPdf(){
+            const folioRaw = ($('#f-folio')?.value || '').trim();
+            if (!folioRaw) {
+                await Swal.fire({ icon:'warning', title:'Falta folio', text:'Captura un folio antes de guardar el PDF.' });
+                return;
+            }
+
+            const { isConfirmed } = await Swal.fire({
+                title: "¿Guardar PDF en Supabase?",
+                text: "Se generará el PDF de la vista y se subirá a Doc_Embarque.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "Sí, guardar"
+            });
+
+            if (!isConfirmed) return;
+
+            try{
+                // Loading
+                Swal.fire({
+                    title: 'Generando PDF...',
+                    text: 'Por favor espera',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+
+                const folio = folioRaw.replaceAll('/', '-').replaceAll(' ', '_');
+                const blob  = await generarPdfBlobDesdePreview();
+                const file  = new File([blob], `${folio}.pdf`, { type: 'application/pdf' });
+
+                const fd = new FormData();
+                fd.append('file', file);                 // archivo PDF
+                fd.append('bucket', 'Doc_Embarque');     // bucket/carpeta destino
+                fd.append('folio', folio);               // por si el backend lo usa en BD
+
+                const url = "<?= site_url('api/storage/pdf') ?>";
+                const r = await fetch(url, {
+                    method: 'POST',
+                    body: fd,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                if(!r.ok){
+                    let msg = `HTTP ${r.status}`;
+                    try {
+                        const err = await r.json();
+                        if (err?.message) msg = err.message;
+                    } catch(_) {}
+                    throw new Error(msg);
+                }
+                const json = await r.json();
+
+                Swal.close();
+                await Swal.fire({
+                    title: "¡Guardado!",
+                    text: json.publicUrl ? "El PDF se subió correctamente." : "El PDF se subió correctamente.",
+                    icon: "success"
+                });
+
+                if (json.publicUrl) {
+                    // abre en nueva pestaña
+                    window.open(json.publicUrl, '_blank', 'noopener');
+                }
+
+            }catch(err){
+                console.error(err);
+                Swal.close();
+                Swal.fire({
+                    title: "Error",
+                    text: err?.message || "No se pudo guardar el PDF.",
+                    icon: "error"
+                });
+            }
+        }
+
+        $('#btnGuardarPdf')?.addEventListener('click', subirPdf);
 
         // Inicial
         recalcFromForm();

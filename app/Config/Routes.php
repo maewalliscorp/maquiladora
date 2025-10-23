@@ -54,10 +54,10 @@ $routes->post  ('api/inventario/editar',             'AlmacenController::apiEdit
 $routes->delete('api/inventario/eliminar/(:num)',    'AlmacenController::apiEliminar/$1');
 
 // ===== NUEVAS RUTAS para spinner/búsqueda y validaciones =====
-$routes->get   ('api/inventario/existe',                 'AlmacenController::apiExiste');
-$routes->get   ('api/articulos/buscar',                  'AlmacenController::apiBuscarArticulos');
-$routes->get   ('api/articulos/detalle',                 'AlmacenController::apiArticuloDetalle');
-$routes->get   ('api/inventario/resumen-articulo/(:num)','AlmacenController::apiResumenArticulo/$1');
+$routes->get   ('api/inventario/existe',                  'AlmacenController::apiExiste');
+$routes->get   ('api/articulos/buscar',                   'AlmacenController::apiBuscarArticulos');
+$routes->get   ('api/articulos/detalle',                  'AlmacenController::apiArticuloDetalle');
+$routes->get   ('api/inventario/resumen-articulo/(:num)', 'AlmacenController::apiResumenArticulo/$1');
 
 /* --------------------------------------------------------------------
  * Home / Auth landing
@@ -199,14 +199,14 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
 
     // Grupo Inspección
     $routes->group('inspeccion', function($routes) {
-        $routes->get('/', 'Inspeccion::index', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
-        $routes->get('nueva', 'Inspeccion::nueva', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
-        $routes->post('guardar', 'Inspeccion::guardar', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
-        $routes->get('ver/(:num)', 'Inspeccion::ver/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
-        $routes->get('editar/(:num)', 'Inspeccion::editar/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
-        $routes->post('actualizar/(:num)', 'Inspeccion::actualizar/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
-        $routes->get('eliminar/(:num)', 'Inspeccion::eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
-        $routes->get('evaluar/(:num)', 'Inspeccion::evaluar/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->get('/',                'Inspeccion::index', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->get('nueva',            'Inspeccion::nueva', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->post('guardar',         'Inspeccion::guardar', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->get('ver/(:num)',       'Inspeccion::ver/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->get('editar/(:num)',    'Inspeccion::editar/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->post('actualizar/(:num)','Inspeccion::actualizar/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->get('eliminar/(:num)',  'Inspeccion::eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->get('evaluar/(:num)',   'Inspeccion::evaluar/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
         $routes->post('evaluar/guardar/(:num)', 'Inspeccion::guardarEvaluacion/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
     });
 
@@ -267,8 +267,8 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     /* =========================
      * LOGÍSTICA · DOCUMENTOS
      * ========================= */
-    $routes->get ('documentos',                 'LogisticaController::documentos', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);   // alias principal
-    $routes->get ('logistica_documentos',       'LogisticaController::documentos', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);   // compat
+    $routes->get ('documentos',                 'LogisticaController::documentos', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
+    $routes->get ('logistica_documentos',       'LogisticaController::documentos', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
 
     // CRUD documentos (doc_embarque)
     $routes->post('documentos/crear',           'LogisticaController::crearDocumento');
@@ -403,4 +403,11 @@ $routes->get('pedido-debug/(:num)', function ($id) {
     } catch (\Throwable $e) {
         return 'ERROR PedidoDebug: ' . $e->getMessage();
     }
+});
+
+/* --------------------------------------------------------------------
+ * API · Supabase Storage (nuevo)
+ * ------------------------------------------------------------------*/
+$routes->group('api/storage', static function($r){
+    $r->post('pdf', 'StorageController::guardarPdf'); // subir PDF a Doc_Embarque
 });

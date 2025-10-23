@@ -23,8 +23,6 @@ $embarques = $embarques ?? [];
 
 <?= $this->section('content') ?>
 
-<!-- (MIGAS DE PAN ELIMINADAS) -->
-
 <!-- Encabezado con acciones -->
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div class="d-flex align-items-center">
@@ -32,9 +30,7 @@ $embarques = $embarques ?? [];
         <span class="badge bg-secondary">Docs</span>
     </div>
     <div class="d-flex gap-2">
-        <a href="<?= site_url('modulo3/embarque/manual') ?>" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-1"></i> Agregar (manualmente)
-        </a>
+        <!-- (ELIMINADO) Botón Agregar (manualmente) -->
         <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#generarModal">
             <i class="bi bi-files me-1"></i> Agregar doc
         </button>
@@ -64,6 +60,8 @@ $embarques = $embarques ?? [];
                 <h5 class="modal-title" id="generarModalLabel">Generación de documentos</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
+
+            <!-- Importante: mantenemos el form para los tipos auto (Factura, Etiqueta, Aduanas) -->
             <form id="formQuick" method="post" action="<?= site_url('modulo3/documentos/crear') ?>">
                 <?= csrf_field() ?>
                 <div class="modal-body">
@@ -76,14 +74,34 @@ $embarques = $embarques ?? [];
                             <?php endforeach ?>
                         </select>
                     </div>
+
                     <div class="d-flex flex-wrap gap-2">
-                        <button name="tipo" value="Factura"      class="btn btn-outline-primary" type="submit">Factura de envío</button>
-                        <button name="tipo" value="Packing List" class="btn btn-outline-primary" type="submit">Lista de empaque</button>
-                        <button name="tipo" value="Etiqueta"     class="btn btn-outline-primary" type="submit">Etiqueta</button>
-                        <button name="tipo" value="Aduanas"      class="btn btn-outline-primary" type="submit">Aduanas</button>
+                        <!-- Estos siguen creando el documento vía POST -->
+                        <button name="tipo" value="Factura" class="btn btn-outline-primary" type="submit">
+                            Factura de envío
+                        </button>
+
+                        <!-- Aquí movemos la acción del "Agregar (manualmente)": abre la vista manual -->
+                        <a href="<?= site_url('modulo3/embarque/manual') ?>" class="btn btn-outline-primary">
+                            Lista de embarque (manual)
+                        </a>
+
+                        <!-- Los demás siguen igual por POST -->
+                        <button name="tipo" value="Etiqueta" class="btn btn-outline-primary" type="submit">
+                            Etiqueta
+                        </button>
+                        <button name="tipo" value="Aduanas" class="btn btn-outline-primary" type="submit">
+                            Aduanas
+                        </button>
                     </div>
+
+                    <small class="text-muted d-block mt-2">
+                        Nota: <em>Lista de embarque (manual)</em> te llevará a la vista de captura manual.
+                    </small>
                 </div>
-                <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
             </form>
         </div></div>
 </div>
@@ -273,9 +291,9 @@ $embarques = $embarques ?? [];
                     <td class="text-center"><?= esc($d['numero'] ?? '') ?></td>
                     <td class="text-center"><?= esc($d['fecha'] ?? '') ?></td>
                     <td class="text-center">
-              <span class="badge <?= ($d['estado'] ?? '')==='Emitida' ? 'bg-success' : 'bg-secondary' ?>">
-                  <?= esc($d['estado'] ?? '—') ?>
-              </span>
+                        <span class="badge <?= ($d['estado'] ?? '')==='Emitida' ? 'bg-success' : 'bg-secondary' ?>">
+                            <?= esc($d['estado'] ?? '—') ?>
+                        </span>
                     </td>
                     <td class="text-center"><?= esc($d['embarqueFolio'] ?? '') ?></td>
                     <td class="text-center">
