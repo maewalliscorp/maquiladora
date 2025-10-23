@@ -59,7 +59,6 @@ class Filters extends BaseFilters
                     'register*',
                     'api/maquiladoras*',
                     'auth/*',
-                    '/', // Asegúrate de que la página de inicio sea accesible
                 ]],
             ],
             'after' => [
@@ -82,6 +81,12 @@ class Filters extends BaseFilters
             // 'honeypot',
             // 'csrf',
             // 'invalidchars',
+            'auth' => ['except' => [
+                'login*',
+                'register*',
+                'api/maquiladoras*',
+                'auth/*',
+            ]],
         ],
         'after' => [
             // 'honeypot',

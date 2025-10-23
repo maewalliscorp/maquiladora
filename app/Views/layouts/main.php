@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title><?= esc($title ?? 'Maquiladora') ?></title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -70,123 +73,156 @@
                 <!-- Gestión Principal -->
                 <h6 class="text-muted small mb-2">GESTIÓN PRINCIPAL</h6>
                 <div class="row g-1 mb-3">
+                    <?php if (can('menu.catalogo_disenos')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo2/catalogodisenos') ?>">
                             <i class="bi bi-brush"></i>
                             <small>Diseños</small>
                         </a>
                     </div>
+                    <?php endif; ?>
+                    <?php if (can('menu.pedidos')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo1/pedidos') ?>">
                             <i class="bi bi-bag"></i>
                             <small>Pedidos</small>
                         </a>
                     </div>
+                    <?php endif; ?>
+                    <?php if (can('menu.ordenes')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo1/ordenes') ?>">
                             <i class="bi bi-list-check"></i>
                             <small>Órdenes</small>
                         </a>
                     </div>
+                    <?php endif; ?>
+                    <?php if (can('menu.produccion')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo1/produccion') ?>">
                             <i class="bi bi-gear"></i>
                             <small>Producción</small>
                         </a>
                     </div>
+                    <?php endif; ?>
+                    <?php if (can('menu.ordenes_clientes')): ?>
                     <div class="col-4">
-                        <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/ordenesclientes') ?>">
+                        <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('clientes') ?>">
                             <i class="bi bi-people"></i>
                             <small>Clientes</small>
                         </a>
                     </div>
+                    <?php endif; ?>
+                    <?php if (can('menu.muestras')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-primary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('muestras') ?>">
                             <i class="bi bi-palette2"></i>
                             <small>Muestras</small>
                         </a>
                     </div>
+                    <?php endif; ?>
+                    <?php if (can('menu.inspeccion')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-success w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/inspeccion') ?>">
                             <i class="bi bi-search"></i>
                             <small>Inspección</small>
                         </a>
                     </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Control de Calidad -->
                 <h6 class="text-muted small mb-2">CONTROL DE CALIDAD</h6>
                 <div class="row g-1 mb-3">
+                    <?php if (can('menu.wip')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-success w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/wip') ?>">
                             <i class="bi bi-diagram-3"></i>
                             <small>Trabajo en proceso</small>
                         </a>
                     </div>
+                    <?php endif; ?>
+                    <?php if (can('menu.incidencias')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-success w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/incidencias') ?>">
                             <i class="bi bi-exclamation-triangle"></i>
                             <small>Incidencias</small>
                         </a>
                     </div>
+                    <?php endif; ?>
+                    <?php if (can('menu.desperdicios')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-success w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/desperdicios') ?>">
                             <i class="bi bi-recycle"></i>
                             <small>Desperdicios</small>
                         </a>
                     </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Planificación -->
                 <h6 class="text-muted small mb-2">PLANIFICACIÓN</h6>
                 <div class="row g-1 mb-3">
+                    <?php if (can('menu.planificacion_materiales')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-info w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/mrp') ?>">
                             <i class="bi bi-diagram-2"></i>
                             <small>Planificacion Materiales</small>
                         </a>
                     </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Mantenimiento -->
                 <h6 class="text-muted small mb-2">MANTENIMIENTO</h6>
                 <div class="row g-1 mb-3">
+                    <?php if (can('menu.inv_maquinas')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-warning w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/mantenimiento_inventario') ?>">
                             <i class="bi bi-tools"></i>
                             <small>Inventario</small>
                         </a>
                     </div>
+                    <?php endif; ?>
+                    <?php if (can('menu.mant_correctivo')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-warning w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/mantenimiento_correctivo') ?>">
                             <i class="bi bi-wrench"></i>
                             <small>Correctivo</small>
                         </a>
                     </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Logística -->
                 <h6 class="text-muted small mb-2">LOGÍSTICA</h6>
                 <div class="row g-1 mb-3">
+                    <?php if (can('menu.logistica_preparacion')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-secondary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/logistica_preparacion') ?>">
                             <i class="bi bi-box-seam"></i>
                             <small>Prep. Envíos</small>
                         </a>
                     </div>
+                    <?php endif; ?>
+                    <?php if (can('menu.logistica_gestion')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-secondary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/logistica_gestion') ?>">
                             <i class="bi bi-truck"></i>
                             <small>Gestión</small>
                         </a>
                     </div>
+                    <?php endif; ?>
+                    <?php if (can('menu.logistica_documentos')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-secondary w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/logistica_documentos') ?>">
                             <i class="bi bi-file-text"></i>
                             <small>Documentos</small>
                         </a>
                     </div>
+                    <?php endif; ?>
                     <!-- INVENTARIO DE ALMACÉN (nuevo) -->
+                    <?php if (can('menu.inventario_almacen')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-secondary w-100 d-flex flex-column align-items-center p-2"
                            href="<?= base_url('almacen/inventario') ?>">
@@ -194,23 +230,34 @@
                             <small>Inventario Almacén</small>
                         </a>
                     </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Administración -->
                 <h6 class="text-muted small mb-2">ADMINISTRACIÓN</h6>
                 <div class="row g-1 mb-3">
+                    <?php if (can('menu.reportes')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-success w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo3/reportes') ?>">
                             <i class="bi bi-bar-chart-line"></i>
                             <small>Reportes</small>
                         </a>
                     </div>
+                    <?php endif; ?>
+                    <?php if (can('menu.roles')): ?>
+                    <a class="btn btn-outline-dark w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo11/roles') ?>">
+                        <i class="bi bi-person-gear"></i>
+                        <small>Roles</small>
+                    </a>
+                    <?php endif; ?>
+                    <?php if (can('menu.usuarios')): ?>
                     <div class="col-4">
                         <a class="btn btn-outline-dark w-100 d-flex flex-column align-items-center p-2" href="<?= base_url('modulo11/usuarios') ?>">
                             <i class="bi bi-shield-lock"></i>
                             <small>Usuarios</small>
                         </a>
                     </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Cerrar sesión -->
@@ -263,37 +310,93 @@
                         <span class="visually-hidden">Accesos rápidos</span>
                     </a>
                     <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="quickMenu" style="min-width: 280px;">
+                        <?php
+                        // Calcular visibilidad por secciones para evitar divisores huérfanos
+                        $secGestion = can('menu.catalogo_disenos') || can('menu.pedidos') || can('menu.ordenes') || can('menu.produccion') || can('menu.ordenes_clientes');
+                        $secMuestrasInspeccion = can('menu.muestras') || can('menu.inspeccion');
+                        $secIncidencias = can('menu.incidencias') || can('menu.wip');
+                        $secPlanificacion = can('menu.planificacion_materiales') || can('menu.desperdicios');
+                        $secMantenimiento = can('menu.inv_maquinas') || can('menu.mant_correctivo');
+                        $secLogistica = can('menu.logistica_preparacion') || can('menu.logistica_gestion') || can('menu.logistica_documentos') || can('menu.inventario_almacen');
+                        $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
+                        ?>
+                        <?php if (can('menu.catalogo_disenos')): ?>
                         <a class="dropdown-item" href="<?= base_url('modulo2/catalogodisenos') ?>"><i class="bi bi-brush me-2"></i>Catálogo de Diseños</a>
+                        <?php endif; ?>
+                        <?php if (can('menu.pedidos')): ?>
                         <a class="dropdown-item" href="<?= base_url('modulo1/pedidos') ?>"><i class="bi bi-bag me-2"></i>Pedidos</a>
+                        <?php endif; ?>
+                        <?php if (can('menu.ordenes')): ?>
                         <a class="dropdown-item" href="<?= base_url('modulo1/ordenes') ?>"><i class="bi bi-card-checklist me-2"></i>Órdenes en proceso</a>
+                        <?php endif; ?>
+                        <?php if (can('menu.produccion')): ?>
                         <a class="dropdown-item" href="<?= base_url('modulo1/produccion') ?>"><i class="bi bi-gear-wide-connected me-2"></i>Producción</a>
-                        <a class="dropdown-item" href="<?= base_url('modulo3/ordenesclientes') ?>"><i class="bi bi-people me-2"></i>Órdenes Clientes</a>
-
+                        <?php endif; ?>
+                        <?php if (can('menu.ordenes_clientes')): ?>
+                        <a class="dropdown-item" href="<?= base_url('clientes') ?>"><i class="bi bi-people me-2"></i>Clientes</a>
+                        <?php endif; ?>
+                        <?php if ($secGestion && $secMuestrasInspeccion): ?>
                         <div class="dropdown-divider"></div>
+                        <?php endif; ?>
+                        <?php if (can('menu.muestras')): ?>
                         <a class="dropdown-item" href="<?= base_url('muestras') ?>"><i class="bi bi-palette2 me-2"></i>Muestras</a>
+                        <?php endif; ?>
+                        <?php if (can('menu.inspeccion')): ?>
                         <a class="dropdown-item" href="<?= base_url('modulo3/inspeccion') ?>"><i class="bi bi-search me-2"></i>Inspección</a>
+                        <?php endif; ?>
+                        <?php if ($secMuestrasInspeccion && $secIncidencias): ?>
                         <div class="dropdown-divider"></div>
+                        <?php endif; ?>
                         <!--<a class="dropdown-item" href="<?= base_url('modulo3/wip') ?>"><i class="bi bi-diagram-3 me-2"></i>Trabajo en proceso</a>-->
+                        <?php if (can('menu.incidencias')): ?>
                         <a class="dropdown-item" href="<?= base_url('modulo3/incidencias') ?>"><i class="bi bi-exclamation-triangle me-2"></i>Incidencias</a>
-
+                        <?php endif; ?>
+                        <?php if ($secIncidencias && $secPlanificacion): ?>
                         <div class="dropdown-divider"></div>
+                        <?php endif; ?>
+                        <?php if (can('menu.planificacion_materiales')): ?>
                         <a class="dropdown-item" href="<?= base_url('modulo3/mrp') ?>"><i class="bi bi-diagram-2 me-2"></i>Planificacion materiales</a>
+                        <?php endif; ?>
+                        <?php if (can('menu.desperdicios')): ?>
                         <a class="dropdown-item" href="<?= base_url('modulo3/desperdicios') ?>"><i class="bi bi-recycle me-2"></i>Desperdicios</a>
-
+                        <?php endif; ?>
+                        <?php if ($secPlanificacion && $secMantenimiento): ?>
                         <div class="dropdown-divider"></div>
+                        <?php endif; ?>
+                        <?php if (can('menu.inv_maquinas')): ?>
                         <a class="dropdown-item" href="<?= base_url('modulo3/mantenimiento_inventario') ?>"><i class="bi bi-tools me-2"></i>Inventario Maq.</a>
+                        <?php endif; ?>
+                        <?php if (can('menu.mant_correctivo')): ?>
                         <a class="dropdown-item" href="<?= base_url('modulo3/mantenimiento_correctivo') ?>"><i class="bi bi-wrench-adjustable-circle me-2"></i>Mant. Correctivo</a>
-
+                        <?php endif; ?>
+                        <?php if ($secMantenimiento && $secLogistica): ?>
                         <div class="dropdown-divider"></div>
+                        <?php endif; ?>
+                        <?php if (can('menu.logistica_preparacion')): ?>
                         <a class="dropdown-item" href="<?= base_url('modulo3/logistica_preparacion') ?>"><i class="bi bi-box-seam me-2"></i>Prep. Envíos</a>
+                        <?php endif; ?>
+                        <?php if (can('menu.logistica_gestion')): ?>
                         <a class="dropdown-item" href="<?= base_url('modulo3/logistica_gestion') ?>"><i class="bi bi-truck me-2"></i>Gestión Envíos</a>
+                        <?php endif; ?>
+                        <?php if (can('menu.logistica_documentos')): ?>
                         <a class="dropdown-item" href="<?= base_url('modulo3/logistica_documentos') ?>"><i class="bi bi-file-earmark-text me-2"></i>Docs. Embarque</a>
+                        <?php endif; ?>
                         <!-- INVENTARIO DE ALMACÉN (nuevo) -->
+                        <?php if (can('menu.inventario_almacen')): ?>
                         <a class="dropdown-item" href="<?= base_url('almacen/inventario') ?>"><i class="bi bi-boxes me-2"></i>Inventario Almacén</a>
-
+                        <?php endif; ?>
+                        <?php if ($secLogistica && $secAdmin): ?>
                         <div class="dropdown-divider"></div>
+                        <?php endif; ?>
+                        <?php if (can('menu.reportes')): ?>
                         <a class="dropdown-item" href="<?= base_url('modulo3/reportes') ?>"><i class="bi bi-bar-chart-line me-2"></i>Reportes</a>
+                        <?php endif; ?>
+                        <?php if (can('menu.roles')): ?>
+                        <a class="dropdown-item" href="<?= base_url('modulo11/roles') ?>"><i class="bi bi-person-gear me-2"></i>Roles</a>
+                        <?php endif; ?>
+                        <?php if (can('menu.usuarios')): ?>
                         <a class="dropdown-item" href="<?= base_url('modulo11/usuarios') ?>"><i class="bi bi-shield-lock me-2"></i>Gestión Usuarios</a>
+                        <?php endif; ?>
                     </div>
                 </li>
 
@@ -348,6 +451,19 @@
             }
         });
     });
+</script>
+
+<script>
+    // Fuerza recarga si la página regresa desde el historial (bfcache) para que se valide sesión
+    (function () {
+        window.addEventListener('pageshow', function (e) {
+            if (e.persisted) {
+                location.reload();
+            }
+        });
+    })();
+    // Nota: dejar un listener 'unload' vacío evita algunos cachés agresivos en ciertos navegadores
+    window.addEventListener('unload', function () {});
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

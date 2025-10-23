@@ -8,19 +8,13 @@ $embarques = $embarques ?? [];
 <?= $this->section('styles') ?>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <style>
     .btn-icon{ padding:.25rem .45rem; border-width:2px; }
-
-    /* Botonera tipo pastillas separadas */
     div.dt-buttons{
-        display:flex !important;
-        gap:.65rem;
-        flex-wrap:wrap;
-        background:transparent !important;
-        border:0 !important;
-        border-radius:0 !important;
-        box-shadow:none !important;
-        padding:0 !important;
+        display:flex !important; gap:.65rem; flex-wrap:wrap;
+        background:transparent !important; border:0 !important;
+        border-radius:0 !important; box-shadow:none !important; padding:0 !important;
     }
     div.dt-buttons > .btn:not(:first-child){ margin-left:0 !important; }
     div.dt-buttons > .btn{ border-radius:.65rem !important; padding:.45rem 1rem !important; }
@@ -29,20 +23,17 @@ $embarques = $embarques ?? [];
 
 <?= $this->section('content') ?>
 
-<!-- Header -->
+<!-- Encabezado con acciones -->
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div class="d-flex align-items-center">
         <h1 class="me-3">Documentos de Embarque</h1>
         <span class="badge bg-secondary">Docs</span>
     </div>
-
     <div class="d-flex gap-2">
-        <!-- Abrir modal Generación rápida -->
+        <!-- (ELIMINADO) Botón Agregar (manualmente) -->
         <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#generarModal">
             <i class="bi bi-files me-1"></i> Agregar doc
         </button>
-
-        <!-- Abrir modal Agregar (form completo) -->
         <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#agregarModal">
             <i class="bi bi-plus-circle me-1"></i> Agregar
         </button>
@@ -62,14 +53,15 @@ $embarques = $embarques ?? [];
     </div>
 <?php endif; ?>
 
-<!-- ===== MODAL: Generación rápida ===== -->
+<!-- MODAL: Generación rápida -->
 <div class="modal fade" id="generarModal" tabindex="-1" aria-labelledby="generarModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="generarModalLabel">Generación de documentos</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
+
+            <!-- Importante: mantenemos el form para los tipos auto (Factura, Etiqueta, Aduanas) -->
             <form id="formQuick" method="post" action="<?= site_url('modulo3/documentos/crear') ?>">
                 <?= csrf_field() ?>
                 <div class="modal-body">
@@ -78,29 +70,41 @@ $embarques = $embarques ?? [];
                         <select class="form-select" name="embarqueId" required>
                             <option value="">— Selecciona —</option>
                             <?php foreach($embarques as $e): ?>
-                                <option value="<?= (int)$e['id'] ?>"><?= esc($e['folio']) ?></option>
+                                <option value="<?= (int)$e['id'] ?>"><?= esc($e['folio'] ?? ('ID '.$e['id'])) ?></option>
                             <?php endforeach ?>
                         </select>
                     </div>
+
                     <div class="d-flex flex-wrap gap-2">
-                        <button name="tipo" value="Factura"      class="btn btn-outline-primary" type="submit">Factura de envío</button>
-                        <button name="tipo" value="Packing List" class="btn btn-outline-primary" type="submit">Lista de empaque</button>
-                        <button name="tipo" value="Etiqueta"     class="btn btn-outline-primary" type="submit">Etiqueta</button>
-                        <button name="tipo" value="Aduanas"      class="btn btn-outline-primary" type="submit">Aduanas</button>
+                        <!-- Estos siguen creando el documento vía POST -->
+                        <button name="tipo" value="Factura" class="btn btn-outline-primary" type="submit">
+                            Factura de envío
+                        </button>
+
+                        <!-- Aquí movemos la acción del "Agregar (manualmente)": abre la vista manual -->
+                        <a href="<?= site_url('modulo3/embarque/manual') ?>" class="btn btn-outline-primary">
+                            Documento de embarque
+                        </a>
+
+                        <!-- Los demás siguen igual por POST -->
+                        <button name="tipo" value="Etiqueta" class="btn btn-outline-primary" type="submit">
+                            Etiqueta
+                        </button>
+                        <button name="tipo" value="Aduanas" class="btn btn-outline-primary" type="submit">
+                            Aduanas
+                        </button>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                 </div>
             </form>
-        </div>
-    </div>
+        </div></div>
 </div>
 
-<!-- ===== MODAL: Agregar (form completo) ===== -->
+<!-- MODAL: Agregar -->
 <div class="modal fade" id="agregarModal" tabindex="-1" aria-labelledby="agregarModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="agregarModalLabel">Agregar documento</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -113,7 +117,7 @@ $embarques = $embarques ?? [];
                         <select class="form-select" name="embarqueId" required>
                             <option value="">— Selecciona —</option>
                             <?php foreach($embarques as $e): ?>
-                                <option value="<?= (int)$e['id'] ?>"><?= esc($e['folio']) ?></option>
+                                <option value="<?= (int)$e['id'] ?>"><?= esc($e['folio'] ?? ('ID '.$e['id'])) ?></option>
                             <?php endforeach ?>
                         </select>
                     </div>
@@ -161,14 +165,12 @@ $embarques = $embarques ?? [];
                     <button class="btn btn-primary" type="submit">Guardar</button>
                 </div>
             </form>
-        </div>
-    </div>
+        </div></div>
 </div>
 
-<!-- ===== MODAL: Ver ===== -->
+<!-- MODAL: Ver -->
 <div class="modal fade" id="verModal" tabindex="-1" aria-labelledby="verModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="verModalLabel">Detalle de documento</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -181,20 +183,18 @@ $embarques = $embarques ?? [];
                     <dt class="col-4">Estado</dt><dd class="col-8" id="v-estado">-</dd>
                     <dt class="col-4">Embarque</dt><dd class="col-8" id="v-embarque">-</dd>
                     <dt class="col-4">PDF</dt>
-                    <dd class="col-8" id="v-pdf"><a id="v-pdf-a" href="#" target="_blank">—</a></dd>
+                    <dd class="col-8" id="v-pdf">
+                        <a id="v-pdf-a" href="#" target="_blank" rel="noopener">—</a>
+                    </dd>
                 </dl>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-            </div>
-        </div>
-    </div>
+            <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
+        </div></div>
 </div>
 
-<!-- ===== MODAL: Editar ===== -->
+<!-- MODAL: Editar -->
 <div class="modal fade" id="editarModal" tabindex="-1" aria-labelledby="editarModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="editarModalLabel">Editar documento</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -207,7 +207,7 @@ $embarques = $embarques ?? [];
                         <select class="form-select" name="embarqueId" id="e-embarqueId">
                             <option value="">— Selecciona —</option>
                             <?php foreach($embarques as $e): ?>
-                                <option value="<?= (int)$e['id'] ?>"><?= esc($e['folio']) ?></option>
+                                <option value="<?= (int)$e['id'] ?>"><?= esc($e['folio'] ?? ('ID '.$e['id'])) ?></option>
                             <?php endforeach ?>
                         </select>
                     </div>
@@ -254,11 +254,10 @@ $embarques = $embarques ?? [];
                     <button class="btn btn-primary" type="submit">Guardar</button>
                 </div>
             </form>
-        </div>
-    </div>
+        </div></div>
 </div>
 
-<!-- ===== Tabla ===== -->
+<!-- Tabla -->
 <div class="card shadow-sm">
     <div class="card-header"><strong>Documentos generados</strong></div>
     <div class="card-body p-0">
@@ -270,11 +269,19 @@ $embarques = $embarques ?? [];
                 <th class="text-center">Fecha</th>
                 <th class="text-center">Estado</th>
                 <th class="text-center">Embarque</th>
+                <th class="text-center">PDF</th>
                 <th class="text-center" style="width:220px;">Acciones</th>
             </tr>
             </thead>
             <tbody>
             <?php foreach($docs as $d): ?>
+                <?php
+                $id    = (int)($d['id'] ?? 0);
+                $url   = trim($d['urlPdf'] ?? '');
+                $arch  = trim($d['archivoPdf'] ?? '');
+                $href  = $url ? $url : ($arch ? site_url('modulo3/documentos/'.$id.'/pdf') : '#');
+                $hasPdf = $url || $arch;
+                ?>
                 <tr>
                     <td class="text-center"><?= esc($d['tipo'] ?? '') ?></td>
                     <td class="text-center"><?= esc($d['numero'] ?? '') ?></td>
@@ -286,18 +293,25 @@ $embarques = $embarques ?? [];
                     </td>
                     <td class="text-center"><?= esc($d['embarqueFolio'] ?? '') ?></td>
                     <td class="text-center">
+                        <?php if ($hasPdf): ?>
+                            <a href="<?= $href ?>" target="_blank" rel="noopener">Abrir PDF</a>
+                        <?php else: ?>
+                            <span class="text-muted">—</span>
+                        <?php endif; ?>
+                    </td>
+                    <td class="text-center">
                         <div class="btn-group" role="group">
-                            <button class="btn btn-outline-info btn-sm btn-icon btn-ver" data-id="<?= (int)$d['id'] ?>" title="Ver">
+                            <button class="btn btn-outline-info btn-sm btn-icon btn-ver" data-id="<?= $id ?>" title="Ver">
                                 <i class="bi bi-eye"></i>
                             </button>
-                            <button class="btn btn-outline-primary btn-sm btn-icon btn-editar" data-id="<?= (int)$d['id'] ?>" title="Editar">
+                            <button class="btn btn-outline-primary btn-sm btn-icon btn-editar" data-id="<?= $id ?>" title="Editar">
                                 <i class="bi bi-pencil"></i>
                             </button>
-                            <a class="btn btn-outline-secondary btn-sm btn-icon" title="Descargar PDF"
-                               href="<?= site_url('modulo3/documentos/'.(int)$d['id'].'/pdf') ?>">
+                            <a class="btn btn-outline-secondary btn-sm btn-icon <?= $hasPdf ? '' : 'disabled' ?>" title="Descargar/Ver PDF"
+                               href="<?= $hasPdf ? $href : '#' ?>" <?= $hasPdf ? 'target="_blank" rel="noopener"' : '' ?>>
                                 <i class="bi bi-file-earmark-pdf"></i>
                             </a>
-                            <form method="post" action="<?= site_url('modulo3/documentos/'.(int)$d['id'].'/eliminar') ?>"
+                            <form method="post" action="<?= site_url('modulo3/documentos/'.$id.'/eliminar') ?>"
                                   class="d-inline ms-1" onsubmit="return confirm('¿Eliminar documento?');">
                                 <?= csrf_field() ?>
                                 <button class="btn btn-outline-danger btn-sm btn-icon" type="submit" title="Eliminar">
@@ -330,7 +344,6 @@ $embarques = $embarques ?? [];
 <script>
     (function(){
         const base = "<?= site_url('modulo3/documentos') ?>";
-
         $.fn.dataTable.Buttons.defaults.dom.container.className = 'dt-buttons';
 
         const langES = {
@@ -344,8 +357,7 @@ $embarques = $embarques ?? [];
 
         $('#tablaDocs').DataTable({
             language: langES,
-            dom: "<'row px-3 pt-3'<'col-sm-6'B><'col-sm-6'f>>" + "t" +
-                "<'row p-3'<'col-sm-6'i><'col-sm-6'p>>",
+            dom: "<'row px-3 pt-3'<'col-sm-6'B><'col-sm-6'f>>t<'row p-3'<'col-sm-6'i><'col-sm-6'p>>",
             buttons: [
                 { extend:'copy',  text:'Copy',  className:'btn btn-secondary' },
                 { extend:'csv',   text:'CSV',   className:'btn btn-secondary' },
@@ -369,9 +381,11 @@ $embarques = $embarques ?? [];
                 document.getElementById('v-fecha').textContent    = d.fecha ?? '—';
                 document.getElementById('v-estado').textContent   = d.estado ?? '—';
                 document.getElementById('v-embarque').textContent = d.embarqueFolio ?? '—';
-                const a = document.getElementById('v-pdf-a');
+                const a   = document.getElementById('v-pdf-a');
+                const href = d.urlPdf ? d.urlPdf : (d.archivoPdf ? `${base}/${id}/pdf` : '#');
                 a.textContent = (d.urlPdf || d.archivoPdf) ? 'Abrir PDF' : '—';
-                a.href        = (d.urlPdf) ? d.urlPdf : (d.archivoPdf ? `${base}/${id}/pdf` : '#');
+                a.href        = href;
+                if (href !== '#') { a.setAttribute('target','_blank'); a.setAttribute('rel','noopener'); }
                 new bootstrap.Modal(document.getElementById('verModal')).show();
             });
         });
@@ -395,7 +409,7 @@ $embarques = $embarques ?? [];
             });
         });
 
-        // Focus al abrir "Agregar" y "Agregar doc"
+        // Focus al abrir modales de alta
         document.getElementById('agregarModal')?.addEventListener('shown.bs.modal', ()=>{
             document.querySelector('#formAgregar select[name="embarqueId"]')?.focus();
         });

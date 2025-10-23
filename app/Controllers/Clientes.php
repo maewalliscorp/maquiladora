@@ -22,10 +22,11 @@ class Clientes extends BaseController
                                    JOIN (SELECT clienteId, MAX(id) AS maxid FROM $cct GROUP BY clienteId) m
                                      ON m.clienteId = cc1.clienteId AND m.maxid = cc1.id";
 
-                        $sql = "SELECT c.id,
+                        $sql = "SELECT c.id AS clienteId,
                                        c.nombre,
                                        c.email,
                                        c.telefono,
+                                       c.fechaRegistro,
                                        d.*,
                                        cc.clasificacionId AS clasificacionId,
                                        cc.descripcion      AS cla_desc
@@ -72,10 +73,11 @@ class Clientes extends BaseController
             if ($claNombre === '' && $claDesc !== '') { $claNombre = $claDesc; }
 
             return [
-                'id'       => $r['id'] ?? null,
+                'id'       => $getv($r, ['clienteId', 'id', 'ID'], null),
                 'nombre'   => $getv($r, ['nombre', 'Nombre'], ''),
                 'email'    => $getv($r, ['email', 'Email', 'correo', 'Correo'], ''),
                 'telefono' => $getv($r, ['telefono', 'Telefono', 'tel', 'Tel'], ''),
+                'fechaRegistro' => $getv($r, ['fechaRegistro', 'fecha', 'created_at'], ''),
                 'direccion_detalle'=> $dir,
                 'clasificacion' => [
                     'id'          => $getv($r, ['clasificacionId', 'clasificacion_id', 'ClasificacionId'], null),
@@ -114,5 +116,224 @@ class Clientes extends BaseController
         }, $rows ?: []);
 
         return $this->response->setJSON($out);
+    }
+
+    public function json_detalle($id = null)
+    {
+        $id = (int)($id ?? 0);
+        if ($id <= 0) { return $this->response->setStatusCode(400)->setJSON(['error'=>'ID inválido']); }
+        $db = \Config\Database::connect();
+        $row = null; $addr = null;
+        foreach (['cliente','Cliente'] as $t) {
+            try { $row = $db->table($t)->where('id',$id)->get()->getRowArray(); if ($row) break; } catch (\Throwable $e) {}
+        }
+        if (!$row) { return $this->response->setStatusCode(404)->setJSON(['error'=>'No encontrado']); }
+        foreach (['cliente_direccion','ClienteDireccion'] as $t) {
+            try {
+                $addr = $db->table($t)->where('clienteId',$id)->orderBy('esPrincipal','DESC')->orderBy('id','DESC')->get()->getRowArray();
+                if ($addr) break;
+            } catch (\Throwable $e) {}
+        }
+        $out = [
+            'id' => (int)$row['id'],
+            'nombre' => $row['nombre'] ?? '',
+            'email' => $row['email'] ?? '',
+            'telefono' => $row['telefono'] ?? '',
+            'fechaRegistro' => $row['fechaRegistro'] ?? null,
+            'direccion' => $addr ? [
+                'id' => (int)($addr['id'] ?? 0),
+                'calle' => $addr['calle'] ?? '',
+                'numExt' => $addr['numExt'] ?? '',
+                'numInt' => $addr['numInt'] ?? '',
+                'ciudad' => $addr['ciudad'] ?? '',
+                'estado' => $addr['estado'] ?? '',
+                'cp' => $addr['cp'] ?? '',
+                'pais' => $addr['pais'] ?? '',
+                'esPrincipal' => (int)($addr['esPrincipal'] ?? 0),
+            ] : null,
+        ];
+        return $this->response->setJSON($out);
+    }
+
+    public function actualizar($id = null)
+    {
+        $id = (int)($id ?? 0);
+        if ($id <= 0) { return $this->response->setStatusCode(400)->setJSON(['ok'=>false]); }
+        $db = \Config\Database::connect();
+        $nombre = trim((string)$this->request->getPost('nombre'));
+        $email = trim((string)$this->request->getPost('email'));
+        $telefono = trim((string)$this->request->getPost('telefono'));
+        $fechaRegistro = $this->request->getPost('fechaRegistro');
+        if ($fechaRegistro) {
+            $fr = trim((string)$fechaRegistro);
+            if (strpos($fr, '/') !== false) {
+                $parts = preg_split('#[\/\-]#', $fr);
+                if (count($parts) === 3) {
+                    $d = (int)$parts[0]; $m = (int)$parts[1]; $y = (int)$parts[2];
+                    if ($d > 0 && $m > 0 && $y > 0) { $fechaRegistro = sprintf('%04d-%02d-%02d', $y, $m, $d); }
+                }
+            } else {
+                $ts = strtotime($fr);
+                if ($ts) { $fechaRegistro = date('Y-m-d', $ts); }
+            }
+        }
+        $calle = trim((string)$this->request->getPost('calle'));
+        $numExt = trim((string)$this->request->getPost('numExt'));
+        $numInt = trim((string)$this->request->getPost('numInt'));
+        $ciudad = trim((string)$this->request->getPost('ciudad'));
+        $estado = trim((string)$this->request->getPost('estado'));
+        $cp = trim((string)$this->request->getPost('cp'));
+        $pais = trim((string)$this->request->getPost('pais'));
+        $db->transStart();
+        $ok1 = false; $ok2 = false; $aff1 = 0; $aff2 = 0;
+        foreach (['cliente','Cliente'] as $t) {
+            try {
+                $data = [];
+                if ($nombre !== '') $data['nombre'] = $nombre;
+                if ($email !== '') $data['email'] = $email;
+                if ($telefono !== '') $data['telefono'] = $telefono;
+                if ($fechaRegistro !== null && $fechaRegistro !== '') $data['fechaRegistro'] = $fechaRegistro;
+                if ($data) { $db->table($t)->where('id',$id)->update($data); $aff1 = $db->affectedRows(); }
+                $ok1 = true; break;
+            } catch (\Throwable $e) {}
+        }
+        $addrTable = null;
+        foreach (['cliente_direccion','ClienteDireccion'] as $t) {
+            try {
+                $db->query("SELECT 1 FROM $t LIMIT 1");
+                $addrTable = $t; break;
+            } catch (\Throwable $e) { /* try next */ }
+        }
+        if ($addrTable === null) { $addrTable = 'cliente_direccion'; }
+        try {
+            $ex = null;
+            try { $ex = $db->query("SELECT id FROM $addrTable WHERE clienteId = ? ORDER BY esPrincipal DESC, id DESC LIMIT 1", [$id])->getRowArray(); } catch (\Throwable $e) { $ex = null; }
+            $addrData = [
+                'clienteId' => $id,
+                'calle' => $calle,
+                'numExt' => $numExt,
+                'numInt' => $numInt,
+                'ciudad' => $ciudad,
+                'estado' => $estado,
+                'cp' => $cp,
+                'pais' => $pais,
+                'esPrincipal' => 1,
+            ];
+            if ($ex && isset($ex['id'])) {
+                $db->table($addrTable)->where('id', (int)$ex['id'])->update($addrData);
+                $aff2 = $db->affectedRows();
+            } else {
+                $db->table($addrTable)->insert($addrData);
+                $aff2 = $db->affectedRows();
+            }
+            $ok2 = true;
+        } catch (\Throwable $e) { $ok2 = false; }
+        $db->transComplete();
+        if ($db->transStatus() === false || !$ok1) {
+            $err = $db->error();
+            return $this->response->setStatusCode(500)->setJSON(['ok'=>false, 'error'=>($err['message'] ?? 'Transacción fallida')]);
+        }
+        return $this->response->setJSON(['ok'=>true, 'updatedCliente'=>$aff1, 'updatedDireccion'=>$aff2]);
+    }
+
+    public function crear()
+    {
+        $db = \Config\Database::connect();
+        $nombre = trim((string)$this->request->getPost('nombre'));
+        $email = trim((string)$this->request->getPost('email'));
+        $telefono = trim((string)$this->request->getPost('telefono'));
+        $fechaRegistro = $this->request->getPost('fechaRegistro');
+        if ($fechaRegistro) {
+            $fr = trim((string)$fechaRegistro);
+            if (strpos($fr, '/') !== false) {
+                $parts = preg_split('#[\/\-]#', $fr);
+                if (count($parts) === 3) {
+                    $d = (int)$parts[0]; $m = (int)$parts[1]; $y = (int)$parts[2];
+                    if ($d > 0 && $m > 0 && $y > 0) { $fechaRegistro = sprintf('%04d-%02d-%02d', $y, $m, $d); }
+                }
+            } else {
+                $ts = strtotime($fr);
+                if ($ts) { $fechaRegistro = date('Y-m-d', $ts); }
+            }
+        }
+        $calle = trim((string)$this->request->getPost('calle'));
+        $numExt = trim((string)$this->request->getPost('numExt'));
+        $numInt = trim((string)$this->request->getPost('numInt'));
+        $ciudad = trim((string)$this->request->getPost('ciudad'));
+        $estado = trim((string)$this->request->getPost('estado'));
+        $cp = trim((string)$this->request->getPost('cp'));
+        $pais = trim((string)$this->request->getPost('pais'));
+
+        if ($nombre === '') { return $this->response->setStatusCode(422)->setJSON(['ok'=>false, 'error'=>'Nombre requerido']); }
+
+        $db->transStart();
+        $clienteTable = null;
+        foreach (['cliente','Cliente'] as $t) {
+            try { $db->query("SELECT 1 FROM $t LIMIT 1"); $clienteTable = $t; break; } catch (\Throwable $e) {}
+        }
+        if (!$clienteTable) { $clienteTable = 'cliente'; }
+
+        $db->table($clienteTable)->insert([
+            'nombre' => $nombre,
+            'email' => $email !== '' ? $email : null,
+            'telefono' => $telefono !== '' ? $telefono : null,
+            'fechaRegistro' => $fechaRegistro ?: date('Y-m-d'),
+        ]);
+        $newId = (int)$db->insertID();
+
+        $addrTable = null;
+        foreach (['cliente_direccion','ClienteDireccion'] as $t) {
+            try { $db->query("SELECT 1 FROM $t LIMIT 1"); $addrTable = $t; break; } catch (\Throwable $e) {}
+        }
+        if ($addrTable) {
+            $db->table($addrTable)->insert([
+                'clienteId' => $newId,
+                'calle' => $calle,
+                'numExt' => $numExt,
+                'numInt' => $numInt,
+                'ciudad' => $ciudad,
+                'estado' => $estado,
+                'cp' => $cp,
+                'pais' => $pais,
+                'esPrincipal' => 1,
+            ]);
+        }
+
+        $db->transComplete();
+        if ($db->transStatus() === false) {
+            $err = $db->error();
+            return $this->response->setStatusCode(500)->setJSON(['ok'=>false, 'error'=>($err['message'] ?? 'Transacción fallida')]);
+        }
+        return $this->response->setJSON(['ok'=>true, 'id'=>$newId]);
+    }
+
+    public function eliminar($id = null)
+    {
+        $id = (int)($id ?? 0);
+        if ($id <= 0) { return $this->response->setStatusCode(400)->setJSON(['ok'=>false, 'error'=>'ID inválido']); }
+        $db = \Config\Database::connect();
+        $db->transStart();
+        // eliminar direcciones primero
+        $addrTable = null;
+        foreach (['cliente_direccion','ClienteDireccion'] as $t) {
+            try { $db->query("SELECT 1 FROM $t LIMIT 1"); $addrTable = $t; break; } catch (\Throwable $e) {}
+        }
+        if ($addrTable) {
+            try { $db->table($addrTable)->where('clienteId', $id)->delete(); } catch (\Throwable $e) {}
+        }
+        // eliminar cliente
+        $cliTable = null;
+        foreach (['cliente','Cliente'] as $t) {
+            try { $db->query("SELECT 1 FROM $t LIMIT 1"); $cliTable = $t; break; } catch (\Throwable $e) {}
+        }
+        if ($cliTable) {
+            try { $db->table($cliTable)->where('id', $id)->delete(); } catch (\Throwable $e) {}
+        }
+        $db->transComplete();
+        if ($db->transStatus() === false) {
+            $err = $db->error();
+            return $this->response->setStatusCode(500)->setJSON(['ok'=>false, 'error'=>($err['message'] ?? 'Transacción fallida')]);
+        }
+        return $this->response->setJSON(['ok'=>true]);
     }
 }

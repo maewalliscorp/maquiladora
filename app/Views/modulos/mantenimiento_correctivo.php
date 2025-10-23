@@ -3,9 +3,8 @@
 <?= $this->section('head') ?>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
-
 <style>
-    /* Separar botones de DataTables (export) */
+    /* Separar botones de export de DataTables */
     .dt-buttons.btn-group .btn{
         margin-left: 0 !important;
         margin-right: .5rem;
@@ -13,21 +12,19 @@
     }
     .dt-buttons.btn-group .btn:last-child{ margin-right: 0; }
 
-    /* Centrar SIEMPRE la última columna (Acciones) */
+    /* Columna Acciones centrada */
     .tabla-acciones-centradas th:last-child,
     .tabla-acciones-centradas td:last-child{
         text-align:center !important;
-        white-space:nowrap; /* evita wraps raros */
+        white-space:nowrap;
     }
-
-    /* Estilo de los botones de acciones: cuadrados, separados */
     .tabla-acciones-centradas td:last-child .acciones-wrap{
-        display:inline-flex;            /* se centra dentro del td */
+        display:inline-flex;
         align-items:center;
-        gap:.5rem;                      /* separación entre botones */
+        gap:.5rem;
     }
     .tabla-acciones-centradas td:last-child .acciones-wrap .btn{
-        padding:.25rem .45rem;          /* tamaño compacto */
+        padding:.25rem .45rem;
         border-radius:.5rem;
         line-height:1;
     }
@@ -35,13 +32,16 @@
 <?= $this->endSection() ?>
 
 <?php
-$tableId = $tableId ?? 'tablaMtto';
-$columns = $columns ?? ['Folio','Apertura','Máquina','Tipo','Estatus','Descripción','Cierre','Horas','Acciones'];
-$rows    = is_array($rows ?? null) ? $rows : [];
+$tableId   = $tableId   ?? 'tablaMtto';
+$columns   = $columns   ?? ['Folio','Apertura','Máquina','Tipo','Estatus','Descripción','Cierre','Horas','Acciones'];
+$rows      = is_array($rows ?? null) ? $rows : [];
+$maquinas  = $maquinas  ?? []; // id, codigo/clave/serie/modelo/nombre/descripcion
+$empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres, apellido/apellidos
 ?>
 
 <?= $this->section('content') ?>
 
+<!-- Encabezado + Agregar -->
 <div class="d-flex align-items-center justify-content-between mb-3">
     <div class="d-flex align-items-center">
         <h1 class="me-3">Mantenimiento Correctivo</h1>
@@ -76,13 +76,41 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                             <label class="form-label fw-semibold text-dark">Fecha apertura *</label>
                             <input name="fechaApertura" id="f-fechaApertura" type="datetime-local" class="form-control" required>
                         </div>
+
+                        <!-- Máquina: SELECT con fallbacks de columnas -->
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark">Máquina ID *</label>
-                            <input name="maquinaId" type="number" class="form-control" required>
+                            <label class="form-label fw-semibold text-dark">Máquina *</label>
+                            <select name="maquinaId" class="form-select" required>
+                                <option value="" disabled selected>— Selecciona máquina —</option>
+                                <?php foreach ($maquinas as $m): ?>
+                                    <?php
+                                    $codigo = $m['codigo'] ?? $m['clave'] ?? $m['serie'] ?? $m['modelo'] ?? $m['id'];
+                                    $nombre = $m['nombre'] ?? $m['descripcion'] ?? $m['modelo'] ?? $m['serie'] ?? 'Sin nombre';
+                                    ?>
+                                    <option value="<?= esc($m['id'],'attr') ?>">
+                                        [<?= esc($codigo) ?>] <?= esc($nombre) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
+
+                        <!-- Responsable: SELECT con fallbacks -->
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark">Responsable ID</label>
-                            <input name="responsableId" type="number" class="form-control">
+                            <label class="form-label fw-semibold text-dark">Responsable</label>
+                            <select name="responsableId" class="form-select">
+                                <option value="">— Sin responsable —</option>
+                                <?php foreach ($empleados as $e): ?>
+                                    <?php
+                                    $noEmp = $e['noEmpleado'] ?? $e['numeroEmpleado'] ?? $e['id'];
+                                    $nom   = $e['nombre'] ?? $e['nombres'] ?? '';
+                                    $ape   = $e['apellido'] ?? $e['apellidos'] ?? '';
+                                    $full  = trim($nom.' '.$ape);
+                                    ?>
+                                    <option value="<?= esc($e['id'],'attr') ?>">
+                                        [<?= esc($noEmp) ?>] <?= esc($full ?: 'Empleado') ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
 
                         <div class="col-md-4">
@@ -147,14 +175,15 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                 <tbody>
                 <?php foreach ($rows as $r): ?>
                     <?php
-                    $estado = $r['Estatus'] ?? '';
-                    $cls = ($estado === 'Cerrado') ? 'bg-success'
+                    $estado   = $r['Estatus'] ?? '';
+                    $cls      = ($estado === 'Cerrado') ? 'bg-success'
                             : (($estado === 'En reparación') ? 'bg-warning text-dark' : 'bg-danger');
 
                     $folio       = $r['Folio']        ?? '';
                     $apertura    = $r['Apertura']     ?? '';
                     $maquina     = $r['Maquina']      ?? '';
                     $maquinaId   = $r['MaquinaId']    ?? '';
+                    $respId      = $r['ResponsableId']?? '';
                     $tipo        = $r['Tipo']         ?? '';
                     $descripcion = $r['Descripcion']  ?? '';
                     $cierre      = $r['Cierre']       ?? '';
@@ -170,8 +199,8 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                         <td><?= esc($cierre ?: '-') ?></td>
                         <td><?= number_format((float)$horas, 2) ?></td>
                         <td class="text-center">
-                            <!-- SIN btn-group: botones separados -->
                             <div class="acciones-wrap">
+                                <!-- Ver -->
                                 <button type="button"
                                         class="btn btn-sm btn-outline-info btn-ver"
                                         title="Ver"
@@ -180,6 +209,7 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                                         data-apertura="<?= esc($apertura, 'attr') ?>"
                                         data-maquina="<?= esc($maquina, 'attr') ?>"
                                         data-maquinaid="<?= esc($maquinaId, 'attr') ?>"
+                                        data-responsableid="<?= esc($respId, 'attr') ?>"
                                         data-tipo="<?= esc($tipo, 'attr') ?>"
                                         data-estatus="<?= esc($estado, 'attr') ?>"
                                         data-descripcion="<?= esc($descripcion, 'attr') ?>"
@@ -187,6 +217,8 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                                         data-horas="<?= esc($horas, 'attr') ?>">
                                     <i class="bi bi-eye"></i>
                                 </button>
+
+                                <!-- Editar -->
                                 <button type="button"
                                         class="btn btn-sm btn-outline-primary btn-editar"
                                         title="Editar"
@@ -194,11 +226,21 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                                         data-id="<?= esc($folio, 'attr') ?>"
                                         data-apertura="<?= esc($apertura, 'attr') ?>"
                                         data-maquinaid="<?= esc($maquinaId, 'attr') ?>"
+                                        data-responsableid="<?= esc($respId, 'attr') ?>"
                                         data-tipo="<?= esc($tipo, 'attr') ?>"
                                         data-estatus="<?= esc($estado, 'attr') ?>"
                                         data-descripcion="<?= esc($descripcion, 'attr') ?>"
                                         data-cierre="<?= esc($cierre, 'attr') ?>">
                                     <i class="bi bi-pencil"></i>
+                                </button>
+
+                                <!-- Eliminar -->
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger btn-eliminar"
+                                        title="Eliminar"
+                                        data-bs-toggle="modal" data-bs-target="#modalEliminar"
+                                        data-id="<?= esc($folio, 'attr') ?>">
+                                    <i class="bi bi-trash"></i>
                                 </button>
                             </div>
                         </td>
@@ -223,6 +265,7 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                     <dt class="col-sm-3 fw-semibold text-dark">Folio</dt>        <dd class="col-sm-9" id="v-folio"></dd>
                     <dt class="col-sm-3 fw-semibold text-dark">Apertura</dt>     <dd class="col-sm-9" id="v-apertura"></dd>
                     <dt class="col-sm-3 fw-semibold text-dark">Máquina</dt>      <dd class="col-sm-9" id="v-maquina"></dd>
+                    <dt class="col-sm-3 fw-semibold text-dark">Responsable (ID)</dt><dd class="col-sm-9" id="v-responsable"></dd>
                     <dt class="col-sm-3 fw-semibold text-dark">Tipo</dt>         <dd class="col-sm-9" id="v-tipo"></dd>
                     <dt class="col-sm-3 fw-semibold text-dark">Estatus</dt>      <dd class="col-sm-9" id="v-estatus"></dd>
                     <dt class="col-sm-3 fw-semibold text-dark">Descripción</dt>  <dd class="col-sm-9" id="v-descripcion"></dd>
@@ -255,13 +298,41 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                             <label class="form-label fw-semibold text-dark">Fecha apertura *</label>
                             <input name="fechaApertura" id="e-apertura" type="datetime-local" class="form-control" required>
                         </div>
+
+                        <!-- Máquina: SELECT -->
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark">Máquina ID *</label>
-                            <input name="maquinaId" id="e-maquinaId" type="number" class="form-control" required>
+                            <label class="form-label fw-semibold text-dark">Máquina *</label>
+                            <select name="maquinaId" id="e-maquinaId" class="form-select" required>
+                                <option value="">— Selecciona máquina —</option>
+                                <?php foreach ($maquinas as $m): ?>
+                                    <?php
+                                    $codigo = $m['codigo'] ?? $m['clave'] ?? $m['serie'] ?? $m['modelo'] ?? $m['id'];
+                                    $nombre = $m['nombre'] ?? $m['descripcion'] ?? $m['modelo'] ?? $m['serie'] ?? 'Sin nombre';
+                                    ?>
+                                    <option value="<?= esc($m['id'],'attr') ?>">
+                                        [<?= esc($codigo) ?>] <?= esc($nombre) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
+
+                        <!-- Responsable: SELECT -->
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark">Responsable ID</label>
-                            <input name="responsableId" id="e-responsableId" type="number" class="form-control">
+                            <label class="form-label fw-semibold text-dark">Responsable</label>
+                            <select name="responsableId" id="e-responsableId" class="form-select">
+                                <option value="">— Sin responsable —</option>
+                                <?php foreach ($empleados as $e): ?>
+                                    <?php
+                                    $noEmp = $e['noEmpleado'] ?? $e['numeroEmpleado'] ?? $e['id'];
+                                    $nom   = $e['nombre'] ?? $e['nombres'] ?? '';
+                                    $ape   = $e['apellido'] ?? $e['apellidos'] ?? '';
+                                    $full  = trim($nom.' '.$ape);
+                                    ?>
+                                    <option value="<?= esc($e['id'],'attr') ?>">
+                                        [<?= esc($noEmp) ?>] <?= esc($full ?: 'Empleado') ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
 
                         <div class="col-md-4">
@@ -290,6 +361,31 @@ $rows    = is_array($rows ?? null) ? $rows : [];
                 <div class="modal-footer">
                     <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
                     <button class="btn btn-primary" type="submit">Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ====================== MODAL ELIMINAR ====================== -->
+<div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-semibold text-dark" id="modalEliminarLabel">Eliminar orden</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="formEliminar" method="post">
+                <?= csrf_field() ?>
+                <div class="modal-body">
+                    <p class="mb-0">
+                        Esta acción es <strong>permanente</strong>.<br>
+                        ¿Deseas eliminar la orden de mantenimiento <strong>#<span id="del-id"></span></strong>?
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-danger" type="submit">Eliminar</button>
                 </div>
             </form>
         </div>
@@ -366,12 +462,14 @@ $rows    = is_array($rows ?? null) ? $rows : [];
             return dt.replace(' ', 'T').slice(0,16);
         }
 
+        // VER
         document.querySelectorAll('.btn-ver').forEach(btn=>{
             btn.addEventListener('click', ()=>{
                 const d = btn.dataset;
                 document.getElementById('v-folio').textContent       = d.id || '';
                 document.getElementById('v-apertura').textContent    = d.apertura || '';
                 document.getElementById('v-maquina').textContent     = d.maquina || '';
+                document.getElementById('v-responsable').textContent = d.responsableid || '(sin responsable)';
                 document.getElementById('v-tipo').textContent        = d.tipo || '';
                 document.getElementById('v-estatus').textContent     = d.estatus || '';
                 document.getElementById('v-descripcion').textContent = d.descripcion || '';
@@ -380,19 +478,34 @@ $rows    = is_array($rows ?? null) ? $rows : [];
             });
         });
 
+        // EDITAR
         document.querySelectorAll('.btn-editar').forEach(btn=>{
             btn.addEventListener('click', ()=>{
                 const d = btn.dataset;
                 const form = document.getElementById('formEditar');
                 form.action = '<?= site_url("mantenimiento/correctivo/actualizar") ?>' + '/' + (d.id || '');
+
                 document.getElementById('e-id').value            = d.id || '';
                 document.getElementById('e-apertura').value      = toLocalInputValue(d.apertura || '');
+
+                // Selects
                 document.getElementById('e-maquinaId').value     = d.maquinaid || '';
-                document.getElementById('e-responsableId').value = '';
+                document.getElementById('e-responsableId').value = d.responsableid || '';
+
                 document.getElementById('e-tipo').value          = d.tipo || 'Correctivo';
                 document.getElementById('e-estatus').value       = d.estatus || 'Abierta';
                 document.getElementById('e-descripcion').value   = d.descripcion || '';
                 document.getElementById('e-cierre').value        = toLocalInputValue(d.cierre || '');
+            });
+        });
+
+        // ELIMINAR
+        document.querySelectorAll('.btn-eliminar').forEach(btn=>{
+            btn.addEventListener('click', ()=>{
+                const id = btn.dataset.id || '';
+                document.getElementById('del-id').textContent = id;
+                const form = document.getElementById('formEliminar');
+                form.action = '<?= site_url("mantenimiento/correctivo/eliminar") ?>' + '/' + id;
             });
         });
     })();

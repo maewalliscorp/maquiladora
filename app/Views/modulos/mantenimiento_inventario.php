@@ -3,21 +3,16 @@
 <?= $this->section('styles') ?>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
-
 <style>
     /* Botones de exportación separados */
-    .dt-buttons.btn-group .btn{
-        margin-right:.5rem;border-radius:.375rem!important
-    }
-    .dt-buttons.btn-group .btn:last-child{margin-right:0}
+    .dt-buttons.btn-group .btn{ margin-right:.5rem;border-radius:.375rem!important }
+    .dt-buttons.btn-group .btn:last-child{ margin-right:0 }
 
-    /* Centrar SIEMPRE la última columna (Acciones) y evitar saltos */
+    /* Acciones centradas */
     #tablaMaquinaria.tabla-acciones-centradas th:last-child,
-    #tablaMaquinaria.tabla-acciones-centradas td:last-child{
-        text-align:center!important;white-space:nowrap
-    }
+    #tablaMaquinaria.tabla-acciones-centradas td:last-child{ text-align:center!important;white-space:nowrap }
 
-    /* Botones de acciones separados (no btn-group) */
+    /* Botones de acciones como pastillas separadas */
     #tablaMaquinaria.tabla-acciones-centradas td:last-child .acciones-wrap{
         display:inline-flex;align-items:center;gap:.5rem
     }
@@ -29,7 +24,7 @@
 
 <?= $this->section('content') ?>
 
-<!-- Encabezado con botón Agregar al lado derecho -->
+<!-- Encabezado -->
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div class="d-flex align-items-center">
         <h1 class="me-3">Inventario de Maquinaria</h1>
@@ -44,12 +39,11 @@
 <?php if (session()->getFlashdata('success')): ?>
     <div class="alert alert-success mb-3"><?= esc(session()->getFlashdata('success')) ?></div>
 <?php endif; ?>
-
 <?php if (session()->getFlashdata('error')): ?>
     <div class="alert alert-danger mb-3"><?= esc(session()->getFlashdata('error')) ?></div>
 <?php endif; ?>
 
-<!-- MODAL: Agregar / Registrar máquina (centrado) -->
+<!-- ================= Modal: Alta con Catálogo / Manual ================= -->
 <div class="modal fade" id="maqModal" tabindex="-1" aria-labelledby="maqModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -61,31 +55,114 @@
             <form class="row g-3" method="post" action="<?= base_url('modulo3/maquinaria/guardar') ?>">
                 <?= csrf_field() ?>
                 <div class="modal-body">
+
+                    <!-- Toggle de modo -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="btn-group" role="group" aria-label="Modo de captura">
+                            <button type="button" class="btn btn-outline-primary active" id="btnModoCatalogo">
+                                Seleccionar de BD
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" id="btnModoManual">
+                                Agregar nuevo equipo
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="row g-3">
+                        <!-- Código con consecutivo sugerido -->
                         <div class="col-md-4">
                             <label for="codigo" class="form-label fw-semibold text-dark">Código</label>
-                            <input id="codigo" name="codigo" class="form-control" required
-                                   value="<?= esc(old('codigo')) ?>" placeholder="MC-0007">
+                            <div class="input-group">
+                                <input id="codigo" name="codigo" class="form-control"
+                                       value="<?= esc(old('codigo') ?: ($sigCodigo ?? 'MC-0001')) ?>"
+                                       placeholder="MC-0007">
+                                <button class="btn btn-outline-secondary" type="button" id="btnAutonum" title="Generar siguiente">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">Puedes modificarlo; si lo dejas vacío, se asigna el siguiente disponible.</div>
                         </div>
 
-                        <div class="col-md-4">
-                            <label for="modelo" class="form-label fw-semibold text-dark">Modelo</label>
-                            <input id="modelo" name="modelo" class="form-control" required
-                                   value="<?= esc(old('modelo')) ?>" placeholder="Juki DDL-8700">
+                        <!-- ======== MODO CATÁLOGO (SPINNERS) ======== -->
+                        <div id="secCatalogo" class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-dark">Modelo</label>
+                                <select id="modeloSelect" name="modelo" class="form-select">
+                                    <option value="">— Selecciona —</option>
+                                    <?php foreach (($modelos ?? []) as $opt): ?>
+                                        <option value="<?= esc($opt,'attr') ?>" <?= (old('modelo')===$opt?'selected':'') ?>>
+                                            <?= esc($opt) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-dark">Fabricante</label>
+                                <select id="fabricanteSelect" name="fabricante" class="form-select">
+                                    <option value="">— Selecciona —</option>
+                                    <?php foreach (($fabricantes ?? []) as $opt): ?>
+                                        <option value="<?= esc($opt,'attr') ?>" <?= (old('fabricante')===$opt?'selected':'') ?>>
+                                            <?= esc($opt) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-dark">Ubicación</label>
+                                <select id="ubicacionSelect" name="ubicacion" class="form-select" <?= empty($ubicaciones)?'disabled':'' ?>>
+                                    <option value="">— Selecciona —</option>
+                                    <?php foreach (($ubicaciones ?? []) as $opt): ?>
+                                        <option value="<?= esc($opt,'attr') ?>" <?= (old('ubicacion')===$opt?'selected':'') ?>>
+                                            <?= esc($opt) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-dark">Serie</label>
+                                <select id="serieSelect" name="serie" class="form-select" <?= empty($series)?'disabled':'' ?>>
+                                    <option value="">— Selecciona —</option>
+                                    <?php foreach (($series ?? []) as $opt): ?>
+                                        <option value="<?= esc($opt,'attr') ?>" <?= (old('serie')===$opt?'selected':'') ?>>
+                                            <?= esc($opt) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <div class="form-text">Si la serie ya existe en la BD, selecciónala aquí.</div>
+                            </div>
                         </div>
 
-                        <div class="col-md-4">
-                            <label for="fabricante" class="form-label fw-semibold text-dark">Fabricante</label>
-                            <input id="fabricante" name="fabricante" class="form-control"
-                                   value="<?= esc(old('fabricante')) ?>" placeholder="Juki / Brother / Siruba ...">
+                        <!-- ======== MODO MANUAL (CAMPOS TEXTO) ======== -->
+                        <div id="secManual" class="row g-3 d-none">
+                            <div class="col-md-4">
+                                <label for="modeloInput" class="form-label fw-semibold text-dark">Modelo</label>
+                                <input id="modeloInput" name="modelo" class="form-control"
+                                       value="<?= esc(old('modelo')) ?>" placeholder="Juki DDL-8700" disabled>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="fabricanteInput" class="form-label fw-semibold text-dark">Fabricante</label>
+                                <input id="fabricanteInput" name="fabricante" class="form-control"
+                                       value="<?= esc(old('fabricante')) ?>" placeholder="Juki / Brother / Siruba ..." disabled>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="ubicacionInput" class="form-label fw-semibold text-dark">Ubicación</label>
+                                <input id="ubicacionInput" name="ubicacion" class="form-control"
+                                       value="<?= esc(old('ubicacion')) ?>" placeholder="Línea 2" disabled>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="serieInput" class="form-label fw-semibold text-dark">Serie</label>
+                                <input id="serieInput" name="serie" class="form-control"
+                                       value="<?= esc(old('serie')) ?>" placeholder="SER12345" disabled>
+                            </div>
                         </div>
 
-                        <div class="col-md-4">
-                            <label for="serie" class="form-label fw-semibold text-dark">Serie</label>
-                            <input id="serie" name="serie" class="form-control"
-                                   value="<?= esc(old('serie')) ?>" placeholder="SER12345">
-                        </div>
-
+                        <!-- Comunes -->
                         <div class="col-md-4">
                             <label for="fechaCompra" class="form-label fw-semibold text-dark">Fecha de compra</label>
                             <input id="fechaCompra" type="date" name="fechaCompra" class="form-control"
@@ -93,17 +170,11 @@
                         </div>
 
                         <div class="col-md-4">
-                            <label for="ubicacion" class="form-label fw-semibold text-dark">Ubicación</label>
-                            <input id="ubicacion" name="ubicacion" class="form-control"
-                                   value="<?= esc(old('ubicacion')) ?>" placeholder="Línea 2">
-                        </div>
-
-                        <div class="col-md-4">
                             <label for="activa" class="form-label fw-semibold text-dark">Estado</label>
+                            <?php $optEstado = old('activa') ?: 'Operativa'; ?>
                             <select id="activa" name="activa" class="form-select">
-                                <?php $opt = old('activa') ?: 'Operativa'; ?>
-                                <option value="Operativa"     <?= $opt==='Operativa'?'selected':'' ?>>Operativa</option>
-                                <option value="En reparación" <?= $opt==='En reparación'?'selected':'' ?>>En reparación</option>
+                                <option value="Operativa"     <?= $optEstado==='Operativa'?'selected':'' ?>>Operativa</option>
+                                <option value="En reparación" <?= $optEstado==='En reparación'?'selected':'' ?>>En reparación</option>
                             </select>
                         </div>
                     </div>
@@ -118,7 +189,7 @@
     </div>
 </div>
 
-<!-- MODAL: Ver / Más información (solo lectura, sin botón Editar) -->
+<!-- ================= Modal: Ver ================= -->
 <div class="modal fade" id="verModal" tabindex="-1" aria-labelledby="verModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content text-dark">
@@ -128,13 +199,13 @@
             </div>
             <div class="modal-body">
                 <dl class="row mb-0">
-                    <dt class="col-sm-3">Código</dt>       <dd class="col-sm-9" id="v-codigo">-</dd>
-                    <dt class="col-sm-3">Modelo</dt>       <dd class="col-sm-9" id="v-modelo">-</dd>
-                    <dt class="col-sm-3">Fabricante</dt>   <dd class="col-sm-9" id="v-fabricante">-</dd>
-                    <dt class="col-sm-3">Serie</dt>        <dd class="col-sm-9" id="v-serie">-</dd>
-                    <dt class="col-sm-3">Compra</dt>       <dd class="col-sm-9" id="v-compra">-</dd>
-                    <dt class="col-sm-3">Ubicación</dt>    <dd class="col-sm-9" id="v-ubicacion">-</dd>
-                    <dt class="col-sm-3">Estado</dt>       <dd class="col-sm-9" id="v-estado"><span class="badge bg-success">Operativa</span></dd>
+                    <dt class="col-sm-3">Código</dt>     <dd class="col-sm-9" id="v-codigo">-</dd>
+                    <dt class="col-sm-3">Modelo</dt>     <dd class="col-sm-9" id="v-modelo">-</dd>
+                    <dt class="col-sm-3">Fabricante</dt> <dd class="col-sm-9" id="v-fabricante">-</dd>
+                    <dt class="col-sm-3">Serie</dt>      <dd class="col-sm-9" id="v-serie">-</dd>
+                    <dt class="col-sm-3">Compra</dt>     <dd class="col-sm-9" id="v-compra">-</dd>
+                    <dt class="col-sm-3">Ubicación</dt>  <dd class="col-sm-9" id="v-ubicacion">-</dd>
+                    <dt class="col-sm-3">Estado</dt>     <dd class="col-sm-9" id="v-estado"><span class="badge bg-success">Operativa</span></dd>
                 </dl>
             </div>
             <div class="modal-footer">
@@ -144,7 +215,7 @@
     </div>
 </div>
 
-<!-- Tabla -->
+<!-- ================= Tabla ================= -->
 <div class="card shadow-sm">
     <div class="card-header"><strong>Listado</strong></div>
     <div class="card-body table-responsive">
@@ -167,19 +238,17 @@
                     <?php
                     $compra = '';
                     if (!empty($m['compra'])) {
-                        $ts = strtotime($m['compra']);
-                        if ($ts) { $compra = date('Y-m-d', $ts); }
+                        $ts = strtotime($m['compra']); if ($ts) { $compra = date('Y-m-d', $ts); }
                     }
-                    $estado       = $m['estado'] ?? 'Operativa';
-                    $esOperativa  = ($estado === 'Operativa');
-                    $badgeClass   = $esOperativa ? 'bg-success' : 'bg-warning text-dark';
+                    $estado     = $m['estado'] ?? 'Operativa';
+                    $badgeClass = ($estado === 'Operativa') ? 'bg-success' : 'bg-warning text-dark';
 
-                    $id         = $m['id']        ?? null;
-                    $codigo     = $m['cod']       ?? '';
-                    $modelo     = $m['modelo']    ?? '';
-                    $fabricante = $m['fabricante']?? '';
-                    $serie      = $m['serie']     ?? '';
-                    $ubicacion  = $m['ubic']      ?? '';
+                    $id         = $m['id'] ?? null;
+                    $codigo     = $m['cod'] ?? '';
+                    $modelo     = $m['modelo'] ?? '';
+                    $fabricante = $m['fabricante'] ?? '';
+                    $serie      = $m['serie'] ?? '';
+                    $ubicacion  = $m['ubic'] ?? '';
                     ?>
                     <tr>
                         <td><?= esc($codigo) ?></td>
@@ -189,16 +258,11 @@
                         <td><?= esc($compra) ?></td>
                         <td><?= esc($ubicacion) ?></td>
                         <td><span class="badge <?= esc($badgeClass,'attr') ?>"><?= esc($estado) ?></span></td>
-                        <td class="text-center">
-                            <!-- Botones separados -->
+                        <td>
                             <div class="acciones-wrap">
                                 <!-- Ver -->
-                                <button
-                                        type="button"
-                                        class="btn btn-sm btn-outline-info"
-                                        title="Ver"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#verModal"
+                                <button type="button" class="btn btn-sm btn-outline-info" title="Ver"
+                                        data-bs-toggle="modal" data-bs-target="#verModal"
                                         data-id="<?= esc($id) ?>"
                                         data-codigo="<?= esc($codigo, 'attr') ?>"
                                         data-modelo="<?= esc($modelo, 'attr') ?>"
@@ -206,17 +270,24 @@
                                         data-serie="<?= esc($serie, 'attr') ?>"
                                         data-compra="<?= esc($compra, 'attr') ?>"
                                         data-ubicacion="<?= esc($ubicacion, 'attr') ?>"
-                                        data-estado="<?= esc($estado, 'attr') ?>"
-                                >
+                                        data-estado="<?= esc($estado, 'attr') ?>">
                                     <i class="bi bi-eye"></i>
                                 </button>
 
                                 <!-- Editar -->
-                                <a class="btn btn-sm btn-outline-primary <?= $id ? '' : 'disabled' ?>"
-                                   title="Editar"
+                                <a class="btn btn-sm btn-outline-primary <?= $id ? '' : 'disabled' ?>" title="Editar"
                                    href="<?= $id ? base_url('modulo3/maquinaria/editar/'.$id) : 'javascript:void(0)' ?>">
                                     <i class="bi bi-pencil"></i>
                                 </a>
+
+                                <!-- Eliminar -->
+                                <form action="<?= $id ? base_url('modulo3/maquinaria/eliminar/'.$id) : '#' ?>" method="post" class="d-inline frm-del">
+                                    <?= csrf_field() ?>
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-del" title="Eliminar"
+                                            <?= $id ? '' : 'disabled' ?> data-name="<?= esc($codigo) ?>">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -245,27 +316,57 @@
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
 
-<!-- Contenedor de botones de exportación con separación (global) -->
 <script>
+    // Contenedor de botones de exportación
     $.fn.dataTable.Buttons.defaults.dom.container.className =
         'dt-buttons d-inline-flex flex-wrap gap-2';
-</script>
 
-<script>
     (function () {
-        // Rellena fecha por defecto al abrir "Agregar"
+        // ===== Prefill fecha y establecer modo por defecto =====
         const addModal = document.getElementById('maqModal');
+        function setModo(modo){
+            const btnCat = document.getElementById('btnModoCatalogo');
+            const btnMan = document.getElementById('btnModoManual');
+            const secCat = document.getElementById('secCatalogo');
+            const secMan = document.getElementById('secManual');
+
+            if(modo==='catalogo'){
+                btnCat.classList.add('active'); btnMan.classList.remove('active');
+                secCat.classList.remove('d-none'); secMan.classList.add('d-none');
+                secCat.querySelectorAll('select').forEach(el=>el.disabled=false);
+                secMan.querySelectorAll('input').forEach(el=>el.disabled=true);
+            }else{
+                btnMan.classList.add('active'); btnCat.classList.remove('active');
+                secMan.classList.remove('d-none'); secCat.classList.add('d-none');
+                secMan.querySelectorAll('input').forEach(el=>el.disabled=false);
+                secCat.querySelectorAll('select').forEach(el=>el.disabled=true);
+            }
+        }
+
         if (addModal) {
             addModal.addEventListener('show.bs.modal', () => {
-                const input = document.getElementById('fechaCompra');
-                if (input && !input.value) {
-                    const d = new Date(), pad = n => String(n).padStart(2,'0');
-                    input.value = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+                // Fecha
+                const f = document.getElementById('fechaCompra');
+                if (f && !f.value) {
+                    const d=new Date(), pad=n=>String(n).padStart(2,'0');
+                    f.value = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
                 }
+                // Modo por defecto: catálogo
+                setModo('catalogo');
             });
         }
 
-        // Pinta datos en el modal "Ver"
+        // Toggle modo
+        document.getElementById('btnModoCatalogo')?.addEventListener('click', ()=>setModo('catalogo'));
+        document.getElementById('btnModoManual')?.addEventListener('click',   ()=>setModo('manual'));
+
+        // Botón de consecutivo (deja vacío para que el backend asigne el siguiente)
+        document.getElementById('btnAutonum')?.addEventListener('click', function(){
+            const input = document.getElementById('codigo');
+            if (input) input.value = '';
+        });
+
+        // Modal Ver → pintar datos
         const verModal = document.getElementById('verModal');
         if (verModal) {
             verModal.addEventListener('show.bs.modal', function (event) {
@@ -301,7 +402,6 @@
             oPaginate:{ sFirst:"Primero", sLast:"Último", sNext:"Siguiente", sPrevious:"Anterior" },
             buttons:{ copy:"Copiar" }
         };
-
         const hoy = new Date().toISOString().slice(0,10);
 
         $('#tablaMaquinaria').DataTable({
@@ -321,6 +421,16 @@
                     orientation:'landscape', pageSize:'A4', exportOptions:{ columns: ':not(:last-child)' } },
                 { extend:'print', text:'Print', exportOptions:{ columns: ':not(:last-child)' } }
             ]
+        });
+
+        // Eliminar con confirm
+        document.querySelectorAll('.btn-del').forEach(btn=>{
+            btn.addEventListener('click', function(){
+                const name = this.getAttribute('data-name') || 'la máquina';
+                if (confirm('¿Eliminar ' + name + ' de forma permanente?')) {
+                    this.closest('form').submit();
+                }
+            });
         });
     })();
 </script>

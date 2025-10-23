@@ -1,5 +1,19 @@
 <?= $this->extend('layouts/main') ?>
 
+<?= $this->section('head') ?>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+    <style>
+        /* Separación entre los botones de DataTables */
+        .dt-buttons.btn-group .btn{
+            margin-left: 0 !important;
+            margin-right: .5rem;
+            border-radius: .375rem !important;
+        }
+        .dt-buttons.btn-group .btn:last-child{ margin-right: 0; }
+    </style>
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
     <div class="d-flex align-items-center justify-content-between mb-4">
         <h1 class="me-3">Gestión de Usuarios</h1>
@@ -23,7 +37,6 @@
                     <th>NOMBRE</th>
                     <th>EMAIL</th>
                     <th>PUESTO</th>
-                    <th>MAQUILADORA</th>
                     <th>ESTATUS</th>
                     <th>FECHA REGISTRO</th>
                     <th>ÚLTIMO ACCESO</th>
@@ -40,11 +53,6 @@
                     <td>
                         <span class="rol-badge rol-<?= strtolower(str_replace(' ', '', $usuario['puesto'])) ?>">
                             <?= $usuario['puesto'] ?>
-                        </span>
-                    </td>
-                    <td>
-                        <span class="badge bg-info text-dark">
-                            <?= $usuario['idmaquiladora'] ? 'ID: ' . $usuario['idmaquiladora'] : 'Sin asignar' ?>
                         </span>
                     </td>
                     <td>
@@ -86,7 +94,7 @@
                             data-id="<?= $usuario['id'] ?>">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <button onclick="eliminarUsuario(<?= $usuario['id'] ?>)" 
+                        <button onclick="confirmarEliminarUsuario(<?= $usuario['id'] ?>, '<?= esc($usuario['nombre']) ?>')" 
                                 class="btn btn-sm btn-outline-danger btn-accion" title="Eliminar Usuario">
                             <i class="bi bi-trash"></i>
                         </button>
@@ -122,7 +130,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="editar_email" class="form-label">Correo Electrónico</label>
-                                <input type="email" class="form-control" id="editar_email" name="email" required>
+                                <input type="email" class="form-control" id="editar_email" name="email" required autocomplete="username">
                             </div>
                         </div>
                         
@@ -151,7 +159,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="editar_password" class="form-label">Nueva Contraseña</label>
-                                <input type="password" class="form-control" id="editar_password" name="password" placeholder="Dejar en blanco para no cambiar">
+                                <input type="password" class="form-control" id="editar_password" name="password" placeholder="Dejar en blanco para no cambiar" autocomplete="new-password">
                                 <div class="form-text">Mínimo 8 caracteres</div>
                             </div>
                         </div>
@@ -173,10 +181,21 @@
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <!-- DataTables Buttons dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         $(document).ready(function () {
             // Inicializar DataTable
+            const fecha = new Date().toISOString().slice(0,10);
+            const fileName = 'usuarios_' + fecha;
             var table = $('#tablaUsuarios').DataTable({
                 language: {
                     "sProcessing":     "Procesando...",
@@ -206,10 +225,30 @@
                         "colvis": "Visibilidad"
                     }
                 },
+                columnDefs: [{
+                    targets: -1,
+                    orderable: false,
+                    searchable: false
+                }],
                 order: [[0, 'asc']],
                 pageLength: 10,
-                responsive: true
+                responsive: true,
+                dom:
+                    "<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
+                    "<'row'<'col-12'tr>>" +
+                    "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                buttons: [
+                    { extend:'copy',  text:'Copiar',  exportOptions:{ columns: ':not(:last-child)' } },
+                    { extend:'csv',   text:'CSV',   filename:fileName, exportOptions:{ columns: ':not(:last-child)' } },
+                    { extend:'excel', text:'Excel', filename:fileName, exportOptions:{ columns: ':not(:last-child)' } },
+                    { extend:'pdf',   text:'PDF',   filename:fileName, title:fileName,
+                        orientation:'portrait', pageSize:'A4',
+                        exportOptions:{ columns: ':not(:last-child)' } },
+                    { extend:'print', text:'Imprimir', exportOptions:{ columns: ':not(:last-child)' } }
+                ]
             });
+            // Exponer la instancia para usarla fuera del ready
+            window.usuariosTable = table;
         });
 
         // Función para abrir el modal de edición con los datos del usuario
@@ -223,7 +262,11 @@
                 
                 if ($modal.length === 0 || $modalBody.length === 0) {
                     console.error('[ERROR] No se encontró el modal o el contenedor del cuerpo');
-                    alert('Error: No se pudo abrir el modal de edición. Por favor, revise la consola para más detalles.');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No se pudo abrir el modal de edición. Revisa la consola para más detalles.'
+                    });
                     return;
                 }
                 
@@ -285,12 +328,13 @@
                                 if (usuario.roles && Array.isArray(usuario.roles) && usuario.roles.length > 0) {
                                     console.log('[DEBUG] Cargando roles:', usuario.roles);
                                     usuario.roles.forEach(rol => {
-                                        const selected = (rol.id == (usuario.rol_id || 2)); // 2 = Usuario por defecto
-                                        $rolSelect.append(new Option(rol.name, rol.id, false, selected));
+                                        // No forzar selección por defecto aquí
+                                        $rolSelect.append(new Option(rol.name, rol.id, false, false));
                                     });
                                 } else {
-                                    console.warn('[WARN] No se encontraron roles, usando valores por defecto');
-                                    $rolSelect.append(new Option('Usuario', 2, true, true));
+                                    console.warn('[WARN] No se encontraron roles');
+                                    // Dejar el select vacío y deshabilitado si no hay catálogo
+                                    $rolSelect.prop('disabled', true);
                                 }
                                 
                                 // Cargar maquiladoras
@@ -313,7 +357,14 @@
                                 }
                                 
                                 // Establecer valores seleccionados
-                                if (usuario.rol_id) $rolSelect.val(usuario.rol_id);
+                                if (usuario.rol_id) { 
+                                    $rolSelect.val(usuario.rol_id);
+                                } else {
+                                    // Si no hay rol asignado, seleccionar el primero disponible si existe
+                                    if ($rolSelect[0].options.length > 0) {
+                                        $rolSelect.prop('selectedIndex', 0);
+                                    }
+                                }
                                 if (usuario.maquiladoraIdFK) $maquiladoraSelect.val(usuario.maquiladoraIdFK);
                                 
                                 // Estado activo/inactivo
@@ -382,7 +433,7 @@
                 });
             } catch (error) {
                 console.error('[ERROR CRÍTICO] Error en abrirModalEditar:', error);
-                alert('Error crítico al abrir el modal de edición. Por favor, revise la consola para más detalles.');
+                Swal.fire({ icon: 'error', title: 'Error crítico', text: 'No se pudo abrir el modal de edición.' });
             }
         }
 
@@ -401,17 +452,24 @@
             const $submitBtn = $form.find('button[type="submit"]');
             const originalBtnText = $submitBtn.html();
             
+            // Validar ID de usuario
+            const idVal = parseInt($('#editar_id').val(), 10) || 0;
+            if (idVal <= 0) {
+                Swal.fire({ icon: 'warning', title: 'ID inválido', text: 'Cierre y vuelva a abrir el modal.' });
+                return false;
+            }
+
             // Validar contraseña si se proporcionó
             const password = $('#editar_password').val();
             if (password && password.length < 8) {
-                alert('La contraseña debe tener al menos 8 caracteres');
+                Swal.fire({ icon: 'warning', title: 'Contraseña corta', text: 'Debe tener al menos 8 caracteres.' });
                 return false;
             }
             
             // Validar que se haya seleccionado un rol
             const rol = $('#editar_rol').val();
             if (!rol) {
-                alert('Por favor seleccione un rol para el usuario');
+                Swal.fire({ icon: 'warning', title: 'Rol requerido', text: 'Seleccione un rol para el usuario.' });
                 return false;
             }
             
@@ -420,7 +478,7 @@
             
             // Preparar los datos del formulario
             const formData = new FormData();
-            formData.append('id', $('#editar_id').val());
+            formData.append('id', String(idVal));
             formData.append('nombre', $('#editar_nombre').val().trim());
             formData.append('email', $('#editar_email').val().trim());
             formData.append('rol', rol);
@@ -440,23 +498,15 @@
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        // Mostrar mensaje de éxito
-                        const $modal = $('#editarUsuarioModal');
-                        const $modalBody = $modal.find('#modalBodyContainer');
-                        
-                        $modalBody.html(`
-                            <div class="modal-body">
-                                <div class="alert alert-success">
-                                    <i class="bi bi-check-circle-fill"></i> ${response.message || 'Usuario actualizado correctamente'}
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-primary" onclick="location.reload()">Aceptar</button>
-                            </div>
-                        `);
+                        try { $('#editarUsuarioModal').modal('hide'); } catch(e){}
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Actualizado!',
+                            text: response.message || 'Usuario actualizado correctamente',
+                            confirmButtonText: 'Aceptar'
+                        }).then(() => { location.reload(); });
                     } else {
-                        // Mostrar mensaje de error
-                        alert('Error al actualizar el usuario: ' + (response.message || 'Error desconocido'));
+                        Swal.fire({ icon: 'error', title: 'Error', text: response.message || 'No fue posible actualizar.' });
                         $submitBtn.prop('disabled', false).html(originalBtnText);
                     }
                 },
@@ -474,22 +524,92 @@
                         console.error('Error al procesar la respuesta de error:', e);
                     }
                     
-                    alert(errorMessage);
+                    Swal.fire({ icon: 'error', title: 'Error', text: errorMessage });
                     $submitBtn.prop('disabled', false).html(originalBtnText);
                 }
             });
         });
 
-        function eliminarUsuario(id) {
-            if (confirm('¿Está seguro de que desea eliminar este usuario?')) {
-                // Pendiente: implementar con backend cuando la BD esté lista
-                alert("Función de eliminación pendiente de implementar con backend.");
+        // Confirmación con SweetAlert2 para eliminar
+        function confirmarEliminarUsuario(id, nombre) {
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: `Se eliminará al usuario "${nombre}" y no podrás revertirlo`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    eliminarUsuario(id, null, nombre);
+                }
+            });
+        }
+
+        function eliminarUsuario(id, modalInstance, nombre) {
+            $.ajax({
+                url: '<?= base_url('modulo11/eliminar_usuario') ?>',
+                method: 'POST',
+                data: { id: id },
+                dataType: 'json',
+                success: function(resp){
+                    if (resp && resp.success) {
+                        if (modalInstance) modalInstance.hide();
+                        // Remover fila de la tabla (usando DataTable API)
+                        const row = $("#tablaUsuarios tbody tr").filter(function(){
+                            return $(this).find('td:first').text().trim() == String(id);
+                        });
+                        if (row.length && window.usuariosTable) {
+                            window.usuariosTable.row(row).remove().draw(false);
+                        }
+                        Swal.fire({ icon: 'success', title: '¡Eliminado!', text: resp.message || `Usuario "${nombre}" eliminado.` });
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Error', text: resp.message || 'No se pudo eliminar.' });
+                    }
+                },
+                error: function(xhr){
+                    let msg = 'Error al eliminar';
+                    try { const j = JSON.parse(xhr.responseText); if (j.message) msg = j.message; } catch(e){}
+                    Swal.fire({ icon: 'error', title: 'Error', text: msg });
+                }
+            });
+        }
+
+        // Toast helper
+        function ensureToastContainer() {
+            if (!document.getElementById('toastContainer')) {
+                const container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.className = 'toast-container position-fixed top-50 start-50 translate-middle p-3';
+                container.style.zIndex = '1080';
+                document.body.appendChild(container);
             }
+            return document.getElementById('toastContainer');
+        }
+
+        function showToast(message, type) {
+            const container = ensureToastContainer();
+            const toastEl = document.createElement('div');
+            toastEl.className = `toast align-items-center text-bg-${type} border-0`;
+            toastEl.role = 'alert';
+            toastEl.ariaLive = 'assertive';
+            toastEl.ariaAtomic = 'true';
+            toastEl.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>`;
+            container.appendChild(toastEl);
+            const bsToast = new bootstrap.Toast(toastEl, { delay: 2500 });
+            bsToast.show();
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
         }
 
         function verDetalles(id) {
             // Pendiente: implementar modal con detalles del usuario
-            alert("Función de ver detalles pendiente de implementar.");
+            Swal.fire({ icon: 'info', title: 'Información', text: 'Función de ver detalles pendiente de implementar.' });
         }
     </script>
 <?= $this->endSection() ?>

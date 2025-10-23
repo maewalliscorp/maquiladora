@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Login - Maquiladora</title>
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
@@ -26,6 +29,49 @@
     <div class="w-50 bg-secondary d-flex justify-content-center align-items-center">
         <div class="login-card" style="max-width: 380px; width: 100%;">
             <h3 class="mb-4 fw-bold text-center text-light">Inicio de Sesión</h3>
+
+            <?php $successMsg = session()->getFlashdata('success'); ?>
+            <?php if ($successMsg): ?>
+                <div class="alert alert-success d-none" role="alert" id="successInline">
+                    <?= esc($successMsg) ?>
+                </div>
+                <!-- Modal de éxito -->
+                <div class="modal fade" id="registerSuccessModal" tabindex="-1" aria-labelledby="registerSuccessLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="registerSuccessLabel">Registro exitoso</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                            </div>
+                            <div class="modal-body">
+                                <?= esc($successMsg) ?>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendido</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        try {
+                            // Bootstrap 5: mostrar modal automáticamente
+                            var modalEl = document.getElementById('registerSuccessModal');
+                            if (modalEl && window.bootstrap) {
+                                var modal = new bootstrap.Modal(modalEl);
+                                modal.show();
+                            } else {
+                                // Fallback: mostrar alerta inline si Bootstrap no está disponible
+                                var inline = document.getElementById('successInline');
+                                if (inline) inline.classList.remove('d-none');
+                            }
+                        } catch (e) {
+                            var inline = document.getElementById('successInline');
+                            if (inline) inline.classList.remove('d-none');
+                        }
+                    });
+                </script>
+            <?php endif; ?>
 
             <?php if (session()->getFlashdata('error')): ?>
                 <div class="alert alert-danger" role="alert">
@@ -56,6 +102,19 @@
     </div>
 
 </div>
+
+<script>
+  // Si volvemos a esta página desde el historial (bfcache), forzar recarga
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted) {
+      location.reload();
+    }
+  });
+  // Ayuda a que algunos navegadores no cacheen esta página
+  window.addEventListener('unload', function () {});
+  // Como refuerzo adicional, si detectamos que hay sesión (por error de caché), redirigimos a /logout
+  // Nota: no tenemos acceso a PHP aquí, pero si tuvieras una variable global renderizada, podríamos usarla.
+</script>
 
 </body>
 </html>

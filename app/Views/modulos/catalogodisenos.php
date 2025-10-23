@@ -356,9 +356,6 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <a id="m-editar" href="#" class="btn btn-primary">
-                    <i class="bi bi-pencil"></i> Editar
-                </a>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>

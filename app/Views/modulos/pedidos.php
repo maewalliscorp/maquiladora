@@ -37,12 +37,6 @@
                 <!-- Paso 1: Cliente -->
                 <div class="mb-3">
                     <h6 class="mb-2">Cliente</h6>
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="pa-nuevo-cliente">
-                            <label class="form-check-label ms-2" for="pa-nuevo-cliente">Nuevo cliente</label>
-                        </div>
-                    </div>
                     <div id="pa-select-wrap" class="row g-3 align-items-end">
                         <div class="col-md-8">
                             <label class="form-label">Seleccionar cliente</label>
