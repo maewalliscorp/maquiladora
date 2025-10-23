@@ -285,6 +285,9 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->get ('embarque/manual/print',  'LogisticaController::documentoManualPrint');   // vista SOLO documento (para imprimir)
     $routes->post('embarque/manual/print',  'LogisticaController::documentoManualPrint');   // idem por POST
 
+    // ====== ⬇️ NUEVO: Proxy Storage (fallback de listado) ======
+    $routes->post('storage/list', 'StorageProxy::list'); // => /modulo3/storage/list
+
     // Órdenes de clientes (enlace del menú)
     $routes->get('ordenesclientes', 'Modulos::m1_ordenesclientes', ['filter' => 'auth:Administrador,Jefe,Empleado,Envios,Calidad,Almacenista,RH,Inspector,Diseñador']);
 });
