@@ -66,10 +66,14 @@ class UsuarioController extends Controller
         if ($user && (int)($user['active'] ?? 0) !== 1) {
             return redirect()
                 ->to('/login')
+                ->withInput()
+                ->with('login_attempted', true)
                 ->with('error', 'Tu cuenta está inactiva. Contacta al administrador.');
         }
         return redirect()
             ->to('/login')
+            ->withInput()
+            ->with('login_attempted', true)
             ->with('error', 'Correo o contraseña incorrectos.');
     }
 
@@ -102,11 +106,41 @@ class UsuarioController extends Controller
     {
         $validation = \Config\Services::validation();
         $validation->setRules([
-            'username' => 'required|min_length[3]|is_unique[users.username]',
-            'correo' => 'required|valid_email|is_unique[users.correo]',
-            'password' => 'required|min_length[6]',
-            'password_verify' => 'matches[password]',
-            'maquiladoraIdFK' => 'required'
+            'username' => [
+                'rules'  => 'required|min_length[3]|is_unique[users.username]',
+                'errors' => [
+                    'required'   => 'El nombre de usuario es obligatorio.',
+                    'min_length' => 'El nombre de usuario debe tener al menos 3 caracteres.',
+                    'is_unique'  => 'El nombre de usuario ya está registrado.'
+                ],
+            ],
+            'correo' => [
+                'rules'  => 'required|valid_email|is_unique[users.correo]',
+                'errors' => [
+                    'required'    => 'El correo electrónico es obligatorio.',
+                    'valid_email' => 'Debes ingresar un correo electrónico válido.',
+                    'is_unique'   => 'El correo electrónico ya está registrado.'
+                ],
+            ],
+            'password' => [
+                'rules'  => 'required|min_length[6]',
+                'errors' => [
+                    'required'   => 'La contraseña es obligatoria.',
+                    'min_length' => 'La contraseña debe tener al menos 6 caracteres.'
+                ],
+            ],
+            'password_verify' => [
+                'rules'  => 'matches[password]',
+                'errors' => [
+                    'matches' => 'La confirmación de contraseña no coincide.'
+                ],
+            ],
+            'maquiladoraIdFK' => [
+                'rules'  => 'required',
+                'errors' => [
+                    'required' => 'Debes seleccionar una maquiladora.'
+                ],
+            ],
         ]);
 
         if (!$validation->withRequest($this->request)->run()) {

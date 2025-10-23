@@ -13,6 +13,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
             integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
             crossorigin="anonymous"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="vh-100">
 
@@ -35,51 +37,38 @@
                 <div class="alert alert-success d-none" role="alert" id="successInline">
                     <?= esc($successMsg) ?>
                 </div>
-                <!-- Modal de éxito -->
-                <div class="modal fade" id="registerSuccessModal" tabindex="-1" aria-labelledby="registerSuccessLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="registerSuccessLabel">Registro exitoso</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                            </div>
-                            <div class="modal-body">
-                                <?= esc($successMsg) ?>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendido</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
                 <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                        try {
-                            // Bootstrap 5: mostrar modal automáticamente
-                            var modalEl = document.getElementById('registerSuccessModal');
-                            if (modalEl && window.bootstrap) {
-                                var modal = new bootstrap.Modal(modalEl);
-                                modal.show();
-                            } else {
-                                // Fallback: mostrar alerta inline si Bootstrap no está disponible
-                                var inline = document.getElementById('successInline');
-                                if (inline) inline.classList.remove('d-none');
-                            }
-                        } catch (e) {
-                            var inline = document.getElementById('successInline');
-                            if (inline) inline.classList.remove('d-none');
-                        }
+                    document.addEventListener('DOMContentLoaded', function () {
+                        Swal.fire({
+                            title: 'Registro exitoso',
+                            text: document.getElementById('successInline')?.textContent?.trim() || '',
+                            icon: 'success',
+                            confirmButtonText: 'Aceptar',
+                            heightAuto: false
+                        });
                     });
                 </script>
             <?php endif; ?>
 
-            <?php if (session()->getFlashdata('error')): ?>
-                <div class="alert alert-danger" role="alert">
-                    <?= session()->getFlashdata('error') ?>
+            <?php $attempted = session()->getFlashdata('login_attempted'); ?>
+            <?php if (session()->getFlashdata('error') && $attempted): ?>
+                <div class="alert alert-danger d-none" id="errorInline" role="alert">
+                    <?= esc(session()->getFlashdata('error')) ?>
                 </div>
+                <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                        Swal.fire({
+                            title: 'Error',
+                            text: document.getElementById('errorInline')?.textContent?.trim() || '',
+                            icon: 'error',
+                            confirmButtonText: 'Aceptar',
+                            heightAuto: false
+                        });
+                    });
+                </script>
             <?php endif; ?>
 
-            <form action="<?= base_url('login') ?>" method="post">
+            <form action="<?= base_url('login') ?>" method="post" id="loginForm">
                 <!-- Cambiado a correo -->
                 <label for="correo" class="form-label text-light">Correo electrónico</label>
                 <input type="email" id="correo" name="correo" class="form-control mb-3"
@@ -114,6 +103,7 @@
   window.addEventListener('unload', function () {});
   // Como refuerzo adicional, si detectamos que hay sesión (por error de caché), redirigimos a /logout
   // Nota: no tenemos acceso a PHP aquí, pero si tuvieras una variable global renderizada, podríamos usarla.
+  // En login ya no se usa confirmación; el Swal solo se muestra si hay error en flashdata
 </script>
 
 </body>

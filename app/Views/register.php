@@ -6,6 +6,8 @@
     <title>Registro - Maquiladora</title>
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body style="background-color:rgb(98, 132, 183);">
     <div class="d-flex min-vh-100">
@@ -24,20 +26,39 @@
 
                     <!-- Mostrar errores -->
                     <?php if (session()->getFlashdata('errors')): ?>
-                        <div class="alert alert-danger">
+                        <div class="alert alert-danger d-none" id="errorsInline">
                             <ul class="mb-0">
                                 <?php foreach (session('errors') as $error): ?>
                                     <li><?= esc($error) ?></li>
                                 <?php endforeach ?>
                             </ul>
                         </div>
+                        <script>
+                          document.addEventListener('DOMContentLoaded', function () {
+                            const list = document.querySelector('#errorsInline');
+                            const text = list ? list.innerText.trim() : '';
+                            Swal.fire({
+                              title: 'Errores de validación',
+                              html: text.replaceAll('\n', '<br>'),
+                              icon: 'error',
+                              confirmButtonText: 'Entendido',
+                              heightAuto: false
+                            });
+                          });
+                        </script>
                     <?php endif; ?>
 
                     <!-- Mostrar mensaje de éxito -->
                     <?php if (session()->getFlashdata('success')): ?>
-                        <div class="alert alert-success">
-                            <?= esc(session('success')) ?>
-                        </div>
+                        <script>
+                          Swal.fire({
+                            title: 'Registro exitoso',
+                            text: '<?= esc(session('success')) ?>',
+                            icon: 'success',
+                            confirmButtonText: 'Aceptar',
+                            heightAuto: false
+                          });
+                        </script>
                     <?php endif; ?>
 
                     <form action="<?= base_url('/register/store') ?>" method="post" id="registerForm">
@@ -84,5 +105,30 @@
             </div>
         </div>
     </div>
+    <script>
+      // Confirmación antes de enviar registro
+      document.addEventListener('DOMContentLoaded', function () {
+        var form = document.getElementById('registerForm');
+        if (!form) return;
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          Swal.fire({
+            title: '¿Estás seguro?',
+            text: 'Se creará tu cuenta con la información proporcionada.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Sí, continuar',
+            cancelButtonText: 'No, cancelar',
+            heightAuto: false
+          }).then((result) => {
+            if (result.isConfirmed) {
+              form.submit();
+            }
+          });
+        });
+      });
+    </script>
 </body>
 </html>
