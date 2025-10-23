@@ -78,7 +78,6 @@ class UsuarioModel extends Model
         'username' => 'required|min_length[3]|max_length[30]|is_unique[users.username]',
         'correo' => 'required|valid_email|is_unique[users.correo]',
         'password' => 'required|min_length[6]',
-        'maquiladoraIdFK' => 'required|integer',
         'active' => 'permit_empty|in_list[0,1]',
         'status' => 'permit_empty|in_list[0,1]',
         'maquiladoraIdFK' => 'required|integer'
