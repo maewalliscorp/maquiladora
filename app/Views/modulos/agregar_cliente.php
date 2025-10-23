@@ -140,6 +140,7 @@
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         $(document).ready(function () {
@@ -244,38 +245,40 @@
             // Cargar datos iniciales
             cargarClientes();
 
-            // Eliminar con confirmación
-            let delId = null; let delBtn = null;
-            $(document).on('click', '.btn-del', function(){
-                delId = $(this).data('id');
-                if (!delId) return;
-                delBtn = $(this);
-                delBtn.prop('disabled', true);
-                const m = new bootstrap.Modal(document.getElementById('modalClienteDel'));
-                m.show();
-                const onHidden = () => {
-                    if (delBtn) delBtn.prop('disabled', false);
-                    delBtn = null;
-                    $('#modalClienteDel').off('hidden.bs.modal', onHidden);
-                };
-                $('#modalClienteDel').on('hidden.bs.modal', onHidden);
-            });
-
-            $('#btnConfirmDel').on('click', async function(){
-                if (!delId) return;
-                $(this).prop('disabled', true);
-                try {
-                    const res = await fetch('<?= site_url('api/clientes') ?>/' + encodeURIComponent(delId) + '/eliminar', { method: 'POST', headers: { 'Accept': 'application/json' }});
-                    if (res.ok) {
-                        cargarClientes(); // Recargar datos
-                        $('#modalClienteDel').modal('hide');
-                        return;
+            // Eliminar con confirmación (SweetAlert2)
+            $(document).on('click', '.btn-del', async function(){
+                const idSel = $(this).data('id');
+                if (!idSel) return;
+                const $btn = $(this);
+                $btn.prop('disabled', true);
+                Swal.fire({
+                    title: '¿Estás seguro?',
+                    text: 'No podrás revertir esta acción',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        try {
+                            const res = await fetch('<?= site_url('api/clientes') ?>/' + encodeURIComponent(idSel) + '/eliminar', { method: 'POST', headers: { 'Accept': 'application/json' }});
+                            if (res.ok) {
+                                try { await res.json(); } catch(e) {}
+                                await Swal.fire({ icon: 'success', title: '¡Eliminado!', text: 'El cliente ha sido eliminado.' });
+                                cargarClientes();
+                            } else {
+                                let msg = 'No se pudo eliminar';
+                                try { const js = await res.json(); if (js && js.error) msg = js.error; } catch(e) {}
+                                Swal.fire({ icon: 'error', title: 'Error', text: msg });
+                            }
+                        } catch(err) {
+                            Swal.fire({ icon: 'error', title: 'Error de red', text: 'No se pudo eliminar.' });
+                        }
                     }
-                    let msg = 'No se pudo eliminar';
-                    try { const js = await res.json(); if (js && js.error) msg = js.error; } catch(e) {}
-                    alert(msg);
-                } catch(err) { alert('Error de red al eliminar'); }
-                $(this).prop('disabled', false);
+                    $btn.prop('disabled', false);
+                });
             });
 
             let lastEditBtn = null;
@@ -321,14 +324,18 @@
                     if (res.ok) {
                         try { await res.json(); } catch(e) {}
                         $('#modalCliente').modal('hide');
-                        alert(id ? 'Cambios guardados' : 'Cliente agregado');
+                        await Swal.fire({
+                            icon: 'success',
+                            title: id ? '¡Cambios guardados!' : '¡Cliente agregado!',
+                            confirmButtonText: 'Aceptar'
+                        });
                         cargarClientes(); // Recargar datos
                         return;
                     }
                     let msg = 'No se pudo guardar';
                     try { const js = await res.json(); if (js && js.error) msg = js.error; } catch(e) {}
-                    alert(msg);
-                } catch(err) { alert('Error de red al guardar'); }
+                    Swal.fire({ icon: 'error', title: 'Error', text: msg });
+                } catch(err) { Swal.fire({ icon: 'error', title: 'Error de red', text: 'No se pudo guardar.' }); }
                 if (btnSave) btnSave.prop('disabled', false);
                 if (lastEditBtn) lastEditBtn.prop('disabled', false);
                 if (btnAdd) btnAdd.prop('disabled', false);
@@ -383,7 +390,7 @@
                     m.find('[name="v_pais"]').val(d.pais || '');
                     m.modal('show');
                 } catch (err) {
-                    alert('No fue posible cargar el detalle');
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'No fue posible cargar el detalle.' });
                 }
             });
 

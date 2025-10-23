@@ -189,6 +189,7 @@
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         $(document).ready(function () {
@@ -261,7 +262,11 @@
                 
                 if ($modal.length === 0 || $modalBody.length === 0) {
                     console.error('[ERROR] No se encontró el modal o el contenedor del cuerpo');
-                    alert('Error: No se pudo abrir el modal de edición. Por favor, revise la consola para más detalles.');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No se pudo abrir el modal de edición. Revisa la consola para más detalles.'
+                    });
                     return;
                 }
                 
@@ -428,7 +433,7 @@
                 });
             } catch (error) {
                 console.error('[ERROR CRÍTICO] Error en abrirModalEditar:', error);
-                alert('Error crítico al abrir el modal de edición. Por favor, revise la consola para más detalles.');
+                Swal.fire({ icon: 'error', title: 'Error crítico', text: 'No se pudo abrir el modal de edición.' });
             }
         }
 
@@ -450,21 +455,21 @@
             // Validar ID de usuario
             const idVal = parseInt($('#editar_id').val(), 10) || 0;
             if (idVal <= 0) {
-                alert('Error: ID de usuario inválido. Cierre y vuelva a abrir el modal.');
+                Swal.fire({ icon: 'warning', title: 'ID inválido', text: 'Cierre y vuelva a abrir el modal.' });
                 return false;
             }
 
             // Validar contraseña si se proporcionó
             const password = $('#editar_password').val();
             if (password && password.length < 8) {
-                alert('La contraseña debe tener al menos 8 caracteres');
+                Swal.fire({ icon: 'warning', title: 'Contraseña corta', text: 'Debe tener al menos 8 caracteres.' });
                 return false;
             }
             
             // Validar que se haya seleccionado un rol
             const rol = $('#editar_rol').val();
             if (!rol) {
-                alert('Por favor seleccione un rol para el usuario');
+                Swal.fire({ icon: 'warning', title: 'Rol requerido', text: 'Seleccione un rol para el usuario.' });
                 return false;
             }
             
@@ -493,23 +498,15 @@
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        // Mostrar mensaje de éxito
-                        const $modal = $('#editarUsuarioModal');
-                        const $modalBody = $modal.find('#modalBodyContainer');
-                        
-                        $modalBody.html(`
-                            <div class="modal-body">
-                                <div class="alert alert-success">
-                                    <i class="bi bi-check-circle-fill"></i> ${response.message || 'Usuario actualizado correctamente'}
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-primary" onclick="location.reload()">Aceptar</button>
-                            </div>
-                        `);
+                        try { $('#editarUsuarioModal').modal('hide'); } catch(e){}
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Actualizado!',
+                            text: response.message || 'Usuario actualizado correctamente',
+                            confirmButtonText: 'Aceptar'
+                        }).then(() => { location.reload(); });
                     } else {
-                        // Mostrar mensaje de error
-                        alert('Error al actualizar el usuario: ' + (response.message || 'Error desconocido'));
+                        Swal.fire({ icon: 'error', title: 'Error', text: response.message || 'No fue posible actualizar.' });
                         $submitBtn.prop('disabled', false).html(originalBtnText);
                     }
                 },
@@ -527,49 +524,28 @@
                         console.error('Error al procesar la respuesta de error:', e);
                     }
                     
-                    alert(errorMessage);
+                    Swal.fire({ icon: 'error', title: 'Error', text: errorMessage });
                     $submitBtn.prop('disabled', false).html(originalBtnText);
                 }
             });
         });
 
-        // Modal de confirmación de eliminación
-        const modalEliminarHtml = `
-        <div class=\"modal fade\" id=\"modalConfirmarEliminar\" tabindex=\"-1\" aria-hidden=\"true\">
-          <div class=\"modal-dialog modal-dialog-centered\">
-            <div class="modal-content">
-              <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Confirmar eliminación</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-              </div>
-              <div class="modal-body">
-                <p id="textoConfirmacion"></p>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" id="btnEliminarConfirmado">Eliminar</button>
-              </div>
-            </div>
-          </div>
-        </div>`;
-
-        if (!document.getElementById('modalConfirmarEliminar')) {
-            document.body.insertAdjacentHTML('beforeend', modalEliminarHtml);
-        }
-
+        // Confirmación con SweetAlert2 para eliminar
         function confirmarEliminarUsuario(id, nombre) {
-            const modalEl = document.getElementById('modalConfirmarEliminar');
-            const texto = modalEl.querySelector('#textoConfirmacion');
-            texto.textContent = `¿Desea eliminar al usuario "${nombre}" (ID ${id})?`;
-            const modal = new bootstrap.Modal(modalEl);
-
-            // Remover handlers previos
-            const btn = modalEl.querySelector('#btnEliminarConfirmado');
-            const nuevoBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(nuevoBtn, btn);
-            nuevoBtn.addEventListener('click', function(){ eliminarUsuario(id, modal, nombre); });
-
-            modal.show();
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: `Se eliminará al usuario "${nombre}" y no podrás revertirlo`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    eliminarUsuario(id, null, nombre);
+                }
+            });
         }
 
         function eliminarUsuario(id, modalInstance, nombre) {
@@ -588,16 +564,15 @@
                         if (row.length && window.usuariosTable) {
                             window.usuariosTable.row(row).remove().draw(false);
                         }
-                        // Mostrar toast de confirmación
-                        showToast(resp.message || `Usuario "${nombre}" eliminado.`, 'success');
+                        Swal.fire({ icon: 'success', title: '¡Eliminado!', text: resp.message || `Usuario "${nombre}" eliminado.` });
                     } else {
-                        showToast(resp.message || 'No se pudo eliminar', 'danger');
+                        Swal.fire({ icon: 'error', title: 'Error', text: resp.message || 'No se pudo eliminar.' });
                     }
                 },
                 error: function(xhr){
                     let msg = 'Error al eliminar';
                     try { const j = JSON.parse(xhr.responseText); if (j.message) msg = j.message; } catch(e){}
-                    showToast(msg, 'danger');
+                    Swal.fire({ icon: 'error', title: 'Error', text: msg });
                 }
             });
         }
@@ -634,7 +609,7 @@
 
         function verDetalles(id) {
             // Pendiente: implementar modal con detalles del usuario
-            alert("Función de ver detalles pendiente de implementar.");
+            Swal.fire({ icon: 'info', title: 'Información', text: 'Función de ver detalles pendiente de implementar.' });
         }
     </script>
 <?= $this->endSection() ?>
