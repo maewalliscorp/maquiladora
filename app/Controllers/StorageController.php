@@ -6,79 +6,104 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 class StorageController extends BaseController
 {
-    /**
-     * Recibe: multipart/form-data con:
-     *  - file:     PDF (Blob)
-     *  - name:     nombre de archivo (ej. EMB-2025-0012.pdf)
-     *  - bucket:   opcional (por defecto Doc_Embarque)
-     *
-     * Devuelve: { ok:bool, url?:string, name?:string, error?:string }
-     */
-    public function guardarPdf(): ResponseInterface
+    public function ping()
     {
-        $bucket = $this->request->getPost('bucket')
-            ?: env('SUPABASE_BUCKET_DOC_EMBARQUE', env('SUPABASE_BUCKET', 'Doc_Embarque'));
+        return $this->response->setJSON(['ok' => true, 'now' => date('c')]);
+    }
 
-        $name = trim($this->request->getPost('name') ?? '');
-        if ($name === '') {
-            $name = 'doc_' . date('Ymd_His') . '.pdf';
-        }
-        // Asegura extensión .pdf
-        if (!str_ends_with(strtolower($name), '.pdf')) {
-            $name .= '.pdf';
-        }
-
-        $file = $this->request->getFile('file');
-        if (!$file || !$file->isValid()) {
-            return $this->response->setStatusCode(400)->setJSON([
-                'ok'    => false,
-                'error' => 'Falta archivo'
-            ]);
-        }
-
-        // Lee bytes del temporal
-        $bytes = file_get_contents($file->getTempName());
-
-        // Configuración Supabase
-        $baseUrl   = rtrim((string) env('SUPABASE_URL'), '/');
-        $apiUrl    = "{$baseUrl}/storage/v1/object/{$bucket}/{$name}";
-        // Usa SERVICE_ROLE_KEY si existe; si no, usa SERVICE_KEY (ambas funcionan en backend)
-        $token     = env('SUPABASE_SERVICE_ROLE_KEY', env('SUPABASE_SERVICE_KEY'));
-
+    public function guardarPdf()
+    {
         try {
-            $client = service('curlrequest', ['timeout' => 20]);
-
-            $res = $client->request('POST', $apiUrl, [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $token,
-                    'Content-Type'  => 'application/pdf',
-                    'X-Upsert'      => 'true', // sobre-escribe si ya existe
-                ],
-                'body' => $bytes,
-            ]);
-
-            $status = $res->getStatusCode();
-
-            if ($status >= 200 && $status < 300) {
-                // Si el bucket es público: URL pública directa
-                $publicUrl = "{$baseUrl}/storage/v1/object/public/{$bucket}/{$name}";
-                return $this->response->setJSON([
-                    'ok'   => true,
-                    'name' => $name,
-                    'url'  => $publicUrl,
-                ]);
+            // --- Validaciones básicas
+            if (!$this->request->is('post')) {
+                return $this->failBadRequest('Solo POST');
+            }
+            $file = $this->request->getFile('file');
+            if (!$file || !$file->isValid()) {
+                return $this->failBadRequest('No llegó el archivo o es inválido');
+            }
+            if ($file->getClientMimeType() !== 'application/pdf') {
+                // Algunos navegadores envían octet-stream; lo permitimos si termina en .pdf
+                $ext = strtolower($file->getExtension() ?: pathinfo($file->getName(), PATHINFO_EXTENSION));
+                if ($ext !== 'pdf') {
+                    return $this->failBadRequest('El archivo debe ser PDF');
+                }
             }
 
-            return $this->response->setStatusCode(500)->setJSON([
-                'ok'     => false,
-                'status' => $status,
-                'body'   => $res->getBody(),
+            $bucket  = $this->request->getPost('bucket') ?: getenv('SUPABASE_BUCKET_DOC_EMBARQUE') ?: 'Doc_Embarque';
+            $folio   = $this->request->getPost('folio')  ?: ('DOC-' . date('Ymd-His'));
+            $nameOut = preg_replace('~[^A-Za-z0-9._-]+~', '_', $folio) . '.pdf';
+
+            // --- Carga de credenciales
+            $url   = rtrim(getenv('SUPABASE_URL') ?: '', '/');
+            $key   = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
+            if (!$url || !$key) {
+                return $this->failServerError('Faltan variables SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY');
+            }
+
+            // --- Ruta objeto (sin carpetas por solicitud del usuario)
+            $objectPath = $nameOut;
+
+            // --- Leer el binario (Windows/Mac ok)
+            $tmpPath = $file->getTempName();
+            if (!is_file($tmpPath)) {
+                return $this->failServerError('No se pudo leer el archivo temporal');
+            }
+            $data = file_get_contents($tmpPath);
+            if ($data === false) {
+                return $this->failServerError('file_get_contents falló');
+            }
+
+            // --- Llamada HTTP a Supabase Storage (upload o overwrite)
+            $endpoint = $url . '/storage/v1/object/' . rawurlencode($bucket) . '/' . $objectPath;
+
+            $ch = curl_init($endpoint);
+            curl_setopt_array($ch, [
+                CURLOPT_CUSTOMREQUEST  => 'PUT',            // PUT sobrescribe si existe
+                CURLOPT_POSTFIELDS     => $data,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER     => [
+                    'Authorization: Bearer ' . $key,
+                    'Content-Type: application/pdf',
+                    'x-upsert: true', // crea o sobreescribe
+                ],
+                // En Windows algunos entornos necesitan verificar SSL off (no recomendado en prod)
+                // CURLOPT_SSL_VERIFYPEER => false,
+                // CURLOPT_SSL_VERIFYHOST => false,
             ]);
+            $respBody = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlErr  = curl_error($ch);
+            curl_close($ch);
+
+            if ($respBody === false || $httpCode >= 400) {
+                // Devuelve texto de supabase si lo hay
+                return $this->failServerError('Supabase respondió ' . $httpCode . ' ' . ($respBody ?: $curlErr));
+            }
+
+            // --- URL pública (si el bucket es público)
+            $publicUrl = $url . '/storage/v1/object/public/' . rawurlencode($bucket) . '/' . $objectPath;
+
+            return $this->response->setJSON([
+                'ok'        => true,
+                'bucket'    => $bucket,
+                'object'    => $objectPath,
+                'publicUrl' => $publicUrl,
+            ])->setStatusCode(ResponseInterface::HTTP_OK);
+
         } catch (\Throwable $e) {
-            return $this->response->setStatusCode(500)->setJSON([
-                'ok'    => false,
-                'error' => $e->getMessage(),
-            ]);
+            log_message('error', 'guardarPdf: ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+            return $this->failServerError($e->getMessage());
         }
+    }
+
+    // Helpers de respuesta
+    private function failBadRequest(string $msg)
+    {
+        return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => $msg]);
+    }
+    private function failServerError(string $msg)
+    {
+        return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $msg]);
     }
 }

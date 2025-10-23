@@ -83,7 +83,7 @@ $embarques = $embarques ?? [];
 
                         <!-- Aquí movemos la acción del "Agregar (manualmente)": abre la vista manual -->
                         <a href="<?= site_url('modulo3/embarque/manual') ?>" class="btn btn-outline-primary">
-                            Lista de embarque (manual)
+                            Documento de embarque
                         </a>
 
                         <!-- Los demás siguen igual por POST -->
@@ -94,10 +94,6 @@ $embarques = $embarques ?? [];
                             Aduanas
                         </button>
                     </div>
-
-                    <small class="text-muted d-block mt-2">
-                        Nota: <em>Lista de embarque (manual)</em> te llevará a la vista de captura manual.
-                    </small>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>

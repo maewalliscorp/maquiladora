@@ -15,7 +15,7 @@ $e = fn($k,$d='') => esc($embarque[$k] ?? $d);
     .muted { color:#6c757d; font-size:.9rem; }
 
     /* ======= IMPRESIÓN SOLO DEL DOCUMENTO (CARTA) ======= */
-    @page { size: Letter; margin: 25mm 30mm; } /* 2.5cm top/bottom, 3cm left/right */
+    @page { size: Letter; margin: 25mm 30mm; }
     @media print {
         body * { visibility: hidden !important; }
         #printArea, #printArea * { visibility: visible !important; }
@@ -416,8 +416,20 @@ $e = fn($k,$d='') => esc($embarque[$k] ?? $d);
             tbl.appendChild(tr);
         });
 
-        $('#btnClearRows')?.addEventListener('click', ()=>{
-            if(confirm('¿Vaciar todas las partidas?')){ tbl.innerHTML=''; recalcFromForm(); }
+        $('#btnClearRows')?.addEventListener('click', async ()=>{
+            const res = await Swal.fire({
+                title: "¿Vaciar todas las partidas?",
+                text: "Esta acción no se puede deshacer.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "Sí, vaciar"
+            });
+            if (res.isConfirmed) {
+                tbl.innerHTML=''; recalcFromForm();
+                await Swal.fire({title:"Listo", text:"Se vaciaron las partidas.", icon:"success"});
+            }
         });
 
         // Imprimir en popup (referencia)
@@ -458,8 +470,8 @@ $e = fn($k,$d='') => esc($embarque[$k] ?? $d);
             const pdf = new jsPDF({ unit: 'pt', format: 'letter' }); // 612x792pt
             const pageW = pdf.internal.pageSize.getWidth();
             const pageH = pdf.internal.pageSize.getHeight();
-            const marginL = 85; // ~30mm
-            const marginT = 72; // ~25mm
+            const marginL = 85;  // ~30mm
+            const marginT = 72;  // ~25mm
             const maxW = pageW - marginL*2;
             const maxH = pageH - marginT*2;
 
@@ -492,11 +504,9 @@ $e = fn($k,$d='') => esc($embarque[$k] ?? $d);
                 cancelButtonColor: "#d33",
                 confirmButtonText: "Sí, guardar"
             });
-
             if (!isConfirmed) return;
 
             try{
-                // Loading
                 Swal.fire({
                     title: 'Generando PDF...',
                     text: 'Por favor espera',
@@ -509,9 +519,9 @@ $e = fn($k,$d='') => esc($embarque[$k] ?? $d);
                 const file  = new File([blob], `${folio}.pdf`, { type: 'application/pdf' });
 
                 const fd = new FormData();
-                fd.append('file', file);                 // archivo PDF
-                fd.append('bucket', 'Doc_Embarque');     // bucket/carpeta destino
-                fd.append('folio', folio);               // por si el backend lo usa en BD
+                fd.append('file', file);
+                fd.append('bucket', 'Doc_Embarque');
+                fd.append('folio', folio);
 
                 const url = "<?= site_url('api/storage/pdf') ?>";
                 const r = await fetch(url, {
@@ -522,26 +532,22 @@ $e = fn($k,$d='') => esc($embarque[$k] ?? $d);
 
                 if(!r.ok){
                     let msg = `HTTP ${r.status}`;
-                    try {
-                        const err = await r.json();
-                        if (err?.message) msg = err.message;
-                    } catch(_) {}
+                    try { const err = await r.json(); if (err?.message) msg = err.message; } catch(_) {}
                     throw new Error(msg);
                 }
-                const json = await r.json();
 
+                const json = await r.json();
                 Swal.close();
+
                 await Swal.fire({
                     title: "¡Guardado!",
-                    text: json.publicUrl ? "El PDF se subió correctamente." : "El PDF se subió correctamente.",
+                    text: "El PDF se subió correctamente.",
                     icon: "success"
                 });
 
                 if (json.publicUrl) {
-                    // abre en nueva pestaña
                     window.open(json.publicUrl, '_blank', 'noopener');
                 }
-
             }catch(err){
                 console.error(err);
                 Swal.close();
