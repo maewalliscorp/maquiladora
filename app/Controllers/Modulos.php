@@ -368,6 +368,15 @@ class Modulos extends BaseController
             'nombre'      => trim((string)$this->request->getPost('nombre')),
             'descripcion' => trim((string)$this->request->getPost('descripcion')) ?: null,
         ];
+        // FK opcionales (sexo, talla, tipo corte, tipo ropa)
+        $idSexo   = $this->request->getPost('idSexoFK')      ?? $this->request->getPost('id_sexo')      ?? $this->request->getPost('sexoId');
+        $idTalla  = $this->request->getPost('idTallasFK')    ?? $this->request->getPost('id_talla')     ?? $this->request->getPost('tallaId');
+        $idCorte  = $this->request->getPost('idTipoCorteFK') ?? $this->request->getPost('id_tipo_corte')?? $this->request->getPost('tipoCorteId');
+        $idRopa   = $this->request->getPost('idTipoRopaFK')  ?? $this->request->getPost('id_tipo_ropa') ?? $this->request->getPost('tipoRopaId');
+        if ($idSexo  !== null && $idSexo  !== '') { $dataDiseno['idSexoFK']      = (int)$idSexo; }
+        if ($idTalla !== null && $idTalla !== '') { $dataDiseno['idTallasFK']    = (int)$idTalla; }
+        if ($idCorte !== null && $idCorte !== '') { $dataDiseno['idTipoCorteFK'] = (int)$idCorte; }
+        if ($idRopa  !== null && $idRopa  !== '') { $dataDiseno['idTipoRopaFK']  = (int)$idRopa; }
         $dataVersion = [
             'version'         => trim((string)$this->request->getPost('version')),
             'fecha'           => $this->request->getPost('fecha') ?: date('Y-m-d'),
@@ -530,6 +539,60 @@ class Modulos extends BaseController
             try { $rows = $db->query($q)->getResultArray(); if ($rows !== null) break; } catch (\Throwable $e) { /* intenta siguiente */ }
         }
         return $this->response->setJSON(['items' => $rows]);
+    }
+
+    /** Catálogo: sexo */
+    public function m2_catalogo_sexo()
+    {
+        $db = \Config\Database::connect();
+        $rows = [];
+        $queries = [
+            "SELECT id_sexo AS id, nombre, descripcion FROM sexo ORDER BY nombre",
+            "SELECT id_sexo AS id, nombre, descripcion FROM Sexo ORDER BY nombre",
+        ];
+        foreach ($queries as $q) { try { $rows = $db->query($q)->getResultArray(); if ($rows !== null) break; } catch (\Throwable $e) {} }
+        return $this->response->setJSON(['items'=>$rows]);
+    }
+
+    /** Catálogo: tallas */
+    public function m2_catalogo_tallas()
+    {
+        $db = \Config\Database::connect();
+        $rows = [];
+        $queries = [
+            "SELECT id_talla AS id, nombre, descripcion FROM tallas ORDER BY nombre",
+            "SELECT id_talla AS id, nombre, descripcion FROM Tallas ORDER BY nombre",
+        ];
+        foreach ($queries as $q) { try { $rows = $db->query($q)->getResultArray(); if ($rows !== null) break; } catch (\Throwable $e) {} }
+        return $this->response->setJSON(['items'=>$rows]);
+    }
+
+    /** Catálogo: tipo de corte */
+    public function m2_catalogo_tipo_corte()
+    {
+        $db = \Config\Database::connect();
+        $rows = [];
+        $queries = [
+            "SELECT id_tipo_corte AS id, nombre, descripcion FROM tipo_corte ORDER BY nombre",
+            "SELECT id_tipo_corte AS id, nombre, descripcion FROM Tipo_Corte ORDER BY nombre",
+            "SELECT id_tipo_corte AS id, nombre, descripcion FROM tipocorte ORDER BY nombre",
+        ];
+        foreach ($queries as $q) { try { $rows = $db->query($q)->getResultArray(); if ($rows !== null) break; } catch (\Throwable $e) {} }
+        return $this->response->setJSON(['items'=>$rows]);
+    }
+
+    /** Catálogo: tipo de ropa */
+    public function m2_catalogo_tipo_ropa()
+    {
+        $db = \Config\Database::connect();
+        $rows = [];
+        $queries = [
+            "SELECT id_tipo_ropa AS id, nombre, descripcion FROM tipo_ropa ORDER BY nombre",
+            "SELECT id_tipo_ropa AS id, nombre, descripcion FROM Tipo_Ropa ORDER BY nombre",
+            "SELECT id_tipo_ropa AS id, nombre, descripcion FROM tiporopa ORDER BY nombre",
+        ];
+        foreach ($queries as $q) { try { $rows = $db->query($q)->getResultArray(); if ($rows !== null) break; } catch (\Throwable $e) {} }
+        return $this->response->setJSON(['items'=>$rows]);
     }
 
     /** JSON detalle normalizado de pedido. */

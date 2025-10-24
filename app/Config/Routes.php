@@ -165,6 +165,12 @@ $routes->group('modulo2', [], function ($routes) {
     $routes->get('diseno/(:num)/json',  'Modulos::m2_diseno_json/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->get('disenos/json',        'Disenos::json_catalogo',     ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->get('articulos/json',      'Modulos::m2_articulos_json', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    // Nuevo: crear diseño y catálogos
+    $routes->post('disenos/crear',      'Modulos::m2_crear_diseno',   ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->get ('catalogos/sexo',     'Modulos::m2_catalogo_sexo',        ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->get ('catalogos/tallas',   'Modulos::m2_catalogo_tallas',      ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->get ('catalogos/tipo-corte','Modulos::m2_catalogo_tipo_corte', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->get ('catalogos/tipo-ropa','Modulos::m2_catalogo_tipo_ropa',   ['filter' => 'auth:Administrador,Jefe,Diseñador']);
 });
 
 /* --------------------------------------------------------------------
@@ -284,6 +290,9 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->post('embarque/manual',        'LogisticaController::documentoManual');        // procesa POST y vuelve a la misma
     $routes->get ('embarque/manual/print',  'LogisticaController::documentoManualPrint');   // vista SOLO documento (para imprimir)
     $routes->post('embarque/manual/print',  'LogisticaController::documentoManualPrint');   // idem por POST
+
+    // ====== ⬇️ NUEVO: Proxy Storage (fallback de listado) ======
+    $routes->post('storage/list', 'StorageProxy::list'); // => /modulo3/storage/list
 
     // Órdenes de clientes (enlace del menú)
     $routes->get('ordenesclientes', 'Modulos::m1_ordenesclientes', ['filter' => 'auth:Administrador,Jefe,Empleado,Envios,Calidad,Almacenista,RH,Inspector,Diseñador']);

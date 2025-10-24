@@ -3,6 +3,16 @@
 <?php
 $docs      = $docs ?? [];
 $embarques = $embarques ?? [];
+
+/* ====== ENV ====== */
+$supaUrl    = env('SUPABASE_URL')  ?? '';
+$supaAnon   = env('SUPABASE_ANON') ?? ''; // clave pública (anon)
+
+$B_DOC_EMB  = env('SUPABASE_BUCKET_DOC_EMBARQUE') ?? 'Doc_Embarque';
+$B_ETIQUETA = env('SUPABASE_BUCKET_ETIQUETA')     ?? 'Etiqueta';
+$B_FACT     = env('SUPABASE_BUCKET_FACTURAS')     ?? 'Facturas';
+$B_PACK     = env('SUPABASE_BUCKET_PACKING')      ?? 'Packing';
+$B_ADU      = env('SUPABASE_BUCKET_ADUANAS')      ?? 'Aduanas';
 ?>
 
 <?= $this->section('styles') ?>
@@ -23,14 +33,13 @@ $embarques = $embarques ?? [];
 
 <?= $this->section('content') ?>
 
-<!-- Encabezado con acciones -->
+<!-- Encabezado -->
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div class="d-flex align-items-center">
         <h1 class="me-3">Documentos de Embarque</h1>
         <span class="badge bg-secondary">Docs</span>
     </div>
     <div class="d-flex gap-2">
-        <!-- (ELIMINADO) Botón Agregar (manualmente) -->
         <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#generarModal">
             <i class="bi bi-files me-1"></i> Agregar doc
         </button>
@@ -60,8 +69,6 @@ $embarques = $embarques ?? [];
                 <h5 class="modal-title" id="generarModalLabel">Generación de documentos</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-
-            <!-- Importante: mantenemos el form para los tipos auto (Factura, Etiqueta, Aduanas) -->
             <form id="formQuick" method="post" action="<?= site_url('modulo3/documentos/crear') ?>">
                 <?= csrf_field() ?>
                 <div class="modal-body">
@@ -74,30 +81,14 @@ $embarques = $embarques ?? [];
                             <?php endforeach ?>
                         </select>
                     </div>
-
                     <div class="d-flex flex-wrap gap-2">
-                        <!-- Estos siguen creando el documento vía POST -->
-                        <button name="tipo" value="Factura" class="btn btn-outline-primary" type="submit">
-                            Factura de envío
-                        </button>
-
-                        <!-- Aquí movemos la acción del "Agregar (manualmente)": abre la vista manual -->
-                        <a href="<?= site_url('modulo3/embarque/manual') ?>" class="btn btn-outline-primary">
-                            Documento de embarque
-                        </a>
-
-                        <!-- Los demás siguen igual por POST -->
-                        <button name="tipo" value="Etiqueta" class="btn btn-outline-primary" type="submit">
-                            Etiqueta
-                        </button>
-                        <button name="tipo" value="Aduanas" class="btn btn-outline-primary" type="submit">
-                            Aduanas
-                        </button>
+                        <button name="tipo" value="Factura" class="btn btn-outline-primary" type="submit">Factura de envío</button>
+                        <a href="<?= site_url('modulo3/embarque/manual') ?>" class="btn btn-outline-primary">Documento de embarque</a>
+                        <button name="tipo" value="Etiqueta" class="btn btn-outline-primary" type="submit">Etiqueta</button>
+                        <button name="tipo" value="Aduanas" class="btn btn-outline-primary" type="submit">Aduanas</button>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                </div>
+                <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
             </form>
         </div></div>
 </div>
@@ -124,12 +115,13 @@ $embarques = $embarques ?? [];
                     <div class="row">
                         <div class="col-md-6 mb-2">
                             <label class="form-label">Tipo</label>
-                            <select name="tipo" class="form-select" required>
+                            <select name="tipo" id="a-tipo" class="form-select" required>
                                 <option value="">— Selecciona —</option>
                                 <option>Factura</option>
                                 <option>Packing List</option>
                                 <option>Etiqueta</option>
                                 <option>Aduanas</option>
+                                <option>Documento Embarque</option>
                             </select>
                         </div>
                         <div class="col-md-6 mb-2">
@@ -137,6 +129,21 @@ $embarques = $embarques ?? [];
                             <input name="numero" class="form-control" placeholder="FAC-2025-0001">
                         </div>
                     </div>
+
+                    <!-- Lista dinámica Supabase -->
+                    <div class="mb-2">
+                        <label class="form-label">Documento guardado (Supabase)</label>
+                        <div class="d-flex gap-2">
+                            <select id="a-docListado" class="form-select" disabled>
+                                <option value="">— Selecciona primero un tipo —</option>
+                            </select>
+                            <button class="btn btn-outline-secondary" type="button" id="a-btnRefrescar" title="Refrescar" disabled>
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">Al elegir un tipo, se listan los PDFs del bucket correspondiente.</div>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-6 mb-2">
                             <label class="form-label">Fecha</label>
@@ -150,14 +157,6 @@ $embarques = $embarques ?? [];
                                 <option>Cancelada</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">URL PDF (opcional)</label>
-                        <input name="urlPdf" class="form-control" placeholder="https://...">
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">Archivo PDF (ruta en /writable/uploads)</label>
-                        <input name="archivoPdf" class="form-control" placeholder="facturas/FAC-2025-0001.pdf">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -183,9 +182,7 @@ $embarques = $embarques ?? [];
                     <dt class="col-4">Estado</dt><dd class="col-8" id="v-estado">-</dd>
                     <dt class="col-4">Embarque</dt><dd class="col-8" id="v-embarque">-</dd>
                     <dt class="col-4">PDF</dt>
-                    <dd class="col-8" id="v-pdf">
-                        <a id="v-pdf-a" href="#" target="_blank" rel="noopener">—</a>
-                    </dd>
+                    <dd class="col-8" id="v-pdf"><a id="v-pdf-a" href="#" target="_blank" rel="noopener">—</a></dd>
                 </dl>
             </div>
             <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
@@ -219,6 +216,7 @@ $embarques = $embarques ?? [];
                                 <option>Packing List</option>
                                 <option>Etiqueta</option>
                                 <option>Aduanas</option>
+                                <option>Documento Embarque</option>
                             </select>
                         </div>
                         <div class="col-md-6 mb-2">
@@ -226,6 +224,21 @@ $embarques = $embarques ?? [];
                             <input name="numero" id="e-numero" class="form-control">
                         </div>
                     </div>
+
+                    <!-- Lista dinámica Supabase -->
+                    <div class="mb-2">
+                        <label class="form-label">Documento guardado (Supabase)</label>
+                        <div class="d-flex gap-2">
+                            <select id="e-docListado" class="form-select" disabled>
+                                <option value="">— Selecciona primero un tipo —</option>
+                            </select>
+                            <button class="btn btn-outline-secondary" type="button" id="e-btnRefrescar" title="Refrescar" disabled>
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">Puedes reemplazar el PDF seleccionando uno del Storage.</div>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-6 mb-2">
                             <label class="form-label">Fecha</label>
@@ -287,9 +300,9 @@ $embarques = $embarques ?? [];
                     <td class="text-center"><?= esc($d['numero'] ?? '') ?></td>
                     <td class="text-center"><?= esc($d['fecha'] ?? '') ?></td>
                     <td class="text-center">
-                        <span class="badge <?= ($d['estado'] ?? '')==='Emitida' ? 'bg-success' : 'bg-secondary' ?>">
-                            <?= esc($d['estado'] ?? '—') ?>
-                        </span>
+              <span class="badge <?= ($d['estado'] ?? '')==='Emitida' ? 'bg-success' : 'bg-secondary' ?>">
+                <?= esc($d['estado'] ?? '—') ?>
+              </span>
                     </td>
                     <td class="text-center"><?= esc($d['embarqueFolio'] ?? '') ?></td>
                     <td class="text-center">
@@ -341,8 +354,12 @@ $embarques = $embarques ?? [];
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
 
+<!-- Supabase UMD -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+
 <script>
-    (function(){
+    document.addEventListener('DOMContentLoaded', ()=>{
+
         const base = "<?= site_url('modulo3/documentos') ?>";
         $.fn.dataTable.Buttons.defaults.dom.container.className = 'dt-buttons';
 
@@ -405,17 +422,178 @@ $embarques = $embarques ?? [];
                 document.getElementById('e-urlPdf').value     = d.urlPdf ?? '';
                 document.getElementById('e-archivoPdf').value = d.archivoPdf ?? '';
                 document.getElementById('formEditar').action  = `${base}/${id}/editar`;
+                cargarListaPorTipo('editar');
                 new bootstrap.Modal(document.getElementById('editarModal')).show();
             });
         });
 
-        // Focus al abrir modales de alta
-        document.getElementById('agregarModal')?.addEventListener('shown.bs.modal', ()=>{
-            document.querySelector('#formAgregar select[name="embarqueId"]')?.focus();
+        /* ===== SUPABASE desde .env ===== */
+        const SUPABASE_URL  = <?= json_encode($supaUrl) ?>;
+        const SUPABASE_ANON = <?= json_encode($supaAnon) ?>;
+
+        if (!SUPABASE_URL || !SUPABASE_ANON) {
+            console.error('Faltan SUPABASE_URL / SUPABASE_ANON. Verifica tu .env y reinicia el servidor.');
+            return;
+        }
+        if (!window.supabase || !window.supabase.createClient) {
+            console.error('Supabase UMD no cargó.');
+            return;
+        }
+
+        // Logs útiles para confirmar proyecto/clave
+        console.log('[Supabase] URL:', SUPABASE_URL);
+        console.log('[Supabase] ANON (primeros 16):', (SUPABASE_ANON||'').slice(0,16)+'...');
+
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+        // Mapa Tipo → bucket (exactos a tus env)
+        const tipoToBucket = {
+            'Factura'            : <?= json_encode($B_FACT) ?>,
+            'Packing List'       : <?= json_encode($B_PACK) ?>,
+            'Etiqueta'           : <?= json_encode($B_ETIQUETA) ?>,
+            'Aduanas'            : <?= json_encode($B_ADU) ?>,
+            'Documento Embarque' : <?= json_encode($B_DOC_EMB) ?>,
+        };
+
+        // Helpers UI
+        function resetListado($select, $btn, texto) {
+            $select.innerHTML = `<option value="">${texto}</option>`;
+            $select.disabled = true;
+            if ($btn) $btn.disabled = true;
+        }
+
+        // === FUNCIÓN ROBUSTA: raíz → public/ → carpeta única, con FALLBACK al backend ===
+        async function cargarLista(tipo, $select, $btn) {
+            const bucket = tipoToBucket[tipo];
+            if (!bucket) { resetListado($select, $btn, '— Tipo sin bucket —'); return; }
+
+            $select.disabled = true; if ($btn) $btn.disabled = true;
+            $select.innerHTML = `<option value="">Cargando...</option>`;
+            console.log(`[Supabase] Listando bucket="${bucket}"`);
+
+            async function tryList(path) {
+                const res = await sb.storage.from(bucket).list(path, {
+                    limit: 1000, sortBy: { column:'name', order:'asc' }
+                });
+                console.log(`[Supabase] list("${path||''}") ->`, res.error ? res.error.message : `${res.data?.length||0} items`);
+                return res;
+            }
+
+            // 1) raíz
+            let entries = [];
+            let { data, error } = await tryList('');
+
+            // 2) public/
+            if ((!data || data.length === 0) && !error) {
+                const r2 = await tryList('public');
+                if (!r2.error && r2.data?.length) data = r2.data.map(x => ({...x, _prefix:'public/'}));
+            }
+
+            // 3) si hay exactamente 1 carpeta y ningún archivo, entrar
+            if ((!data || data.length === 0) && !error) {
+                const r3 = await tryList('');
+                const folders = (r3.data || []).filter(x => x.id === null);
+                const files   = (r3.data || []).filter(x => x.id !== null);
+                if (folders.length === 1 && files.length === 0) {
+                    const folder = folders[0].name;
+                    const r4 = await tryList(folder);
+                    if (!r4.error && r4.data?.length) {
+                        data = r4.data.map(x => ({...x, _prefix: folder + '/'}));
+                    }
+                }
+            }
+
+            if (!error && data?.length) entries = data;
+
+            // === FALLBACK: proxy backend con SERVICE_ROLE ===
+            if (entries.length === 0) {
+                try {
+                    const resp = await fetch("<?= site_url('modulo3/storage/list') ?>", {
+                        method: 'POST',
+                        headers: { 'Content-Type':'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ bucket, prefix: '' })
+                    });
+                    const json = await resp.json();
+                    if (Array.isArray(json) && json.length) {
+                        console.log('[Proxy] items:', json.length);
+                        entries = json.map(it => ({ name: it.name, id: it.id ?? 'x', _prefix: '' })).filter(x=>!!x.name);
+                    } else {
+                        console.warn('[Proxy] vacío o no válido', json);
+                    }
+                } catch (e) {
+                    console.error('[Proxy] error', e);
+                }
+            }
+
+            const archivos = (entries || [])
+                .filter(it => it.name && typeof it.name === 'string')
+                .filter(it => it.name.toLowerCase().endsWith('.pdf'))
+                .map(it => ({ name: it.name, path: (it._prefix || '') + it.name }));
+
+            if (!archivos.length) { resetListado($select, $btn, '— Sin PDFs en bucket —'); return; }
+
+            $select.innerHTML = `<option value="">— Selecciona un archivo —</option>`;
+            archivos.forEach(f=>{
+                const opt = document.createElement('option');
+                opt.value = JSON.stringify({ bucket, path: f.path, name: f.name });
+                opt.textContent = f.name;
+                $select.appendChild(opt);
+            });
+
+            $select.disabled = false; if ($btn) $btn.disabled = false;
+        }
+
+        // Formularios (Agregar / Editar)
+        const $aTipo        = document.getElementById('a-tipo');
+        const $aListado     = document.getElementById('a-docListado');
+        const $aRef         = document.getElementById('a-btnRefrescar');
+        const $aUrl         = document.getElementById('a-urlPdf');
+        const $aRuta        = document.getElementById('a-archivoPdf');
+
+        const $eTipo        = document.getElementById('e-tipo');
+        const $eListado     = document.getElementById('e-docListado');
+        const $eRef         = document.getElementById('e-btnRefrescar');
+        const $eUrl         = document.getElementById('e-urlPdf');
+        const $eRuta        = document.getElementById('e-archivoPdf');
+
+        function limpiarDestino($url,$ruta){ if($url) $url.value=''; if($ruta) $ruta.value=''; }
+
+        async function cargarListaPorTipo(form) {
+            if (form==='agregar') {
+                const tipo = $aTipo?.value?.trim();
+                limpiarDestino($aUrl,$aRuta);
+                if (!tipo) { resetListado($aListado,$aRef,'— Selecciona primero un tipo —'); return; }
+                await cargarLista(tipo,$aListado,$aRef);
+            } else {
+                const tipo = $eTipo?.value?.trim();
+                limpiarDestino($eUrl,$eRuta);
+                if (!tipo) { resetListado($eListado,$eRef,'— Selecciona primero un tipo —'); return; }
+                await cargarLista(tipo,$eListado,$eRef);
+            }
+        }
+
+        // Eventos Agregar
+        $aTipo?.addEventListener('change', ()=>cargarListaPorTipo('agregar'));
+        $aRef?.addEventListener('click', ()=>cargarListaPorTipo('agregar'));
+        $aListado?.addEventListener('change', async ()=>{
+            if (!$aListado.value) return;
+            const sel = JSON.parse($aListado.value);
+            const { data: pub } = sb.storage.from(sel.bucket).getPublicUrl(sel.path);
+            if ($aUrl)  $aUrl.value  = pub?.publicUrl || '';
+            if ($aRuta) $aRuta.value = sel.path;
         });
-        document.getElementById('generarModal')?.addEventListener('shown.bs.modal', ()=>{
-            document.querySelector('#generarModal select[name="embarqueId"]')?.focus();
+
+        // Eventos Editar
+        $eTipo?.addEventListener('change', ()=>cargarListaPorTipo('editar'));
+        $eRef?.addEventListener('click', ()=>cargarListaPorTipo('editar'));
+        $eListado?.addEventListener('change', async ()=>{
+            if (!$eListado.value) return;
+            const sel = JSON.parse($eListado.value);
+            const { data: pub } = sb.storage.from(sel.bucket).getPublicUrl(sel.path);
+            if ($eUrl)  $eUrl.value  = pub?.publicUrl || '';
+            if ($eRuta) $eRuta.value = sel.path;
         });
-    })();
+
+    });
 </script>
 <?= $this->endSection() ?>
