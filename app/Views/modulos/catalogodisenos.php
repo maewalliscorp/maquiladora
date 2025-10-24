@@ -126,6 +126,31 @@
                             <label class="form-label">Notas</label>
                             <input type="text" name="notas" class="form-control" />
                         </div>
+                        <!-- Catálogos: sexo, talla, tipo corte, tipo ropa -->
+                        <div class="col-md-3">
+                            <label class="form-label">Sexo</label>
+                            <select class="form-select" name="idSexoFK" id="selSexo" disabled>
+                                <option value="">Cargando…</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Talla</label>
+                            <select class="form-select" name="idTallasFK" id="selTalla" disabled>
+                                <option value="">Cargando…</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo de corte</label>
+                            <select class="form-select" name="idTipoCorteFK" id="selTipoCorte" disabled>
+                                <option value="">Cargando…</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo de ropa</label>
+                            <select class="form-select" name="idTipoRopaFK" id="selTipoRopa" disabled>
+                                <option value="">Cargando…</option>
+                            </select>
+                        </div>
                         <div class="col-md-6">
                             <label class="form-label">Archivo CAD (subir cualquier formato)</label>
                             <input type="file" name="archivoCadFile" class="form-control" />
@@ -614,7 +639,7 @@
         });
     };
     function cargarArticulos(){
-        const url = '<?= base_url('modulo2/articulos/json') ?>';
+        const url = '<?= base_url('modulo2/articulos/json') ?>' + '?_=' + Date.now();
         const $disp = $('#listaDisponibles');
         $disp.html('<div class="text-muted px-2">Cargando artículos…</div>');
         return $.getJSON(url)
@@ -622,7 +647,10 @@
                 articulosCache = (resp && resp.items) ? resp.items : [];
                 pintarDisponibles();
             })
-            .fail(function(){ $('#listaDisponibles').html('<div class="text-danger px-2">Error cargando artículos</div>'); });
+            .fail(function(xhr){
+                console.error('Error cargando artículos', xhr && xhr.status, xhr && xhr.responseText);
+                $('#listaDisponibles').html('<div class="text-danger px-2">Error cargando artículos</div>');
+            });
     }
     function labelArticulo(a){
         return (a.nombre || ('ID '+a.id)) + (a.unidadMedida ? ' ('+a.unidadMedida+')' : '') + (a.sku ? ' • ' + a.sku : '');
@@ -646,8 +674,16 @@
         });
         if (count === 0) { $disp.html('<div class="text-muted px-2">Sin coincidencias</div>'); }
     }
-    $('#nuevoDisenoModal').on('shown.bs.modal', function(){
+    function initCatalogos(){
+        // Cargar catálogos en paralelo con cache-busting
+        cargarCatalogo('<?= base_url('modulo2/catalogos/sexo') ?>' + '?_=' + Date.now(), '#selSexo');
+        cargarCatalogo('<?= base_url('modulo2/catalogos/tallas') ?>' + '?_=' + Date.now(), '#selTalla');
+        cargarCatalogo('<?= base_url('modulo2/catalogos/tipo-corte') ?>' + '?_=' + Date.now(), '#selTipoCorte');
+        cargarCatalogo('<?= base_url('modulo2/catalogos/tipo-ropa') ?>' + '?_=' + Date.now(), '#selTipoRopa');
+    }
+    $('#nuevoDisenoModal').on('show.bs.modal shown.bs.modal', function(){
         if (articulosCache === null) { cargarArticulos(); }
+        initCatalogos();
     });
     $(document).on('input', '#buscarArticulo', function(){
         const q = ($(this).val() || '').toString().toLowerCase().trim();
@@ -711,8 +747,36 @@
         });
     });
 
+    // ==== Helpers: cargar catálogos con spinner ====
+    function cargarCatalogo(url, selectSel){
+        const $sel = $(selectSel);
+        $sel.prop('disabled', true).html('<option value="">Cargando…</option>');
+        $.getJSON(url)
+            .done(function(resp){
+                const items = (resp && resp.items) ? resp.items : [];
+                if (!items.length){
+                    $sel.html('<option value="">Sin datos</option>');
+                } else {
+                    const opts = ['<option value="">Seleccione…</option>'];
+                    items.forEach(function(it){
+                        const id = it.id ?? it.ID ?? it.Id;
+                        const nombre = (it.nombre || it.name || ('ID '+id));
+                        opts.push('<option value="'+id+'">'+nombre+'</option>');
+                    });
+                    $sel.html(opts.join(''));
+                }
+            })
+            .fail(function(){ $sel.html('<option value="">Error al cargar</option>'); })
+            .always(function(){ $sel.prop('disabled', false); });
+    }
+
     // ====== DataTable con Buttons (izquierda) ======
     $(document).ready(function () {
+        // Fallback: por si no se dispara el evento del modal
+        if (document.getElementById('nuevoDisenoModal')) {
+            try { initCatalogos(); } catch(e) { console.warn('initCatalogos error', e); }
+            try { if (articulosCache === null) cargarArticulos(); } catch(e) { console.warn('cargarArticulos error', e); }
+        }
         // Español + layout con botones a la izquierda y buscador a la derecha
         const langES = {
             "sProcessing":     "Procesando...",
