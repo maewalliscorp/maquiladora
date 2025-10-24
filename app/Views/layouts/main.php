@@ -56,14 +56,14 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
 
         <!-- Usuario y notificaciones (móvil) -->
         <div class="d-flex align-items-center d-lg-none">
-            <a class="nav-link d-flex align-items-center text-dark text-decoration-none hover-color"
+            <a class="nav-link d-flex align-items-center text-dark text-decoration-none hover-color ms-lg-2"
                href="#" id="userMenuMobile" role="button" data-bs-toggle="dropdown" aria-expanded="false"
                aria-label="Usuario">
                 <i class="fa-solid fa-user-circle me-2 fs-5" aria-hidden="true"></i>
                 <?= esc(session()->get('user_name') ?? 'Usuario') ?>
             </a>
 
-            <a class="nav-link position-relative text-dark hover-color"
+            <a class="nav-link position-relative text-dark hover-color ms-lg-2"
                href="<?= esc(base_url('modulo3/notificaciones')) ?>" aria-label="Notificaciones">
                 <i class="bi bi-bell fs-5" aria-hidden="true"></i>
                 <?php if ($notifCount > 0): ?>
@@ -101,7 +101,7 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
             <!-- Menú móvil (colapsado) -->
             <ul class="navbar-nav d-lg-none">
                 <li class="nav-item">
-                    <a class="nav-link position-relative text-dark"
+                    <a class="nav-link position-relative text-dark ms-lg-2"
                        href="<?= esc(base_url('modulo3/notificaciones')) ?>">
                         <i class="bi bi-bell fs-5" aria-hidden="true"></i>
                         <?php if ($notifCount > 0): ?>
