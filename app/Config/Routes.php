@@ -159,14 +159,15 @@ $routes->group('modulo2', [], function ($routes) {
     $routes->post('agregardiseno',      'Modulos::m2_agregardiseno',   ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->get('editardiseno/(:num)', 'Modulos::m2_editardiseno/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('actualizar/(:num)',  'Modulos::m2_actualizar/$1',   ['filter' => 'auth:Administrador,Jefe,Diseñador']);
-    $routes->post('disenos/crear',      'Modulos::m2_crear_diseno',    ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->match(['post','options'],'disenos/crear', 'Modulos::m2_crear_diseno', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->match(['post','options'],'disenos/eliminar/(:num)', 'Modulos::m2_eliminar_diseno/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
 
     // APIs (restringidas al mismo rol)
     $routes->get('diseno/(:num)/json',  'Modulos::m2_diseno_json/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->get('disenos/json',        'Disenos::json_catalogo',     ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->get('articulos/json',      'Modulos::m2_articulos_json', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
-    // Nuevo: crear diseño y catálogos
-    $routes->post('disenos/crear',      'Modulos::m2_crear_diseno',   ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    // Nuevo: crear diseño y catálogos (duplicate guard)
+    // Ya declarado arriba con match post/options
     $routes->get ('catalogos/sexo',     'Modulos::m2_catalogo_sexo',        ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->get ('catalogos/tallas',   'Modulos::m2_catalogo_tallas',      ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->get ('catalogos/tipo-corte','Modulos::m2_catalogo_tipo_corte', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
