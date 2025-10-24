@@ -30,6 +30,7 @@
                 <th>NOMBRE</th>
                 <th>DESCRIPCIÓN</th>
                 <th>VERSIÓN</th>
+                <th>PRECIO UNIDAD</th>
                 <th>MATERIALES</th>
                 <th>ACCIONES</th>
             </tr>
@@ -42,6 +43,7 @@
                         <td><strong><?= esc($d['nombre']) ?></strong></td>
                         <td class="text-start"><?= esc($d['descripcion']) ?></td>
                         <td><?= esc($d['version']) ?></td>
+                        <td><?= isset($d['precio_unidad']) && $d['precio_unidad'] !== '' ? esc($d['precio_unidad']) : '-' ?></td>
                         <td class="text-start">
                             <?php if (!empty($d['materiales'])): ?>
                                 <ul class="material-list">
@@ -125,6 +127,10 @@
                         <div class="col-md-6">
                             <label class="form-label">Notas</label>
                             <input type="text" name="notas" class="form-control" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Precio por unidad</label>
+                            <input type="number" name="precio_unidad" class="form-control" min="0" step="0.01" placeholder="0.00" inputmode="decimal" />
                         </div>
                         <!-- Catálogos: sexo, talla, tipo corte, tipo ropa -->
                         <div class="col-md-3">
@@ -247,6 +253,34 @@
                             <label class="form-label">Notas</label>
                             <input type="text" name="notas" id="e-notas" class="form-control" />
                         </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Sexo</label>
+                            <select class="form-select" name="idSexoFK" id="e-selSexo" disabled>
+                                <option value="">Cargando…</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Talla</label>
+                            <select class="form-select" name="idTallasFK" id="e-selTalla" disabled>
+                                <option value="">Cargando…</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo de corte</label>
+                            <select class="form-select" name="idTipoCorteFK" id="e-selTipoCorte" disabled>
+                                <option value="">Cargando…</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo de ropa</label>
+                            <select class="form-select" name="idTipoRopaFK" id="e-selTipoRopa" disabled>
+                                <option value="">Cargando…</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Precio por unidad</label>
+                            <input type="number" name="precio_unidad" id="e-precio_unidad" class="form-control" min="0" step="0.01" placeholder="0.00" inputmode="decimal" />
+                        </div>
                         <div class="col-md-6">
                             <label class="form-label">Archivo CAD (subir cualquier formato)</label>
                             <input type="file" name="archivoCadFile" class="form-control" />
@@ -338,6 +372,8 @@
                     <dd class="col-sm-9 text-dark" id="m-fecha">-</dd>
                     <dt class="col-sm-3 fw-semibold text-dark">Notas</dt>
                     <dd class="col-sm-9 text-dark" id="m-notas">-</dd>
+                    <dt class="col-sm-3 fw-semibold text-dark">Precio unidad</dt>
+                    <dd class="col-sm-9 text-dark" id="m-precio">-</dd>
                     <dt class="col-sm-3 fw-semibold text-dark">Materiales</dt>
                     <dd class="col-sm-9 text-dark" id="m-materiales">-</dd>
                     <dt class="col-sm-3 fw-semibold text-dark">Vista previa CAD</dt>
@@ -402,6 +438,8 @@
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- Visores DXF (si no cargan, se hace fallback) -->
 <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
@@ -451,10 +489,11 @@
     function e_pintarDisponibles(filtro = ''){
         const $disp = $('#e-listaDisponibles');
         $disp.empty();
+        const idsSeleccionados = eSeleccionados;
         const q = (filtro||'').toLowerCase();
         let count = 0;
         (articulosCache||[]).forEach(a => {
-            if (eSeleccionados.has(String(a.id))) return;
+            if (idsSeleccionados.has(String(a.id))) return;
             const hay = [a.nombre, a.unidadMedida, a.sku].filter(Boolean).join(' ').toLowerCase();
             if (q && !hay.includes(q)) return;
             const item = '<label class="form-check d-flex align-items-center gap-2 mb-1">'
@@ -504,6 +543,11 @@
         if ($btn.data('version') !== undefined) $('#e-version').val($btn.data('version'));
         if (articulosCache === null) { cargarArticulos(); }
         e_pintarDisponibles();
+        // Cargar catálogos para edición
+        const q1 = cargarCatalogo('<?= base_url('modulo2/catalogos/sexo') ?>' + '?_=' + Date.now(), '#e-selSexo');
+        const q2 = cargarCatalogo('<?= base_url('modulo2/catalogos/tallas') ?>' + '?_=' + Date.now(), '#e-selTalla');
+        const q3 = cargarCatalogo('<?= base_url('modulo2/catalogos/tipo-corte') ?>' + '?_=' + Date.now(), '#e-selTipoCorte');
+        const q4 = cargarCatalogo('<?= base_url('modulo2/catalogos/tipo-ropa') ?>' + '?_=' + Date.now(), '#e-selTipoRopa');
         $.getJSON('<?= base_url('modulo2/diseno') ?>/' + id + '/json')
             .done(function (data) {
                 $('#e-codigo').val(data.codigo||'');
@@ -512,10 +556,18 @@
                 $('#e-version').val(data.version||'');
                 if (data.fecha) { $('#e-fecha').val(String(data.fecha).slice(0,10)); }
                 $('#e-notas').val(data.notas||'');
+                if (data.precio_unidad !== undefined && data.precio_unidad !== null) { $('#e-precio_unidad').val(data.precio_unidad); }
                 $('#e-archivoCadUrl').val(data.archivoCadUrl||'');
                 $('#e-archivoPatronUrl').val(data.archivoPatronUrl||'');
                 const apr = data.aprobado;
                 $('#e-aprobadoCheck').prop('checked', apr === 1 || apr === true || apr === '1');
+                // Setear FKs cuando carguen los catálogos
+                $.when(q1, q2, q3, q4).always(function(){
+                    if (data.idSexoFK !== undefined && data.idSexoFK !== null) $('#e-selSexo').val(String(data.idSexoFK));
+                    if (data.IdTallasFK !== undefined && data.IdTallasFK !== null) $('#e-selTalla').val(String(data.IdTallasFK));
+                    if (data.idTipoCorteFK !== undefined && data.idTipoCorteFK !== null) $('#e-selTipoCorte').val(String(data.idTipoCorteFK));
+                    if (data.idTipoRopaFK !== undefined && data.idTipoRopaFK !== null) $('#e-selTipoRopa').val(String(data.idTipoRopaFK));
+                });
 
                 const mats = data.materiales || [];
                 if (mats.length > 0) {
@@ -592,25 +644,39 @@
             materials.push({ articuloId: parseInt(idm,10), cantidadPorUnidad: isNaN(cant)?0:cant, mermaPct: (mermaNum===null||isNaN(mermaNum))?null:mermaNum });
         });
         if (materials.length > 0) fd.append('materials', JSON.stringify(materials));
-        $.ajax({
-            url: '<?= base_url('modulo2/actualizar') ?>/'+id,
-            method: 'POST',
-            data: fd,
-            contentType: false,
-            processData: false,
-        }).done(function(resp){
-            if (resp && (resp.ok || resp.success)) {
-                const modalEl = document.getElementById('editarDisenoModal');
-                const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-                modal.hide();
-                window.location.reload();
-            } else {
-                $alert.removeClass('d-none').text(resp && (resp.message||resp.error) ? (resp.message||resp.error) : 'No se pudo actualizar.');
-            }
-        }).fail(function(xhr){
-            let msg = 'Error al actualizar.';
-            if (xhr && xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
-            $alert.removeClass('d-none').text(msg);
+        Swal.fire({
+            title: '¿Guardar cambios?',
+            text: 'Se actualizará el diseño.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Sí, guardar'
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+            $.ajax({
+                url: '<?= base_url('modulo2/actualizar') ?>/'+id,
+                method: 'POST',
+                data: fd,
+                contentType: false,
+                processData: false,
+            }).done(function(resp){
+                if (resp && (resp.ok || resp.success)) {
+                    Swal.fire({ title:'¡Guardado!', text:'Cambios aplicados.', icon:'success' }).then(()=>{
+                        const modalEl = document.getElementById('editarDisenoModal');
+                        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                        modal.hide();
+                        window.location.reload();
+                    });
+                } else {
+                    const msg = resp && (resp.message||resp.error) ? (resp.message||resp.error) : 'No se pudo actualizar.';
+                    Swal.fire({ title:'Error', text: msg, icon:'error' });
+                }
+            }).fail(function(xhr){
+                let msg = 'Error al actualizar.';
+                if (xhr && xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                Swal.fire({ title:'Error', text: msg, icon:'error' });
+            });
         });
     });
 
@@ -725,25 +791,39 @@
             materials.push({ articuloId: parseInt(id,10), cantidadPorUnidad: isNaN(cant)?0:cant, mermaPct: (mermaNum===null||isNaN(mermaNum))?null:mermaNum });
         });
         if (materials.length > 0) fd.append('materials', JSON.stringify(materials));
-        $.ajax({
-            url: '<?= base_url('modulo2/disenos/crear') ?>',
-            method: 'POST',
-            data: fd,
-            contentType: false,
-            processData: false,
-        }).done(function(resp){
-            if (resp && resp.ok) {
-                const modalEl = document.getElementById('nuevoDisenoModal');
-                const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-                modal.hide();
-                window.location.reload();
-            } else {
-                $alert.removeClass('d-none').text(resp && resp.message ? resp.message : 'No se pudo guardar.');
-            }
-        }).fail(function(xhr){
-            let msg = 'Error al guardar.';
-            if (xhr && xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
-            $alert.removeClass('d-none').text(msg);
+        Swal.fire({
+            title: '¿Guardar diseño?',
+            text: 'Se creará un nuevo diseño.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Sí, guardar'
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+            $.ajax({
+                url: '<?= base_url('modulo2/disenos/crear') ?>',
+                method: 'POST',
+                data: fd,
+                contentType: false,
+                processData: false,
+            }).done(function(resp){
+                if (resp && resp.ok) {
+                    Swal.fire({ title:'¡Guardado!', text:'Diseño creado correctamente.', icon:'success' }).then(()=>{
+                        const modalEl = document.getElementById('nuevoDisenoModal');
+                        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                        modal.hide();
+                        window.location.reload();
+                    });
+                } else {
+                    const msg = resp && resp.message ? resp.message : 'No se pudo guardar.';
+                    Swal.fire({ title:'Error', text: msg, icon:'error' });
+                }
+            }).fail(function(xhr){
+                let msg = 'Error al guardar.';
+                if (xhr && xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                Swal.fire({ title:'Error', text: msg, icon:'error' });
+            });
         });
     });
 
@@ -751,7 +831,7 @@
     function cargarCatalogo(url, selectSel){
         const $sel = $(selectSel);
         $sel.prop('disabled', true).html('<option value="">Cargando…</option>');
-        $.getJSON(url)
+        return $.getJSON(url)
             .done(function(resp){
                 const items = (resp && resp.items) ? resp.items : [];
                 if (!items.length){
@@ -824,9 +904,33 @@
             if (action === 'Editar') {
                 window.location.href = '<?= base_url('modulo2/editardiseno/') ?>' + id;
             } else if (action === 'Eliminar') {
-                if (confirm('¿Estás seguro de que deseas eliminar este diseño?')) {
-                    alert('Diseño con ID ' + id + ' eliminado (simulación)');
-                }
+                Swal.fire({
+                    title: '¿Eliminar diseño?',
+                    text: 'No podrás revertir esta acción.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Sí, eliminar'
+                }).then((result)=>{
+                    if (!result.isConfirmed) return;
+                    $.ajax({
+                        url: '<?= base_url('modulo2/disenos/eliminar') ?>/'+id,
+                        method: 'POST',
+                    }).done(function(resp){
+                        if (resp && resp.ok) {
+                            Swal.fire({ title:'Eliminado', text: 'Diseño eliminado correctamente', icon:'success' }).then(()=>{
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire({ title:'Error', text: (resp && resp.message) ? resp.message : 'No se pudo eliminar', icon:'error' });
+                        }
+                    }).fail(function(xhr){
+                        let msg = 'Error al eliminar';
+                        if (xhr && xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                        Swal.fire({ title:'Error', text: msg, icon:'error' });
+                    });
+                });
             }
         });
 
@@ -849,6 +953,7 @@
                     $('#m-version').text(data.version || '-');
                     $('#m-fecha').text(data.fecha ? (new Date(data.fecha)).toISOString().slice(0,10) : '-');
                     $('#m-notas').text(data.notas || '-');
+                    $('#m-precio').text((data.precio_unidad !== undefined && data.precio_unidad !== null && data.precio_unidad !== '') ? data.precio_unidad : '-');
                     $('#m-materiales').text((data.materiales || []).join(', '));
 
                     const isImage = (u) => /\.(png|jpg|jpeg|gif|bmp|webp|svg)$/i.test(u || '');

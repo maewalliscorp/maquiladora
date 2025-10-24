@@ -202,7 +202,11 @@ class Modulos extends BaseController
      */
     public function m2_actualizar($id = null)
     {
-        if ($this->request->getMethod() !== 'post') {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') {
+            return $this->response->setJSON(['ok' => true, 'message' => 'OK']);
+        }
+        if ($method !== 'post') {
             return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
         }
         $id = (int)($id ?? 0);
@@ -218,6 +222,11 @@ class Modulos extends BaseController
         $mapGet = function(string $k) { return trim((string)($this->request->getPost($k) ?? '')); };
         foreach (['codigo','nombre','descripcion'] as $k) {
             $v = $mapGet($k); if ($v !== '') { $dataDiseno[$k] = $v; }
+        }
+        // precio_unidad (opcional, numérico)
+        if ($this->request->getPost('precio_unidad') !== null && $this->request->getPost('precio_unidad') !== '') {
+            $pu = (float)$this->request->getPost('precio_unidad');
+            if ($pu >= 0) { $dataDiseno['precio_unidad'] = $pu; }
         }
         foreach (['version','fecha','notas','archivoCadUrl','archivoPatronUrl'] as $k) {
             $v = $mapGet($k); if ($v !== '') { $dataVersion[$k] = $v; }
@@ -358,7 +367,11 @@ class Modulos extends BaseController
      */
     public function m2_crear_diseno()
     {
-        if ($this->request->getMethod() !== 'post') {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') {
+            return $this->response->setJSON(['ok' => true, 'message' => 'OK']);
+        }
+        if ($method !== 'post') {
             return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
         }
 
@@ -368,13 +381,17 @@ class Modulos extends BaseController
             'nombre'      => trim((string)$this->request->getPost('nombre')),
             'descripcion' => trim((string)$this->request->getPost('descripcion')) ?: null,
         ];
+        // precio_unidad desde el modal (float)
+        if (($p = $this->request->getPost('precio_unidad')) !== null && $p !== '') {
+            $dataDiseno['precio_unidad'] = (float)$p;
+        }
         // FK opcionales (sexo, talla, tipo corte, tipo ropa)
         $idSexo   = $this->request->getPost('idSexoFK')      ?? $this->request->getPost('id_sexo')      ?? $this->request->getPost('sexoId');
         $idTalla  = $this->request->getPost('idTallasFK')    ?? $this->request->getPost('id_talla')     ?? $this->request->getPost('tallaId');
         $idCorte  = $this->request->getPost('idTipoCorteFK') ?? $this->request->getPost('id_tipo_corte')?? $this->request->getPost('tipoCorteId');
         $idRopa   = $this->request->getPost('idTipoRopaFK')  ?? $this->request->getPost('id_tipo_ropa') ?? $this->request->getPost('tipoRopaId');
         if ($idSexo  !== null && $idSexo  !== '') { $dataDiseno['idSexoFK']      = (int)$idSexo; }
-        if ($idTalla !== null && $idTalla !== '') { $dataDiseno['idTallasFK']    = (int)$idTalla; }
+        if ($idTalla !== null && $idTalla !== '') { $dataDiseno['IdTallasFK']    = (int)$idTalla; }
         if ($idCorte !== null && $idCorte !== '') { $dataDiseno['idTipoCorteFK'] = (int)$idCorte; }
         if ($idRopa  !== null && $idRopa  !== '') { $dataDiseno['idTipoRopaFK']  = (int)$idRopa; }
         $dataVersion = [
@@ -645,6 +662,60 @@ class Modulos extends BaseController
         return $this->response->setJSON($out);
     }
 
+    /**
+     * Eliminar un diseño: borra sus versiones y materiales asociados.
+     * Acepta POST/OPTIONS
+     */
+    public function m2_eliminar_diseno($id = null)
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') { return $this->response->setJSON(['ok'=>true]); }
+        if ($method !== 'post') {
+            return $this->response->setStatusCode(405)->setJSON(['ok'=>false,'message'=>'Método no permitido']);
+        }
+        $id = (int)($id ?? 0);
+        if ($id <= 0) { return $this->response->setStatusCode(400)->setJSON(['ok'=>false,'message'=>'ID inválido']); }
+
+        $db = \Config\Database::connect();
+        try {
+            $db->transStart();
+
+            // Obtener IDs de versiones
+            $dvIds = array_map(function($r){ return (int)$r['id']; }, $db->query('SELECT id FROM diseno_version WHERE disenoId = ?', [$id])->getResultArray() ?? []);
+            if (!$dvIds) {
+                $dvIds = array_map(function($r){ return (int)$r['id']; }, $db->query('SELECT id FROM disenoversion WHERE disenoId = ?', [$id])->getResultArray() ?? []);
+            }
+
+            if (!empty($dvIds)) {
+                $in = implode(',', array_fill(0, count($dvIds), '?'));
+                // Borrar materiales por versiones
+                foreach (['lista_materiales','listamateriales','ListaMateriales'] as $t) {
+                    try { $db->query("DELETE FROM $t WHERE disenoVersionId IN ($in)", $dvIds); break; } catch (\Throwable $e) { /* try next */ }
+                }
+                // Borrar versiones
+                foreach (['diseno_version','disenoversion'] as $t) {
+                    try { $db->query("DELETE FROM $t WHERE id IN ($in)", $dvIds); break; } catch (\Throwable $e) { /* try next */ }
+                }
+            }
+
+            // Borrar diseño
+            $deleted = false;
+            foreach (['diseno','Diseno'] as $t) {
+                try { $db->table($t)->where('id', $id)->delete(); $deleted = true; break; } catch (\Throwable $e) { /* next */ }
+            }
+
+            $db->transComplete();
+            if ($db->transStatus() === false || !$deleted) {
+                throw new \Exception('No se pudo eliminar el diseño');
+            }
+
+            return $this->response->setJSON(['ok'=>true,'message'=>'Diseño eliminado']);
+        } catch (\Throwable $e) {
+            try { $db->transRollback(); } catch (\Throwable $ee) {}
+            return $this->response->setStatusCode(500)->setJSON(['ok'=>false,'message'=>'Error al eliminar: '.$e->getMessage()]);
+        }
+    }
+
     /** JSON detalle normalizado de diseño. */
     public function m2_diseno_json($id = null)
     {
@@ -672,6 +743,11 @@ class Modulos extends BaseController
             'archivoCadUrl' => $detalle['archivoCadUrl'] ?? '',
             'archivoPatronUrl' => $detalle['archivoPatronUrl'] ?? '',
             'aprobado' => $detalle['aprobado'] ?? null,
+            'precio_unidad' => $detalle['precio_unidad'] ?? null,
+            'idSexoFK' => $detalle['idSexoFK'] ?? null,
+            'IdTallasFK' => $detalle['IdTallasFK'] ?? null,
+            'idTipoCorteFK' => $detalle['idTipoCorteFK'] ?? null,
+            'idTipoRopaFK' => $detalle['idTipoRopaFK'] ?? null,
             // Nuevos: listas de archivos/imágenes (compatibles hacia atrás)
             'archivosCad' => $detalle['archivosCad'] ?? [],
             'archivosPatron' => $detalle['archivosPatron'] ?? [],
