@@ -435,12 +435,30 @@ class Modulos extends BaseController
         try {
             // Insertar en diseno
             $db->table('diseno')->insert($dataDiseno);
+            // Revisar error inmediato
+            $err = $db->error();
+            if (!empty($err['message'])) { throw new \Exception('Error al insertar en diseno: '.$err['message']); }
             $idDiseno = (int)$db->insertID();
+            if ($idDiseno === 0) {
+                // Fallback: obtener último ID insertado por orden
+                try {
+                    $row = $db->query('SELECT id FROM diseno ORDER BY id DESC LIMIT 1')->getRowArray();
+                    if ($row && isset($row['id'])) { $idDiseno = (int)$row['id']; }
+                } catch (\Throwable $e) { /* intentar mayúscula */ }
+            }
 
             if (!$idDiseno) {
                 // Fallback por mayúsculas
                 $db->table('Diseno')->insert($dataDiseno);
+                $err = $db->error();
+                if (!empty($err['message'])) { throw new \Exception('Error al insertar en Diseno: '.$err['message']); }
                 $idDiseno = (int)$db->insertID();
+                if ($idDiseno === 0) {
+                    try {
+                        $row = $db->query('SELECT id FROM Diseno ORDER BY id DESC LIMIT 1')->getRowArray();
+                        if ($row && isset($row['id'])) { $idDiseno = (int)$row['id']; }
+                    } catch (\Throwable $e) { /* no se pudo obtener */ }
+                }
             }
 
             if (!$idDiseno) {
@@ -450,11 +468,27 @@ class Modulos extends BaseController
             // Insertar versión
             $dataVersion['disenoId'] = $idDiseno;
             $db->table('diseno_version')->insert($dataVersion);
+            $err = $db->error();
+            if (!empty($err['message'])) { throw new \Exception('Error al insertar en diseno_version: '.$err['message']); }
             $idVersion = (int)$db->insertID();
+            if ($idVersion === 0) {
+                try {
+                    $row = $db->query('SELECT id FROM diseno_version WHERE disenoId = ? ORDER BY id DESC LIMIT 1', [$idDiseno])->getRowArray();
+                    if ($row && isset($row['id'])) { $idVersion = (int)$row['id']; }
+                } catch (\Throwable $e) { /* fallback abajo */ }
+            }
             if (!$idVersion) {
                 // Fallback por mayúsculas / sin guiones
                 $db->table('disenoversion')->insert($dataVersion);
+                $err = $db->error();
+                if (!empty($err['message'])) { throw new \Exception('Error al insertar en disenoversion: '.$err['message']); }
                 $idVersion = (int)$db->insertID();
+                if ($idVersion === 0) {
+                    try {
+                        $row = $db->query('SELECT id FROM disenoversion WHERE disenoId = ? ORDER BY id DESC LIMIT 1', [$idDiseno])->getRowArray();
+                        if ($row && isset($row['id'])) { $idVersion = (int)$row['id']; }
+                    } catch (\Throwable $e) { /* no se pudo obtener */ }
+                }
             }
 
             if (!$idVersion) {
@@ -494,6 +528,99 @@ class Modulos extends BaseController
                         }
                     }
                 }
+            }
+
+            // === Crear automáticamente PROTOTIPO y MUESTRA ===
+            $userName = (string)(session()->get('user_name') ?? '');
+
+            // 1) PROTOTIPO: referenciar la versión, dejar fechas/estado/notas en NULL
+            $prototipoId = null;
+            $rowProt = [
+                'disenoVersionId' => $idVersion,
+                'codigo'          => $dataDiseno['codigo'] ?? null,
+                'fechainicio'     => null,
+                'fechaFin'        => null,
+                'estado'          => null,
+                'notas'           => null,
+            ];
+            try {
+                $db->table('prototipo')->insert($rowProt);
+                $prototipoId = (int)$db->insertID();
+            } catch (\Throwable $e) {
+                try {
+                    $db->table('Prototipo')->insert($rowProt);
+                    $prototipoId = (int)$db->insertID();
+                } catch (\Throwable $e2) {
+                    $err = $db->error();
+                    $msg = $err['message'] ?? $e2->getMessage() ?? 'Error desconocido al crear prototipo';
+                    throw new \Exception('No se pudo crear el prototipo: ' . $msg);
+                }
+            }
+            if (!$prototipoId) {
+                $err = $db->error();
+                $msg = $err['message'] ?? 'Error desconocido al crear prototipo';
+                throw new \Exception('No se pudo crear el prototipo: ' . $msg);
+            }
+
+            // 2) MUESTRA: prototipoId del paso anterior; solicitadaPor = username; fechaSolicitud = hoy; demás NULL
+            $rowMuestra = [
+                'prototipoId'    => $prototipoId,
+                'solicitadaPor'  => $userName !== '' ? $userName : null,
+                'fechaSolicitud' => date('Y-m-d'),
+                'fechaEnvio'     => null,
+                'estado'         => 'Pendiente',
+                'observaciones'  => null,
+            ];
+            try {
+                $db->table('muestra')->insert($rowMuestra);
+            } catch (\Throwable $e) {
+                try {
+                    $db->table('Muestra')->insert($rowMuestra);
+                } catch (\Throwable $e2) {
+                    $err = $db->error();
+                    $msg = $err['message'] ?? $e2->getMessage() ?? 'Error desconocido al crear muestra';
+                    throw new \Exception('No se pudo crear la muestra: ' . $msg);
+                }
+            }
+            // Obtener ID de la muestra recién creada
+            $muestraId = (int)$db->insertID();
+            if ($muestraId === 0) {
+                try {
+                    $row = $db->query('SELECT id FROM muestra ORDER BY id DESC LIMIT 1')->getRowArray();
+                    if ($row && isset($row['id'])) { $muestraId = (int)$row['id']; }
+                } catch (\Throwable $e) {
+                    try {
+                        $row = $db->query('SELECT id FROM Muestra ORDER BY id DESC LIMIT 1')->getRowArray();
+                        if ($row && isset($row['id'])) { $muestraId = (int)$row['id']; }
+                    } catch (\Throwable $e2) { $muestraId = 0; }
+                }
+            }
+            if ($muestraId <= 0) {
+                throw new \Exception('No se pudo obtener el ID de la muestra creada');
+            }
+
+            // Crear registro de aprobacion_muestra con valores NULL
+            $rowAprob = [
+                'muestraId'  => $muestraId,
+                'clienteId'  => null,
+                'fecha'      => null,
+                'decision'   => 'Pendiente',
+                'comentarios'=> null,
+            ];
+            $insertedAprob = false;
+            try {
+                $db->table('aprobacion_muestra')->insert($rowAprob);
+                $insertedAprob = true;
+            } catch (\Throwable $e) {
+                try {
+                    $db->table('Aprobacion_Muestra')->insert($rowAprob);
+                    $insertedAprob = true;
+                } catch (\Throwable $e2) { /* se validará abajo */ }
+            }
+            if (!$insertedAprob) {
+                $err = $db->error();
+                $msg = $err['message'] ?? 'Error desconocido al crear aprobacion_muestra';
+                throw new \Exception('No se pudo crear aprobacion_muestra: ' . $msg);
             }
 
             $db->transComplete();
