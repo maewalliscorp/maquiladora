@@ -108,6 +108,9 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
     (function(){
         const conceptosDiv = document.getElementById('conceptos');
@@ -121,53 +124,92 @@
         let lastPayload = null;
         let lastResult  = null;
 
+        // ==== Helpers SweetAlert2 ====
+        const confirmAsync = (title, text, icon='warning', confirmText='Sí, continuar')=>{
+            return Swal.fire({
+                title, text, icon,
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33'
+            }).then(r => r.isConfirmed);
+        };
+        const toast = (text, icon='success')=>{
+            return Swal.fire({
+                toast: true, position: 'top-end', showConfirmButton: false,
+                timer: 1800, timerProgressBar: true, icon, title: text
+            });
+        };
+        const loading = (title='Procesando...')=>{
+            Swal.fire({title, allowOutsideClick:false, didOpen:()=>Swal.showLoading()});
+        };
+
+        // ==== Conceptos ====
         const addConcepto = (c={descripcion:'Servicio de envío', claveProdServ:'01010101', claveUnidad:'E48', cantidad:1, precioUnitario:100})=>{
             const wrap = document.createElement('div');
             wrap.className = 'border rounded p-2 mb-2';
             wrap.innerHTML = `
-          <div class="row g-2 align-items-end">
-            <div class="col-md-6">
-              <label class="form-label">Descripción</label>
-              <input class="form-control c-desc" value="${c.descripcion||''}">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Clave ProdServ</label>
-              <input class="form-control c-cps" value="${c.claveProdServ||'01010101'}">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Clave Unidad</label>
-              <input class="form-control c-cu" value="${c.claveUnidad||'E48'}">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Cantidad</label>
-              <input type="number" step="0.001" class="form-control c-cant" value="${c.cantidad||1}">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Precio Unit.</label>
-              <input type="number" step="0.01" class="form-control c-pre" value="${c.precioUnitario||0}">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Importe</label>
-              <input class="form-control c-imp" value="0" disabled>
-            </div>
-            <div class="col-md-3 d-grid">
-              <button type="button" class="btn btn-outline-danger btnRemove"><i class="bi bi-trash"></i></button>
-            </div>
-          </div>`;
+      <div class="row g-2 align-items-end">
+        <div class="col-md-6">
+          <label class="form-label">Descripción</label>
+          <input class="form-control c-desc" value="${c.descripcion||''}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Clave ProdServ</label>
+          <input class="form-control c-cps" value="${c.claveProdServ||'01010101'}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Clave Unidad</label>
+          <input class="form-control c-cu" value="${c.claveUnidad||'E48'}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Cantidad</label>
+          <input type="number" step="0.001" class="form-control c-cant" value="${c.cantidad||1}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Precio Unit.</label>
+          <input type="number" step="0.01" class="form-control c-pre" value="${c.precioUnitario||0}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Importe</label>
+          <input class="form-control c-imp" value="0" disabled>
+        </div>
+        <div class="col-md-3 d-grid">
+          <button type="button" class="btn btn-outline-danger btnRemove"><i class="bi bi-trash"></i></button>
+        </div>
+      </div>`;
+
             conceptosDiv.appendChild(wrap);
+
+            // Recalcular importe
             const recalc = ()=> {
                 const cant = parseFloat(wrap.querySelector('.c-cant').value||0);
                 const pre  = parseFloat(wrap.querySelector('.c-pre').value||0);
                 wrap.querySelector('.c-imp').value = (cant*pre).toFixed(2);
             };
             wrap.querySelectorAll('.c-cant,.c-pre').forEach(i=>i.addEventListener('input',recalc));
-            wrap.querySelector('.btnRemove').addEventListener('click',()=>wrap.remove());
             recalc();
+
+            // Confirmar borrado del concepto
+            wrap.querySelector('.btnRemove').addEventListener('click', async ()=>{
+                if (await confirmAsync('¿Eliminar concepto?', 'Esta acción no se puede deshacer.')) {
+                    wrap.remove();
+                    toast('Concepto eliminado');
+                }
+            });
         };
 
-        document.getElementById('btnAddConcepto').addEventListener('click',()=>addConcepto());
-        addConcepto(); // uno por defecto
+        // Botón agregar concepto
+        document.getElementById('btnAddConcepto').addEventListener('click',()=>{
+            addConcepto();
+            toast('Concepto agregado');
+        });
 
+        // Uno por defecto
+        addConcepto();
+
+        // ==== Payload ====
         const buildPayload = ()=>{
             return {
                 rfc:   document.getElementById('rfc').value.trim(),
@@ -188,66 +230,94 @@
             };
         };
 
-        // Enviar a tu endpoint "timbrar" (demo/mock) y mostrar resultado
+        // ==== Submit (timbrar demo) con SweetAlert2 ====
         frm.addEventListener('submit', async (e)=>{
             e.preventDefault();
-            const id = document.getElementById('embarqueId').value;
-            const payload = buildPayload();
 
-            const r = await fetch(`<?= site_url('logistica/embarque') ?>/${id}/facturar`, {
-                method:'POST',
-                headers:{ 'Content-Type':'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            const d = await r.json().catch(()=>null);
-            if (!r.ok || !d || !d.ok) {
-                alert((d && d.msg) ? d.msg : 'No se pudo timbrar (demo).');
+            // Validación mínima de conceptos
+            if (conceptosDiv.children.length === 0) {
+                Swal.fire('Sin conceptos', 'Agrega al menos un concepto antes de timbrar.', 'info');
                 return;
             }
 
-            // Guarda estado para "Descargar PDF"
-            lastPayload = payload;
-            lastResult  = d;
+            // Confirmación previa
+            const ok = await confirmAsync('¿Generar factura (demo)?', 'Se timbrará usando el proveedor configurado.');
+            if (!ok) return;
 
-            // Pinta resultado
-            const kv = document.getElementById('kv');
-            kv.innerHTML = '';
-            const row = (k,v)=>{ const a=document.createElement('div'); a.textContent=k; const b=document.createElement('div'); b.textContent=(v ?? '—'); kv.append(a,b); };
-            row('UUID', d.uuid);
-            row('Serie', d.serie||'—');
-            row('Folio', d.folio||'—');
-            row('Total', (d.total!=null) ? d.total : '—');
-            row('Fecha', d.fecha||'—');
-            row('Proveedor', d.provider||'mock');
+            const id = document.getElementById('embarqueId').value;
+            const payload = buildPayload();
 
-            // Si tu servicio devuelve URLs directas, úsalas; si no, las generamos localmente
-            const btnPdf = document.getElementById('btnPdf');
-            const btnXml = document.getElementById('btnXml');
+            try{
+                loading('Timbrando CFDI...');
+                const r = await fetch(`<?= site_url('logistica/embarque') ?>/${id}/facturar`, {
+                    method:'POST',
+                    headers:{ 'Content-Type':'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-            if (d.pdf_url) { btnPdf.href = d.pdf_url; btnPdf.onclick = null; }
-            else {
-                btnPdf.href = "#";
-                btnPdf.onclick = (ev)=>{
-                    ev.preventDefault();
-                    postToNewTab('<?= site_url('facturacion/demo/pdf') ?>', {
-                        [CSRF_NAME]: CSRF_HASH,
-                        payload: JSON.stringify(lastPayload),
-                        result:  JSON.stringify(lastResult)
-                    });
-                };
+                const d = await r.json().catch(()=>null);
+                if (!r.ok || !d || !d.ok) {
+                    const msg = (d && d.msg) ? d.msg : 'No se pudo timbrar (demo).';
+                    Swal.fire('Error', msg, 'error');
+                    return;
+                }
+
+                // Guarda estado para "Descargar PDF"
+                lastPayload = payload;
+                lastResult  = d;
+
+                // Pinta resultado
+                const kv = document.getElementById('kv');
+                kv.innerHTML = '';
+                const row = (k,v)=>{ const a=document.createElement('div'); a.textContent=k; const b=document.createElement('div'); b.textContent=(v ?? '—'); kv.append(a,b); };
+                row('UUID', d.uuid);
+                row('Serie', d.serie||'—');
+                row('Folio', d.folio||'—');
+                row('Total', (d.total!=null) ? d.total : '—');
+                row('Fecha', d.fecha||'—');
+                row('Proveedor', d.provider||'mock');
+
+                // Enlaces PDF/XML
+                const btnPdf = document.getElementById('btnPdf');
+                const btnXml = document.getElementById('btnXml');
+
+                if (d.pdf_url) { btnPdf.href = d.pdf_url; btnPdf.onclick = null; }
+                else {
+                    btnPdf.href = "#";
+                    btnPdf.onclick = (ev)=>{
+                        ev.preventDefault();
+                        postToNewTab('<?= site_url('facturacion/demo/pdf') ?>', {
+                            [CSRF_NAME]: CSRF_HASH,
+                            payload: JSON.stringify(lastPayload),
+                            result:  JSON.stringify(lastResult)
+                        });
+                    };
+                }
+
+                if (d.xml_url) { btnXml.href = d.xml_url; btnXml.onclick = null; }
+                else {
+                    btnXml.href = "#";
+                    btnXml.onclick = (ev)=>{
+                        ev.preventDefault();
+                        Swal.fire('XML no disponible', 'Demo: el XML no está disponible en el mock.', 'info');
+                    };
+                }
+
+                document.getElementById('cardResultado').classList.remove('d-none');
+
+                Swal.fire({
+                    title: '¡Timbrado exitoso!',
+                    text: 'Se generó la factura de demostración.',
+                    icon: 'success',
+                    confirmButtonText: 'Ver resultado'
+                }).then(()=> {
+                    document.getElementById('cardResultado').scrollIntoView({behavior:'smooth', block:'start'});
+                });
+
+            } catch(err){
+                console.error(err);
+                Swal.fire('Error', 'Ocurrió un error inesperado.', 'error');
             }
-
-            if (d.xml_url) { btnXml.href = d.xml_url; btnXml.onclick = null; }
-            else {
-                btnXml.href = "#";
-                btnXml.onclick = (ev)=>{
-                    ev.preventDefault();
-                    alert('Demo: XML no disponible en mock.');
-                };
-            }
-
-            document.getElementById('cardResultado').classList.remove('d-none');
         });
 
         // Utilidad: abre POST en nueva pestaña (para generar PDF con Dompdf)
