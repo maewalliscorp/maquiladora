@@ -565,7 +565,6 @@ class LogisticaController extends BaseController
 
     /* =========================================================
      *  DOCUMENTO MANUAL (sin BD)
-     *  GET/POST /modulo3/embarque/manual
      * =======================================================*/
     public function documentoManual()
     {
@@ -658,7 +657,6 @@ class LogisticaController extends BaseController
 
     /**
      * Vista SOLO para imprimir (GET/POST /modulo3/embarque/manual/print)
-     * - Si viene __payload (JSON) lo usa; si no, cae en defaults.
      */
     public function documentoManualPrint()
     {
@@ -669,18 +667,15 @@ class LogisticaController extends BaseController
         ];
         $items = [];
 
-        // Preferir payload JSON (desde el botón Imprimir de la vista manual/logística)
         $payload = $this->request->getPost('__payload');
         if ($payload) {
             try {
                 $obj = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
-                // Mapear embarque
                 $keys = ['folio','fecha','origen','destino','remitente','rfcRemitente','domicilioRemitente',
                     'destinatario','rfcDestinatario','domicilioDestinatario','tipoTransporte',
                     'transportista','operador','placas','referencia','notas'];
                 foreach ($keys as $k) $embarque[$k] = trim((string)($obj[$k] ?? ($embarque[$k] ?? '')));
 
-                // Items (ambos esquemas)
                 $sku   = $obj['items_sku']   ?? $obj['sku']         ?? [];
                 $desc  = $obj['items_desc']  ?? $obj['descripcion'] ?? [];
                 $cant  = $obj['items_cant']  ?? $obj['cantidad']    ?? [];
@@ -702,9 +697,7 @@ class LogisticaController extends BaseController
                         'valor'       => (float)($valor[$i] ?? 0),
                     ];
                 }
-            } catch (\Throwable $e) {
-                // Si falla el JSON, seguimos con defaults mínimos
-            }
+            } catch (\Throwable $e) {}
         }
 
         if (empty($items)) {
@@ -715,5 +708,262 @@ class LogisticaController extends BaseController
         }
 
         return view('modulos/embarque_documento_print', compact('embarque','items'));
+    }
+
+    /* =========================================================
+     *  FACTURACIÓN (UI + mock/real)
+     * =======================================================*/
+
+    /** Página para capturar/editar datos de facturación del embarque */
+    public function facturarUI($embarqueId)
+    {
+        return view('modulos/facturar_envio', [
+            'embarqueId'    => (int)$embarqueId,
+            'embarqueFolio' => null,
+        ]);
+    }
+
+    /** UUID v4 para demo */
+    private function uuidv4(): string
+    {
+        $data = random_bytes(16);
+        $data[6] = chr((ord($data[6]) & 0x0f) | 0x40);
+        $data[8] = chr((ord($data[8]) & 0x3f) | 0x80);
+        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+    }
+
+    /** Convierte total a texto MUY simple (demo) */
+    private function montoALetraMXN(float $m): string
+    {
+        $enteros = floor($m);
+        $cent    = round(($m - $enteros) * 100);
+        return number_format($enteros, 0, '.', ',') . ' PESOS ' . str_pad((string)$cent, 2, '0', STR_PAD_LEFT) . '/100 M.N.';
+    }
+
+    /** Redondeo corto */
+    private function r2($n){ return round((float)$n, 2); }
+
+    /** Endpoint que timbra: mock (gratis) o Facturapi si lo configuras */
+    public function facturar($embarqueId)
+    {
+        try {
+            $provider = strtolower((string)(getenv('facturacion.provider') ?: 'mock'));
+            $data = $this->request->getJSON(true) ?? $this->request->getPost();
+
+            $rfc   = trim($data['rfc'] ?? '');
+            $name  = trim($data['nombre'] ?? '');
+            if (!$rfc) {
+                return $this->response->setStatusCode(422)->setJSON(['ok'=>false,'msg'=>'RFC del receptor es requerido']);
+            }
+
+            $uso   = $data['usoCFDI']               ?? 'G03';
+            $reg   = $data['regimenFiscalReceptor'] ?? '601';
+            $zip   = $data['domicilioFiscalReceptor'] ?? '00000';
+            $fp    = $data['formaPago']             ?? '03';
+            $mp    = $data['metodoPago']            ?? 'PUE';
+            $mon   = $data['moneda']                ?? 'MXN';
+            $in    = $data['conceptos']             ?? [];
+
+            // Normaliza conceptos (para el HTML factura_cfdi_demo)
+            $conceptos = [];
+            if ($in && is_array($in)) {
+                foreach ($in as $c) {
+                    $cantidad = (float)($c['cantidad'] ?? 1);
+                    $vu       = (float)($c['precioUnitario'] ?? 0);
+                    $importe  = $cantidad * $vu;
+                    $iva      = $this->r2($importe * 0.16);
+                    $conceptos[] = [
+                        'prodserv'     => $c['claveProdServ'] ?? '01010101',
+                        'claveUnidad'  => $c['claveUnidad']   ?? 'E48',
+                        'cantidad'     => $cantidad,
+                        'unidad'       => '', // opcional
+                        'descripcion'  => $c['descripcion']    ?? 'Concepto',
+                        'valorUnitario'=> $vu,
+                        'descuento'    => 0,
+                        'importe'      => $importe,
+                        'iva'          => $iva,
+                        'ieps'         => 0,
+                    ];
+                }
+            } else {
+                $cantidad = 1;
+                $vu       = 100.00;
+                $importe  = $cantidad * $vu;
+                $iva      = $this->r2($importe * 0.16);
+                $conceptos[] = [
+                    'prodserv'     => '01010101',
+                    'claveUnidad'  => 'E48',
+                    'cantidad'     => $cantidad,
+                    'unidad'       => '',
+                    'descripcion'  => 'Servicio de envío - Embarque #'.$embarqueId,
+                    'valorUnitario'=> $vu,
+                    'descuento'    => 0,
+                    'importe'      => $importe,
+                    'iva'          => $iva,
+                    'ieps'         => 0,
+                ];
+            }
+
+            // Totales
+            $subtotal   = $this->r2(array_reduce($conceptos, fn($a,$c)=>$a + (float)$c['importe'], 0));
+            $trasladado = $this->r2(array_reduce($conceptos, fn($a,$c)=>$a + (float)$c['iva'], 0));
+            $retenidos  = 0.0;
+            $descuento  = 0.0;
+            $total      = $this->r2($subtotal - $descuento + $trasladado - $retenidos);
+
+            $serie = 'DEMO';
+            $folio = rand(1000, 9999);
+            $uuid  = $this->uuidv4();
+            $fecha = date('Y-m-d H:i:s');
+
+            /* ---------- MOCK (gratis) ---------- */
+            if ($provider === 'mock') {
+                // Arma payload para la vista factura_cfdi_demo
+                $emisor = [
+                    'logo'          => '', // si tienes logo en /public, pon la URL
+                    'nombre'        => 'Textiles XYZ S.A. de C.V.',
+                    'rfc'           => 'TXY123456789',
+                    'regimen'       => '601',
+                    'lugarExpedicion'=> $zip,
+                    'noCertCSD'     => '00001000000403258748',
+                ];
+                $receptor = [
+                    'nombre'   => $name ?: $rfc,
+                    'rfc'      => $rfc,
+                    'usoCfdi'  => $uso,
+                    'domicilio'=> 'CP '.$zip,
+                ];
+                $factura = [
+                    'tipo'        => 'I',
+                    'serie'       => $serie,
+                    'folio'       => $folio,
+                    'fecha'       => $fecha,
+                    'moneda'      => $mon,
+                    'tipoCambio'  => '1.0000',
+                    'formaPago'   => $fp,
+                    'metodoPago'  => $mp,
+                    'condiciones' => 'Contado',
+                ];
+                $totales = [
+                    'subtotal'  => $subtotal,
+                    'descuento' => $descuento,
+                    'trasladados'=> $trasladado,
+                    'retenidos' => $retenidos,
+                    'total'     => $total,
+                    'letra'     => $this->montoALetraMXN($total),
+                ];
+                $timbre = [
+                    'uuid'          => $uuid,
+                    'fechaTimbrado' => $fecha,
+                    'noCertCSD'     => $emisor['noCertCSD'],
+                    'selloCfdi'     => substr(hash('sha256', 'cfdi-'.$uuid), 0, 80).'…',
+                    'selloSat'      => substr(hash('sha256', 'sat-'.$uuid), 0, 80).'…',
+                    'qr'            => null,
+                ];
+
+                // Guarda en sesión (dos llaves por comodidad)
+                $key1 = 'factura_demo';
+                $key2 = 'factura_demo_'.$embarqueId;
+                $pack = compact('emisor','receptor','factura','conceptos','totales','timbre');
+                session()->set($key1, $pack);
+                session()->set($key2, $pack);
+
+                // URLs internas para preview/PDF
+                $previewUrl = site_url('logistica/factura/'.$embarqueId);
+                $pdfUrl     = site_url('logistica/factura/'.$embarqueId.'/pdf');
+
+                return $this->response->setJSON([
+                    'ok'          => true,
+                    'uuid'        => $uuid,
+                    'serie'       => $serie,
+                    'folio'       => $folio,
+                    'total'       => $total,
+                    'fecha'       => date('c'),
+                    'provider'    => 'mock',
+                    'preview_url' => $previewUrl,
+                    'pdf_url'     => $pdfUrl,
+                    // Si quieres seguir mostrando un XML de demo, puedes poner un enlace:
+                    'xml_url'     => 'https://www.w3schools.com/xml/note.xml',
+                ]);
+            }
+
+            /* ---------- FACTURAPI (real) ---------- */
+            $apiKey = getenv('facturacion.facturapi_key') ?: '';
+            if (!$apiKey) {
+                return $this->response->setStatusCode(500)
+                    ->setJSON(['ok'=>false,'msg'=>'Falta facturacion.facturapi_key en .env (o usa facturacion.provider=mock)']);
+            }
+
+            $items = [];
+            foreach ($conceptos as $c) {
+                $items[] = [
+                    'product' => [
+                        'description' => $c['descripcion'],
+                        'product_key' => $c['prodserv'],
+                        'price'       => (float)$c['valorUnitario'],
+                        'unit_key'    => $c['claveUnidad'],
+                        'name'        => $c['descripcion'],
+                    ],
+                    'quantity' => (float)$c['cantidad'],
+                ];
+            }
+
+            $payload = [
+                'type'           => 'I',
+                'customer'       => [
+                    'legal_name' => $name ?: $rfc,
+                    'tax_id'     => $rfc,
+                    'tax_system' => $reg,
+                    'address'    => ['zip' => $zip],
+                ],
+                'use'            => $uso,
+                'payment_form'   => $fp,
+                'payment_method' => $mp,
+                'currency'       => $mon,
+                'items'          => $items,
+                'external_id'    => 'embarque-'.$embarqueId,
+            ];
+
+            $ch = curl_init('https://www.facturapi.io/v2/invoices');
+            curl_setopt_array($ch, [
+                CURLOPT_CUSTOMREQUEST  => 'POST',
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER     => [
+                    'Content-Type: application/json',
+                    'Authorization: Bearer '.$apiKey,
+                ],
+                CURLOPT_POSTFIELDS     => json_encode($payload),
+                CURLOPT_TIMEOUT        => 45,
+            ]);
+            $out  = curl_exec($ch);
+            $err  = curl_error($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($err) {
+                return $this->response->setStatusCode(502)->setJSON(['ok'=>false,'msg'=>$err]);
+            }
+
+            $d = json_decode($out, true) ?: [];
+            if (!in_array($code, [200,201])) {
+                $msg = $d['message'] ?? 'No se pudo timbrar';
+                return $this->response->setStatusCode(400)->setJSON(['ok'=>false,'msg'=>$msg,'raw'=>$d]);
+            }
+
+            return $this->response->setJSON([
+                'ok'      => true,
+                'uuid'    => $d['uuid'] ?? null,
+                'serie'   => $d['series'] ?? ($d['series_name'] ?? null),
+                'folio'   => $d['number'] ?? null,
+                'total'   => $d['total'] ?? null,
+                'pdf_url' => $d['files']['pdf'] ?? null,
+                'xml_url' => $d['files']['xml'] ?? null,
+                'fecha'   => $d['date'] ?? null,
+                'provider'=> 'facturapi',
+            ]);
+
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['ok'=>false,'msg'=>$e->getMessage()]);
+        }
     }
 }
