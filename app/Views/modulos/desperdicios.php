@@ -1,6 +1,5 @@
 <?= $this->extend('layouts/main') ?>
 
-<!-- DataTables -->
 <?= $this->section('styles') ?>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
@@ -40,7 +39,7 @@
 
 <div class="row g-3">
 
-    <!-- ====== DESECHOS (fila completa) ====== -->
+    <!-- ====== DESECHOS ====== -->
     <div class="col-12">
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -60,7 +59,7 @@
                         </thead>
                         <tbody>
                         <?php if(!empty($desp)): foreach($desp as $x): ?>
-                            <tr>
+                            <tr data-row-id="<?= (int)$x['id'] ?>">
                                 <td><?= esc($x['fecha']) ?></td>
                                 <td><?= esc($x['op']) ?></td>
                                 <td><?= esc($x['cantidad']) ?></td>
@@ -70,9 +69,7 @@
                                         <button class="btn btn-sm btn-outline-info ver-desecho"
                                                 data-id="<?= (int)$x['id'] ?>"
                                                 data-bs-toggle="modal" data-bs-target="#modalVistaDesecho"
-                                                title="Ver">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
+                                                title="Ver"><i class="bi bi-eye"></i></button>
                                         <button class="btn btn-sm btn-outline-primary edit-desecho"
                                                 data-id="<?= (int)$x['id'] ?>"
                                                 data-fecha="<?= esc($x['fecha']) ?>"
@@ -80,9 +77,10 @@
                                                 data-cantidad="<?= esc($x['cantidad']) ?>"
                                                 data-motivo="<?= esc($x['observaciones']) ?>"
                                                 data-bs-toggle="modal" data-bs-target="#modalDesecho"
-                                                title="Editar">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
+                                                title="Editar"><i class="bi bi-pencil"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger del-desecho"
+                                                data-id="<?= (int)$x['id'] ?>"
+                                                title="Eliminar"><i class="bi bi-trash"></i></button>
                                     </div>
                                 </td>
                             </tr>
@@ -96,7 +94,7 @@
         </div>
     </div>
 
-    <!-- ====== REPROCESOS (otra fila completa) ====== -->
+    <!-- ====== REPROCESOS ====== -->
     <div class="col-12">
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -116,7 +114,7 @@
                         </thead>
                         <tbody>
                         <?php if(!empty($rep)): foreach($rep as $r): ?>
-                            <tr>
+                            <tr data-row-id="<?= (int)$r['id'] ?>">
                                 <td><?= esc($r['op']) ?></td>
                                 <td><?= esc($r['tarea']) ?></td>
                                 <td><?= (int)$r['pendientes'] ?></td>
@@ -126,9 +124,7 @@
                                         <button class="btn btn-sm btn-outline-info ver-rep"
                                                 data-id="<?= (int)$r['id'] ?>"
                                                 data-bs-toggle="modal" data-bs-target="#modalVistaReproceso"
-                                                title="Ver">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
+                                                title="Ver"><i class="bi bi-eye"></i></button>
                                         <button class="btn btn-sm btn-outline-primary edit-rep"
                                                 data-id="<?= (int)$r['id'] ?>"
                                                 data-op="<?= esc($r['op']) ?>"
@@ -136,9 +132,10 @@
                                                 data-pendientes="<?= (int)$r['pendientes'] ?>"
                                                 data-eta="<?= esc($r['eta']) ?>"
                                                 data-bs-toggle="modal" data-bs-target="#modalReproceso"
-                                                title="Editar">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
+                                                title="Editar"><i class="bi bi-pencil"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger del-rep"
+                                                data-id="<?= (int)$r['id'] ?>"
+                                                title="Eliminar"><i class="bi bi-trash"></i></button>
                                     </div>
                                 </td>
                             </tr>
@@ -154,8 +151,7 @@
 
 </div>
 
-<!-- ===== Modales ===== -->
-
+<!-- ===================== MODALES ===================== -->
 <!-- Agregar/Editar Desecho -->
 <div class="modal fade" id="modalDesecho" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -287,8 +283,6 @@
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-
-<!-- Buttons (exportación) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
@@ -296,10 +290,8 @@
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
-
-<!-- ===== Separación precisa de botones (global) ===== -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // Evita 'btn-group' y usa utilidades de Bootstrap con gap
     $.fn.dataTable.Buttons.defaults.dom.container.className =
         'dt-buttons d-inline-flex flex-wrap gap-2';
 </script>
@@ -307,26 +299,19 @@
 <script>
     $(function () {
         const langES = {
-            sProcessing:"Procesando...",
-            sLengthMenu:"Mostrar _MENU_ registros",
-            sZeroRecords:"No se encontraron resultados",
-            sEmptyTable:"Sin datos",
-            sInfo:"Mostrando _START_–_END_ de _TOTAL_",
-            sInfoEmpty:"Mostrando 0–0 de 0",
-            sInfoFiltered:"(filtrado de _MAX_)",
-            sSearch:"Buscar:",
+            sProcessing:"Procesando...", sLengthMenu:"Mostrar _MENU_ registros",
+            sZeroRecords:"No se encontraron resultados", sEmptyTable:"Sin datos",
+            sInfo:"Mostrando _START_–_END_ de _TOTAL_", sInfoEmpty:"Mostrando 0–0 de 0",
+            sInfoFiltered:"(filtrado de _MAX_)", sSearch:"Buscar:",
             oPaginate:{ sFirst:"Primero", sLast:"Último", sNext:"Siguiente", sPrevious:"Anterior" },
             buttons:{ copy:"Copiar" }
         };
-
         const hoy = new Date().toISOString().slice(0,10);
 
-        // ===== Desechos =====
         $('#tablaDesechos').DataTable({
             language: langES,
-            columnDefs: [{ orderable:false, searchable:false, targets:[4] }], // Acciones
-            dom:
-                "<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
+            columnDefs: [{ orderable:false, searchable:false, targets:[4] }],
+            dom:"<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
                 "<'row'<'col-12'tr>>" +
                 "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
             buttons: [
@@ -339,16 +324,13 @@
             ]
         });
 
-        // ===== Reprocesos =====
         $('#tablaReprocesos').DataTable({
             language: langES,
-            columnDefs: [{ orderable:false, searchable:false, targets:[4] }], // Acciones
-            dom:
-                "<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
+            columnDefs: [{ orderable:false, searchable:false, targets:[4] }],
+            dom:"<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
                 "<'row'<'col-12'tr>>" +
                 "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
             buttons: [
-                // Exportar SOLO las 4 primeras columnas
                 { extend:'copy',  text:'Copy',  exportOptions:{ columns:[0,1,2,3] } },
                 { extend:'csv',   text:'CSV',   filename:'calidad_reprocesos_'+hoy, exportOptions:{ columns:[0,1,2,3] } },
                 { extend:'excel', text:'Excel', filename:'calidad_reprocesos_'+hoy, exportOptions:{ columns:[0,1,2,3] } },
@@ -358,63 +340,165 @@
             ]
         });
 
-        // ====== Lógica de modales ======
-
         // Ver: Desecho
         $(document).on('click', '.ver-desecho', async function(){
             const id = this.dataset.id;
             const r  = await (await fetch('<?= site_url('calidad/desperdicios') ?>/'+id)).json();
-            document.getElementById('vd-fecha').textContent     = r.fecha || '-';
-            document.getElementById('vd-op').textContent        = r.op || '-';
-            document.getElementById('vd-cantidad').textContent  = r.cantidad || '-';
-            document.getElementById('vd-motivo').textContent    = r.observaciones || '-';
+            vd_fecha.textContent     = r.fecha || '-';
+            vd_op.textContent        = r.op || '-';
+            vd_cantidad.textContent  = r.cantidad || '-';
+            vd_motivo.textContent    = r.observaciones || '-';
         });
 
         // Ver: Reproceso
         $(document).on('click', '.ver-rep', async function(){
             const id = this.dataset.id;
             const r  = await (await fetch('<?= site_url('calidad/reprocesos') ?>/'+id)).json();
-            document.getElementById('vr-op').textContent         = r.op || '-';
-            document.getElementById('vr-tarea').textContent      = r.tarea || '-';
-            document.getElementById('vr-pendientes').textContent = (r.cantidad ?? r.pendientes) || '-';
-            document.getElementById('vr-eta').textContent        = (r.fecha ?? r.eta) || '-';
+            vr_op.textContent         = r.op || '-';
+            vr_tarea.textContent      = r.accion || r.tarea || '-';
+            vr_pendientes.textContent = (r.cantidad ?? r.pendientes) || '-';
+            vr_eta.textContent        = (r.fecha ?? r.eta) || '-';
         });
 
         // Editar: Desecho
         $(document).on('click', '.edit-desecho', function(){
-            const f = document.getElementById('formDesecho');
+            const f = formDesecho;
             f.action = '<?= site_url('calidad/desperdicios') ?>/'+this.dataset.id+'/editar';
-            document.getElementById('d-fecha').value    = this.dataset.fecha || '';
-            document.getElementById('d-op').value       = this.dataset.op || '';
-            document.getElementById('d-cantidad').value = this.dataset.cantidad || '';
-            document.getElementById('d-motivo').value   = this.dataset.motivo || '';
+            d_fecha.value    = this.dataset.fecha || '';
+            d_op.value       = this.dataset.op || '';
+            d_cantidad.value = this.dataset.cantidad || '';
+            d_motivo.value   = this.dataset.motivo || '';
         });
-        document.getElementById('modalDesecho').addEventListener('show.bs.modal', e=>{
+        modalDesecho.addEventListener('show.bs.modal', e=>{
             if (!e.relatedTarget || !e.relatedTarget.classList.contains('edit-desecho')) {
-                const f = document.getElementById('formDesecho');
-                f.action = '<?= site_url('calidad/desperdicios/guardar') ?>';
+                formDesecho.action = '<?= site_url('calidad/desperdicios/guardar') ?>';
                 ['d-fecha','d-op','d-cantidad','d-motivo'].forEach(id=>document.getElementById(id).value='');
             }
         });
 
         // Editar: Reproceso
         $(document).on('click', '.edit-rep', function(){
-            const f = document.getElementById('formReproceso');
+            const f = formReproceso;
             f.action = '<?= site_url('calidad/reprocesos') ?>/'+this.dataset.id+'/editar';
-            document.getElementById('r-op').value         = this.dataset.op || '';
-            document.getElementById('r-tarea').value      = this.dataset.tarea || '';
-            document.getElementById('r-pendientes').value = this.dataset.pendientes || '';
-            document.getElementById('r-eta').value        = this.dataset.eta || '';
-            document.getElementById('r-estado').value     = 'pendiente';
+            r_op.value         = this.dataset.op || '';
+            r_tarea.value      = this.dataset.tarea || '';
+            r_pendientes.value = this.dataset.pendientes || '';
+            r_eta.value        = this.dataset.eta || '';
+            r_estado.value     = 'pendiente';
         });
-        document.getElementById('modalReproceso').addEventListener('show.bs.modal', e=>{
+        modalReproceso.addEventListener('show.bs.modal', e=>{
             if (!e.relatedTarget || !e.relatedTarget.classList.contains('edit-rep')) {
-                const f = document.getElementById('formReproceso');
-                f.action = '<?= site_url('calidad/reprocesos/guardar') ?>';
+                formReproceso.action = '<?= site_url('calidad/reprocesos/guardar') ?>';
                 ['r-op','r-tarea','r-pendientes','r-eta'].forEach(id=>document.getElementById(id).value='');
-                document.getElementById('r-estado').value = 'pendiente';
+                r_estado.value = 'pendiente';
             }
         });
+
+        // ===== Eliminar con SweetAlert2 =====
+        const csrfName = '<?= csrf_token() ?>';
+        let   csrfHash = '<?= csrf_hash() ?>';
+
+        async function confirmarYEliminar({url, row}) {
+            const result = await Swal.fire({
+                title: "¿Eliminar registro?",
+                text: "Esta acción no se puede deshacer.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#d33",
+                cancelButtonColor: "#6c757d",
+                confirmButtonText: "Sí, eliminar",
+                cancelButtonText: "Cancelar"
+            });
+            if (!result.isConfirmed) return;
+
+            const fd = new FormData(); fd.append(csrfName, csrfHash);
+
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: { 'X-Requested-With':'XMLHttpRequest' },
+                body: fd
+            });
+            let json = {}; try { json = await resp.json(); } catch(_){}
+            if (json.csrf) csrfHash = json.csrf;
+
+            if (resp.ok && (json.ok ?? true)) {
+                row?.remove();
+                await Swal.fire({ title: "Eliminado", text: json.message ?? "El registro fue eliminado correctamente.", icon: "success", confirmButtonColor: "#0d6efd" });
+            } else {
+                await Swal.fire({ title: "Error", text: json.message ?? "No se pudo eliminar el registro.", icon: "error", confirmButtonColor: "#0d6efd" });
+            }
+        }
+
+        $(document).on('click', '.del-desecho', function(){
+            const id  = this.dataset.id;
+            const row = this.closest('tr');
+            const url = '<?= site_url('calidad/desperdicios') ?>/'+id+'/eliminar';
+            confirmarYEliminar({url, row});
+        });
+        $(document).on('click', '.del-rep', function(){
+            const id  = this.dataset.id;
+            const row = this.closest('tr');
+            const url = '<?= site_url('calidad/reprocesos') ?>/'+id+'/eliminar';
+            confirmarYEliminar({url, row});
+        });
+
+        // ===== Enviar formularios con Swal (AJAX) + FIX cierre modal =====
+        async function enviarFormularioConSwal(form) {
+            const btn = form.querySelector('[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.disabled = true; btn.innerHTML = 'Guardando...';
+
+            const fd = new FormData(form);
+
+            try {
+                const resp = await fetch(form.action, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: fd
+                });
+
+                let json = null; try { json = await resp.json(); } catch(e) {}
+                if (json && json.csrf) {
+                    document.querySelectorAll('input[name="<?= csrf_token() ?>"]').forEach(i => i.value = json.csrf);
+                    csrfHash = json.csrf;
+                }
+
+                // Cerrar modales abiertos ANTES de Swal (evita warning aria-hidden)
+                document.querySelectorAll('.modal.show').forEach(el=>{
+                    const inst = bootstrap.Modal.getInstance(el);
+                    if (inst) inst.hide();
+                });
+
+                if (resp.ok && (!json || json.ok !== false)) {
+                    await Swal.fire({ icon: 'success', title: (json?.message) || 'Guardado', text: 'La información se registró correctamente.', confirmButtonColor: '#0d6efd' });
+                    location.reload();
+                } else {
+                    await Swal.fire({ icon: 'error', title: 'Error', text: (json?.message) || 'No se pudo guardar. Revisa los datos.', confirmButtonColor: '#0d6efd' });
+                }
+            } catch (err) {
+                // Cerrar modales para evitar overlay bloqueado
+                document.querySelectorAll('.modal.show').forEach(el=>{
+                    const inst = bootstrap.Modal.getInstance(el);
+                    if (inst) inst.hide();
+                });
+                await Swal.fire({ icon: 'error', title: 'Error de red', text: 'Ocurrió un problema al enviar la petición.', confirmButtonColor: '#0d6efd' });
+            } finally {
+                btn.disabled = false; btn.innerHTML = originalText;
+            }
+        }
+
+        const formDesecho = document.getElementById('formDesecho');
+        const formReproceso = document.getElementById('formReproceso');
+        if (formDesecho) formDesecho.addEventListener('submit', e=>{ e.preventDefault(); enviarFormularioConSwal(e.target); });
+        if (formReproceso) formReproceso.addEventListener('submit', e=>{ e.preventDefault(); enviarFormularioConSwal(e.target); });
+
+        // Flashdata -> Swal
+        <?php if(session()->getFlashdata('success')): ?>
+        Swal.fire({ icon: 'success', title: 'Éxito', text: '<?= esc(session()->getFlashdata('success')) ?>', confirmButtonColor: '#0d6efd' });
+        <?php endif; ?>
+        <?php if(session()->getFlashdata('error')): ?>
+        Swal.fire({ icon: 'error', title: 'Error', text: '<?= esc(session()->getFlashdata('error')) ?>', confirmButtonColor: '#0d6efd' });
+        <?php endif; ?>
     });
 </script>
 <?= $this->endSection() ?>

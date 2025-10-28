@@ -12,7 +12,6 @@ class Maquinaria extends BaseController
         $db   = \Config\Database::connect();
         $max  = 0;
         try {
-            // Trae sólo los códigos que inician con el prefijo
             $rows = $db->table('maquina')->select('codigo')
                 ->like('codigo', $prefix, 'after')->get()->getResultArray();
 
@@ -30,6 +29,38 @@ class Maquinaria extends BaseController
             // si algo falla, arranca desde 0
         }
         return $prefix . str_pad((string)($max + 1), $pad, '0', STR_PAD_LEFT);
+    }
+
+    /** Normaliza POST y valida */
+    protected function sanitizeAndValidate(array $post, ?int $id = null): array
+    {
+        // Estado → 1/0 (acepta 'Operativa'/'En reparación' o 1/0)
+        $post['activa'] = $post['activa'] ?? 'Operativa';
+        $post['activa'] = ($post['activa'] === 'Operativa' || $post['activa'] === '1' || $post['activa'] === 1) ? 1 : 0;
+
+        // Normalizar fecha dd/mm/yyyy → Y-m-d
+        if (!empty($post['fechaCompra']) && strpos($post['fechaCompra'], '/') !== false) {
+            [$d,$m,$y] = explode('/', $post['fechaCompra']);
+            if (@checkdate((int)$m, (int)$d, (int)$y)) {
+                $post['fechaCompra'] = sprintf('%04d-%02d-%02d', $y, $m, $d);
+            }
+        }
+
+        // Reglas de validación
+        $rules = [
+            'codigo'      => 'required|min_length[3]|max_length[50]',
+            'modelo'      => 'required|min_length[2]|max_length[120]',
+            'fabricante'  => 'permit_empty|max_length[120]',
+            'serie'       => 'permit_empty|max_length[120]',
+            'fechaCompra' => 'permit_empty|valid_date[Y-m-d]',
+            'ubicacion'   => 'permit_empty|max_length[100]',
+        ];
+
+        if (!$this->validate($rules)) {
+            throw new \RuntimeException(implode(' ', $this->validator->getErrors()));
+        }
+
+        return $post;
     }
 
     /** Inventario */
@@ -85,56 +116,30 @@ class Maquinaria extends BaseController
     /** Guardar (genera código si viene vacío y evita choques) */
     public function guardar()
     {
-        $post = $this->request->getPost([
-            'codigo','modelo','fabricante','serie','fechaCompra','ubicacion','activa'
-        ]);
-
-        // Código incremental si viene vacío
-        if (empty($post['codigo'])) {
-            $post['codigo'] = $this->nextCodigo();
-        }
-
-        // Estado → 1/0
-        $post['activa'] = $post['activa'] ?? 'Operativa';
-        $post['activa'] = ($post['activa'] === 'Operativa' || $post['activa'] === '1') ? 1 : 0;
-
-        // Normalizar fecha dd/mm/yyyy
-        if (!empty($post['fechaCompra']) && strpos($post['fechaCompra'], '/') !== false) {
-            [$d,$m,$y] = explode('/', $post['fechaCompra']);
-            if (@checkdate((int)$m, (int)$d, (int)$y)) {
-                $post['fechaCompra'] = sprintf('%04d-%02d-%02d', $y, $m, $d);
-            }
-        }
-
-        // Validación
-        $rules = [
-            'codigo'      => 'required|min_length[3]|max_length[50]',
-            'modelo'      => 'required|min_length[2]|max_length[120]',
-            'fabricante'  => 'permit_empty|max_length[120]',
-            'serie'       => 'permit_empty|max_length[120]', // puedes volverla is_unique si lo deseas
-            'fechaCompra' => 'permit_empty|valid_date[Y-m-d]',
-            'ubicacion'   => 'permit_empty|max_length[100]',
-        ];
-        if (!$this->validate($rules)) {
-            return redirect()->back()->withInput()->with('error', implode(' ', $this->validator->getErrors()));
-        }
-
         try {
+            $post = $this->request->getPost([
+                'codigo','modelo','fabricante','serie','fechaCompra','ubicacion','activa'
+            ]);
+
+            // Código incremental si viene vacío
+            if (empty($post['codigo'])) {
+                $post['codigo'] = $this->nextCodigo();
+            }
+
+            $post = $this->sanitizeAndValidate($post);
+
             $model  = new MaquinaModel();
             $db     = \Config\Database::connect();
             $fields = $db->getFieldNames($model->getTable());
 
-            // Si el código ya existe, genera otro (minimiza choque sin índice único)
+            // Si el código ya existe, genera otro
             if ($model->where('codigo', $post['codigo'])->first()) {
                 $post['codigo'] = $this->nextCodigo();
             }
 
-            // Construir payload solo con columnas existentes
             $data = [];
             foreach (['codigo','modelo','fabricante','serie','fechaCompra','ubicacion','activa'] as $k) {
-                if (in_array($k, $fields, true)) {
-                    $data[$k] = $post[$k] ?? null;
-                }
+                if (in_array($k, $fields, true)) $data[$k] = $post[$k] ?? null;
             }
 
             $model->insert($data);
@@ -143,19 +148,66 @@ class Maquinaria extends BaseController
                 ->with('success', 'Máquina guardada correctamente.');
         } catch (\Throwable $e) {
             log_message('error', 'Guardar Máquina: {msg}', ['msg' => $e->getMessage()]);
-            return redirect()->back()->withInput()->with('error', 'No se pudo guardar. Revisa los datos.');
+            return redirect()->back()->withInput()->with('error', 'No se pudo guardar. ' . $e->getMessage());
         }
     }
 
+    /** Formulario de edición */
     public function editar($id)
     {
         $model = new MaquinaModel();
         $row   = $model->find($id);
         if (!$row) throw new PageNotFoundException('Máquina no encontrada');
+
         $row['estado_txt'] = ((int)$row['activa'] === 1) ? 'Operativa' : 'En reparación';
+
         return view('modulos/maquinaria_editar', ['m' => $row]);
     }
 
+    /** Actualizar registro */
+    public function actualizar($id)
+    {
+        try {
+            $model = new MaquinaModel();
+            $row   = $model->find($id);
+            if (!$row) throw new PageNotFoundException('Máquina no encontrada');
+
+            $post = $this->request->getPost([
+                'codigo','modelo','fabricante','serie','fechaCompra','ubicacion','activa'
+            ]);
+
+            // Si dejan vacío el código al editar, le asignamos uno nuevo
+            if (empty($post['codigo'])) {
+                $post['codigo'] = $this->nextCodigo();
+            }
+
+            $post = $this->sanitizeAndValidate($post, (int)$id);
+
+            // Verificar choque de código con otro registro
+            $existe = $model->where('codigo', $post['codigo'])->where('id !=', $id)->first();
+            if ($existe) {
+                // Si choca, generamos el siguiente
+                $post['codigo'] = $this->nextCodigo();
+            }
+
+            $db     = \Config\Database::connect();
+            $fields = $db->getFieldNames($model->getTable());
+            $data   = [];
+            foreach (['codigo','modelo','fabricante','serie','fechaCompra','ubicacion','activa'] as $k) {
+                if (in_array($k, $fields, true)) $data[$k] = $post[$k] ?? null;
+            }
+
+            $model->update($id, $data);
+
+            return redirect()->to(base_url('modulo3/mantenimiento_inventario'))
+                ->with('success', 'Máquina actualizada correctamente.');
+        } catch (\Throwable $e) {
+            log_message('error', 'Actualizar Máquina: {msg}', ['msg' => $e->getMessage()]);
+            return redirect()->back()->withInput()->with('error', 'No se pudo actualizar. ' . $e->getMessage());
+        }
+    }
+
+    /** Eliminar */
     public function eliminar($id)
     {
         $model = new MaquinaModel();

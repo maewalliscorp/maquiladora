@@ -68,7 +68,7 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
 
-            <form class="row g-3" method="post" action="<?= site_url('mantenimiento/correctivo/crear') ?>">
+            <form class="row g-3" method="post" action="<?= site_url('mantenimiento/correctivo/crear') ?>" id="formCrear">
                 <?= csrf_field() ?>
                 <div class="modal-body">
                     <div class="row g-3">
@@ -218,11 +218,10 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
                                     <i class="bi bi-eye"></i>
                                 </button>
 
-                                <!-- Editar -->
+                                <!-- Editar (con confirmación antes de abrir modal) -->
                                 <button type="button"
                                         class="btn btn-sm btn-outline-primary btn-editar"
                                         title="Editar"
-                                        data-bs-toggle="modal" data-bs-target="#modalEditar"
                                         data-id="<?= esc($folio, 'attr') ?>"
                                         data-apertura="<?= esc($apertura, 'attr') ?>"
                                         data-maquinaid="<?= esc($maquinaId, 'attr') ?>"
@@ -234,11 +233,10 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
                                     <i class="bi bi-pencil"></i>
                                 </button>
 
-                                <!-- Eliminar -->
+                                <!-- Eliminar (SweetAlert directo, sin modal) -->
                                 <button type="button"
                                         class="btn btn-sm btn-outline-danger btn-eliminar"
                                         title="Eliminar"
-                                        data-bs-toggle="modal" data-bs-target="#modalEliminar"
                                         data-id="<?= esc($folio, 'attr') ?>">
                                     <i class="bi bi-trash"></i>
                                 </button>
@@ -367,7 +365,8 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
     </div>
 </div>
 
-<!-- ====================== MODAL ELIMINAR ====================== -->
+<!-- ====================== (Opcional) MODAL ELIMINAR LEGADO ======================
+     Se mantiene por compatibilidad, pero el flujo usa SweetAlert2 directo -->
 <div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -410,10 +409,35 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
 
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
     (function(){
         const tableSelector = '#<?= esc($tableId) ?>';
 
+        // ===== Helpers SweetAlert2 =====
+        const confirmAsync = (title, text, icon='warning', confirmText='Sí, continuar')=>{
+            return Swal.fire({
+                title, text, icon,
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33'
+            }).then(r=>r.isConfirmed);
+        };
+        const toast = (text, icon='success')=>{
+            return Swal.fire({
+                toast: true, position: 'top-end', showConfirmButton: false,
+                timer: 1700, timerProgressBar: true, icon, title: text
+            });
+        };
+        const loading = (title='Procesando...')=>{
+            Swal.fire({title, allowOutsideClick:false, didOpen:()=>Swal.showLoading()});
+        };
+
+        // ===== DataTables =====
         const langES = {
             sEmptyTable:"Sin datos", sZeroRecords:"No se encontraron resultados",
             sInfo:"Mostrando _START_–_END_ de _TOTAL_", sInfoEmpty:"Mostrando 0–0 de 0",
@@ -444,7 +468,7 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
             ]
         });
 
-        // ====== Modales ======
+        // ====== Modales (prefills) ======
         const crear = document.getElementById('modalMtto');
         if (crear) {
             crear.addEventListener('show.bs.modal', () => {
@@ -478,36 +502,83 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
             });
         });
 
-        // EDITAR
+        // EDITAR (confirmación antes de abrir + prefill)
         document.querySelectorAll('.btn-editar').forEach(btn=>{
-            btn.addEventListener('click', ()=>{
+            btn.addEventListener('click', async (ev)=>{
+                ev.preventDefault();
                 const d = btn.dataset;
+
+                if (!(await confirmAsync('¿Editar orden #'+ (d.id||'') +'?', 'Entrarás al modo edición.', 'question', 'Editar')))
+                    return;
+
                 const form = document.getElementById('formEditar');
                 form.action = '<?= site_url("mantenimiento/correctivo/actualizar") ?>' + '/' + (d.id || '');
 
                 document.getElementById('e-id').value            = d.id || '';
                 document.getElementById('e-apertura').value      = toLocalInputValue(d.apertura || '');
-
-                // Selects
                 document.getElementById('e-maquinaId').value     = d.maquinaid || '';
                 document.getElementById('e-responsableId').value = d.responsableid || '';
-
                 document.getElementById('e-tipo').value          = d.tipo || 'Correctivo';
                 document.getElementById('e-estatus').value       = d.estatus || 'Abierta';
                 document.getElementById('e-descripcion').value   = d.descripcion || '';
                 document.getElementById('e-cierre').value        = toLocalInputValue(d.cierre || '');
+
+                // Abrir modal de edición
+                const modal = new bootstrap.Modal(document.getElementById('modalEditar'));
+                modal.show();
             });
         });
 
-        // ELIMINAR
+        // ELIMINAR (SweetAlert directo con CSRF, sin abrir el modal)
         document.querySelectorAll('.btn-eliminar').forEach(btn=>{
-            btn.addEventListener('click', ()=>{
+            btn.addEventListener('click', async (ev)=>{
+                ev.preventDefault();
                 const id = btn.dataset.id || '';
-                document.getElementById('del-id').textContent = id;
+
+                if (!(await confirmAsync('¿Eliminar orden #'+ id +'?', 'Esta acción no se puede deshacer.', 'warning', 'Sí, eliminar')))
+                    return;
+
+                // Enviar POST al endpoint usando el form oculto (con CSRF)
                 const form = document.getElementById('formEliminar');
                 form.action = '<?= site_url("mantenimiento/correctivo/eliminar") ?>' + '/' + id;
+
+                loading('Eliminando...');
+                form.submit();
             });
         });
+
+        // ====== SweetAlert2 en submits ======
+        // Crear
+        const formCrear = document.getElementById('formCrear');
+        if (formCrear){
+            formCrear.addEventListener('submit', async (e)=>{
+                e.preventDefault();
+                if (await confirmAsync('¿Guardar orden?', 'Se registrará una nueva orden de mantenimiento.', 'question', 'Guardar')) {
+                    loading('Guardando...');
+                    formCrear.submit();
+                }
+            });
+        }
+
+        // Editar (confirmación al guardar cambios)
+        const formEditar = document.getElementById('formEditar');
+        if (formEditar){
+            formEditar.addEventListener('submit', async (e)=>{
+                e.preventDefault();
+                if (await confirmAsync('¿Guardar cambios?', 'Se actualizará la orden seleccionada.', 'question', 'Guardar')) {
+                    loading('Actualizando...');
+                    formEditar.submit();
+                }
+            });
+        }
+
+        // ====== Mostrar flashdata con SweetAlert (además del alert Bootstrap) ======
+        <?php if (session()->getFlashdata('success')): ?>
+        toast('<?= esc(session()->getFlashdata('success')) ?>', 'success');
+        <?php endif; ?>
+        <?php if (session()->getFlashdata('error')): ?>
+        Swal.fire('Error', '<?= esc(session()->getFlashdata('error')) ?>', 'error');
+        <?php endif; ?>
     })();
 </script>
 <?= $this->endSection() ?>

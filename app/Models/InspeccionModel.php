@@ -10,7 +10,9 @@ class InspeccionModel extends Model
     protected $returnType    = 'array';
     protected $useTimestamps = false;
 
+    // NO requerimos numero_inspeccion en la BD
     protected $allowedFields = [
+        // 'numero_inspeccion',  // <- la omitimos por ahora
         'ordenProduccionId',
         'puntoInspeccionId',
         'inspectorId',
@@ -19,9 +21,61 @@ class InspeccionModel extends Model
         'observaciones'
     ];
 
-    /**
-     * Obtiene el listado de inspecciones con datos relacionados
-     */
+    protected $validationRules = [
+        'ordenProduccionId' => 'permit_empty|integer',
+        'puntoInspeccionId' => 'permit_empty|integer',
+        'inspectorId'       => 'permit_empty|integer',
+        'fecha'             => 'required|valid_date[Y-m-d]',
+        'resultado'         => 'required|string|min_length[3]',
+        'observaciones'     => 'permit_empty|string',
+        // 'numero_inspeccion' => 'permit_empty|string'
+    ];
+
+    /** Detecta si la columna existe en la tabla (para que el modelo sea tolerante) */
+    private function hasNumeroInspeccion(): bool
+    {
+        $fields = $this->db->getFieldNames($this->table);
+        return in_array('numero_inspeccion', $fields, true);
+    }
+
+    /** Genera el siguiente folio SOLO si la columna existe; si no, devuelve string vacío */
+    public function generarNumeroInspeccion(): string
+    {
+        if (!$this->hasNumeroInspeccion()) {
+            return ''; // omitimos por completo
+        }
+
+        $prefix = 'INSP-' . date('Y') . '-';
+        $last = $this->like('numero_inspeccion', $prefix, 'after')
+            ->orderBy('id', 'DESC')
+            ->first();
+
+        if ($last && !empty($last['numero_inspeccion'])) {
+            $lastNum = (int) str_replace($prefix, '', $last['numero_inspeccion']);
+            return $prefix . str_pad($lastNum + 1, 4, '0', STR_PAD_LEFT);
+        }
+        return $prefix . '0001';
+    }
+
+    /** Crea inspección; solo guarda numero_inspeccion si la columna existe */
+    public function crearInspeccion(array $data): int
+    {
+        if ($this->hasNumeroInspeccion()) {
+            $folio = $this->generarNumeroInspeccion();
+            if ($folio !== '') {
+                $data['numero_inspeccion'] = $folio;
+                // Si agregas la columna en el futuro, recuerda también
+                // añadir 'numero_inspeccion' a $allowedFields.
+            }
+        }
+
+        $this->insert($data, true); // true => retorna ID
+        return (int) $this->getInsertID();
+    }
+
+    // --- Tus métodos de listado/detalle pueden quedarse igual,
+    //     pero SIN asumir que existe numero_inspeccion. ---
+
     public function getListadoCompleto(): array
     {
         $db = \Config\Database::connect();
@@ -35,27 +89,23 @@ class InspeccionModel extends Model
 
         $inspecciones = $builder->get()->getResultArray();
 
-        // Formatear los datos para la respuesta
         $resultados = [];
         foreach ($inspecciones as $inspeccion) {
             $resultados[] = [
                 'id' => $inspeccion['id'],
-                'numero_inspeccion' => 'INSP-' . str_pad($inspeccion['id'], 5, '0', STR_PAD_LEFT),
+                // Si la columna no existe, no intentes mostrarla:
+                // 'numero_inspeccion' => $inspeccion['numero_inspeccion'] ?? null,
                 'orden_produccion' => $inspeccion['orden_produccion'],
                 'punto_inspeccion' => $inspeccion['punto_inspeccion'],
-                'inspector' => $inspeccion['inspector'],
-                'fecha' => $inspeccion['fecha'],
-                'resultado' => $inspeccion['resultado'],
-                'observaciones' => $inspeccion['observaciones']
+                'inspector'        => $inspeccion['inspector'],
+                'fecha'            => $inspeccion['fecha'],
+                'resultado'        => $inspeccion['resultado'],
+                'observaciones'    => $inspeccion['observaciones']
             ];
         }
-
         return $resultados;
     }
 
-    /**
-     * Obtiene los detalles de una inspección específica
-     */
     public function getDetalle($id): ?array
     {
         $db = \Config\Database::connect();
@@ -67,76 +117,25 @@ class InspeccionModel extends Model
             ->where('i.id', $id);
 
         $inspeccion = $builder->get()->getRowArray();
+        if (!$inspeccion) return null;
 
-        if ($inspeccion) {
-            // Obtener los defectos de la inspección
-            $defectos = $db->table('inspeccion_defecto id')
-                ->select('d.id, d.nombre as tipo, d.descripcion as descripcion_defecto, 
-                         id.descripcion, id.cantidad, id.accion_correctiva, id.fecha_registro')
-                ->join('defecto d', 'd.id = id.defecto_id')
-                ->where('id.inspeccion_id', $id)
-                ->get()
-                ->getResultArray();
+        $defectos = $db->table('inspeccion_defecto id')
+            ->select('d.id, d.nombre as tipo, d.descripcion as descripcion_defecto, 
+                      id.descripcion, id.cantidad, id.accion_correctiva, id.fecha_registro')
+            ->join('defecto d', 'd.id = id.defecto_id')
+            ->where('id.inspeccion_id', $id)
+            ->get()->getResultArray();
 
-            $inspeccion['defectos'] = $defectos;
-
-            // Formatear los datos para la respuesta
-            return [
-                'id' => $inspeccion['id'],
-                'numero_inspeccion' => 'INSP-' . str_pad($inspeccion['id'], 5, '0', STR_PAD_LEFT),
-                'orden_produccion' => $inspeccion['orden_produccion'],
-                'punto_inspeccion' => $inspeccion['punto_inspeccion'],
-                'inspector' => $inspeccion['inspector'],
-                'fecha' => $inspeccion['fecha'],
-                'resultado' => $inspeccion['resultado'],
-                'observaciones' => $inspeccion['observaciones'],
-                'defectos' => $defectos
-            ];
-        }
-
-        return null;
-    }
-
-    /**
-     * Genera el siguiente número de inspección
-     */
-    public function generarNumeroInspeccion(): string
-    {
-        $prefix = 'INSP-' . date('Y') . '-';
-        $last = $this->like('numero_inspeccion', $prefix, 'after')
-            ->orderBy('id', 'DESC')
-            ->first();
-
-        if ($last) {
-            $lastNum = (int) str_replace($prefix, '', $last['numero_inspeccion']);
-            return $prefix . str_pad($lastNum + 1, 4, '0', STR_PAD_LEFT);
-        }
-
-        return $prefix . '0001';
-    }
-
-    /**
-     * Crea una nueva inspección
-     */
-    public function crearInspeccion(array $data): bool
-    {
-        $data['numero_inspeccion'] = $this->generarNumeroInspeccion();
-        return $this->insert($data);
-    }
-
-    /**
-     * Actualiza una inspección existente
-     */
-    public function actualizarInspeccion(int $id, array $data): bool
-    {
-        return $this->update($id, $data);
-    }
-
-    /**
-     * Elimina una inspección
-     */
-    public function eliminarInspeccion(int $id): bool
-    {
-        return $this->delete($id);
+        return [
+            'id'               => $inspeccion['id'],
+            // 'numero_inspeccion' => $inspeccion['numero_inspeccion'] ?? null,
+            'orden_produccion' => $inspeccion['orden_produccion'],
+            'punto_inspeccion' => $inspeccion['punto_inspeccion'],
+            'inspector'        => $inspeccion['inspector'],
+            'fecha'            => $inspeccion['fecha'],
+            'resultado'        => $inspeccion['resultado'],
+            'observaciones'    => $inspeccion['observaciones'],
+            'defectos'         => $defectos
+        ];
     }
 }

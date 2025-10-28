@@ -6,9 +6,30 @@ use App\Models\ReprocesoModel;
 
 class Calidad extends BaseController
 {
-    /**
-     * Vista principal: Desperdicios & Reprocesos
-     */
+    /* =========================================================
+     * Helper: resolver ordenProduccionId desde input del usuario
+     * Acepta: id o numero. Devuelve id o null si no existe.
+     * ========================================================= */
+    private function resolveOrdenProduccionId($op): ?int
+    {
+        $op = trim((string)$op);
+        if ($op === '') return null;
+
+        $db  = \Config\Database::connect();
+        $tbl = $db->table('orden_produccion');
+
+        // Busca por id exacto o por numero
+        $row = $tbl->select('id')
+            ->groupStart()
+            ->where('id', (int)$op)
+            ->orWhere('numero', $op)
+            ->groupEnd()
+            ->get(1)->getRowArray();
+
+        return $row['id'] ?? null;
+    }
+
+    /** ===================== LISTA ===================== */
     public function desperdicios()
     {
         $mR   = new ReprocesoModel();
@@ -17,24 +38,25 @@ class Calidad extends BaseController
         if ($todo) {
             $rep = $mR->select(
                 'reproceso.id,
-                     reproceso.accion AS tarea,
-                     reproceso.cantidad AS pendientes,
-                     reproceso.fecha AS eta,
-                     inspeccion.ordenProduccionId AS op'
+                 reproceso.accion AS tarea,
+                 reproceso.cantidad AS pendientes,
+                 reproceso.fecha AS eta,
+                 inspeccion.ordenProduccionId AS op'
             )
                 ->join('inspeccion','inspeccion.id = reproceso.inspeccionId')
                 ->orderBy('reproceso.fecha','DESC')
                 ->groupBy('reproceso.id')->distinct()->findAll();
+
             $desp = [];
         } else {
-            // 1) Desechos (sinónimos)
+            // Desechos
             $desp = $mR->select(
                 'reproceso.id,
-                     reproceso.cantidad,
-                     reproceso.fecha,
-                     inspeccion.ordenProduccionId AS op,
-                     inspeccion.resultado,
-                     inspeccion.observaciones'
+                 reproceso.cantidad,
+                 reproceso.fecha,
+                 inspeccion.ordenProduccionId AS op,
+                 inspeccion.resultado,
+                 inspeccion.observaciones'
             )
                 ->join('inspeccion','inspeccion.id = reproceso.inspeccionId')
                 ->groupStart()
@@ -51,35 +73,32 @@ class Calidad extends BaseController
 
             $despIDs = array_map('intval', array_column($desp, 'id'));
 
-            // 2) Reprocesos: todo lo que NO sea desecho (incluye vacío/NULL/reproceso)
+            // Reprocesos
             $notIn = "LOWER(TRIM(COALESCE(inspeccion.resultado,''))) NOT IN
-                  ('rechazo','desecho','desperdicio','scrap','rechazado','descartado','merma')";
+                     ('rechazo','desecho','desperdicio','scrap','rechazado','descartado','merma')";
 
             $repBuilder = $mR->select(
                 'reproceso.id,
-                             reproceso.accion AS tarea,
-                             reproceso.cantidad AS pendientes,
-                             reproceso.fecha AS eta,
-                             inspeccion.ordenProduccionId AS op'
+                 reproceso.accion AS tarea,
+                 reproceso.cantidad AS pendientes,
+                 reproceso.fecha AS eta,
+                 inspeccion.ordenProduccionId AS op'
             )
                 ->join('inspeccion','inspeccion.id = reproceso.inspeccionId')
                 ->where($notIn, null, false)
                 ->orderBy('reproceso.fecha','ASC')
                 ->groupBy('reproceso.id')->distinct();
 
-            if (!empty($despIDs)) {
-                $repBuilder->whereNotIn('reproceso.id', $despIDs);
-            }
+            if (!empty($despIDs)) $repBuilder->whereNotIn('reproceso.id', $despIDs);
             $rep = $repBuilder->findAll();
 
-            // 3) Fallback: si nada entró, muestra todo como reproceso
             if (empty($desp) && empty($rep)) {
                 $rep = $mR->select(
                     'reproceso.id,
-                         reproceso.accion AS tarea,
-                         reproceso.cantidad AS pendientes,
-                         reproceso.fecha AS eta,
-                         inspeccion.ordenProduccionId AS op'
+                     reproceso.accion AS tarea,
+                     reproceso.cantidad AS pendientes,
+                     reproceso.fecha AS eta,
+                     inspeccion.ordenProduccionId AS op'
                 )
                     ->join('inspeccion','inspeccion.id = reproceso.inspeccionId')
                     ->orderBy('reproceso.fecha','DESC')
@@ -95,144 +114,245 @@ class Calidad extends BaseController
         ]);
     }
 
+    /** ===================== CREAR ===================== */
 
-    /**
-     * Crear registro de Desecho
-     */
     public function guardarDesecho()
     {
         $post = $this->request->getPost();
         $db   = \Config\Database::connect();
-        $db->transStart();
 
-        // Inspección asociada con resultado estandarizado "rechazo"
-        $mI = new InspeccionModel();
-        $mI->insert([
-            'ordenProduccionId' => (int)$post['op'],
-            'puntoInspeccionId' => $post['puntoInspeccionId'] ?? null,
-            'inspectorId'       => $post['inspectorId'] ?? null,
-            'fecha'             => $post['fecha'],
-            'resultado'         => 'rechazo',
-            'observaciones'     => $post['motivo'] ?? null,
-        ]);
-        $insId = $mI->getInsertID();
+        try {
+            $db->transStart();
 
-        // En tu BD, "accion" es la descripción/motivo
-        $mR = new ReprocesoModel();
-        $mR->insert([
-            'inspeccionId' => $insId,
-            'accion'       => $post['motivo'] ?: 'Desecho',
-            'cantidad'     => $post['cantidad'],
-            'fecha'        => $post['fecha'],
-        ]);
+            // Resolver OP a id real (FK). Si no existe, quedará null.
+            $ordenId = $this->resolveOrdenProduccionId($post['op'] ?? null);
 
-        $db->transComplete();
-        return $db->transStatus()
-            ? redirect()->to('/calidad/desperdicios')->with('success', 'Desecho registrado')
-            : redirect()->back()->with('error', 'No se pudo registrar el desecho');
+            $mI = new InspeccionModel();
+            $insId = $mI->crearInspeccion([
+                'ordenProduccionId' => $ordenId, // id real o null
+                'fecha'             => $post['fecha'] ?? date('Y-m-d'),
+                'resultado'         => 'rechazo',
+                'observaciones'     => $post['motivo'] ?? null,
+            ]);
+
+            $mR = new ReprocesoModel();
+            $mR->insert([
+                'inspeccionId' => $insId,
+                'accion'       => $post['motivo'] ?: 'Desecho',
+                'cantidad'     => $post['cantidad'],
+                'fecha'        => $post['fecha'] ?? date('Y-m-d'),
+            ]);
+
+            $db->transComplete();
+            if (!$db->transStatus()) throw new \RuntimeException('DB transaction failed');
+
+            return $this->respOkRedirect('Desecho registrado');
+        } catch (\Throwable $e) {
+            log_message('error', '[Desecho] '.$e->getMessage());
+            return $this->respErrRedirect('No se pudo registrar el desecho');
+        }
     }
 
-    /**
-     * Crear registro de Reproceso
-     */
     public function guardarReproceso()
     {
         $post = $this->request->getPost();
         $db   = \Config\Database::connect();
-        $db->transStart();
 
-        $mI = new InspeccionModel();
-        $mI->insert([
-            'ordenProduccionId' => (int)$post['op'],
-            'puntoInspeccionId' => $post['puntoInspeccionId'] ?? null,
-            'inspectorId'       => $post['inspectorId'] ?? null,
-            'fecha'             => $post['eta'],
-            'resultado'         => 'reproceso',
-            'observaciones'     => $post['tarea'] ?? null,
-        ]);
-        $insId = $mI->getInsertID();
+        try {
+            $db->transStart();
 
-        $mR = new ReprocesoModel();
-        $mR->insert([
-            'inspeccionId' => $insId,
-            'accion'       => $post['tarea'] ?: 'Reproceso',
-            'cantidad'     => $post['pendientes'],
-            'fecha'        => $post['eta'],
-        ]);
+            $ordenId = $this->resolveOrdenProduccionId($post['op'] ?? null);
 
-        $db->transComplete();
-        return $db->transStatus()
-            ? redirect()->to('/calidad/desperdicios')->with('success', 'Reproceso registrado')
-            : redirect()->back()->with('error', 'No se pudo registrar el reproceso');
+            $mI = new InspeccionModel();
+            $insId = $mI->crearInspeccion([
+                'ordenProduccionId' => $ordenId,
+                'fecha'             => $post['eta'] ?? date('Y-m-d'),
+                'resultado'         => 'reproceso',
+                'observaciones'     => $post['tarea'] ?? null,
+            ]);
+
+            $mR = new ReprocesoModel();
+            $mR->insert([
+                'inspeccionId' => $insId,
+                'accion'       => $post['tarea'] ?: 'Reproceso',
+                'cantidad'     => $post['pendientes'],
+                'fecha'        => $post['eta'] ?? date('Y-m-d'),
+            ]);
+
+            $db->transComplete();
+            if (!$db->transStatus()) throw new \RuntimeException('DB transaction failed');
+
+            return $this->respOkRedirect('Reproceso registrado');
+        } catch (\Throwable $e) {
+            log_message('error', '[Reproceso] '.$e->getMessage());
+            return $this->respErrRedirect('No se pudo registrar el reproceso');
+        }
     }
 
-    /**
-     * Editar Desecho
-     */
+    /** ===================== EDITAR ===================== */
+
     public function editarDesecho($id)
     {
         $post = $this->request->getPost();
         $mR   = new ReprocesoModel();
         $r    = $mR->find($id);
-        if (!$r) return redirect()->back()->with('error', 'Registro no existe');
+        if (!$r) return $this->respErrRedirect('Registro no existe');
 
         $db = \Config\Database::connect();
-        $db->transStart();
 
-        $mR->update($id, [
-            'accion'   => $post['motivo'] ?: 'Desecho',
-            'cantidad' => $post['cantidad'],
-            'fecha'    => $post['fecha'],
-        ]);
+        try {
+            $db->transStart();
 
-        (new InspeccionModel())->update($r['inspeccionId'], [
-            'ordenProduccionId' => (int)$post['op'],
-            'fecha'             => $post['fecha'],
-            'resultado'         => 'rechazo',
-            'observaciones'     => $post['motivo'] ?? null,
-        ]);
+            $mR->update($id, [
+                'accion'   => $post['motivo'] ?: 'Desecho',
+                'cantidad' => $post['cantidad'],
+                'fecha'    => $post['fecha'],
+            ]);
 
-        $db->transComplete();
-        return $db->transStatus()
-            ? redirect()->to('/calidad/desperdicios')->with('success', 'Actualizado')
-            : redirect()->back()->with('error', 'No se pudo editar');
+            $ordenId = $this->resolveOrdenProduccionId($post['op'] ?? null);
+
+            (new InspeccionModel())->update($r['inspeccionId'], [
+                'ordenProduccionId' => $ordenId,
+                'fecha'             => $post['fecha'],
+                'resultado'         => 'rechazo',
+                'observaciones'     => $post['motivo'] ?? null,
+            ]);
+
+            $db->transComplete();
+            if (!$db->transStatus()) throw new \RuntimeException('DB transaction failed');
+
+            return $this->respOkRedirect('Actualizado');
+        } catch (\Throwable $e) {
+            log_message('error', '[EditarDesecho] '.$e->getMessage());
+            return $this->respErrRedirect('No se pudo editar');
+        }
     }
 
-    /**
-     * Editar Reproceso
-     */
     public function editarReproceso($id)
     {
         $post = $this->request->getPost();
         $mR   = new ReprocesoModel();
         $r    = $mR->find($id);
-        if (!$r) return redirect()->back()->with('error', 'Registro no existe');
+        if (!$r) return $this->respErrRedirect('Registro no existe');
 
         $db = \Config\Database::connect();
-        $db->transStart();
 
-        $mR->update($id, [
-            'accion'   => $post['tarea'] ?: 'Reproceso',
-            'cantidad' => $post['pendientes'],
-            'fecha'    => $post['eta'],
-        ]);
+        try {
+            $db->transStart();
 
-        (new InspeccionModel())->update($r['inspeccionId'], [
-            'ordenProduccionId' => (int)$post['op'],
-            'fecha'             => $post['eta'],
-            'resultado'         => 'reproceso',
-            'observaciones'     => $post['tarea'] ?? null,
-        ]);
+            $mR->update($id, [
+                'accion'   => $post['tarea'] ?: 'Reproceso',
+                'cantidad' => $post['pendientes'],
+                'fecha'    => $post['eta'],
+            ]);
 
-        $db->transComplete();
-        return $db->transStatus()
-            ? redirect()->to('/calidad/desperdicios')->with('success', 'Actualizado')
-            : redirect()->back()->with('error', 'No se pudo editar');
+            $ordenId = $this->resolveOrdenProduccionId($post['op'] ?? null);
+
+            (new InspeccionModel())->update($r['inspeccionId'], [
+                'ordenProduccionId' => $ordenId,
+                'fecha'             => $post['eta'],
+                'resultado'         => 'reproceso',
+                'observaciones'     => $post['tarea'] ?? null,
+            ]);
+
+            $db->transComplete();
+            if (!$db->transStatus()) throw new \RuntimeException('DB transaction failed');
+
+            return $this->respOkRedirect('Actualizado');
+        } catch (\Throwable $e) {
+            log_message('error', '[EditarReproceso] '.$e->getMessage());
+            return $this->respErrRedirect('No se pudo editar');
+        }
     }
 
-    /**
-     * JSON detalle Desecho (modal "Vista")
-     */
+    /** ===================== ELIMINAR ===================== */
+
+    public function eliminarDesecho($id)
+    {
+        $reqAjax = $this->request->isAJAX();
+        $mR = new ReprocesoModel();
+        $row = $mR->find($id);
+
+        if (!$row) {
+            $msg = ['ok'=>false,'message'=>'Registro no encontrado','csrf'=>csrf_hash()];
+            return $reqAjax ? $this->response->setJSON($msg)->setStatusCode(404)
+                : redirect()->back()->with('error',$msg['message']);
+        }
+
+        $db = \Config\Database::connect();
+        try {
+            $db->transStart();
+            $mR->delete($id);
+            if (!empty($row['inspeccionId'])) {
+                (new InspeccionModel())->delete((int)$row['inspeccionId']);
+            }
+            $db->transComplete();
+            if (!$db->transStatus()) throw new \RuntimeException('DB transaction failed');
+
+            if ($reqAjax) {
+                return $this->response->setJSON([
+                    'ok' => true,
+                    'message' => 'Eliminado correctamente',
+                    'csrf' => csrf_hash(),
+                ]);
+            }
+            return redirect()->to('/calidad/desperdicios')->with('success','Eliminado');
+        } catch (\Throwable $e) {
+            if ($reqAjax) {
+                return $this->response->setJSON([
+                    'ok' => false,
+                    'message' => 'No se pudo eliminar',
+                    'csrf' => csrf_hash(),
+                ], 500);
+            }
+            return redirect()->back()->with('error','No se pudo eliminar');
+        }
+    }
+
+    public function eliminarReproceso($id)
+    {
+        $reqAjax = $this->request->isAJAX();
+        $mR = new ReprocesoModel();
+        $row = $mR->find($id);
+
+        if (!$row) {
+            $msg = ['ok'=>false,'message'=>'Registro no encontrado','csrf'=>csrf_hash()];
+            return $reqAjax ? $this->response->setJSON($msg)->setStatusCode(404)
+                : redirect()->back()->with('error',$msg['message']);
+        }
+
+        $db = \Config\Database::connect();
+        try {
+            $db->transStart();
+            $mR->delete($id);
+            if (!empty($row['inspeccionId'])) {
+                (new InspeccionModel())->delete((int)$row['inspeccionId']);
+            }
+            $db->transComplete();
+            if (!$db->transStatus()) throw new \RuntimeException('DB transaction failed');
+
+            if ($reqAjax) {
+                return $this->response->setJSON([
+                    'ok' => true,
+                    'message' => 'Eliminado correctamente',
+                    'csrf' => csrf_hash(),
+                ]);
+            }
+            return redirect()->to('/calidad/desperdicios')->with('success','Eliminado');
+        } catch (\Throwable $e) {
+            if ($reqAjax) {
+                return $this->response->setJSON([
+                    'ok' => false,
+                    'message' => 'No se pudo eliminar',
+                    'csrf' => csrf_hash(),
+                ], 500);
+            }
+            return redirect()->back()->with('error','No se pudo eliminar');
+        }
+    }
+
+    /** ===================== JSON VISTA DETALLE ===================== */
+
     public function verDesecho($id)
     {
         $row = (new ReprocesoModel())
@@ -246,9 +366,6 @@ class Calidad extends BaseController
             : $this->response->setStatusCode(404)->setBody('No encontrado');
     }
 
-    /**
-     * JSON detalle Reproceso (modal "Vista")
-     */
     public function verReproceso($id)
     {
         $row = (new ReprocesoModel())
@@ -262,72 +379,21 @@ class Calidad extends BaseController
             : $this->response->setStatusCode(404)->setBody('No encontrado');
     }
 
-    /**
-     * Diagnóstico rápido (JSON)
-     */
-    public function diag()
+    /** ===================== HELPERS RESPUESTA ===================== */
+
+    private function respOkRedirect(string $msg)
     {
-        $db  = \Config\Database::connect();
-        $out = ['ok' => true, 'steps' => []];
-
-        try {
-            // Tablas
-            $tables = $db->listTables();
-            $out['database'] = $db->getDatabase();
-            $out['tables']   = $tables;
-            $out['has']      = [
-                'inspeccion' => in_array('inspeccion', $tables),
-                'reproceso'  => in_array('reproceso',  $tables),
-            ];
-            $out['steps'][] = 'tables_ok';
-
-            // Conteos
-            $out['counts'] = [];
-            if ($out['has']['reproceso'])  $out['counts']['reproceso']  = (int)$db->table('reproceso')->countAll();
-            if ($out['has']['inspeccion']) $out['counts']['inspeccion'] = (int)$db->table('inspeccion')->countAll();
-            $out['steps'][] = 'counts_ok';
-
-            // Valores de reproceso.accion
-            $out['accion_values'] = $out['has']['reproceso']
-                ? $db->query("SELECT LOWER(accion) AS accion, COUNT(*) c FROM reproceso GROUP BY LOWER(accion)")
-                    ->getResultArray()
-                : [];
-            $out['steps'][] = 'accion_ok';
-
-            // Valores de inspeccion.resultado
-            $out['resultado_values'] = $out['has']['inspeccion']
-                ? $db->query("SELECT LOWER(COALESCE(resultado,'')) AS resultado, COUNT(*) c
-                              FROM inspeccion GROUP BY LOWER(COALESCE(resultado,''))")->getResultArray()
-                : [];
-            $out['steps'][] = 'resultado_ok';
-
-            // JOIN + muestra
-            if ($out['has']['reproceso'] && $out['has']['inspeccion']) {
-                $out['join_count'] = (int)($db->query("
-                        SELECT COUNT(*) c
-                        FROM reproceso r
-                        JOIN inspeccion i ON i.id = r.inspeccionId
-                    ")->getRowArray()['c'] ?? 0);
-
-                $out['sample'] = $db->query("
-                        SELECT r.id, r.accion, r.cantidad, r.fecha,
-                               i.ordenProduccionId AS op, i.observaciones, i.resultado
-                        FROM reproceso r
-                        JOIN inspeccion i ON i.id = r.inspeccionId
-                        ORDER BY r.fecha DESC
-                        LIMIT 5
-                    ")->getResultArray();
-            } else {
-                $out['join_count'] = 0;
-                $out['sample'] = [];
-            }
-            $out['steps'][] = 'join_ok';
-
-        } catch (\Throwable $e) {
-            $out['ok']    = false;
-            $out['error'] = $e->getMessage();
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['ok'=>true,'message'=>$msg,'csrf'=>csrf_hash()]);
         }
+        return redirect()->to('/calidad/desperdicios')->with('success', $msg);
+    }
 
-        return $this->response->setJSON($out, $out['ok'] ? 200 : 500);
+    private function respErrRedirect(string $msg)
+    {
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['ok'=>false,'message'=>$msg,'csrf'=>csrf_hash()], 422);
+        }
+        return redirect()->back()->with('error', $msg);
     }
 }

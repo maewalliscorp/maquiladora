@@ -65,21 +65,19 @@ $routes->get('/',          'UsuarioController::login');
 $routes->get('/dashboard', 'Modulos::dashboard', ['filter' => 'auth']);
 
 /* --------------------------------------------------------------------
- * API (Dashboard, etc.)
+ * API (Dashboard y Clientes sin duplicados)
  * ------------------------------------------------------------------*/
 $routes->group('api', static function ($routes) {
-    $routes->get('dashboard', 'Api::dashboard'); // ?range=30
+    $routes->get('dashboard',                 'Api::dashboard'); // ?range=30
+
+    // Clientes (con CORS para POST si lo necesitas)
+    $routes->match(['post','options'],'clientes/crear',           'Clientes::crear');
+    $routes->match(['post','options'],'clientes/(:num)/editar',   'Clientes::actualizar/$1');
+    $routes->match(['post','options'],'clientes/(:num)/eliminar', 'Clientes::eliminar/$1');
+
+    // Lectura/detalle
     $routes->get('clientes/(:num)', 'Clientes::json_detalle/$1');
-    $routes->post('clientes/(:num)/editar', 'Clientes::actualizar/$1');
-    $routes->post('clientes/crear', 'Clientes::crear');
-    $routes->post('clientes/(:num)/eliminar', 'Clientes::eliminar/$1');
 });
-$routes->post('api/clientes/crear',           'Clientes::crear');
-$routes->post('api/clientes/(:num)/editar',   'Clientes::actualizar/$1');
-$routes->match(['post','options'],'api/clientes/crear',         'Clientes::crear');
-$routes->match(['post','options'],'api/clientes/(:num)/editar', 'Clientes::actualizar/$1');
-$routes->post('api/clientes/(:num)/eliminar', 'Clientes::eliminar/$1');
-$routes->match(['post','options'],'api/clientes/(:num)/eliminar','Clientes::eliminar/$1');
 
 /* --------------------------------------------------------------------
  * Muestras (prototipos)
@@ -180,13 +178,34 @@ $routes->group('mantenimiento', static function($r){
 });
 
 /* --------------------------------------------------------------------
- * Módulo 3 (Dashboard, WIP, Inspección, Mantenimiento, Logística)
+ * Módulo 3 (Dashboard, WIP, Inspección, Mantenimiento, Logística, MRP alias)
  * ------------------------------------------------------------------*/
 $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
 
     $routes->get('/',         'Modulos::dashboard');
     $routes->get('dashboard', 'Modulos::dashboard');
     $routes->get('ordenes',   'Modulos::ordenes');
+
+    // ===== MRP (ALIAS bajo /modulo3/mrp) =====
+    $routes->group('mrp', function($r){
+        $r->get('/',   'Mrp::index', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
+        $r->get('diag','Mrp::diag');
+        $r->post('requerimientos/guardar',       'Mrp::guardarRequerimiento',   ['filter' => 'auth:Administrador,Jefe,Almacenista']);
+        $r->post('requerimientos/(:num)/editar', 'Mrp::editarRequerimiento/$1', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
+        $r->get ('requerimientos/(:num)',        'Mrp::verReq/$1',              ['filter' => 'auth:Administrador,Jefe,Almacenista']);
+        $r->post('ocs/guardar',                  'Mrp::guardarOc',              ['filter' => 'auth:Administrador,Jefe,Almacenista']);
+        $r->post('ocs/(:num)/editar',            'Mrp::editarOc/$1',            ['filter' => 'auth:Administrador,Jefe,Almacenista']);
+        $r->get ('ocs/(:num)',                   'Mrp::verOc/$1',               ['filter' => 'auth:Administrador,Jefe,Almacenista']);
+    });
+
+    // ===== ALIAS Calidad (Desperdicios & Reprocesos) bajo /modulo3 =====
+    $routes->get ('desperdicios',                 'Calidad::desperdicios', ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
+    $routes->post('desperdicios/guardar',         'Calidad::guardarDesecho', ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
+    $routes->get ('desperdicios/(:num)',          'Calidad::verDesecho/$1',  ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
+    $routes->post('desperdicios/(:num)/editar',   'Calidad::editarDesecho/$1', ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
+    $routes->post('reprocesos/guardar',           'Calidad::guardarReproceso', ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
+    $routes->get ('reprocesos/(:num)',            'Calidad::verReproceso/$1',  ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
+    $routes->post('reprocesos/(:num)/editar',     'Calidad::editarReproceso/$1', ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
 
     // WIP
     $routes->get ('wip',                   'Wip::index',          ['filter' => 'auth:Administrador,Jefe,Inspector,Empleado']);
@@ -218,10 +237,11 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->get('mantenimiento_correctivo', fn () => redirect()->to(site_url('mantenimiento/correctivo')));
 
     // CRUD Maquinaria
-    $routes->get ('maquinaria',                 'Maquinaria::index',       ['filter' => 'auth:Administrador,Jefe,Almacenista']);
-    $routes->post('maquinaria/guardar',         'Maquinaria::guardar',     ['filter' => 'auth:Administrador,Jefe,Almacenista']);
-    $routes->get ('maquinaria/editar/(:num)',   'Maquinaria::editar/$1',   ['filter' => 'auth:Administrador,Jefe,Almacenista']);
-    $routes->post('maquinaria/eliminar/(:num)', 'Maquinaria::eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
+    $routes->get ('maquinaria',                      'Maquinaria::index',       ['filter' => 'auth:Administrador,Jefe,Almacenista']);
+    $routes->post('maquinaria/guardar',              'Maquinaria::guardar',     ['filter' => 'auth:Administrador,Jefe,Almacenista']);
+    $routes->get ('maquinaria/editar/(:num)',        'Maquinaria::editar/$1',   ['filter' => 'auth:Administrador,Jefe,Almacenista']);
+    $routes->post('maquinaria/actualizar/(:num)',    'Maquinaria::actualizar/$1',['filter' => 'auth:Administrador,Jefe,Almacenista']);
+    $routes->post('maquinaria/eliminar/(:num)',      'Maquinaria::eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
 
     /* =========================
      * LOGÍSTICA · PREPARACIÓN / PACKING
@@ -289,11 +309,10 @@ $routes->group('calidad', [], function ($routes) {
     $routes->post('reprocesos/guardar',          'Calidad::guardarReproceso', ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
     $routes->get ('reprocesos/(:num)',           'Calidad::verReproceso/$1',  ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
     $routes->post('reprocesos/(:num)/editar',    'Calidad::editarReproceso/$1',['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
-    $routes->get ('desperdicios/diag',           'Calidad::diag',              ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
 });
 
 /* --------------------------------------------------------------------
- * MRP
+ * MRP (grupo raíz existente)
  * ------------------------------------------------------------------*/
 $routes->group('mrp', [], function ($r) {
     $r->get('/',   'Mrp::index', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
@@ -404,7 +423,6 @@ $routes->post(
 /* --------------------------------------------------------------------
  * FACTURA DEMO (Preview HTML + PDF por GET usando sesión)
  * ------------------------------------------------------------------*/
-// Estas son las rutas que resuelven tu 404 del botón "Descargar PDF".
 $routes->get('logistica/factura',               'FacturaDemoController::preview',    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
 $routes->get('logistica/factura/(:num)',        'FacturaDemoController::preview/$1', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
 $routes->get('logistica/factura/(:num)/pdf',    'FacturaDemoController::pdf/$1',     ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
@@ -413,8 +431,7 @@ $routes->get('logistica/factura/(:num)/pdf',    'FacturaDemoController::pdf/$1',
  * (Opcional) Endpoints POST si quieres mandar payload directo (no sesión)
  * ------------------------------------------------------------------*/
 $routes->group('facturacion', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad'], static function($r){
-    // Si más adelante agregas métodos que reciban JSON para renderizar/descargar
-    // por POST, puedes apuntarlos aquí. Se dejan por compatibilidad.
+    // Espacio para futuras rutas POST (payload directo)
     // $r->post('demo/html', 'FacturaDemoController::html');
     // $r->post('demo/pdf',  'FacturaDemoController::pdfPost');
 });

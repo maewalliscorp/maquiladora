@@ -14,8 +14,8 @@ class ReprocesoModel extends Model
 
     protected $validationRules = [
         'inspeccionId' => 'required|integer',
-        'accion'       => 'required|string',
+        'accion'       => 'required|string|min_length[3]',
         'cantidad'     => 'required|numeric',
-        'fecha'        => 'required|valid_date',
+        'fecha'        => 'required|valid_date[Y-m-d]',
     ];
 }
