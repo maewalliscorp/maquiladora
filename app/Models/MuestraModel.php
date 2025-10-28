@@ -71,6 +71,7 @@ class MuestraModel extends Model
             SELECT 
                 m.id,
                 a.clienteId,
+                c.nombre AS clienteNombre,
                 m.prototipoId,
                 a.fecha,
                 m.solicitadaPor,
@@ -81,7 +82,8 @@ class MuestraModel extends Model
                 a.comentarios,
                 m.observaciones
             FROM muestra m
-            INNER JOIN aprobacion_muestra a ON m.id = a.id
+            INNER JOIN aprobacion_muestra a ON m.id = a.muestraId
+            LEFT JOIN cliente c ON a.clienteId = c.id
             WHERE a.decision IS NOT NULL
         ";
 

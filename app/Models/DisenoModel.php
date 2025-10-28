@@ -234,6 +234,7 @@
                            d.nombre,
                            d.descripcion,
                            d.precio_unidad,
+                           d.clienteId,
                            d.idSexoFK,
                            d.IdTallasFK,
                            d.idTipoCorteFK,
@@ -250,20 +251,20 @@
                     LEFT JOIN diseno_version dv ON dv.id = dvsel.id
                     LEFT JOIN lista_materiales lm ON lm.disenoVersionId = dv.id
                     WHERE d.id = ?
-                    GROUP BY d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, d.idSexoFK, d.IdTallasFK, d.idTipoCorteFK, d.idTipoRopaFK, dv.version, dv.fecha, dv.notas, dv.archivoCadUrl, dv.archivoPatronUrl, dv.aprobado";
+                    GROUP BY d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, d.clienteId, d.idSexoFK, d.IdTallasFK, d.idTipoCorteFK, d.idTipoRopaFK, dv.version, dv.fecha, dv.notas, dv.archivoCadUrl, dv.archivoPatronUrl, dv.aprobado";
     
             try {
                 $row = $db->query($sql, [$id])->getRowArray();
             } catch (\Throwable $e) {
                 $sub2 = "SELECT dv1.disenoId, dv1.id FROM disenoversion dv1 LEFT JOIN disenoversion dv2 ON dv1.disenoId = dv2.disenoId AND ((dv1.fecha < dv2.fecha) OR (dv1.fecha = dv2.fecha AND dv1.id < dv2.id)) WHERE dv2.id IS NULL";
-                $sql2 = "SELECT d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, d.idSexoFK, d.IdTallasFK, d.idTipoCorteFK, d.idTipoRopaFK, dv.version, dv.fecha, dv.notas, dv.archivoCadUrl, dv.archivoPatronUrl, dv.aprobado,
+                $sql2 = "SELECT d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, d.clienteId, d.idSexoFK, d.IdTallasFK, d.idTipoCorteFK, d.idTipoRopaFK, dv.version, dv.fecha, dv.notas, dv.archivoCadUrl, dv.archivoPatronUrl, dv.aprobado,
                                  GROUP_CONCAT(CONCAT(COALESCE(lm.articuloId,'Art'),' x ',COALESCE(lm.cantidadPorUnidad,0)) SEPARATOR '||') AS materiales_concat
                           FROM diseno d
                           LEFT JOIN ($sub2) dvsel ON dvsel.disenoId = d.id
                           LEFT JOIN disenoversion dv ON dv.id = dvsel.id
                           LEFT JOIN listamateriales lm ON lm.disenoVersionId = dv.id
                           WHERE d.id = ?
-                          GROUP BY d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, d.idSexoFK, d.IdTallasFK, d.idTipoCorteFK, d.idTipoRopaFK, dv.version, dv.fecha, dv.notas, dv.archivoCadUrl, dv.archivoPatronUrl, dv.aprobado";
+                          GROUP BY d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, d.clienteId, d.idSexoFK, d.IdTallasFK, d.idTipoCorteFK, d.idTipoRopaFK, dv.version, dv.fecha, dv.notas, dv.archivoCadUrl, dv.archivoPatronUrl, dv.aprobado";
                 try {
                     $row = $db->query($sql2, [$id])->getRowArray();
                 } catch (\Throwable $e2) {

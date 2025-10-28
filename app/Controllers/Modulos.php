@@ -223,6 +223,11 @@ class Modulos extends BaseController
         foreach (['codigo','nombre','descripcion'] as $k) {
             $v = $mapGet($k); if ($v !== '') { $dataDiseno[$k] = $v; }
         }
+        // clienteId (opcional, permitir limpiar cuando viene vacío)
+        $cliIdUp = $this->request->getPost('clienteId') ?? $this->request->getVar('clienteId');
+        if ($cliIdUp !== null) {
+            $dataDiseno['clienteId'] = ($cliIdUp === '') ? null : (int)$cliIdUp;
+        }
         // precio_unidad (opcional, numérico)
         if ($this->request->getPost('precio_unidad') !== null && $this->request->getPost('precio_unidad') !== '') {
             $pu = (float)$this->request->getPost('precio_unidad');
@@ -332,34 +337,6 @@ class Modulos extends BaseController
         }
     }
 
-    /** Alias a dashboard(). */
-    public function index()
-    {
-        return $this->dashboard();
-    }
-
-    /* =========================================================
-     *                   MÓDULO 3 (Dashboard)
-     * ========================================================= */
-
-    /** Dashboard de gestión (demo). */
-    public function dashboard()
-    {
-        $kpis = [
-            ['label' => 'Órdenes Activas',     'value' => 8,  'color' => 'primary'],
-            ['label' => 'WIP (%)',             'value' => 62, 'color' => 'info'],
-            ['label' => 'Incidencias Hoy',     'value' => 3,  'color' => 'danger'],
-            ['label' => 'Órdenes Completadas', 'value' => 21, 'color' => 'success'],
-        ];
-
-
-        return view('modulos/dashboard', $this->payload([
-            'title' => 'Módulo 3 · Dashboard',
-            'kpis'  => $kpis,
-            'notifCount' => 3,
-        ]));
-    }
-
     /**
      * Crear un nuevo diseño y su primera versión.
      * Entrada (POST): codigo?, nombre (req), descripcion?, version (req), fecha?, notas?, archivoCadUrl?, archivoPatronUrl?, aprobado?
@@ -381,6 +358,11 @@ class Modulos extends BaseController
             'nombre'      => trim((string)$this->request->getPost('nombre')),
             'descripcion' => trim((string)$this->request->getPost('descripcion')) ?: null,
         ];
+        // clienteId opcional desde el modal
+        $cid = $this->request->getPost('clienteId') ?? $this->request->getVar('clienteId');
+        if ($cid !== null) {
+            $dataDiseno['clienteId'] = ($cid === '') ? null : (int)$cid;
+        }
         // precio_unidad desde el modal (float)
         if (($p = $this->request->getPost('precio_unidad')) !== null && $p !== '') {
             $dataDiseno['precio_unidad'] = (float)$p;
@@ -863,6 +845,7 @@ class Modulos extends BaseController
             'codigo' => $detalle['codigo'] ?? '',
             'nombre' => $detalle['nombre'] ?? '',
             'descripcion' => $detalle['descripcion'] ?? '',
+            'clienteId' => $detalle['clienteId'] ?? null,
             'version' => $detalle['version'] ?? '',
             'fecha' => $detalle['fecha'] ?? '',
             'notas' => $detalle['notas'] ?? '',

@@ -59,4 +59,55 @@ class Muestras extends BaseController
             ]
         ]);
     }
+
+    public function guardar()
+    {
+        $db = \Config\Database::connect();
+        $id = (int)($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
+        if ($id <= 0) {
+            return $this->response->setStatusCode(400)->setJSON(['ok'=>false, 'message'=>'ID inválido']);
+        }
+        $clienteId = $this->request->getPost('clienteId');
+        $prototipoId = $this->request->getPost('prototipoId');
+        $fecha = $this->request->getPost('fecha');
+        $solicitadaPor = trim((string)$this->request->getPost('solicitadaPor'));
+        $fechaSolicitud = $this->request->getPost('fechaSolicitud');
+        $decision = $this->request->getPost('decision');
+        $estado = $this->request->getPost('estado');
+        $comentarios = $this->request->getPost('comentarios');
+        $observaciones = $this->request->getPost('observaciones');
+
+        $db->transStart();
+        try {
+            $mData = [];
+            if ($prototipoId !== null && $prototipoId !== '') { $mData['prototipoId'] = (int)$prototipoId; }
+            if ($solicitadaPor !== '') { $mData['solicitadaPor'] = $solicitadaPor; }
+            if ($fechaSolicitud !== null && $fechaSolicitud !== '') { $mData['fechaSolicitud'] = $fechaSolicitud; }
+            if ($estado !== null && $estado !== '') { $mData['estado'] = $estado; }
+            if ($observaciones !== null) { $mData['observaciones'] = $observaciones; }
+            if ($mData) { $db->table('muestra')->where('id', $id)->update($mData); }
+
+            $rowA = null;
+            try { $rowA = $db->table('aprobacion_muestra')->where('muestraId', $id)->get()->getRowArray(); } catch (\Throwable $e) { $rowA = null; }
+            $aData = [
+                'muestraId' => $id,
+                'clienteId' => ($clienteId !== null && $clienteId !== '') ? (int)$clienteId : null,
+                'fecha' => ($fecha !== null && $fecha !== '') ? $fecha : null,
+                'decision' => $decision !== '' ? $decision : null,
+                'comentarios' => $comentarios !== '' ? $comentarios : null,
+            ];
+            if ($rowA) {
+                $db->table('aprobacion_muestra')->where('muestraId', $id)->update($aData);
+            } else {
+                $db->table('aprobacion_muestra')->insert($aData);
+            }
+
+            $db->transComplete();
+            if ($db->transStatus() === false) { throw new \Exception('Error en la transacción'); }
+            return $this->response->setJSON(['ok'=>true, 'message'=>'Guardado']);
+        } catch (\Throwable $e) {
+            try { $db->transRollback(); } catch (\Throwable $e2) {}
+            return $this->response->setStatusCode(500)->setJSON(['ok'=>false, 'message'=>'Error: '.$e->getMessage()]);
+        }
+    }
 }

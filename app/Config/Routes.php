@@ -85,6 +85,7 @@ $routes->group('api', static function ($routes) {
 $routes->get ('muestras',                'Muestras::index',      ['filter' => 'auth:Administrador,Jefe,Diseñador,Calidad,Inspector']);
 $routes->post('muestras/data',           'Muestras::data',       ['filter' => 'auth:Administrador,Jefe,Diseñador,Calidad,Inspector']);
 $routes->get ('muestras/evaluar/(:num)', 'Muestras::evaluar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador,Calidad,Inspector']);
+$routes->post('muestras/guardar',        'Muestras::guardar',    ['filter' => 'auth:Administrador,Jefe,Diseñador,Calidad,Inspector']);
 
 /* --------------------------------------------------------------------
  * Legacy

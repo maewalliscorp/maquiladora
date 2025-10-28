@@ -87,8 +87,6 @@
             <table id="tablaMuestrasDecision" class="table table-hover table-striped align-middle" style="width:100%">
                 <thead class="table-light">
                 <tr>
-                    <th>ID</th>
-                    <th>Cliente ID</th>
                     <th>Prototipo ID</th>
                     <th>Fecha Aprobación</th>
                     <th>Solicitante</th>
@@ -101,10 +99,11 @@
                 <tbody>
                 <?php if (!empty($muestrasDecision)): ?>
                     <?php foreach ($muestrasDecision as $row): ?>
-                        <tr data-comentarios="<?= esc($row['comentarios'] ?? '') ?>"
-                            data-observaciones="<?= esc($row['observaciones'] ?? '') ?>">
-                            <td><?= $row['id'] ?></td>
-                            <td><?= esc($row['clienteId']) ?></td>
+                        <tr data-id="<?= esc($row['id']) ?>"
+                            data-comentarios="<?= esc($row['comentarios'] ?? '') ?>"
+                            data-observaciones="<?= esc($row['observaciones'] ?? '') ?>"
+                            data-cliente-id="<?= esc($row['clienteId'] ?? '') ?>"
+                            data-cliente-nombre="<?= esc($row['clienteNombre'] ?? '') ?>">
                             <td><?= esc($row['prototipoId']) ?></td>
                             <td><?= !empty($row['fecha']) ? date('d/m/Y', strtotime($row['fecha'])) : 'N/A' ?></td>
                             <td><?= esc($row['solicitadaPor']) ?></td>
@@ -149,8 +148,8 @@
             <div class="modal-body">
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <label class="form-label fw-bold">Cliente ID</label>
-                        <p class="form-control-plaintext" id="verClienteId">-</p>
+                        <label class="form-label fw-bold">Cliente</label>
+                        <p class="form-control-plaintext" id="verClienteNombre">-</p>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-bold">Prototipo ID</label>
@@ -222,8 +221,15 @@
 
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label for="clienteId" class="form-label">Cliente ID</label>
-                            <input type="text" class="form-control" id="clienteId" name="clienteId">
+                            <label for="clienteId" class="form-label">Cliente</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <select class="form-select" id="clienteId" name="clienteId" disabled>
+                                    <option value="">Cargando clientes...</option>
+                                </select>
+                                <div id="clienteSpinner" class="spinner-border text-primary" role="status" style="width: 1.5rem; height: 1.5rem; display: none;">
+                                    <span class="visually-hidden">Cargando...</span>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <label for="prototipoId" class="form-label">Prototipo ID</label>
@@ -306,6 +312,7 @@
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
     $(document).ready(function() {
@@ -321,18 +328,18 @@
             const row = button.closest('tr');
 
             // Obtener los datos de la fila
-            const clienteId = row.find('td:eq(1)').text().trim();
-            const prototipoId = row.find('td:eq(2)').text().trim();
-            const fecha = row.find('td:eq(3)').text().trim();
-            const solicitadaPor = row.find('td:eq(4)').text().trim();
-            const fechaSolicitud = row.find('td:eq(5)').text().trim();
-            const decision = row.find('td:eq(6)').text().trim();
-            const estado = row.find('td:eq(7)').text().trim();
+            const clienteNombre = row.data('cliente-nombre') || '-';
+            const prototipoId = row.find('td:eq(0)').text().trim();
+            const fecha = row.find('td:eq(1)').text().trim();
+            const solicitadaPor = row.find('td:eq(2)').text().trim();
+            const fechaSolicitud = row.find('td:eq(3)').text().trim();
+            const decision = row.find('td:eq(4)').text().trim();
+            const estado = row.find('td:eq(5)').text().trim();
             const comentarios = row.data('comentarios') || '-';
             const observaciones = row.data('observaciones') || '-';
 
             // Poblar el modal de solo lectura
-            $('#verClienteId').text(clienteId);
+            $('#verClienteNombre').text(clienteNombre);
             $('#verPrototipoId').text(prototipoId);
             $('#verFecha').text(fecha);
             $('#verSolicitadaPor').text(solicitadaPor);
@@ -343,20 +350,51 @@
             $('#verObservaciones').text(observaciones);
         });
 
+        // Cache y carga de clientes para el select
+        let clientesCache = null;
+        function cargarClientes(preselectId) {
+            const $sel = $('#clienteId');
+            const $sp = $('#clienteSpinner');
+            if (clientesCache) {
+                $sel.empty();
+                $sel.append('<option value="">Seleccionar...</option>');
+                clientesCache.forEach(c => $sel.append(`<option value="${c.id}">${c.nombre}</option>`));
+                if (preselectId) { $sel.val(String(preselectId)); }
+                $sel.prop('disabled', false);
+                $sp.hide();
+                return;
+            }
+            $sp.show();
+            $sel.prop('disabled', true);
+            $.ajax({ url: '<?= base_url('modulo1/clientes/json') ?>', method: 'GET' })
+                .done(function(list){
+                    clientesCache = (list || []).map(it => ({ id: it.id, nombre: it.nombre }));
+                    $sel.empty();
+                    $sel.append('<option value="">Seleccionar...</option>');
+                    clientesCache.forEach(c => $sel.append(`<option value="${c.id}">${c.nombre}</option>`));
+                    if (preselectId) { $sel.val(String(preselectId)); }
+                    $sel.prop('disabled', false);
+                })
+                .fail(function(){
+                    $sel.empty().append('<option value="">Error al cargar</option>');
+                })
+                .always(function(){ $sp.hide(); });
+        }
+
         // Cargar los datos de la muestra en el modal
         $('#evaluarModal').on('show.bs.modal', function (event) {
             const button = $(event.relatedTarget);
             const row = button.closest('tr');
 
             // Obtener los datos de la fila
-            const id = row.find('td:eq(0)').text().trim();
-            const clienteId = row.find('td:eq(1)').text().trim();
-            const prototipoId = row.find('td:eq(2)').text().trim();
-            const fecha = row.find('td:eq(3)').text().trim();
-            const solicitadaPor = row.find('td:eq(4)').text().trim();
-            const fechaSolicitud = row.find('td:eq(5)').text().trim();
-            const decision = row.find('td:eq(6)').text().trim();
-            const estado = row.find('td:eq(7)').text().trim();
+            const id = String(row.data('id') || '').trim();
+            const clienteId = row.data('cliente-id') || '';
+            const prototipoId = row.find('td:eq(0)').text().trim();
+            const fecha = row.find('td:eq(1)').text().trim();
+            const solicitadaPor = row.find('td:eq(2)').text().trim();
+            const fechaSolicitud = row.find('td:eq(3)').text().trim();
+            const decision = row.find('td:eq(4)').text().trim();
+            const estado = row.find('td:eq(5)').text().trim();
             const comentarios = row.data('comentarios') || '';
             const observaciones = row.data('observaciones') || '';
 
@@ -375,7 +413,8 @@
 
             // Poblar el formulario
             $('#muestraId').val(id);
-            $('#clienteId').val(clienteId);
+            // cargar clientes y preseleccionar
+            cargarClientes(clienteId);
             $('#prototipoId').val(prototipoId);
             $('#fecha').val(convertirFecha(fecha));
             $('#solicitadaPor').val(solicitadaPor);
@@ -396,8 +435,11 @@
             $('#formEvaluarMuestra')[0].reset();
         });
 
-        // Manejar el clic en el botón Guardar Cambios
+        // Manejar el clic en el botón Guardar Cambios con confirmación y anti-doble click
         $('#btnGuardarEvaluacion').on('click', function() {
+            const $btn = $(this);
+            if ($btn.prop('disabled')) return; // evitar duplicados
+
             const formData = {
                 id: $('#muestraId').val(),
                 clienteId: $('#clienteId').val(),
@@ -411,21 +453,34 @@
                 observaciones: $('#observaciones').val()
             };
 
-            console.log('Guardando datos:', formData);
+            Swal.fire({
+                title: '¿Guardar cambios?',
+                text: 'Se actualizará la evaluación de la muestra.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, guardar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (!result.isConfirmed) return;
 
-            // Aquí puedes agregar la llamada AJAX para guardar
-            $.ajax({
-                url: '<?= base_url('muestras/guardar') ?>',
-                method: 'POST',
-                data: formData,
-                success: function(response) {
-                    alert('Datos guardados correctamente');
-                    $('#evaluarModal').modal('hide');
-                    location.reload(); // Recargar la página para ver los cambios
-                },
-                error: function(xhr) {
-                    alert('Error al guardar: ' + (xhr.responseJSON?.message || 'Error desconocido'));
-                }
+                const originalHtml = $btn.html();
+                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Guardando...');
+
+                $.ajax({
+                    url: '<?= base_url('muestras/guardar') ?>',
+                    method: 'POST',
+                    data: formData,
+                }).done(function(resp){
+                    Swal.fire({ title: 'Guardado', text: 'Datos guardados correctamente', icon: 'success' })
+                        .then(()=>{ $('#evaluarModal').modal('hide'); location.reload(); });
+                }).fail(function(xhr){
+                    const msg = (xhr && xhr.responseJSON && (xhr.responseJSON.message||xhr.responseJSON.error)) ? (xhr.responseJSON.message||xhr.responseJSON.error) : 'Error desconocido';
+                    Swal.fire({ title: 'Error', text: 'Error al guardar: ' + msg, icon: 'error' });
+                }).always(function(){
+                    $btn.prop('disabled', false).html(originalHtml);
+                });
             });
         });
 

@@ -4,11 +4,12 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 <style>
-    /* Separar los botones de DataTables (corrige el btn-group pegado) */
+    /* Botones DataTables: estilo píldora y separación uniforme */
     .dt-buttons.btn-group .btn{
         margin-left: 0 !important;
         margin-right: .5rem;
-        border-radius: .375rem !important;
+        border-radius: 50rem !important; /* pill */
+        padding: .35rem .75rem;
     }
     .dt-buttons.btn-group .btn:last-child{ margin-right: 0; }
 </style>
@@ -131,6 +132,18 @@
                         <div class="col-md-3">
                             <label class="form-label">Precio por unidad</label>
                             <input type="number" name="precio_unidad" class="form-control" min="0" step="0.01" placeholder="0.00" inputmode="decimal" />
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label">Cliente (opcional)</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <select class="form-select" name="clienteId" id="selClienteNuevo" disabled>
+                                    <option value="">Cargando clientes…</option>
+                                </select>
+                                <div id="clienteNuevoSpinner" class="spinner-border text-primary" role="status" style="width: 1.5rem; height: 1.5rem; display: none;">
+                                    <span class="visually-hidden">Cargando...</span>
+                                </div>
+                            </div>
+                            <small class="text-muted">Si lo dejas vacío, el diseño se crea sin cliente asignado.</small>
                         </div>
                         <!-- Catálogos: sexo, talla, tipo corte, tipo ropa -->
                         <div class="col-md-3">
@@ -297,6 +310,20 @@
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" value="1" id="e-aprobadoCheck" name="aprobado">
                                 <label class="form-check-label" for="e-aprobadoCheck">Aprobado</label>
+                            </div>
+                        </div>
+                        <div class="col-md-9 d-flex align-items-end">
+                            <div class="w-100">
+                                <label class="form-label">Cliente (opcional)</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <select class="form-select" name="clienteId" id="e-selCliente" disabled>
+                                        <option value="">Cargando clientes…</option>
+                                    </select>
+                                    <div id="e-clienteSpinner" class="spinner-border text-primary" role="status" style="width: 1.5rem; height: 1.5rem; display: none;">
+                                        <span class="visualmente-hidden">Cargando…</span>
+                                    </div>
+                                </div>
+                                <small class="text-muted">Si lo dejas vacío, se mantiene o elimina la relación (según guardes).</small>
                             </div>
                         </div>
 
@@ -548,6 +575,44 @@
         const q2 = cargarCatalogo('<?= base_url('modulo2/catalogos/tallas') ?>' + '?_=' + Date.now(), '#e-selTalla');
         const q3 = cargarCatalogo('<?= base_url('modulo2/catalogos/tipo-corte') ?>' + '?_=' + Date.now(), '#e-selTipoCorte');
         const q4 = cargarCatalogo('<?= base_url('modulo2/catalogos/tipo-ropa') ?>' + '?_=' + Date.now(), '#e-selTipoRopa');
+        // Cargar clientes (opcional)
+        let preCli = null;
+        const cargarClientesEditar = function(preselectId){
+            const $sel = $('#e-selCliente');
+            const $sp = $('#e-clienteSpinner');
+            if (window._clientesCacheEditar) {
+                $sel.empty();
+                $sel.append('<option value="">(Sin cliente)</option>');
+                window._clientesCacheEditar.forEach(c => $sel.append(`<option value="${c.id}">${c.nombre}</option>`));
+                if (preselectId) {
+                    $sel.val(String(preselectId));
+                    // Si no existe en el catálogo, agregar opción de fallback
+                    if ($sel.val() !== String(preselectId)) {
+                        $sel.append(`<option value="${preselectId}">(ID ${preselectId})</option>`);
+                        $sel.val(String(preselectId));
+                    }
+                }
+                $sel.prop('disabled', false); $sp.hide(); return;
+            }
+            $sp.show(); $sel.prop('disabled', true);
+            $.ajax({ url: '<?= base_url('modulo1/clientes/json') ?>', method: 'GET' })
+                .done(function(list){
+                    window._clientesCacheEditar = (list || []).map(it => ({ id: it.id, nombre: it.nombre }));
+                    $sel.empty();
+                    $sel.append('<option value="">(Sin cliente)</option>');
+                    window._clientesCacheEditar.forEach(c => $sel.append(`<option value="${c.id}">${c.nombre}</option>`));
+                    if (preselectId) {
+                        $sel.val(String(preselectId));
+                        if ($sel.val() !== String(preselectId)) {
+                            $sel.append(`<option value="${preselectId}">(ID ${preselectId})</option>`);
+                            $sel.val(String(preselectId));
+                        }
+                    }
+                    $sel.prop('disabled', false);
+                })
+                .fail(function(){ $sel.empty().append('<option value="">Error al cargar</option>'); })
+                .always(function(){ $sp.hide(); });
+        };
         $.getJSON('<?= base_url('modulo2/diseno') ?>/' + id + '/json')
             .done(function (data) {
                 $('#e-codigo').val(data.codigo||'');
@@ -561,12 +626,14 @@
                 $('#e-archivoPatronUrl').val(data.archivoPatronUrl||'');
                 const apr = data.aprobado;
                 $('#e-aprobadoCheck').prop('checked', apr === 1 || apr === true || apr === '1');
+                preCli = (data.clienteId !== undefined && data.clienteId !== null && data.clienteId !== '') ? String(data.clienteId) : null;
                 // Setear FKs cuando carguen los catálogos
                 $.when(q1, q2, q3, q4).always(function(){
                     if (data.idSexoFK !== undefined && data.idSexoFK !== null) $('#e-selSexo').val(String(data.idSexoFK));
                     if (data.IdTallasFK !== undefined && data.IdTallasFK !== null) $('#e-selTalla').val(String(data.IdTallasFK));
                     if (data.idTipoCorteFK !== undefined && data.idTipoCorteFK !== null) $('#e-selTipoCorte').val(String(data.idTipoCorteFK));
                     if (data.idTipoRopaFK !== undefined && data.idTipoRopaFK !== null) $('#e-selTipoRopa').val(String(data.idTipoRopaFK));
+                    cargarClientesEditar(preCli);
                 });
 
                 const mats = data.materiales || [];
@@ -634,6 +701,9 @@
         $alert.addClass('d-none').text('');
         const formEl = document.getElementById('formEditarDiseno');
         const fd = new FormData(formEl);
+        // Asegurar clienteId en el payload (el select pudo haber estado disabled al inicio)
+        try { $('#e-selCliente').prop('disabled', false); } catch(e) {}
+        fd.set('clienteId', ($('#e-selCliente').val() || ''));
         const materials = [];
         $('#e-tblMaterialesBody tr').each(function(){
             const idm = $(this).data('id');
@@ -747,9 +817,40 @@
         cargarCatalogo('<?= base_url('modulo2/catalogos/tipo-corte') ?>' + '?_=' + Date.now(), '#selTipoCorte');
         cargarCatalogo('<?= base_url('modulo2/catalogos/tipo-ropa') ?>' + '?_=' + Date.now(), '#selTipoRopa');
     }
+    // Clientes (opcional) para nuevo diseño
+    let clientesCacheNuevo = null;
+    function cargarClientesNuevo(preselectId){
+        const $sel = $('#selClienteNuevo');
+        const $sp = $('#clienteNuevoSpinner');
+        if (clientesCacheNuevo) {
+            $sel.empty();
+            $sel.append('<option value="">(Sin cliente)</option>');
+            clientesCacheNuevo.forEach(c => $sel.append(`<option value="${c.id}">${c.nombre}</option>`));
+            if (preselectId) { $sel.val(String(preselectId)); }
+            $sel.prop('disabled', false);
+            $sp.hide();
+            return;
+        }
+        $sp.show();
+        $sel.prop('disabled', true);
+        $.ajax({ url: '<?= base_url('modulo1/clientes/json') ?>', method: 'GET' })
+            .done(function(list){
+                clientesCacheNuevo = (list || []).map(it => ({ id: it.id, nombre: it.nombre }));
+                $sel.empty();
+                $sel.append('<option value="">(Sin cliente)</option>');
+                clientesCacheNuevo.forEach(c => $sel.append(`<option value="${c.id}">${c.nombre}</option>`));
+                if (preselectId) { $sel.val(String(preselectId)); }
+                $sel.prop('disabled', false);
+            })
+            .fail(function(){
+                $sel.empty().append('<option value="">Error al cargar</option>');
+            })
+            .always(function(){ $sp.hide(); });
+    }
     $('#nuevoDisenoModal').on('show.bs.modal shown.bs.modal', function(){
         if (articulosCache === null) { cargarArticulos(); }
         initCatalogos();
+        cargarClientesNuevo();
     });
     $(document).on('input', '#buscarArticulo', function(){
         const q = ($(this).val() || '').toString().toLowerCase().trim();
@@ -781,6 +882,9 @@
         $alert.addClass('d-none').text('');
         const formEl = document.getElementById('formNuevoDiseno');
         const fd = new FormData(formEl);
+        // Asegurar clienteId en el payload (por si el select está cargando)
+        try { $('#selClienteNuevo').prop('disabled', false); } catch(e) {}
+        fd.set('clienteId', ($('#selClienteNuevo').val() || ''));
         const materials = [];
         $('#tblMaterialesBody tr').each(function(){
             const id = $(this).data('id');
@@ -887,13 +991,13 @@
                 "<'row'<'col-12'tr>>" +
                 "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
             buttons: [
-                { extend:'copy',  text:'Copy',  exportOptions:{ columns: ':not(:last-child)' } },
-                { extend:'csv',   text:'CSV',   filename:fileName, exportOptions:{ columns: ':not(:last-child)' } },
-                { extend:'excel', text:'Excel', filename:fileName, exportOptions:{ columns: ':not(:last-child)' } },
-                { extend:'pdf',   text:'PDF',   filename:fileName, title:fileName,
+                { extend:'copy',  text:'Copiar',  exportOptions:{ columns: ':visible' } },
+                { extend:'csv',   text:'CSV',     filename:fileName, exportOptions:{ columns: ':visible' } },
+                { extend:'excel', text:'Excel',   filename:fileName, exportOptions:{ columns: ':visible' } },
+                { extend:'pdf',   text:'PDF',     filename:fileName, title:fileName,
                     orientation:'landscape', pageSize:'A4',
-                    exportOptions:{ columns: ':not(:last-child)' } },
-                { extend:'print', text:'Print', exportOptions:{ columns: ':not(:last-child)' } }
+                    exportOptions:{ columns: ':visible' } },
+                { extend:'print', text:'Imprimir', exportOptions:{ columns: ':visible' } }
             ]
         });
 

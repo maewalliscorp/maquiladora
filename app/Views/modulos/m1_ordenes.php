@@ -224,13 +224,13 @@
                     "<'row'<'col-12'tr>>" +
                     "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
                 buttons: [
-                    { extend:'copy',  text:'Copy',  exportOptions:{ columns: ':not(:last-child)' } },
-                    { extend:'csv',   text:'CSV',   filename:fileName, exportOptions:{ columns: ':not(:last-child)' } },
-                    { extend:'excel', text:'Excel', filename:fileName, exportOptions:{ columns: ':not(:last-child)' } },
-                    { extend:'pdf',   text:'PDF',   filename:fileName, title:fileName,
+                    { extend:'copy',  text:'Copiar',  exportOptions:{ columns: ':visible' } },
+                    { extend:'csv',   text:'CSV',     filename:fileName, exportOptions:{ columns: ':visible' } },
+                    { extend:'excel', text:'Excel',   filename:fileName, exportOptions:{ columns: ':visible' } },
+                    { extend:'pdf',   text:'PDF',     filename:fileName, title:fileName,
                         orientation:'landscape', pageSize:'A4',
-                        exportOptions:{ columns: ':not(:last-child)' } },
-                    { extend:'print', text:'Print', exportOptions:{ columns: ':not(:last-child)' } }
+                        exportOptions:{ columns: ':visible' } },
+                    { extend:'print', text:'Imprimir', exportOptions:{ columns: ':visible' } }
                 ]
             });
 
