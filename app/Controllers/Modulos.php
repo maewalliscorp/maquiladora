@@ -28,7 +28,7 @@ class Modulos extends BaseController
             ]);
         }
 
-        $db = \Config\Database::connect();
+        // $db ya definido arriba
         try {
             // Usuario base
             $user = $db->table('users')->where('id', $id)->get()->getRowArray();
@@ -1995,5 +1995,111 @@ public function m11_usuarios()
             'id'         => $id,
             'notifCount' => 0,
         ]));
+    }
+
+    public function m1_pedidos_crear()
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method !== 'post') {
+            return $this->response->setStatusCode(405)->setJSON(['ok'=>false,'message'=>'Método no permitido']);
+        }
+
+        $clienteId         = (int)($this->request->getPost('oc_clienteId'));
+        $ocEstatus         = (string)($this->request->getPost('oc_estatus') ?? 'Pendiente');
+        $ocFolio           = trim((string)$this->request->getPost('oc_folio'));
+        $ocFecha           = (string)$this->request->getPost('oc_fecha');
+        $ocMoneda          = trim((string)$this->request->getPost('oc_moneda')) ?: 'MXN';
+        $ocTotal           = (float)($this->request->getPost('oc_total'));
+
+        $opFolio           = trim((string)$this->request->getPost('op_folio'));
+        $opCantidadPlan    = (int)($this->request->getPost('op_cantidadPlan'));
+        $opFechaInicioPlan = (string)($this->request->getPost('op_fechaInicioPlan'));
+        $opFechaFinPlan    = (string)($this->request->getPost('op_fechaFinPlan'));
+        $opStatus          = (string)($this->request->getPost('op_status') ?? 'Planeada');
+
+        // Diseño
+        $disenoVersionId   = (int)($this->request->getPost('disenoVersionId') ?? $this->request->getPost('pa_dis_version_id') ?? 0);
+        $disenoId          = (int)($this->request->getPost('disenoId') ?? 0);
+
+        if ($clienteId <= 0) {
+            return $this->response->setStatusCode(422)->setJSON(['ok'=>false,'message'=>'Cliente requerido']);
+        }
+        if ($opCantidadPlan <= 0) {
+            return $this->response->setStatusCode(422)->setJSON(['ok'=>false,'message'=>'Cantidad plan debe ser mayor que 0']);
+        }
+        if ($ocFecha === '') { $ocFecha = date('Y-m-d'); }
+        if ($opFechaInicioPlan === '') { $opFechaInicioPlan = date('Y-m-d'); }
+
+        $db = \Config\Database::connect();
+
+        // Si no viene disenoVersionId, intentar resolver última versión por disenoId
+        if ($disenoVersionId <= 0 && $disenoId > 0) {
+            try {
+                $row = $db->query(
+                    'SELECT dv.id FROM diseno_version dv WHERE dv.disenoId = ? ORDER BY dv.fecha DESC, dv.id DESC LIMIT 1',
+                    [$disenoId]
+                )->getRowArray();
+                if ($row && isset($row['id'])) { $disenoVersionId = (int)$row['id']; }
+            } catch (\Throwable $e) {
+                try {
+                    $row = $db->query(
+                        'SELECT dv.id FROM disenoversion dv WHERE dv.disenoId = ? ORDER BY dv.fecha DESC, dv.id DESC LIMIT 1',
+                        [$disenoId]
+                    )->getRowArray();
+                    if ($row && isset($row['id'])) { $disenoVersionId = (int)$row['id']; }
+                } catch (\Throwable $e2) { /* ignore */ }
+            }
+        }
+        if ($disenoVersionId <= 0) {
+            return $this->response->setStatusCode(422)->setJSON(['ok'=>false,'message'=>'Versión de diseño requerida']);
+        }
+
+        try {
+            $db->transStart();
+
+            // Insertar orden_compra (nombres exactos)
+            $rowOC = [
+                'clienteId' => $clienteId,
+                'folio'     => $ocFolio !== '' ? $ocFolio : ('OC-'.date('Y').'-'.$clienteId),
+                'fecha'     => $ocFecha,
+                'estatus'   => $ocEstatus ?: 'Pendiente',
+                'moneda'    => $ocMoneda,
+                'total'     => $ocTotal,
+            ];
+            $db->table('orden_compra')->insert($rowOC);
+            $ocId = (int)$db->insertID();
+            if ($ocId === 0) {
+                // fallback por mayúsculas
+                $db->table('OrdenCompra')->insert($rowOC);
+                $ocId = (int)$db->insertID();
+            }
+            if (!$ocId) { throw new \Exception('No se pudo crear la Orden de Compra'); }
+
+            // Insertar orden_produccion (nombres exactos)
+            $rowOP = [
+                'ordenCompraId'   => $ocId,
+                'disenoVersionId' => $disenoVersionId,
+                'folio'           => $opFolio !== '' ? $opFolio : ('OP-'.date('Y').'-'.$clienteId),
+                'cantidadPlan'    => $opCantidadPlan,
+                'fechaInicioPlan' => $opFechaInicioPlan,
+                'fechaFinPlan'    => ($opFechaFinPlan ?: null),
+                'status'          => $opStatus ?: 'Planeada',
+            ];
+            $db->table('orden_produccion')->insert($rowOP);
+            $opId = (int)$db->insertID();
+            if ($opId === 0) {
+                $db->table('OrdenProduccion')->insert($rowOP);
+                $opId = (int)$db->insertID();
+            }
+            if (!$opId) { throw new \Exception('No se pudo crear la Orden de Producción'); }
+
+            $db->transComplete();
+            if ($db->transStatus() === false) { throw new \Exception('Error en la transacción'); }
+
+            return $this->response->setJSON(['ok'=>true, 'ocId'=>$ocId, 'opId'=>$opId, 'message'=>'Pedido creado']);
+        } catch (\Throwable $e) {
+            try { $db->transRollback(); } catch (\Throwable $e2) {}
+            return $this->response->setStatusCode(500)->setJSON(['ok'=>false,'message'=>'Error al crear pedido: '.$e->getMessage()]);
+        }
     }
 }

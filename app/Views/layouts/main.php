@@ -268,6 +268,9 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                     </a>
                     <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="quickMenu"
                          style="min-width: 280px;">
+                        <?php if (can('menu.ordenes_clientes')): ?><a class="dropdown-item"
+                                                                      href="<?= esc(base_url('clientes')) ?>"><i
+                                        class="bi bi-people me-2"></i>Clientes</a><?php endif; ?>
                         <?php if (can('menu.catalogo_disenos')): ?><a class="dropdown-item"
                                                                       href="<?= esc(base_url('modulo2/catalogodisenos')) ?>">
                                 <i class="bi bi-brush me-2"></i>Catálogo de Diseños</a><?php endif; ?>
@@ -280,10 +283,6 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                         <?php if (can('menu.produccion')): ?><a class="dropdown-item"
                                                                 href="<?= esc(base_url('modulo1/produccion')) ?>"><i
                                         class="bi bi-gear-wide-connected me-2"></i>Producción</a><?php endif; ?>
-                        <?php if (can('menu.ordenes_clientes')): ?><a class="dropdown-item"
-                                                                      href="<?= esc(base_url('clientes')) ?>"><i
-                                        class="bi bi-people me-2"></i>Clientes</a><?php endif; ?>
-
                         <?php if ($secGestion && $secMuestrasInspeccion): ?>
                             <div class="dropdown-divider"></div><?php endif; ?>
 

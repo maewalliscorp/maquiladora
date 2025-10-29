@@ -3,6 +3,8 @@
 <?= $this->section('head') ?>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+<!-- SweetAlert2 CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 <style>
     /* Separación entre los botones de DataTables */
     .dt-buttons.btn-group .btn{
@@ -170,6 +172,11 @@
                             <label class="form-label">Fecha versión</label>
                             <input type="text" class="form-control" id="pa-dis-fecha" readonly>
                         </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Precio unidad</label>
+                            <input type="number" step="0.01" class="form-control" id="pa-dis-precio" readonly>
+                        </div>
+                        <input type="hidden" id="pa-dis-version-id" name="pa_dis_version_id" value="">
                         <div class="col-12">
                             <label class="form-label">Descripción</label>
                             <textarea class="form-control" id="pa-dis-descripcion" rows="2" readonly></textarea>
@@ -201,6 +208,57 @@
                         <div class="col-md-5">
                             <label class="form-label">Lista de materiales</label>
                             <ul class="list-group" id="pa-dis-materiales"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Paso 5: Orden de Compra -->
+                <div class="mb-2">
+                    <h6 class="mb-2">Orden de Compra</h6>
+                    <div class="row g-3">
+                        <input type="hidden" id="oc-clienteId" name="oc_clienteId" value="">
+                        <input type="hidden" id="oc-estatus" name="oc_estatus" value="Pendiente">
+                        <input type="hidden" id="oc-folio" name="oc_folio" value="">
+                        <div class="col-md-4">
+                            <label class="form-label">Fecha</label>
+                            <input type="date" class="form-control" id="oc-fecha" name="oc_fecha" value="<?= date('Y-m-d') ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Moneda</label>
+                            <select class="form-select" id="oc-moneda" name="oc_moneda">
+                                <option value="MXN">MXN</option>
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Total</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="oc-total" name="oc_total" placeholder="0.00">
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Paso 6: Orden de Producción -->
+                <div class="mb-2">
+                    <h6 class="mb-2">Orden de Producción</h6>
+                    <div class="row g-3">
+                        <input type="hidden" id="op-folio" name="op_folio" value="">
+                        <div class="col-md-4">
+                            <label class="form-label">Cantidad plan</label>
+                            <input type="number" min="1" step="1" class="form-control" id="op-cantidadPlan" name="op_cantidadPlan" placeholder="100">
+                        </div>
+                        <input type="hidden" id="op-status" name="op_status" value="Planeada">
+                        <div class="col-md-4">
+                            <label class="form-label">Inicio plan</label>
+                            <input type="date" class="form-control" id="op-fechaInicioPlan" name="op_fechaInicioPlan" value="<?= date('Y-m-d') ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Fin plan</label>
+                            <input type="date" class="form-control" id="op-fechaFinPlan" name="op_fechaFinPlan">
                         </div>
                     </div>
                 </div>
@@ -450,6 +508,17 @@
                                 </select>
                             </div>
                         </div>
+                        <div class="row g-3 mb-3 mt-1">
+                            <div class="col-md-3">
+                                <label class="form-label">Precio unidad</label>
+                                <input type="number" step="0.01" class="form-control" id="pe-dis-precio" readonly>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Cantidad plan</label>
+                                <input type="number" class="form-control" id="pe-op-cantidadPlan" min="1">
+                            </div>
+                            <input type="hidden" id="pe-dis-version-id" value="">
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -531,9 +600,18 @@
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
     $(document).ready(function () {
+        function toNum(v, def=0){ const n = parseFloat(v); return isNaN(n)?def:n; }
+        function recalcTotal(){
+            const cant = toNum($('#op-cantidadPlan').val(), 0);
+            const precio = toNum($('#pa-dis-precio').val(), toNum($('#pe-dis-precio').val(), 0));
+            const total = cant * precio;
+            $('#oc-total').prop('readonly', true).val(total.toFixed(2));
+        }
         const langES = {
             "sProcessing":     "Procesando...",
             "sLengthMenu":     "Mostrar _MENU_ registros",
@@ -555,7 +633,7 @@
         const fecha = new Date().toISOString().slice(0,10);
         const fileName = 'pedidos_' + fecha;
 
-        $('#tablaPedidos').DataTable({
+        const dtPedidos = $('#tablaPedidos').DataTable({
             language: langES,
             columnDefs: [{ targets: -1, orderable:false, searchable:false }], // Acciones
             dom:
@@ -573,10 +651,183 @@
             ]
         });
 
+        // Guardar pedido (OC + OP) con confirmación SweetAlert y bloqueo anti-duplicados
+        let paSubmitting = false;
+        $(document).on('click', '#pa-continuar', function(){
+            if (paSubmitting) { return; }
+            const $btn = $(this);
+            const originalText = $btn.text();
+            $btn.prop('disabled', true).text('Guardando...');
+            const selDis = ($('#pa-dis-select').length ? $('#pa-dis-select') : $('#pe-dis-select'));
+            const disIdSel = selDis.find('option:selected').data('id') || selDis.val() || '';
+            const payload = {
+                oc_clienteId:      $('#oc-clienteId').val(),
+                oc_estatus:        $('#oc-estatus').val(),
+                oc_folio:          $('#oc-folio').val(),
+                oc_fecha:          $('#oc-fecha').val(),
+                oc_moneda:         $('#oc-moneda').val(),
+                oc_total:          $('#oc-total').val(),
+                op_folio:          $('#op-folio').val(),
+                op_cantidadPlan:   $('#op-cantidadPlan').val(),
+                op_fechaInicioPlan:$('#op-fechaInicioPlan').val(),
+                op_fechaFinPlan:   $('#op-fechaFinPlan').val(),
+                op_status:         $('#op-status').val(),
+                disenoVersionId:   ($('#pa-dis-version-id').val() || $('#pe-dis-version-id').val()),
+                disenoId:          disIdSel
+            };
+
+            // Validaciones rápidas
+            if (!payload.oc_clienteId) { 
+                Swal.fire({ icon:'warning', title:'Validación', text:'Selecciona un cliente.' });
+                $btn.prop('disabled', false).text(originalText); 
+                return; 
+            }
+            if (!payload.disenoVersionId) { 
+                const $sel = $('#pa-dis-select').length ? $('#pa-dis-select') : $('#pe-dis-select');
+                const verIdOpt = $sel.find('option:selected').data('versionId') || $sel.find('option:selected').data('verId') || '';
+                if (verIdOpt) {
+                    payload.disenoVersionId = verIdOpt;
+                    confirmAndPost();
+                    return;
+                }
+                const disId = $sel.find('option:selected').data('id') || $sel.val();
+                if (!disId) { 
+                    Swal.fire({ icon:'warning', title:'Validación', text:'Selecciona un diseño.' });
+                    $btn.prop('disabled', false).text(originalText); 
+                    return; 
+                }
+                const url = '<?= base_url('modulo2/diseno') ?>/' + disId + '/json?t=' + Date.now();
+                $.getJSON(url).done(function(data){
+                    let verObj = null;
+                    if (data && typeof data.version === 'object') verObj = data.version;
+                    else if (data && typeof data.ultima_version === 'object') verObj = data.ultima_version;
+                    else if (Array.isArray(data?.versiones) && data.versiones.length) {
+                        // tomar la más reciente (última)
+                        verObj = data.versiones[data.versiones.length - 1];
+                    } else if (data && typeof data.diseno_version === 'object') verObj = data.diseno_version;
+                    const verId = verObj ? (verObj.id ?? verObj.versionId ?? verObj.disenoVersionId ?? verObj.diseno_version_id ?? null)
+                                          : (data.versionId ?? data.disenoVersionId ?? data.diseno_version_id ?? null);
+                    if (!verId) {
+                        // Fallback: continuar y que backend resuelva con disenoId
+                        payload.disenoVersionId = '';
+                        confirmAndPost();
+                        return;
+                    }
+                    payload.disenoVersionId = verId;
+                    if ($('#pa-dis-version-id').length) { $('#pa-dis-version-id').val(verId); }
+                    if ($('#pe-dis-version-id').length) { $('#pe-dis-version-id').val(verId); }
+                    confirmAndPost();
+                }).fail(function(){
+                    // Si tenemos disenoId, continuar y backend resuelve
+                    if (disId) { payload.disenoVersionId = ''; confirmAndPost(); return; }
+                    Swal.fire({ icon:'warning', title:'Validación', text:'Selecciona un diseño.' });
+                    $btn.prop('disabled', false).text(originalText);
+                });
+                return;
+            }
+
+            // Confirmación con SweetAlert2 para agregar pedido
+            function confirmAndPost(){
+                Swal.fire({
+                  title: '¿Agregar pedido?',
+                  text: 'Se guardará el pedido. Puedes confirmar o seguir editando.',
+                  icon: 'warning',
+                  showCancelButton: true,
+                  confirmButtonColor: '#3085d6',
+                  cancelButtonColor: '#d33',
+                  confirmButtonText: 'Sí, guardar',
+                  cancelButtonText: 'Seguir editando',
+                  reverseButtons: true
+                }).then((result) => {
+                  if (result.isConfirmed) {
+                    paSubmitting = true;
+                    $.ajax({
+                        url: '<?= base_url('modulo1/pedidos/crear') ?>',
+                        method: 'POST',
+                        data: payload,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        success: function(resp){
+                            if (resp && (resp.ok === true || resp.success === true)) {
+                                // Intentar agregar fila sin recargar; si no hay ID, recargar
+                                const newId = resp.id || resp.pedidoId || resp.oc_id || resp.ocId || resp.orderId || null;
+                                const finalizeSuccess = function(){
+                                    try { $('#pedidoAddModal').modal('hide'); } catch(e) {}
+                                    Swal.fire({
+                                      title: '¡Pedido agregado!',
+                                      text: 'El pedido se guardó correctamente.',
+                                      icon: 'success',
+                                      confirmButtonText: 'Aceptar'
+                                    }).then(() => {
+                                      // Si no se agregó fila (por falta de datos), recargar
+                                      if (!finalizeSuccess.rowAdded) { location.reload(); }
+                                    });
+                                };
+                                finalizeSuccess.rowAdded = false;
+
+                                if (newId) {
+                                    const urlDetalle = '<?= base_url('modulo1/pedido') ?>/' + newId + '/json?t=' + Date.now();
+                                    $.getJSON(urlDetalle).done(function(data){
+                                        const id = data?.id || newId;
+                                        const empresa = (data?.empresa) || (data?.cliente?.nombre) || '-';
+                                        const folio = data?.folio || payload.oc_folio || '-';
+                                        const fechaV = data?.fecha || payload.oc_fecha || '';
+                                        const fechaFmt = fechaV ? (new Date(fechaV).toISOString().slice(0,10)) : '-';
+                                        const estatus = data?.estatus || payload.oc_estatus || 'Pendiente';
+                                        const moneda = data?.moneda || payload.oc_moneda || '-';
+                                        const total = (data?.total ?? payload.oc_total ?? 0);
+                                        const totalFmt = (parseFloat(total)||0).toFixed(2);
+                                        const acciones = `
+                                            <button type="button" class="btn btn-sm btn-outline-info btn-ver-pedido" data-id="${id}" data-bs-toggle="modal" data-bs-target="#pedidoModal">
+                                                <i class=\"bi bi-eye\"></i>
+                                            </button>
+                                            <a class=\"btn btn-sm btn-outline-primary\" href=\"<?= base_url('modulo1/editar') ?>/${id}\" role=\"button\" onclick=\"return false;\">
+                                                <i class=\"bi bi-pencil\"></i>
+                                            </a>
+                                            <span class=\"text-muted\">—</span>`;
+                                        try {
+                                            dtPedidos.row.add([id, empresa, folio, fechaFmt, estatus, moneda, totalFmt, acciones]).draw(false);
+                                            finalizeSuccess.rowAdded = true;
+                                        } catch(e) {
+                                            finalizeSuccess.rowAdded = false;
+                                        }
+                                        finalizeSuccess();
+                                    }).fail(function(){
+                                        finalizeSuccess();
+                                    });
+                                } else {
+                                    finalizeSuccess();
+                                }
+                            } else {
+                                const msg = resp && (resp.message || resp.msg) ? (resp.message||resp.msg) : 'Error al crear el pedido';
+                                Swal.fire({ icon:'error', title:'Error', text: msg });
+                            }
+                        },
+                        error: function(xhr){
+                            const msg = (xhr && xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Error de conexión al guardar';
+                            Swal.fire({ icon:'error', title:'Error', text: msg });
+                        },
+                        complete: function(){
+                            paSubmitting = false;
+                            $btn.prop('disabled', false).text(originalText);
+                        }
+                    });
+                  } else {
+                    $btn.prop('disabled', false).text(originalText);
+                  }
+                });
+            }
+
+            confirmAndPost();
+        });
+
+        // Recalcular total cuando cambie cantidad plan o si manualmente cambian el precio (aunque es de solo lectura)
+        $(document).on('input change', '#op-cantidadPlan', recalcTotal);
+        $(document).on('input change', '#pa-dis-precio', recalcTotal);
+
         // (Estatus inline removido aquí; se implementará en m1_ordenes.php)
 
-        // Manejar selección de diseño
-        $(document).on('change', '#pa-dis-select', function(){
+        // Manejar selección de diseño (ambos selects soportados)
+        $(document).on('change', '#pa-dis-select, #pe-dis-select', function(){
             const $opt = $(this).find('option:selected');
             const id = $opt.data('id');
             const key = $(this).val();
@@ -599,7 +850,11 @@
                     // Campos básicos
                     const nombre = pick(data, ['nombre','Nombre'], '');
                     const descripcion = pick(data, ['descripcion','Descripcion'], '');
-                    let verObj = data && typeof data.version === 'object' ? data.version : (data.ultima_version || null);
+                    let verObj = null;
+                    if (data && typeof data.version === 'object') verObj = data.version;
+                    else if (data && typeof data.ultima_version === 'object') verObj = data.ultima_version;
+                    else if (Array.isArray(data?.versiones) && data.versiones.length) { verObj = data.versiones[data.versiones.length-1]; }
+                    else if (data && typeof data.diseno_version === 'object') verObj = data.diseno_version;
                     const version = verObj ? (verObj.version ?? verObj.ver ?? '') : (data.version ?? '');
                     const fecha = verObj ? (verObj.fecha ?? '') : (data.fecha ?? '');
                     const notas = verObj ? (verObj.notas ?? '') : (data.notas ?? '');
@@ -613,6 +868,15 @@
                         $('#pa-dis-fecha').val('');
                     }
                     $('#pa-dis-notas').val(notas || '');
+                    // Guardar ID de versión de diseño
+                    const verId = verObj ? (verObj.id ?? verObj.versionId ?? verObj.disenoVersionId ?? verObj.diseno_version_id ?? null)
+                                          : (data.versionId ?? data.disenoVersionId ?? data.diseno_version_id ?? null);
+                    if (verId) { if ($('#pa-dis-version-id').length) { $('#pa-dis-version-id').val(verId); } if ($('#pe-dis-version-id').length) { $('#pe-dis-version-id').val(verId); } }
+                    // Precio unidad
+                    const precio = (data && (data.precio_unidad ?? data.precioUnidad)) ?? (verObj && (verObj.precio_unidad ?? verObj.precioUnidad)) ?? 0;
+                    if ($('#pa-dis-precio').length) { $('#pa-dis-precio').val(precio || 0); }
+                    if ($('#pe-dis-precio').length) { $('#pe-dis-precio').val(precio || 0); }
+                    recalcTotal();
 
                     // Imágenes (tolerante)
                     let imgs = [];
@@ -1101,6 +1365,148 @@
                 }
             });
         });
+
+        // ====== Clientes: cargar catálogo y rellenar datos al seleccionar ======
+        function cargarClientesPedido(preselectId){
+            const $sel = $('#pa-cliente-select');
+            const $sp = $('#pa-cli-loading');
+            $sp.show();
+            $.ajax({ url: '<?= base_url('modulo1/clientes/json') ?>', method:'GET' })
+                .done(function(list){
+                    $sel.empty().append('<option value="">Seleccionar...</option>');
+                    (list||[]).forEach(c => {
+                        const nombre = c.nombre || ('ID '+c.id);
+                        const correo = c.email || c.correo || '';
+                        const label = correo ? (nombre + ' — ' + correo) : nombre;
+                        // soporta shape con direccion anidada
+                        const d = c.direccion || {};
+                        const attrs = [
+                            'data-email="'+(correo||'')+'"',
+                            'data-telefono="'+(c.telefono||'')+'"',
+                            'data-calle="'+(d.calle||'')+'"',
+                            'data-numext="'+(d.numext||'')+'"',
+                            'data-numint="'+(d.numint||'')+'"',
+                            'data-ciudad="'+(d.ciudad||'')+'"',
+                            'data-estado="'+(d.estado||'')+'"',
+                            'data-pais="'+(d.pais||'')+'"',
+                            'data-cp="'+(d.cp||'')+'"'
+                        ].join(' ');
+                        $sel.append('<option value="'+c.id+'" '+attrs+'>'+label+'</option>');
+                    });
+                    if (preselectId) $sel.val(String(preselectId));
+                    // Si hay selección válida, disparar cambio
+                    const v = $sel.val();
+                    if (v && v !== 'null' && v !== 'undefined') { $sel.trigger('change'); }
+                })
+                .fail(function(){
+                    $sel.empty().append('<option value="">Error al cargar</option>');
+                })
+                .always(function(){ $sp.hide(); });
+        }
+        // Helper: actualizar folios OC/OP según cliente
+        function actualizarFolios(clienteId){
+            const year = new Date().getFullYear();
+            if (clienteId && clienteId !== 'null' && clienteId !== 'undefined') {
+                $('#oc-folio').val('OC-' + year + '-' + clienteId);
+                $('#op-folio').val('OP-' + year + '-' + clienteId);
+            } else {
+                $('#oc-folio').val('');
+                $('#op-folio').val('');
+            }
+        }
+
+        // Cargar al abrir modal
+        $('#pedidoAddModal').on('show.bs.modal', function(){
+            cargarClientesPedido();
+            const cid = $('#pa-cliente-select').val();
+            actualizarFolios(cid);
+        });
+
+        // Al seleccionar cliente: rellenar datos y setear clienteId para OC
+        // intenta obtener detalle del cliente de distintas rutas conocidas
+        function fetchClienteDetalle(id){
+            if (!id || id === 'null' || id === 'undefined') {
+                return Promise.reject(new Error('id invalido'));
+            }
+            const endpoints = [
+                '<?= base_url('api/clientes') ?>/'+encodeURIComponent(id),
+                '<?= base_url('modulo1/clientes') ?>/'+encodeURIComponent(id),
+                '<?= base_url('clientes') ?>/'+encodeURIComponent(id)
+            ];
+            let idx = 0;
+            return new Promise((resolve, reject) => {
+                function tryNext(){
+                    if (idx >= endpoints.length) return reject(new Error('No endpoints disponibles'));
+                    const url = endpoints[idx++];
+                    $.getJSON(url).done(resolve).fail(tryNext);
+                }
+                tryNext();
+            });
+        }
+
+        $(document).on('change', '#pa-cliente-select', function(){
+            const id = $(this).val();
+            if (!id || id === 'null' || id === 'undefined') { return; }
+            $('#pa-cliente-id').val(id||'');
+            $('#oc-clienteId').val(id||'');
+            actualizarFolios(id);
+            $('#pa-cli-nombre, #pa-cli-email, #pa-cli-telefono').val('');
+            $('#pa-dir-calle, #pa-dir-numext, #pa-dir-numint, #pa-dir-ciudad, #pa-dir-estado, #pa-dir-pais, #pa-dir-cp, #pa-dir-resumen').val('');
+            fetchClienteDetalle(id)
+                .then(function(cli){
+                    if (!cli) return;
+                    $('#pa-cli-nombre').val(cli.nombre||'');
+                    $('#pa-cli-email').val(cli.email||'');
+                    $('#pa-cli-telefono').val(cli.telefono||'');
+                    // Normalizar dirección: puede venir en cli.direccion o en cli.direcciones[]
+                    let d = null;
+                    if (cli.direccion) {
+                        d = cli.direccion;
+                    } else if (Array.isArray(cli.direcciones) && cli.direcciones.length > 0) {
+                        d = cli.direcciones.find(x => String(x.esPrincipal||x.es_principal||'') === '1') || cli.direcciones[0];
+                    }
+                    if (d) {
+                        const numExt = d.numExt !== undefined ? d.numExt : d.numext;
+                        const numInt = d.numInt !== undefined ? d.numInt : d.numint;
+                        $('#pa-dir-calle').val(d.calle||'');
+                        $('#pa-dir-numext').val(numExt||'');
+                        $('#pa-dir-numint').val(numInt||'');
+                        $('#pa-dir-ciudad').val(d.ciudad||'');
+                        $('#pa-dir-estado').val(d.estado||'');
+                        $('#pa-dir-pais').val(d.pais||'');
+                        $('#pa-dir-cp').val(d.cp||'');
+                        const resumen = [d.calle, numExt, numInt, d.ciudad, d.estado, d.cp, d.pais].filter(Boolean).join(', ');
+                        $('#pa-dir-resumen').val(resumen);
+                    }
+                    // Solo corroboración: marcar como solo lectura al traer datos
+                    $('#pa-cli-nombre, #pa-cli-email, #pa-cli-telefono, #pa-dir-calle, #pa-dir-numext, #pa-dir-numint, #pa-dir-ciudad, #pa-dir-estado, #pa-dir-pais, #pa-dir-cp, #pa-dir-resumen')
+                        .prop('readonly', true);
+                })
+                .catch(function(){
+                    // Fallback: usar data-* del option seleccionado
+                    const $opt = $('#pa-cliente-select option:selected');
+                    const nombre = $opt.text().split(' — ')[0] || '';
+                    $('#pa-cli-nombre').val(nombre);
+                    $('#pa-cli-email').val($opt.data('email')||'');
+                    $('#pa-cli-telefono').val($opt.data('telefono')||'');
+                    $('#pa-dir-calle').val($opt.data('calle')||'');
+                    $('#pa-dir-numext').val($opt.data('numext')||'');
+                    $('#pa-dir-numint').val($opt.data('numint')||'');
+                    $('#pa-dir-ciudad').val($opt.data('ciudad')||'');
+                    $('#pa-dir-estado').val($opt.data('estado')||'');
+                    $('#pa-dir-pais').val($opt.data('pais')||'');
+                    $('#pa-dir-cp').val($opt.data('cp')||'');
+                    const resumen = [
+                        $opt.data('calle'), $opt.data('numext'), $opt.data('numint'),
+                        $opt.data('ciudad'), $opt.data('estado'), $opt.data('cp'), $opt.data('pais')
+                    ].filter(Boolean).join(', ');
+                    $('#pa-dir-resumen').val(resumen);
+                    $('#pa-cli-nombre, #pa-cli-email, #pa-cli-telefono, #pa-dir-calle, #pa-dir-numext, #pa-dir-numint, #pa-dir-ciudad, #pa-dir-estado, #pa-dir-pais, #pa-dir-cp, #pa-dir-resumen')
+                        .prop('readonly', true);
+                });
+        });
+
+        // Hint: aquí puedes implementar el POST para crear OC y OP con estos datos cuando des a Continuar/Guardar.
     });
 </script>
 

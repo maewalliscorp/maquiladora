@@ -11,6 +11,34 @@
         border-radius: 50rem !important; /* pill */
         padding: .35rem .75rem;
     }
+
+    // Render genérico según extensión: imagen/PDF/DXF/otro
+    function renderFilePreview(containerId, url) {
+        const el = document.getElementById(containerId.replace(/^#/,''));
+        if (!el) return;
+        el.innerHTML = '';
+        if (!url) { el.innerHTML = '<div class="text-muted">Sin archivo</div>'; return; }
+        const u = String(url);
+        const lower = u.toLowerCase();
+        const isImg = /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/.test(lower);
+        const isPdf = /\.pdf(\?.*)?$/.test(lower);
+        const isDxf = /\.dxf(\?.*)?$/.test(lower);
+        if (isImg) {
+            el.innerHTML = '<img src="'+u+'" class="img-fluid rounded border" alt="preview">';
+            return;
+        }
+        if (isPdf) {
+            el.innerHTML = '<object data="'+u+'" type="application/pdf" width="100%" height="360"><div class="text-muted p-2">No se pudo mostrar el PDF.</div></object>';
+            return;
+        }
+        if (isDxf) {
+            el.innerHTML = '<div style="height:360px; background:#f8f9fa;" class="rounded border d-flex align-items-center justify-content-center">Cargando DXF…</div>';
+            // pequeño delay para asegurar que el div exista
+            setTimeout(function(){ renderDXF(containerId.replace(/^#/,''), u); }, 30);
+            return;
+        }
+        el.innerHTML = '<a href="'+u+'" target="_blank" class="btn btn-outline-secondary btn-sm">Abrir archivo</a>';
+    }
     .dt-buttons.btn-group .btn:last-child{ margin-right: 0; }
 </style>
 <?= $this->endSection() ?>
@@ -103,6 +131,16 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <div class="row g-3 mb-2">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Vista previa CAD</label>
+                        <div id="nuevoCadPreview" class="border rounded p-2 bg-light" style="min-height:160px"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Vista previa Patrón</label>
+                        <div id="nuevoPatronPreview" class="border rounded p-2 bg-light" style="min-height:160px"></div>
+                    </div>
+                </div>
                 <form id="formNuevoDiseno">
                     <div class="row g-3">
                         <div class="col-md-4">
@@ -239,6 +277,16 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <div class="row g-3 mb-2">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Vista previa CAD</label>
+                        <div id="eCadPreview" class="border rounded p-2 bg-light" style="min-height:160px"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Vista previa Patrón</label>
+                        <div id="ePatronPreview" class="border rounded p-2 bg-light" style="min-height:160px"></div>
+                    </div>
+                </div>
                 <form id="formEditarDiseno">
                     <input type="hidden" name="id" id="e-id" />
                     <div class="row g-3">
@@ -627,6 +675,9 @@
                 const apr = data.aprobado;
                 $('#e-aprobadoCheck').prop('checked', apr === 1 || apr === true || apr === '1');
                 preCli = (data.clienteId !== undefined && data.clienteId !== null && data.clienteId !== '') ? String(data.clienteId) : null;
+                // Previews iniciales en modal Editar
+                renderFilePreview('eCadPreview', data.archivoCadUrl || '');
+                renderFilePreview('ePatronPreview', data.archivoPatronUrl || '');
                 // Setear FKs cuando carguen los catálogos
                 $.when(q1, q2, q3, q4).always(function(){
                     if (data.idSexoFK !== undefined && data.idSexoFK !== null) $('#e-selSexo').val(String(data.idSexoFK));
@@ -670,6 +721,33 @@
             .fail(function(xhr){
                 $('#editarDisenoAlert').removeClass('d-none').text('No fue posible cargar los datos');
             });
+    });
+    // Actualizar previews en cambios de campos (Editar)
+    $(document).on('input change', '#e-archivoCadUrl', function(){ renderFilePreview('eCadPreview', this.value || ''); });
+    $(document).on('input change', '#e-archivoPatronUrl', function(){ renderFilePreview('ePatronPreview', this.value || ''); });
+    $(document).on('change', '#editarDisenoModal input[name="archivoCadFile"]', function(){
+        const f = this.files && this.files[0];
+        renderFilePreview('eCadPreview', f ? URL.createObjectURL(f) : '');
+    });
+    $(document).on('change', '#editarDisenoModal input[name="archivoPatronFile"]', function(){
+        const f = this.files && this.files[0];
+        renderFilePreview('ePatronPreview', f ? URL.createObjectURL(f) : '');
+    });
+
+    // Nuevo: limpiar y actualizar previews
+    $('#nuevoDisenoModal').on('show.bs.modal', function(){
+        renderFilePreview('nuevoCadPreview', '');
+        renderFilePreview('nuevoPatronPreview', '');
+    });
+    $(document).on('input change', '#nuevoDisenoModal input[name="archivoCadUrl"]', function(){ renderFilePreview('nuevoCadPreview', this.value || ''); });
+    $(document).on('input change', '#nuevoDisenoModal input[name="archivoPatronUrl"]', function(){ renderFilePreview('nuevoPatronPreview', this.value || ''); });
+    $(document).on('change', '#nuevoDisenoModal input[name="archivoCadFile"]', function(){
+        const f = this.files && this.files[0];
+        renderFilePreview('nuevoCadPreview', f ? URL.createObjectURL(f) : '');
+    });
+    $(document).on('change', '#nuevoDisenoModal input[name="archivoPatronFile"]', function(){
+        const f = this.files && this.files[0];
+        renderFilePreview('nuevoPatronPreview', f ? URL.createObjectURL(f) : '');
     });
     $(document).on('input', '#e-buscarArticulo', function(){
         const q = ($(this).val()||'').toString().toLowerCase().trim();

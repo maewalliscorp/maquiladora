@@ -110,4 +110,47 @@ class Muestras extends BaseController
             return $this->response->setStatusCode(500)->setJSON(['ok'=>false, 'message'=>'Error: '.$e->getMessage()]);
         }
     }
+
+    // Devuelve URLs de archivos del diseño asociado a la muestra (por su prototipo -> diseno_version)
+    public function archivo($id = null)
+    {
+        $muestraId = (int)($id ?? 0);
+        if ($muestraId <= 0) {
+            return $this->response->setStatusCode(400)->setJSON(['ok'=>false, 'message'=>'ID inválido']);
+        }
+
+        $db = \Config\Database::connect();
+        try {
+            $row = $db->query(
+                "SELECT dv.archivoCadUrl, dv.archivoPatronUrl
+                 FROM muestra m
+                 JOIN prototipo p ON p.id = m.prototipoId
+                 JOIN diseno_version dv ON dv.id = p.disenoVersionId
+                 WHERE m.id = ?",
+                [$muestraId]
+            )->getRowArray();
+
+            if (!$row) {
+                return $this->response->setStatusCode(404)->setJSON(['ok'=>false, 'message'=>'No se encontraron archivos para la muestra']);
+            }
+
+            $cad = $row['archivoCadUrl'] ?? null;
+            $pat = $row['archivoPatronUrl'] ?? null;
+
+            $toAbs = static function ($rel) {
+                if (!$rel) return null;
+                // Si ya es absoluta, devolver tal cual
+                if (preg_match('/^https?:\/\//i', $rel)) return $rel;
+                return base_url(trim($rel, '/'));
+            };
+
+            return $this->response->setJSON([
+                'ok' => true,
+                'cadUrl' => $toAbs($cad),
+                'patronUrl' => $toAbs($pat),
+            ]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['ok'=>false, 'message'=>'Error: '.$e->getMessage()]);
+        }
+    }
 }

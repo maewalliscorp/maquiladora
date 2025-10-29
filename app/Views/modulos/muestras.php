@@ -199,6 +199,13 @@
                         <p class="form-control-plaintext bg-light p-2 rounded" id="verObservaciones">-</p>
                     </div>
                 </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Diseño (versión)</label>
+                        <div id="previewDisenoVer" class="border rounded p-2" style="min-height:180px; background:#f8f9fa"></div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -216,6 +223,11 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body" id="modalEvaluarContent">
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div id="previewDiseno" class="border rounded p-2" style="min-height:180px; background:#f8f9fa"></div>
+                    </div>
+                </div>
                 <form id="formEvaluarMuestra">
                     <input type="hidden" id="muestraId" name="muestraId">
 
@@ -348,6 +360,28 @@
             $('#verEstado').text(estado);
             $('#verComentarios').text(comentarios);
             $('#verObservaciones').text(observaciones);
+
+            // Cargar vista previa del diseño
+            const id = String(row.data('id') || '').trim();
+            const $pv = $('#previewDisenoVer');
+            $pv.html('<div class="text-muted">Cargando diseño…</div>');
+            $.ajax({ url: '<?= base_url('muestras/archivo') ?>/' + encodeURIComponent(id), method: 'GET' })
+                .done(function(resp){
+                    if (!resp || resp.ok !== true) { $pv.html('<div class="text-muted">Sin archivo disponible.</div>'); return; }
+                    const url = resp.cadUrl || resp.patronUrl;
+                    if (!url) { $pv.html('<div class="text-muted">Sin archivo disponible.</div>'); return; }
+                    const lower = String(url).toLowerCase();
+                    if (lower.endsWith('.pdf')) {
+                        $pv.html('<object data="'+url+'" type="application/pdf" width="100%" height="420px"><iframe src="'+url+'" width="100%" height="420px"></iframe></object>');
+                    } else if (lower.match(/\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/)) {
+                        $pv.html('<img src="'+url+'" alt="Diseño" class="img-fluid rounded">');
+                    } else {
+                        $pv.html('<a href="'+url+'" target="_blank" class="btn btn-outline-secondary btn-sm">Abrir archivo</a>');
+                    }
+                })
+                .fail(function(){
+                    $pv.html('<div class="text-danger">No se pudo cargar el archivo del diseño.</div>');
+                });
         });
 
         // Cache y carga de clientes para el select
@@ -428,11 +462,40 @@
                 $('#estado').val(estado);
                 console.log('Estado después de set:', $('#estado').val());
             }, 50);
+
+            // Cargar vista previa del archivo de diseño
+            const $content = $('#modalEvaluarContent');
+            const $pv = $('#previewDiseno');
+            $pv.html('');
+            $content.addClass('loading');
+            $.ajax({ url: '<?= base_url('muestras/archivo') ?>/' + encodeURIComponent(id), method: 'GET' })
+                .done(function(resp){
+                    if (!resp || resp.ok !== true) { $pv.html('<div class="text-muted">Sin archivo disponible.</div>'); return; }
+                    const url = resp.cadUrl || resp.patronUrl;
+                    if (!url) { $pv.html('<div class="text-muted">Sin archivo disponible.</div>'); return; }
+                    const lower = String(url).toLowerCase();
+                    if (lower.endsWith('.pdf')) {
+                        $pv.html('<object data="'+url+'" type="application/pdf" width="100%" height="480px"><iframe src="'+url+'" width="100%" height="480px"></iframe></object>');
+                    } else if (lower.match(/\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/)) {
+                        $pv.html('<img src="'+url+'" alt="Diseño" class="img-fluid rounded">');
+                    } else {
+                        $pv.html('<a href="'+url+'" target="_blank" class="btn btn-outline-secondary btn-sm">Abrir archivo</a>');
+                    }
+                })
+                .fail(function(){
+                    $pv.html('<div class="text-danger">No se pudo cargar el archivo del diseño.</div>');
+                })
+                .always(function(){
+                    $content.removeClass('loading');
+                });
         });
 
         // Limpiar el modal al cerrarlo
         $('#evaluarModal').on('hidden.bs.modal', function () {
             $('#formEvaluarMuestra')[0].reset();
+        });
+        $('#verModal').on('hidden.bs.modal', function(){
+            $('#previewDisenoVer').html('');
         });
 
         // Manejar el clic en el botón Guardar Cambios con confirmación y anti-doble click

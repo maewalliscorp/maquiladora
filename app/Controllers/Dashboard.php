@@ -25,7 +25,7 @@ class Dashboard extends BaseController
             ['nivel'=>'Media','color'=>'#4dabf7','titulo'=>'Revisar muestra M-0045 del cliente A','sub'=>'Módulo: Prototipos'],
         ];
 
-        return view('modulo3/dashboard', [
+        return view('modulos/dashboard', [
             'title' => 'Dashboard Principal',
             'kpis'  => $kpis,
             'notifCount' => count($recentNotifs),

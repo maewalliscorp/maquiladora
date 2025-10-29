@@ -62,7 +62,7 @@ $routes->get   ('api/inventario/resumen-articulo/(:num)', 'AlmacenController::ap
  * Home / Auth landing
  * ------------------------------------------------------------------*/
 $routes->get('/',          'UsuarioController::login');
-$routes->get('/dashboard', 'Modulos::dashboard', ['filter' => 'auth']);
+$routes->get('/dashboard', 'Dashboard::index', ['filter' => 'auth']);
 
 /* --------------------------------------------------------------------
  * API (Dashboard y Clientes sin duplicados)
@@ -86,6 +86,7 @@ $routes->get ('muestras',                'Muestras::index',      ['filter' => 'a
 $routes->post('muestras/data',           'Muestras::data',       ['filter' => 'auth:Administrador,Jefe,Diseñador,Calidad,Inspector']);
 $routes->get ('muestras/evaluar/(:num)', 'Muestras::evaluar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador,Calidad,Inspector']);
 $routes->post('muestras/guardar',        'Muestras::guardar',    ['filter' => 'auth:Administrador,Jefe,Diseñador,Calidad,Inspector']);
+$routes->get ('muestras/archivo/(:num)', 'Muestras::archivo/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador,Calidad,Inspector']);
 
 /* --------------------------------------------------------------------
  * Legacy
@@ -98,7 +99,6 @@ $routes->get('/detalle_pedido/(:num)', 'Modulos::m1_detalles/$1',    ['filter' =
 $routes->get('/perfildisenador',       'Modulos::m2_perfildisenador', ['filter' => 'auth']);
 $routes->get('/catalogodisenos',       'Modulos::m2_catalogodisenos', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
 $routes->get('/agregardiseno',         'Modulos::m2_agregardiseno',   ['filter' => 'auth:Administrador,Jefe,Diseñador']);
-$routes->get('/editardiseno',          'Modulos::m2_editardiseno',    ['filter' => 'auth:Administrador,Jefe,Diseñador']);
 
 /* --------------------------------------------------------------------
  * Módulo 1
@@ -121,6 +121,8 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->get('ordenes-produccion',   'Produccion::ordenes');
     $routes->post('ordenes/estatus',     'Produccion::actualizarEstatus');
     $routes->get('ordenes/(:num)/json',  'Produccion::orden_json/$1');
+    // Crear pedido (OC + OP)
+    $routes->post('pedidos/crear',       'Modulos::m1_pedidos_crear', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Calidad,Envios']);
 
     // Endpoints para modales
     $routes->get('ordenes/folio/(:segment)/json', 'Produccion::orden_json_folio/$1');
@@ -183,8 +185,8 @@ $routes->group('mantenimiento', static function($r){
  * ------------------------------------------------------------------*/
 $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
 
-    $routes->get('/',         'Modulos::dashboard');
-    $routes->get('dashboard', 'Modulos::dashboard');
+    $routes->get('/',         'Dashboard::index');
+    $routes->get('dashboard', 'Dashboard::index');
     $routes->get('ordenes',   'Modulos::ordenes');
 
     // ===== MRP (ALIAS bajo /modulo3/mrp) =====
