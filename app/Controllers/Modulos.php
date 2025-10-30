@@ -27,8 +27,9 @@ class Modulos extends BaseController
                 'message' => 'ID inválido',
             ]);
         }
-
-        // $db ya definido arriba
+        
+        // Conexión a base de datos
+        $db = \Config\Database::connect();
         try {
             // Usuario base
             $user = $db->table('users')->where('id', $id)->get()->getRowArray();
@@ -1247,6 +1248,17 @@ class Modulos extends BaseController
                 $id = $idPost;
             }
 
+            // Si no hay ID en POST/URL, responder apropiadamente (JSON si XHR o Accept JSON)
+            $acceptsJson = stripos((string)$this->request->getHeaderLine('accept'), 'application/json') !== false;
+            if (!$id) {
+                if ($this->request->isAJAX() || $acceptsJson) {
+                    return $this->response->setStatusCode(400)->setJSON([
+                        'success' => false,
+                        'message' => 'ID de pedido ausente'
+                    ]);
+                }
+            }
+
             // Procesar formulario: actualizar campos del pedido
             // Normalizar total a número
             $totalPost = $this->request->getPost('total');
@@ -1281,15 +1293,17 @@ class Modulos extends BaseController
 
             // Guardar
             try {
+                $rowsOC = 0; $rowsOP = 0;
                 if ($id) {
                     // Actualizar orden_compra con Query Builder (evita restricciones de allowedFields)
                     $db = \Config\Database::connect();
                     $updated = false;
                     try {
                         $updated = $db->table('orden_compra')->where('id', (int)$id)->update($ocData);
+                        $rowsOC = $db->affectedRows();
                     } catch (\Throwable $eQB1) { $updated = false; }
                     if (!$updated) {
-                        try { $db->table('OrdenCompra')->where('id', (int)$id)->update($ocData); } catch (\Throwable $eQB2) {}
+                        try { $db->table('OrdenCompra')->where('id', (int)$id)->update($ocData); $rowsOC = $db->affectedRows(); } catch (\Throwable $eQB2) {}
                     }
 
                     // Actualizar OP ligada (última por ordenCompraId) si llegaron campos
@@ -1310,21 +1324,84 @@ class Modulos extends BaseController
                             if ($opCantidadPlan !== null && $opCantidadPlan !== '') { $set['cantidadPlan'] = (int)$opCantidadPlan; }
                             if ($disenoVersionId !== null && (int)$disenoVersionId > 0) { $set['disenoVersionId'] = (int)$disenoVersionId; }
                             if (!empty($set)) {
-                                try { $db->table('orden_produccion')->where('id', (int)$op['id'])->update($set); }
+                                try { $db->table('orden_produccion')->where('id', (int)$op['id'])->update($set); $rowsOP = $db->affectedRows(); }
                                 catch (\Throwable $e3) {
-                                    try { $db->table('OrdenProduccion')->where('id', (int)$op['id'])->update($set); } catch (\Throwable $e4) {}
+                                    try { $db->table('OrdenProduccion')->where('id', (int)$op['id'])->update($set); $rowsOP = $db->affectedRows(); } catch (\Throwable $e4) {}
                                 }
                             }
+                        } else {
+                            // No hay OP, crearla
+                            $newOp = [
+                                'ordenCompraId'   => (int)$id,
+                                'disenoVersionId' => ($disenoVersionId !== null && (int)$disenoVersionId > 0) ? (int)$disenoVersionId : null,
+                                'folio'           => null,
+                                'cantidadPlan'    => ($opCantidadPlan !== null && $opCantidadPlan !== '') ? (int)$opCantidadPlan : null,
+                                'fechaInicioPlan' => null,
+                                'fechaFinPlan'    => null,
+                                'status'          => 'Planeada',
+                            ];
+                            try { $db->table('orden_produccion')->insert($newOp); $rowsOP = $db->affectedRows(); }
+                            catch (\Throwable $e5) {
+                                try { $db->table('OrdenProduccion')->insert($newOp); $rowsOP = $db->affectedRows(); } catch (\Throwable $e6) {}
+                            }
                         }
+
+                        // Recalcular total desde OP y Diseño si tenemos datos suficientes
+                        try {
+                            // Obtener OP actualizada (última)
+                            $opNow = null;
+                            try { $opNow = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int)$id])->getRowArray(); } catch (\Throwable $eR1) { $opNow = null; }
+                            if (!$opNow) { try { $opNow = $db->query('SELECT * FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int)$id])->getRowArray(); } catch (\Throwable $eR2) { $opNow = null; } }
+                            if ($opNow) {
+                                $dvId = $opNow['disenoVersionId'] ?? null;
+                                $cant = $opNow['cantidadPlan'] ?? null;
+                                if ($dvId && $cant) {
+                                    // Precio desde diseño
+                                    $precio = null;
+                                    try {
+                                        $rowP = $db->query('SELECT d.precio_unidad FROM diseno_version dv LEFT JOIN diseno d ON d.id = dv.disenoId WHERE dv.id = ?', [(int)$dvId])->getRowArray();
+                                        $precio = $rowP['precio_unidad'] ?? null;
+                                    } catch (\Throwable $eP1) { $precio = null; }
+                                    if ($precio === null) {
+                                        try {
+                                            $rowP = $db->query('SELECT d.precio_unidad FROM DisenoVersion dv LEFT JOIN Diseno d ON d.id = dv.disenoId WHERE dv.id = ?', [(int)$dvId])->getRowArray();
+                                            $precio = $rowP['precio_unidad'] ?? null;
+                                        } catch (\Throwable $eP2) { $precio = null; }
+                                    }
+                                    if ($precio !== null) {
+                                        $calcTotal = (float)$precio * (float)$cant;
+                                        try {
+                                            $db->table('orden_compra')->where('id', (int)$id)->update(['total' => $calcTotal]);
+                                            $rowsOC = max($rowsOC, $db->affectedRows());
+                                        } catch (\Throwable $eUT1) {
+                                            try { $db->table('OrdenCompra')->where('id', (int)$id)->update(['total' => $calcTotal]); $rowsOC = max($rowsOC, $db->affectedRows()); } catch (\Throwable $eUT2) {}
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (\Throwable $eR) {}
                     }
                 }
-                // Si la petición viene por AJAX, responder JSON
-                if ($this->request->isAJAX()) {
-                    return $this->response->setJSON(['success' => true, 'message' => 'Pedido actualizado correctamente']);
+                // Si la petición viene por AJAX o Accept JSON, responder JSON con estado actual
+                if ($this->request->isAJAX() || $acceptsJson) {
+                    $db = \Config\Database::connect();
+                    $ocRow = null; $opRow = null;
+                    try { $ocRow = $db->query('SELECT id, folio, fecha, estatus, moneda, total FROM orden_compra WHERE id = ?', [(int)$id])->getRowArray(); } catch (\Throwable $eO1) { $ocRow = null; }
+                    if (!$ocRow) { try { $ocRow = $db->query('SELECT id, folio, fecha, estatus, moneda, total FROM OrdenCompra WHERE id = ?', [(int)$id])->getRowArray(); } catch (\Throwable $eO2) { $ocRow = null; } }
+                    try { $opRow = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int)$id])->getRowArray(); } catch (\Throwable $ePR1) { $opRow = null; }
+                    if (!$opRow) { try { $opRow = $db->query('SELECT * FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int)$id])->getRowArray(); } catch (\Throwable $ePR2) { $opRow = null; } }
+                    return $this->response->setJSON([
+                        'success' => true,
+                        'message' => 'Pedido actualizado correctamente',
+                        'rowsOC' => $rowsOC,
+                        'rowsOP' => $rowsOP,
+                        'oc' => $ocRow,
+                        'op' => $opRow,
+                    ]);
                 }
                 return redirect()->to('/modulo1/pedidos')->with('success', 'Pedido actualizado correctamente');
             } catch (\Throwable $e) {
-                if ($this->request->isAJAX()) {
+                if ($this->request->isAJAX() || $acceptsJson) {
                     return $this->response->setStatusCode(500)->setJSON(['success'=>false,'message'=>$e->getMessage()]);
                 }
                 return redirect()->to('/modulo1/pedidos')->with('error', 'Error al actualizar: '.$e->getMessage());

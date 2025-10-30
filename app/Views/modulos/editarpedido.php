@@ -144,20 +144,45 @@
         actualizarPreview(modelo.value);
         modelo.addEventListener('change', () => actualizarPreview(modelo.value));
 
-        // Manejo del envío del formulario
-        document.getElementById('formEditarPedido').addEventListener('submit', function(e) {
-            e.preventDefault(); // Evita el envío inmediato
-
-            // Mostrar mensaje de éxito
-            Swal.fire({
-                icon: 'success',
-                title: '✅ Guardado exitosamente',
-                text: 'El pedido se actualizó correctamente',
-                confirmButtonText: 'OK'
-            }).then(() => {
-                // Enviar el formulario después de que el usuario confirme
-                this.submit();
-            });
+        // Manejo del envío del formulario como XHR
+        document.getElementById('formEditarPedido').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const form = this;
+            const url = form.action;
+            const fd = new FormData(form);
+            // Si falta el ID, intenta obtenerlo de la URL actual /modulo1/editar/{id}
+            if ((!fd.get('id') || String(fd.get('id')).trim() === '') && location.pathname) {
+                const m = location.pathname.match(/\/modulo1\/editar\/(\d+)/);
+                if (m && m[1]) { fd.set('id', m[1]); }
+            }
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    body: fd,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept':'application/json' },
+                    credentials: 'same-origin'
+                });
+                const isJson = (res.headers.get('content-type') || '').includes('application/json');
+                const data = isJson ? await res.json() : null;
+                if (res.ok && data && data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '✅ Guardado exitosamente',
+                        text: 'El pedido se actualizó correctamente',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        if (data.oc && typeof data.oc.total !== 'undefined') {
+                            const totalInput = form.querySelector('input[name="total"]');
+                            if (totalInput) totalInput.value = data.oc.total;
+                        }
+                    });
+                } else {
+                    const msg = (data && data.message) ? data.message : 'Error al actualizar';
+                    Swal.fire({ icon: 'error', title: 'Error', text: msg });
+                }
+            } catch (err) {
+                Swal.fire({ icon: 'error', title: 'Error', text: err.message || 'Error de red' });
+            }
         });
     });
 </script>

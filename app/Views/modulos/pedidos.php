@@ -1439,7 +1439,10 @@
             const m = href.match(/\/modulo1\/editar\/(\d+)/);
             if (m) {
                 e.preventDefault();
-                const id = parseInt(m[1]);
+                const id = parseInt(m[1], 10);
+                // Asegurar que el form apunte a /modulo1/editar (ID via POST)
+                const editUrl = '<?= base_url('modulo1/editar') ?>';
+                $('#formPedidoEditar').attr('action', editUrl);
                 cargarPedidoEnModal(id);
                 $('#pedidoEditModal').modal('show');
             }
@@ -1458,66 +1461,87 @@
             e.preventDefault();
             const $form = $(this);
             const url = $form.attr('action');
-            const fd = new FormData(this);
-            // Forzar envío de total calculado
-            const pePrecio = parseFloat((($('#pe-dis-precio').val()||'')+'').replace(/,/g,'')) || 0;
-            const peCant   = parseFloat((($('#pe-op-cantidadPlan').val()||'')+'').replace(/,/g,'')) || 0;
-            const peTotal  = pePrecio * peCant;
-            fd.set('total', isFinite(peTotal) ? peTotal.toFixed(2) : (($('#pe-total').val()||'').toString().replace(/,/g,'')) );
-            // Asegurar envío de id
-            if (!fd.has('id') && $('#pe-id').length) {
-                fd.set('id', $('#pe-id').val()||'');
-            }
-            // Asegurar envío de disenoVersionId si existe
-            if (!fd.has('disenoVersionId') && $('#pe-dis-version-id').length) {
-                fd.set('disenoVersionId', $('#pe-dis-version-id').val()||'');
-            }
-            $.ajax({
-                url: url,
-                type: 'POST',
-                data: fd,
-                processData: false,
-                contentType: false,
-                dataType: 'json',
-                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept':'application/json' },
-                success: function(resp){
-                    if (resp && (resp.success === true || resp.ok === true)) {
-                        $('#pedidoEditModal').modal('hide');
-                        location.reload();
-                    } else if (resp && typeof resp === 'object') {
-                        const msg = (resp && (resp.message || resp.error)) ? (resp.message || resp.error) : 'Error desconocido';
-                        alert('Error al actualizar: ' + msg);
-                    } else {
-                        // El servidor devolvió HTML (200). Asumimos éxito y recargamos.
-                        try {
-                            const parsed = JSON.parse(resp);
-                            if (parsed && (parsed.success === true || parsed.ok === true)) {
-                                $('#pedidoEditModal').modal('hide');
-                                location.reload();
+
+            Swal.fire({
+                title: '¿Guardar cambios?',
+                text: 'Se actualizará el pedido y su OP vinculada',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, guardar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (!result.isConfirmed) return;
+
+                const fd = new FormData($form[0]);
+                // Forzar envío de total calculado
+                const pePrecio = parseFloat((($('#pe-dis-precio').val()||'')+'').replace(/,/g,'')) || 0;
+                const peCant   = parseFloat((($('#pe-op-cantidadPlan').val()||'')+'').replace(/,/g,'')) || 0;
+                const peTotal  = pePrecio * peCant;
+                fd.set('total', isFinite(peTotal) ? peTotal.toFixed(2) : (($('#pe-total').val()||'').toString().replace(/,/g,'')) );
+                // Asegurar envío de id
+                if (!fd.has('id') && $('#pe-id').length) {
+                    fd.set('id', $('#pe-id').val()||'');
+                }
+                // Asegurar envío de disenoVersionId si existe
+                if (!fd.has('disenoVersionId') && $('#pe-dis-version-id').length) {
+                    fd.set('disenoVersionId', $('#pe-dis-version-id').val()||'');
+                }
+
+                Swal.showLoading();
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: fd,
+                    processData: false,
+                    contentType: false,
+                    dataType: 'json',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept':'application/json' },
+                    success: function(resp){
+                        if (resp && (resp.success === true || resp.ok === true)) {
+                            const rowsOC = Number(resp.rowsOC || 0);
+                            const rowsOP = Number(resp.rowsOP || 0);
+                            if (rowsOC === 0 && rowsOP === 0) {
+                                Swal.fire({
+                                    icon:'warning',
+                                    title:'Guardado sin cambios',
+                                    html: 'La base no reportó filas afectadas.<br/>Posibles causas:<br/>- Mismos valores que ya tenía.<br/>- El pedido/OP no existe.<br/>- El ID no llegó en POST.<br/><br/>rowsOC: '+rowsOC+' · rowsOP: '+rowsOP,
+                                });
                                 return;
                             }
-                        } catch(_) {}
-                        $('#pedidoEditModal').modal('hide');
-                        location.reload();
-                    }
-                },
-                error: function(xhr){
-                    // Si el servidor respondió 200 pero no en JSON (parsererror), tratamos como éxito
-                    if (xhr && xhr.status === 200) {
-                        $('#pedidoEditModal').modal('hide');
-                        location.reload();
-                        return;
-                    }
-                    let msg = 'Error de conexión al actualizar el pedido';
-                    try {
-                        if (xhr && xhr.responseJSON && (xhr.responseJSON.message || xhr.responseJSON.error)) {
-                            msg = xhr.responseJSON.message || xhr.responseJSON.error;
-                        } else if (xhr && xhr.responseText) {
-                            msg = xhr.responseText;
+                            Swal.fire({icon:'success', title:'Guardado', text:'OC filas: '+rowsOC+' · OP filas: '+rowsOP}).then(()=>{ location.reload(); });
+                        } else if (resp && typeof resp === 'object') {
+                            const msg = (resp.message || resp.error || 'Error desconocido');
+                            Swal.fire({icon:'error', title:'Error al actualizar', html: `<pre style="white-space:pre-wrap">${msg}</pre>`});
+                        } else {
+                            // El servidor devolvió HTML (200). Asumimos éxito y recargamos.
+                            try {
+                                const parsed = JSON.parse(resp);
+                                if (parsed && (parsed.success === true || parsed.ok === true)) {
+                                    Swal.fire({icon:'success', title:'Guardado'}).then(()=>{ location.reload(); });
+                                    return;
+                                }
+                            } catch(_) {}
+                            Swal.fire({icon:'success', title:'Guardado'}).then(()=>{ location.reload(); });
                         }
-                    } catch (_) {}
-                    alert('Error al actualizar: ' + msg);
-                }
+                    },
+                    error: function(xhr){
+                        if (xhr && xhr.status === 200) {
+                            Swal.fire({icon:'success', title:'Guardado'}).then(()=>{ location.reload(); });
+                            return;
+                        }
+                        let msg = 'Error de conexión al actualizar el pedido';
+                        try {
+                            if (xhr && xhr.responseJSON && (xhr.responseJSON.message || xhr.responseJSON.error)) {
+                                msg = xhr.responseJSON.message || xhr.responseJSON.error;
+                            } else if (xhr && xhr.responseText) {
+                                msg = xhr.responseText;
+                            }
+                        } catch (_) {}
+                        Swal.fire({icon:'error', title:'Error al actualizar', html: `<pre style="white-space:pre-wrap">${msg}</pre>`});
+                    }
+                });
             });
         });
 
