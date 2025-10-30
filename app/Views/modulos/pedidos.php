@@ -348,6 +348,10 @@
                     <dd class="col-sm-9 text-dark" id="p-dis-version-fecha">-</dd>
                     <dt class="col-sm-3 fw-semibold text-dark">Aprobado</dt>
                     <dd class="col-sm-9 text-dark" id="p-dis-version-aprobado">-</dd>
+                    <dt class="col-sm-3 fw-semibold text-dark">Precio unidad</dt>
+                    <dd class="col-sm-9 text-dark" id="p-dis-precio">-</dd>
+                    <dt class="col-sm-3 fw-semibold text-dark">Cantidad plan</dt>
+                    <dd class="col-sm-9 text-dark" id="p-op-cantidadPlan">-</dd>
                 </dl>
             </div>
             <div class="modal-footer">
@@ -511,13 +515,14 @@
                         <div class="row g-3 mb-3 mt-1">
                             <div class="col-md-3">
                                 <label class="form-label">Precio unidad</label>
-                                <input type="number" step="0.01" class="form-control" id="pe-dis-precio" readonly>
+                                <input type="number" step="0.01" class="form-control" id="pe-dis-precio" name="dis_precio" readonly>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Cantidad plan</label>
-                                <input type="number" class="form-control" id="pe-op-cantidadPlan" min="1">
+                                <input type="number" class="form-control" id="pe-op-cantidadPlan" name="op_cantidadPlan" min="1">
                             </div>
-                            <input type="hidden" id="pe-dis-version-id" value="">
+                            <input type="hidden" id="pe-dis-version-id" name="disenoVersionId" value="">
+                            <input type="hidden" id="pe-id" name="id" value="">
                         </div>
                     </div>
                 </div>
@@ -605,12 +610,33 @@
 
 <script>
     $(document).ready(function () {
-        function toNum(v, def=0){ const n = parseFloat(v); return isNaN(n)?def:n; }
+        function toNum(v, def=0){
+            if (v === undefined || v === null) return def;
+            const s = String(v).replace(/,/g,'').trim();
+            const n = parseFloat(s);
+            return isNaN(n) ? def : n;
+        }
         function recalcTotal(){
-            const cant = toNum($('#op-cantidadPlan').val(), 0);
-            const precio = toNum($('#pa-dis-precio').val(), toNum($('#pe-dis-precio').val(), 0));
+            // Obtener cantidad: priorizar Edit (#pe-op-cantidadPlan) si tiene valor, luego Add (#op-cantidadPlan)
+            const peCantVal = $('#pe-op-cantidadPlan').length ? $('#pe-op-cantidadPlan').val() : undefined;
+            const paCantVal = $('#op-cantidadPlan').length ? $('#op-cantidadPlan').val() : undefined;
+            let cant = toNum(peCantVal, NaN);
+            if (isNaN(cant) || cant === 0) {
+                cant = toNum(paCantVal, 0);
+            }
+
+            // Obtener precio: priorizar Edit (#pe-dis-precio) si tiene valor, luego Add (#pa-dis-precio)
+            const pePrecioVal = $('#pe-dis-precio').length ? $('#pe-dis-precio').val() : undefined;
+            const paPrecioVal = $('#pa-dis-precio').length ? $('#pa-dis-precio').val() : undefined;
+            let precio = toNum(pePrecioVal, NaN);
+            if (isNaN(precio) || precio === 0) {
+                precio = toNum(paPrecioVal, 0);
+            }
+
+            // Recalcular siempre (permite ver 0.00 si falta alguno)
             const total = cant * precio;
-            $('#oc-total').prop('readonly', true).val(total.toFixed(2));
+            if ($('#oc-total').length) { $('#oc-total').prop('readonly', true).val(total.toFixed(2)); }
+            if ($('#pe-total').length) { $('#pe-total').prop('readonly', true).val(total.toFixed(2)); }
         }
         const langES = {
             "sProcessing":     "Procesando...",
@@ -821,8 +847,10 @@
         });
 
         // Recalcular total cuando cambie cantidad plan o si manualmente cambian el precio (aunque es de solo lectura)
-        $(document).on('input change', '#op-cantidadPlan', recalcTotal);
-        $(document).on('input change', '#pa-dis-precio', recalcTotal);
+        $(document).on('input change keyup mouseup blur', '#op-cantidadPlan', recalcTotal);
+        $(document).on('input change keyup mouseup blur', '#pe-op-cantidadPlan', recalcTotal);
+        $(document).on('input change keyup mouseup blur', '#pa-dis-precio', recalcTotal);
+        $(document).on('input change keyup mouseup blur', '#pe-dis-precio', recalcTotal);
 
         // (Estatus inline removido aquí; se implementará en m1_ordenes.php)
 
@@ -841,6 +869,7 @@
             $noimg.hide();
             $matList.empty();
             $('#pa-dis-nombre, #pa-dis-version, #pa-dis-fecha, #pa-dis-descripcion, #pa-dis-notas').val('');
+            if ($('#pa-dis-version-id').length) { $('#pa-dis-version-id').val(''); }
 
             if (!id) { return; }
             $('#pa-dis-loading').show();
@@ -878,7 +907,7 @@
                     if ($('#pe-dis-precio').length) { $('#pe-dis-precio').val(precio || 0); }
                     recalcTotal();
 
-                    // Imágenes (tolerante)
+                    // Imágenes y archivos (tolerante)
                     let imgs = [];
                     const tryArrays = [
                         data?.imagenes, data?.images, data?.fotos,
@@ -887,21 +916,44 @@
                     for (let i=0;i<tryArrays.length;i++){
                         if (Array.isArray(tryArrays[i]) && tryArrays[i].length){ imgs = tryArrays[i]; break; }
                     }
-                    if (imgs.length){
-                        imgs.forEach(function(it, idx){
-                            const url = typeof it === 'string' ? it : (it.url || it.src || '');
-                            if (!url) return;
-                            const active = idx === 0 ? ' active' : '';
-                            $carInner.append(
-                                '<div class="carousel-item'+active+'">\n' +
-                                '  <img class="d-block w-100" src="'+ url +'" alt="imagen '+ (idx+1) +'">\n' +
-                                '</div>'
-                            );
-                        });
-                        $carWrap.show();
-                    } else {
-                        $noimg.show();
-                    }
+                    const isImage = (u) => /\.(png|jpe?g|gif|bmp|webp|svg)$/i.test(u||'');
+                    const isPdf   = (u) => /\.(pdf)$/i.test(u||'');
+                    const isDxf   = (u) => /\.(dxf)$/i.test(u||'');
+                    let anySlide = false;
+                    imgs.forEach(function(it, idx){
+                        const url = typeof it === 'string' ? it : (it.url || it.src || '');
+                        if (!url) return;
+                        const active = anySlide ? '' : ' active';
+                        $carInner.append(
+                            '<div class="carousel-item'+active+'">\n' +
+                            '  <img class="d-block w-100" src="'+ url +'" alt="imagen">\n' +
+                            '</div>'
+                        );
+                        anySlide = true;
+                    });
+
+                    const cadUrl = verObj?.archivoCadUrl || data?.archivoCadUrl || '';
+                    const patronUrl = verObj?.archivoPatronUrl || data?.archivoPatronUrl || '';
+                    const addFileSlide = (url, label) => {
+                        if (!url) return;
+                        const active = anySlide ? '' : ' active';
+                        let html = '';
+                        if (isImage(url)) {
+                            html = '<img class="d-block w-100" src="'+url+'" alt="'+label+'" />';
+                        } else if (isPdf(url)) {
+                            html = '<object data="'+url+'" type="application/pdf" width="100%" height="420"><div class="text-muted p-3">No se pudo mostrar el PDF '+label+'.</div></object>';
+                        } else if (isDxf(url)) {
+                            html = '<div class="p-3 text-muted">Archivo DXF: <a target="_blank" href="'+url+'">Abrir '+label+'</a></div>';
+                        } else {
+                            html = '<div class="p-3 text-muted">Archivo '+label+': <a target="_blank" href="'+url+'">'+url+'</a></div>';
+                        }
+                        $carInner.append('<div class="carousel-item'+active+'">'+ html +'</div>');
+                        anySlide = true;
+                    };
+                    addFileSlide(cadUrl, 'CAD');
+                    addFileSlide(patronUrl, 'Patrón');
+
+                    if (anySlide) { $carWrap.show(); } else { $noimg.show(); }
 
                     // Materiales (tolerante)
                     let mats = [];
@@ -1028,6 +1080,7 @@
             $noimg.hide();
             $matList.empty();
             $('#pa-dis-nombre, #pa-dis-version, #pa-dis-fecha, #pa-dis-descripcion, #pa-dis-notas').val('');
+            if ($('#pa-dis-version-id').length) { $('#pa-dis-version-id').val(''); }
 
             $spinDis.show();
             $.getJSON('<?= base_url('modulo2/disenos/json') ?>' + '?t=' + Date.now())
@@ -1158,6 +1211,24 @@
                         $('#p-dis-version-fecha').text('-');
                     }
                     $('#p-dis-version-aprobado').text((vAprob === 1 || vAprob === true || vAprob === '1') ? 'Sí' : (vAprob === 0 || vAprob === false || vAprob === '0' ? 'No' : '-'));
+
+                    // Mostrar enlace de archivo de diseño si está disponible (CAD/PDF/DXF)
+                    const cadUrl = dis?.archivoCadUrl || ver?.archivoCadUrl || null;
+                    const patUrl = dis?.archivoPatronUrl || ver?.archivoPatronUrl || null;
+                    const firstFile = cadUrl || patUrl || null;
+                    if (firstFile) {
+                        $('#p-doc').attr('href', firstFile).show();
+                    }
+
+                    // Precio unidad y cantidad plan (si existen elementos en la vista de detalles)
+                    if ($('#p-dis-precio').length) {
+                        const precio = dis?.precio_unidad ?? null;
+                        $('#p-dis-precio').text(precio != null ? String(precio) : '-');
+                    }
+                    if ($('#p-op-cantidadPlan').length) {
+                        const cant = data.op_cantidadPlan ?? data.op_cantidad_plan ?? null;
+                        $('#p-op-cantidadPlan').text(cant != null ? String(cant) : '-');
+                    }
                 })
                 .fail(function () {
                     $('#p-empresa').text('No fue posible cargar los datos');
@@ -1275,6 +1346,15 @@
                     $('#pe-dis-codigo').val(dx?.codigo || '');
                     $('#pe-dis-nombre').val(dx?.nombre || '');
                     $('#pe-dis-descripcion').val(dx?.descripcion || '');
+                    // Precio unidad desde el diseño del pedido si existe
+                    if ($('#pe-dis-precio').length) {
+                        // intentar desde dx; si no, desde option seleccionado (data-precio); si no, desde data.diseno
+                        const optPrecio = ($('#pe-dis-select').length ? $('#pe-dis-select option:selected').data('precio') : undefined);
+                        const p = (dx && dx.precio_unidad != null)
+                            ? dx.precio_unidad
+                            : (optPrecio != null ? optPrecio : (data.diseno && data.diseno.precio_unidad != null ? data.diseno.precio_unidad : ''));
+                        $('#pe-dis-precio').val(p);
+                    }
                     let ver = dx && (dx.version && typeof dx.version === 'object' ? dx.version : null);
                     const vNum = ver?.version ?? dx?.version ?? null;
                     const vFechaRaw = ver?.fecha ?? dx?.fecha ?? null;
@@ -1286,7 +1366,19 @@
                     } else {
                         $('#pe-dis-version-fecha').val('');
                     }
-                    $('#pe-dis-version-aprobado').val((vAprob === 1 || vAprob === true || vAprob === '1') ? '1' : (vAprob === 0 || vAprob === false || vAprob === '0' ? '0' : ''));
+                    const apr = (vAprob === 1 || vAprob === true || vAprob === '1') ? '1' : (vAprob === 0 || vAprob === false || vAprob === '0' ? '0' : '');
+                    $('#pe-dis-version-aprobado').val(apr);
+                    // set hidden version id if exists
+                    if ($('#pe-dis-version-id').length && ver && ver.id) {
+                        $('#pe-dis-version-id').val(ver.id);
+                    }
+                    const cadUrl = dx?.archivoCadUrl || ver?.archivoCadUrl || null;
+                    const patUrl = dx?.archivoPatronUrl || ver?.archivoPatronUrl || null;
+                    const firstFile = cadUrl || patUrl || null;
+                    if (firstFile && $('#pe-dis-doc').length) {
+                        $('#pe-dis-doc').attr('href', firstFile).show();
+                    }
+                    if (typeof recalcTotal === 'function') recalcTotal();
                 }
 
                 if ($selDis.length){
@@ -1303,11 +1395,37 @@
                     fillDesignFields(dis || null);
                     $selDis.off('change').on('change', function(){
                         const key = $(this).val();
-                        const dx = mapByKey[key] || null;
-                        fillDesignFields(dx);
+                        let dx = mapByKey[key] || null;
+                        // Si no tenemos precio en dx, intentar obtenerlo vía AJAX por id
+                        const selId = $(this).find('option:selected').data('id') || key;
+                        const needPrice = !(dx && dx.precio_unidad != null);
+                        if (needPrice && selId) {
+                            $.getJSON('<?= base_url('modulo2/diseno') ?>/'+ selId +'/json')
+                                .done(function(resp){
+                                    if (!dx) dx = {};
+                                    const pr = resp?.diseno?.precio_unidad ?? resp?.precio_unidad ?? null;
+                                    if (pr != null) dx.precio_unidad = pr;
+                                    fillDesignFields(dx);
+                                })
+                                .fail(function(){ fillDesignFields(dx); });
+                        } else {
+                            fillDesignFields(dx);
+                        }
                     });
                 } else {
                     fillDesignFields(dis || null);
+                }
+
+                // Cantidad plan desde la OP del pedido
+                if ($('#pe-op-cantidadPlan').length) {
+                    const cant = data.op_cantidadPlan != null ? data.op_cantidadPlan : '';
+                    $('#pe-op-cantidadPlan').val(cant);
+                }
+
+                // Setear id y total inicial de la BD
+                if ($('#pe-id').length) { $('#pe-id').val(data.id || ''); }
+                if ($('#pe-total').length && (data.total != null)) {
+                    $('#pe-total').val(String(data.total).replace(/,/g,'').toString());
                 }
 
                 $('#pe-dis-loading').hide();
@@ -1341,9 +1459,18 @@
             const $form = $(this);
             const url = $form.attr('action');
             const fd = new FormData(this);
-            if (fd.has('total')) {
-                const t = (fd.get('total')||'').toString().replace(/,/g,'');
-                fd.set('total', t);
+            // Forzar envío de total calculado
+            const pePrecio = parseFloat((($('#pe-dis-precio').val()||'')+'').replace(/,/g,'')) || 0;
+            const peCant   = parseFloat((($('#pe-op-cantidadPlan').val()||'')+'').replace(/,/g,'')) || 0;
+            const peTotal  = pePrecio * peCant;
+            fd.set('total', isFinite(peTotal) ? peTotal.toFixed(2) : (($('#pe-total').val()||'').toString().replace(/,/g,'')) );
+            // Asegurar envío de id
+            if (!fd.has('id') && $('#pe-id').length) {
+                fd.set('id', $('#pe-id').val()||'');
+            }
+            // Asegurar envío de disenoVersionId si existe
+            if (!fd.has('disenoVersionId') && $('#pe-dis-version-id').length) {
+                fd.set('disenoVersionId', $('#pe-dis-version-id').val()||'');
             }
             $.ajax({
                 url: url,
@@ -1351,17 +1478,45 @@
                 data: fd,
                 processData: false,
                 contentType: false,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept':'application/json' },
                 success: function(resp){
-                    if (resp && resp.success) {
+                    if (resp && (resp.success === true || resp.ok === true)) {
                         $('#pedidoEditModal').modal('hide');
                         location.reload();
+                    } else if (resp && typeof resp === 'object') {
+                        const msg = (resp && (resp.message || resp.error)) ? (resp.message || resp.error) : 'Error desconocido';
+                        alert('Error al actualizar: ' + msg);
                     } else {
-                        alert('Error al actualizar: ' + (resp && resp.message ? resp.message : 'Error desconocido'));
+                        // El servidor devolvió HTML (200). Asumimos éxito y recargamos.
+                        try {
+                            const parsed = JSON.parse(resp);
+                            if (parsed && (parsed.success === true || parsed.ok === true)) {
+                                $('#pedidoEditModal').modal('hide');
+                                location.reload();
+                                return;
+                            }
+                        } catch(_) {}
+                        $('#pedidoEditModal').modal('hide');
+                        location.reload();
                     }
                 },
-                error: function(){
-                    alert('Error de conexión al actualizar el pedido');
+                error: function(xhr){
+                    // Si el servidor respondió 200 pero no en JSON (parsererror), tratamos como éxito
+                    if (xhr && xhr.status === 200) {
+                        $('#pedidoEditModal').modal('hide');
+                        location.reload();
+                        return;
+                    }
+                    let msg = 'Error de conexión al actualizar el pedido';
+                    try {
+                        if (xhr && xhr.responseJSON && (xhr.responseJSON.message || xhr.responseJSON.error)) {
+                            msg = xhr.responseJSON.message || xhr.responseJSON.error;
+                        } else if (xhr && xhr.responseText) {
+                            msg = xhr.responseText;
+                        }
+                    } catch (_) {}
+                    alert('Error al actualizar: ' + msg);
                 }
             });
         });

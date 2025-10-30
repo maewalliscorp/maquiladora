@@ -752,6 +752,57 @@ class Modulos extends BaseController
             ];
         }
 
+        // Rellenar diseño directamente si viniera vacío
+        if (empty($detalle['diseno'])) {
+            $db = \Config\Database::connect();
+            $row = null;
+            try {
+                $row = $db->query(
+                    "SELECT dv.*, d.id AS d_id, d.codigo AS d_codigo, d.nombre AS d_nombre, d.descripcion AS d_descripcion
+                     FROM orden_produccion op
+                     LEFT JOIN diseno_version dv ON dv.id = op.disenoVersionId
+                     LEFT JOIN diseno d ON d.id = dv.disenoId
+                     WHERE op.ordenCompraId = ?
+                     ORDER BY op.id DESC
+                     LIMIT 1",
+                    [$id]
+                )->getRowArray();
+            } catch (\Throwable $e) { $row = null; }
+            if (!$row) {
+                try {
+                    $row = $db->query(
+                        "SELECT dv.*, d.id AS d_id, d.codigo AS d_codigo, d.nombre AS d_nombre, d.descripcion AS d_descripcion
+                         FROM OrdenProduccion op
+                         LEFT JOIN DisenoVersion dv ON dv.id = op.disenoVersionId
+                         LEFT JOIN Diseno d ON d.id = dv.disenoId
+                         WHERE op.ordenCompraId = ?
+                         ORDER BY op.id DESC
+                         LIMIT 1",
+                        [$id]
+                    )->getRowArray();
+                } catch (\Throwable $e2) { $row = null; }
+            }
+            if ($row && isset($row['d_id'])) {
+                $detalle['diseno'] = [
+                    'id' => $row['d_id'],
+                    'codigo' => $row['d_codigo'] ?? '',
+                    'nombre' => $row['d_nombre'] ?? '',
+                    'descripcion' => $row['d_descripcion'] ?? '',
+                    'version' => [
+                        'id' => $row['id'] ?? null,
+                        'version' => $row['version'] ?? null,
+                        'fecha' => $row['fecha'] ?? null,
+                        'aprobado' => $row['aprobado'] ?? null,
+                        'notas' => $row['notas'] ?? null,
+                        'archivoCadUrl' => $row['archivoCadUrl'] ?? null,
+                        'archivoPatronUrl' => $row['archivoPatronUrl'] ?? null,
+                    ],
+                    'archivoCadUrl' => $row['archivoCadUrl'] ?? null,
+                    'archivoPatronUrl' => $row['archivoPatronUrl'] ?? null,
+                ];
+            }
+        }
+
         // Normalizar para el modal
         $out = [
             'id' => (int)($detalle['id'] ?? $id),
@@ -766,6 +817,14 @@ class Modulos extends BaseController
             'diseno' => $detalle['diseno'] ?? null,
             'disenos' => $detalle['disenos'] ?? [],
             'documento_url' => $detalle['documento_url'] ?? '',
+            // OP ligada
+            'op_id' => $detalle['op_id'] ?? null,
+            'op_folio' => $detalle['op_folio'] ?? null,
+            'op_disenoVersionId' => $detalle['op_disenoVersionId'] ?? null,
+            'op_cantidadPlan' => $detalle['op_cantidadPlan'] ?? null,
+            'op_fechaInicioPlan' => $detalle['op_fechaInicioPlan'] ?? null,
+            'op_fechaFinPlan' => $detalle['op_fechaFinPlan'] ?? null,
+            'op_status' => $detalle['op_status'] ?? null,
         ];
 
         return $this->response->setJSON($out);
@@ -883,6 +942,8 @@ class Modulos extends BaseController
             'notifCount' => 0,
         ]));
     }
+
+    
 
     public function wip()
     {
@@ -1187,6 +1248,11 @@ class Modulos extends BaseController
             }
 
             // Procesar formulario: actualizar campos del pedido
+            // Normalizar total a número
+            $totalPost = $this->request->getPost('total');
+            if (is_string($totalPost)) { $totalPost = str_replace(',', '', $totalPost); }
+            $totalPost = ($totalPost === '' || $totalPost === null) ? null : (float)$totalPost;
+
             $data = [
                 'descripcion'      => $this->request->getPost('descripcion') ?? null,
                 'cantidad'         => $this->request->getPost('cantidad') ?? null,
@@ -1200,15 +1266,69 @@ class Modulos extends BaseController
                 'fecha'            => $this->request->getPost('fecha') ?? null,
                 'folio'            => $this->request->getPost('folio') ?? null,
                 'moneda'           => $this->request->getPost('moneda') ?? null,
-                'total'            => $this->request->getPost('total') ?? null,
+                'total'            => $totalPost,
                 'progreso'         => $this->request->getPost('progreso') ?? null,
             ];
 
+            // Solo columnas válidas de orden_compra
+            $ocData = [
+                'folio'   => $data['folio'],
+                'fecha'   => $data['fecha'],
+                'estatus' => $data['estatus'],
+                'moneda'  => $data['moneda'],
+                'total'   => $data['total'],
+            ];
+
             // Guardar
-            if ($id) {
-                $pedidoModel->where('id', (int)$id)->set($data)->update();
+            try {
+                if ($id) {
+                    // Actualizar orden_compra con Query Builder (evita restricciones de allowedFields)
+                    $db = \Config\Database::connect();
+                    $updated = false;
+                    try {
+                        $updated = $db->table('orden_compra')->where('id', (int)$id)->update($ocData);
+                    } catch (\Throwable $eQB1) { $updated = false; }
+                    if (!$updated) {
+                        try { $db->table('OrdenCompra')->where('id', (int)$id)->update($ocData); } catch (\Throwable $eQB2) {}
+                    }
+
+                    // Actualizar OP ligada (última por ordenCompraId) si llegaron campos
+                    $opCantidadPlan    = $this->request->getPost('op_cantidadPlan');
+                    $disenoVersionId   = $this->request->getPost('disenoVersionId');
+                    if ($opCantidadPlan !== null || $disenoVersionId !== null) {
+                        // $db ya definido
+                        $op = null;
+                        try {
+                            $op = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int)$id])->getRowArray();
+                        } catch (\Throwable $e1) { $op = null; }
+                        if (!$op) {
+                            try { $op = $db->query('SELECT * FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int)$id])->getRowArray(); }
+                            catch (\Throwable $e2) { $op = null; }
+                        }
+                        if ($op) {
+                            $set = [];
+                            if ($opCantidadPlan !== null && $opCantidadPlan !== '') { $set['cantidadPlan'] = (int)$opCantidadPlan; }
+                            if ($disenoVersionId !== null && (int)$disenoVersionId > 0) { $set['disenoVersionId'] = (int)$disenoVersionId; }
+                            if (!empty($set)) {
+                                try { $db->table('orden_produccion')->where('id', (int)$op['id'])->update($set); }
+                                catch (\Throwable $e3) {
+                                    try { $db->table('OrdenProduccion')->where('id', (int)$op['id'])->update($set); } catch (\Throwable $e4) {}
+                                }
+                            }
+                        }
+                    }
+                }
+                // Si la petición viene por AJAX, responder JSON
+                if ($this->request->isAJAX()) {
+                    return $this->response->setJSON(['success' => true, 'message' => 'Pedido actualizado correctamente']);
+                }
+                return redirect()->to('/modulo1/pedidos')->with('success', 'Pedido actualizado correctamente');
+            } catch (\Throwable $e) {
+                if ($this->request->isAJAX()) {
+                    return $this->response->setStatusCode(500)->setJSON(['success'=>false,'message'=>$e->getMessage()]);
+                }
+                return redirect()->to('/modulo1/pedidos')->with('error', 'Error al actualizar: '.$e->getMessage());
             }
-            return redirect()->to('/modulo1/pedidos')->with('success', 'Pedido actualizado correctamente');
         }
 
         $pedido = $pedidoModel->getPedidoPorId((int)$id);

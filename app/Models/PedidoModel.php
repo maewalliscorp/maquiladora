@@ -112,6 +112,36 @@ class PedidoModel extends Model
             }
         } catch (\Throwable $e) {}
 
+        // 2b) Asegurar que tengamos la última OP ligada (por si getPedidoPorId no la trajo)
+        try {
+            if (!isset($base['op_disenoVersionId']) || empty($base['op_disenoVersionId'])) {
+                $op = null;
+                try {
+                    $op = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [$base['id']])->getRowArray();
+                } catch (\Throwable $e1) { $op = null; }
+                if (!$op) {
+                    try { $op = $db->query('SELECT * FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [$base['id']])->getRowArray(); }
+                    catch (\Throwable $e2) { $op = null; }
+                }
+                if ($op) {
+                    $base['op_id'] = $op['id'] ?? null;
+                    $base['op_folio'] = $op['folio'] ?? ($op['Folio'] ?? null);
+                    $base['op_disenoVersionId'] = $op['disenoVersionId']
+                        ?? $op['diseno_version_id']
+                        ?? $op['diseno_versionId']
+                        ?? $op['diseno_versionID']
+                        ?? $op['disenoversionid']
+                        ?? $op['DisenoVersionId']
+                        ?? $op['Diseno_Version_Id']
+                        ?? null;
+                    $base['op_cantidadPlan'] = $op['cantidadPlan'] ?? ($op['cantidad_plan'] ?? ($op['CantidadPlan'] ?? null));
+                    $base['op_fechaInicioPlan'] = $op['fechaInicioPlan'] ?? ($op['fecha_inicio_plan'] ?? ($op['FechaInicioPlan'] ?? null));
+                    $base['op_fechaFinPlan'] = $op['fechaFinPlan'] ?? ($op['fecha_fin_plan'] ?? ($op['FechaFinPlan'] ?? null));
+                    $base['op_status'] = $op['status'] ?? ($op['estatus'] ?? ($op['Estado'] ?? null));
+                }
+            }
+        } catch (\Throwable $e) {}
+
         // 3) Adjuntar datos de la última orden de producción ligada (si existe)
         try {
             if (!empty($base['id'])) {
@@ -128,14 +158,59 @@ class PedidoModel extends Model
                          LIMIT 1",
                         [$base['id']]
                     )->getRowArray();
+                    if (!$op) {
+                        // Fallback con tablas en mayúsculas
+                        try {
+                            $op = $db->query(
+                                "SELECT op.* FROM OrdenProduccion op
+                                 INNER JOIN (
+                                   SELECT MAX(id) AS id, ordenCompraId
+                                   FROM OrdenProduccion
+                                   GROUP BY ordenCompraId
+                                 ) t ON t.id = op.id
+                                 WHERE op.ordenCompraId = ?
+                                 LIMIT 1",
+                                [$base['id']]
+                            )->getRowArray();
+                        } catch (\Throwable $eU) { $op = null; }
+                    }
+                    if (!$op) {
+                        // Fallback simple: última OP por OC usando ORDER BY
+                        try {
+                            $op = $db->query(
+                                "SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1",
+                                [$base['id']]
+                            )->getRowArray();
+                        } catch (\Throwable $eS1) { $op = null; }
+                    }
+                    if (!$op) {
+                        // Fallback simple con mayúsculas
+                        try {
+                            $op = $db->query(
+                                "SELECT * FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1",
+                                [$base['id']]
+                            )->getRowArray();
+                        } catch (\Throwable $eS2) { $op = null; }
+                    }
                     if ($op) {
                         $base['op_id'] = $op['id'] ?? null;
-                        $base['op_folio'] = $op['folio'] ?? null;
-                        $base['op_disenoVersionId'] = $op['disenoVersionId'] ?? null;
-                        $base['op_cantidadPlan'] = $op['cantidadPlan'] ?? null;
-                        $base['op_fechaInicioPlan'] = $op['fechaInicioPlan'] ?? null;
-                        $base['op_fechaFinPlan'] = $op['fechaFinPlan'] ?? null;
-                        $base['op_status'] = $op['status'] ?? null;
+                        $base['op_folio'] = $op['folio'] ?? ($op['Folio'] ?? null);
+                        // Variantes de columna para disenoVersionId
+                        $base['op_disenoVersionId'] = $op['disenoVersionId']
+                            ?? $op['diseno_version_id']
+                            ?? $op['diseno_versionId']
+                            ?? $op['diseno_versionID']
+                            ?? $op['disenoversionid']
+                            ?? $op['DisenoVersionId']
+                            ?? $op['Diseno_Version_Id']
+                            ?? null;
+                        // Variantes cantidad plan
+                        $base['op_cantidadPlan'] = $op['cantidadPlan'] ?? ($op['cantidad_plan'] ?? ($op['CantidadPlan'] ?? null));
+                        // Variantes fechas plan
+                        $base['op_fechaInicioPlan'] = $op['fechaInicioPlan'] ?? ($op['fecha_inicio_plan'] ?? ($op['FechaInicioPlan'] ?? null));
+                        $base['op_fechaFinPlan'] = $op['fechaFinPlan'] ?? ($op['fecha_fin_plan'] ?? ($op['FechaFinPlan'] ?? null));
+                        // Variantes status
+                        $base['op_status'] = $op['status'] ?? ($op['estatus'] ?? ($op['Estado'] ?? null));
                     }
                 } catch (\Throwable $e) {}
             }
@@ -278,71 +353,13 @@ class PedidoModel extends Model
             }
         }
 
-        // 6) Diseños del cliente (tolerando clienteld/clienteId/cliente_id)
+        // 6) Determinar diseño/versión relacionado PRIORIZANDO el ligado a la OP
         $disenos = [];
         $disenoRelacionado = null;
         $versionRelacionado = null;
-        if (!empty($base['clienteId'])) {
-            foreach (['diseno','Diseno'] as $t) {
-                // Intento A: clienteld
-                try {
-                    $disenos = $db->query(
-                        "SELECT * FROM $t WHERE clienteld = ? ORDER BY id",
-                        [$base['clienteId']]
-                    )->getResultArray();
-                } catch (\Throwable $e) { $disenos = []; }
-                // Intento B: clienteId
-                if (!$disenos) {
-                    try {
-                        $disenos = $db->query(
-                            "SELECT * FROM $t WHERE clienteId = ? ORDER BY id",
-                            [$base['clienteId']]
-                        )->getResultArray();
-                    } catch (\Throwable $e2) { $disenos = []; }
-                }
-                // Intento C: cliente_id
-                if (!$disenos) {
-                    try {
-                        $disenos = $db->query(
-                            "SELECT * FROM $t WHERE cliente_id = ? ORDER BY id",
-                            [$base['clienteId']]
-                        )->getResultArray();
-                    } catch (\Throwable $e3) { $disenos = []; }
-                }
 
-                // Escoger relacionado: último por id
-                if ($disenos && !$disenoRelacionado) {
-                    $disenoRelacionado = end($disenos); // último
-                    // obtener versión más reciente
-                    $disId = $disenoRelacionado['id'] ?? ($disenoRelacionado['disenoId'] ?? ($disenoRelacionado['diseno_id'] ?? null));
-                    if ($disId) {
-                        foreach (['diseno_version','DisenoVersion'] as $tv) {
-                            // by disenoId
-                            try {
-                                $versionRelacionado = $db->query(
-                                    "SELECT * FROM $tv WHERE disenoId = ? ORDER BY version DESC, id DESC LIMIT 1",
-                                    [$disId]
-                                )->getRowArray();
-                            } catch (\Throwable $e4) { $versionRelacionado = null; }
-                            // by diseno_id
-                            if (!$versionRelacionado) {
-                                try {
-                                    $versionRelacionado = $db->query(
-                                        "SELECT * FROM $tv WHERE diseno_id = ? ORDER BY version DESC, id DESC LIMIT 1",
-                                        [$disId]
-                                    )->getRowArray();
-                                } catch (\Throwable $e5) { $versionRelacionado = null; }
-                            }
-                            if ($versionRelacionado) break;
-                        }
-                    }
-                }
-                if ($disenos) break; // ya cargado desde alguna variante
-            }
-        }
-
-        // 7) Fallback: usar diseño/versión desde OP si existe
-        if (!$disenoRelacionado && !empty($base['op_disenoVersionId'])) {
+        // 6A) Si la OP ya tiene disenoVersionId, obtener ese par diseño+versión primero
+        if (!empty($base['op_disenoVersionId'])) {
             $ver = null;
             foreach (['diseno_version','DisenoVersion'] as $tv) {
                 try {
@@ -352,9 +369,8 @@ class PedidoModel extends Model
             }
             if ($ver) {
                 $versionRelacionado = $ver;
-                // traer el diseño de esa versión
                 $dis = null;
-                $did = $ver['disenoId'] ?? ($ver['disenoid'] ?? null);
+                $did = $ver['disenoId'] ?? ($ver['disenoid'] ?? $ver['diseno_id'] ?? null);
                 if ($did) {
                     foreach (['diseno','Diseno'] as $td) {
                         try {
@@ -363,22 +379,118 @@ class PedidoModel extends Model
                         } catch (\Throwable $e) {}
                     }
                 }
-                if ($dis) {
-                    $disenoRelacionado = $dis;
+                if ($dis) { $disenoRelacionado = $dis; }
+            }
+        }
+
+        // 6B) Cargar listado de diseños del cliente sólo como referencia/selección, pero NO sobreescribir el relacionado
+        if (!empty($base['clienteId'])) {
+            foreach (['diseno','Diseno'] as $t) {
+                try {
+                    $disenos = $db->query(
+                        "SELECT * FROM $t WHERE clienteld = ? ORDER BY id",
+                        [$base['clienteId']]
+                    )->getResultArray();
+                } catch (\Throwable $e) { $disenos = []; }
+                if (!$disenos) {
+                    try {
+                        $disenos = $db->query(
+                            "SELECT * FROM $t WHERE clienteId = ? ORDER BY id",
+                            [$base['clienteId']]
+                        )->getResultArray();
+                    } catch (\Throwable $e2) { $disenos = []; }
+                }
+                if (!$disenos) {
+                    try {
+                        $disenos = $db->query(
+                            "SELECT * FROM $t WHERE cliente_id = ? ORDER BY id",
+                            [$base['clienteId']]
+                        )->getResultArray();
+                    } catch (\Throwable $e3) { $disenos = []; }
+                }
+                if ($disenos) break;
+            }
+        }
+
+        // 6C) Si aún no hay relacionado, tomar el último del cliente como fallback
+        if (!$disenoRelacionado && $disenos) {
+            $disenoRelacionado = end($disenos);
+            $disId = $disenoRelacionado['id'] ?? ($disenoRelacionado['disenoId'] ?? ($disenoRelacionado['diseno_id'] ?? null));
+            if ($disId) {
+                foreach (['diseno_version','DisenoVersion'] as $tv) {
+                    try {
+                        $versionRelacionado = $db->query(
+                            "SELECT * FROM $tv WHERE disenoId = ? ORDER BY version DESC, id DESC LIMIT 1",
+                            [$disId]
+                        )->getRowArray();
+                    } catch (\Throwable $e4) { $versionRelacionado = null; }
+                    if (!$versionRelacionado) {
+                        try {
+                            $versionRelacionado = $db->query(
+                                "SELECT * FROM $tv WHERE diseno_id = ? ORDER BY version DESC, id DESC LIMIT 1",
+                                [$disId]
+                            )->getRowArray();
+                        } catch (\Throwable $e5) { $versionRelacionado = null; }
+                    }
+                    if ($versionRelacionado) break;
                 }
             }
         }
 
         // 8) Normalizar campos del diseño seleccionado
         $disenoOut = null;
+        if (!$disenoRelacionado) {
+            // Resolución forzada: unir OP -> DV -> D por la última OP del pedido
+            try {
+                $row = $db->query(
+                    "SELECT dv.*, d.id AS d_id, d.codigo AS d_codigo, d.nombre AS d_nombre, d.descripcion AS d_descripcion, d.precio_unidad AS d_precio
+                     FROM orden_produccion op
+                     LEFT JOIN diseno_version dv ON dv.id = op.disenoVersionId
+                     LEFT JOIN diseno d ON d.id = dv.disenoId
+                     WHERE op.ordenCompraId = ?
+                     ORDER BY op.id DESC
+                     LIMIT 1",
+                    [$base['id']]
+                )->getRowArray();
+                if (!$row) {
+                    $row = $db->query(
+                        "SELECT dv.*, d.id AS d_id, d.codigo AS d_codigo, d.nombre AS d_nombre, d.descripcion AS d_descripcion, d.precio_unidad AS d_precio
+                         FROM OrdenProduccion op
+                         LEFT JOIN DisenoVersion dv ON dv.id = op.disenoVersionId
+                         LEFT JOIN Diseno d ON d.id = dv.disenoId
+                         WHERE op.ordenCompraId = ?
+                         ORDER BY op.id DESC
+                         LIMIT 1",
+                        [$base['id']]
+                    )->getRowArray();
+                }
+                if ($row && isset($row['d_id'])) {
+                    $disenoRelacionado = [
+                        'id' => $row['d_id'],
+                        'codigo' => $row['d_codigo'] ?? null,
+                        'nombre' => $row['d_nombre'] ?? null,
+                        'descripcion' => $row['d_descripcion'] ?? null,
+                        'precio_unidad' => $row['d_precio'] ?? null,
+                    ];
+                    $versionRelacionado = $row;
+                }
+            } catch (\Throwable $e) {}
+        }
+
         if ($disenoRelacionado) {
             $disenoOut = $disenoRelacionado;
             $disenoOut['codigo'] = $disenoRelacionado['codigo'] ?? ($disenoRelacionado['cod'] ?? ($disenoRelacionado['code'] ?? ($disenoRelacionado['clave'] ?? '')));
             $disenoOut['nombre'] = $disenoRelacionado['nombre'] ?? ($disenoRelacionado['name'] ?? ($disenoRelacionado['titulo'] ?? ''));
             $disenoOut['descripcion'] = $disenoRelacionado['descripcion'] ?? ($disenoRelacionado['description'] ?? ($disenoRelacionado['detalle'] ?? ''));
+            $disenoOut['precio_unidad'] = $disenoRelacionado['precio_unidad'] ?? ($disenoRelacionado['precio'] ?? null);
             // anidar versión si no está ya anidada
             if (!isset($disenoOut['version']) || !is_array($disenoOut['version'])) {
                 $disenoOut['version'] = $versionRelacionado ?: null;
+            }
+            // pasar URLs si vienen de la versión para que el front pueda previsualizar
+            if ($versionRelacionado) {
+                $disenoOut['archivoCadUrl'] = $versionRelacionado['archivoCadUrl'] ?? ($versionRelacionado['cadUrl'] ?? null);
+                $disenoOut['archivoPatronUrl'] = $versionRelacionado['archivoPatronUrl'] ?? ($versionRelacionado['patronUrl'] ?? null);
             }
         }
 
@@ -389,6 +501,14 @@ class PedidoModel extends Model
             'estatus' => $base['estatus'] ?? '',
             'moneda' => $base['moneda'] ?? '',
             'total' => $base['total'] ?? 0,
+            // OP vinculada (si existe)
+            'op_id' => $base['op_id'] ?? null,
+            'op_folio' => $base['op_folio'] ?? null,
+            'op_disenoVersionId' => $base['op_disenoVersionId'] ?? null,
+            'op_cantidadPlan' => $base['op_cantidadPlan'] ?? null,
+            'op_fechaInicioPlan' => $base['op_fechaInicioPlan'] ?? null,
+            'op_fechaFinPlan' => $base['op_fechaFinPlan'] ?? null,
+            'op_status' => $base['op_status'] ?? null,
             'cliente' => $cliente,
             'items' => $items,
             'disenos' => $disenos,

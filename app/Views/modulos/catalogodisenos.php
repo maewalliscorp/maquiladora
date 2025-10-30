@@ -12,33 +12,6 @@
         padding: .35rem .75rem;
     }
 
-    // Render genérico según extensión: imagen/PDF/DXF/otro
-    function renderFilePreview(containerId, url) {
-        const el = document.getElementById(containerId.replace(/^#/,''));
-        if (!el) return;
-        el.innerHTML = '';
-        if (!url) { el.innerHTML = '<div class="text-muted">Sin archivo</div>'; return; }
-        const u = String(url);
-        const lower = u.toLowerCase();
-        const isImg = /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/.test(lower);
-        const isPdf = /\.pdf(\?.*)?$/.test(lower);
-        const isDxf = /\.dxf(\?.*)?$/.test(lower);
-        if (isImg) {
-            el.innerHTML = '<img src="'+u+'" class="img-fluid rounded border" alt="preview">';
-            return;
-        }
-        if (isPdf) {
-            el.innerHTML = '<object data="'+u+'" type="application/pdf" width="100%" height="360"><div class="text-muted p-2">No se pudo mostrar el PDF.</div></object>';
-            return;
-        }
-        if (isDxf) {
-            el.innerHTML = '<div style="height:360px; background:#f8f9fa;" class="rounded border d-flex align-items-center justify-content-center">Cargando DXF…</div>';
-            // pequeño delay para asegurar que el div exista
-            setTimeout(function(){ renderDXF(containerId.replace(/^#/,''), u); }, 30);
-            return;
-        }
-        el.innerHTML = '<a href="'+u+'" target="_blank" class="btn btn-outline-secondary btn-sm">Abrir archivo</a>';
-    }
     .dt-buttons.btn-group .btn:last-child{ margin-right: 0; }
 </style>
 <?= $this->endSection() ?>
@@ -522,6 +495,33 @@
 <script src="https://unpkg.com/three-dxf@1.0.0/dist/three-dxf.js"></script>
 
 <script>
+    // Render genérico según extensión: imagen/PDF/DXF/otro
+    function renderFilePreview(containerId, url) {
+        const el = document.getElementById(containerId.replace(/^#/,''));
+        if (!el) return;
+        el.innerHTML = '';
+        if (!url) { el.innerHTML = '<div class="text-muted">Sin archivo</div>'; return; }
+        const u = String(url);
+        const lower = u.toLowerCase();
+        const isImg = /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/.test(lower);
+        const isPdf = /\.pdf(\?.*)?$/.test(lower);
+        const isDxf = /\.dxf(\?.*)?$/.test(lower);
+        if (isImg) {
+            el.innerHTML = '<img src="'+u+'" class="img-fluid rounded border" alt="preview">';
+            return;
+        }
+        if (isPdf) {
+            el.innerHTML = '<object data="'+u+'" type="application/pdf" width="100%" height="360"><div class="text-muted p-2">No se pudo mostrar el PDF.</div></object>';
+            return;
+        }
+        if (isDxf) {
+            el.innerHTML = '<div style="height:360px; background:#f8f9fa;" class="rounded border d-flex align-items-center justify-content-center">Cargando DXF…</div>';
+            // pequeño delay para asegurar que el div exista
+            setTimeout(function(){ renderDXF(containerId.replace(/^#/,''), u); }, 30);
+            return;
+        }
+        el.innerHTML = '<a href="'+u+'" target="_blank" class="btn btn-outline-secondary btn-sm">Abrir archivo</a>';
+    }
     // Helper: renderizar DXF si hay librerías disponibles
     function renderDXF(containerId, url) {
         const el = document.getElementById(containerId);
@@ -1079,8 +1079,8 @@
             ]
         });
 
-        // Botones de acción (editar/eliminar) existentes
-        $('.btn-accion').on('click', function() {
+        // Botones de acción (editar/eliminar) con delegación para soportar paginación/redraw
+        $(document).on('click', '.btn-accion', function() {
             const action = $(this).attr('title');
             const id = $(this).data('id');
             if (action === 'Editar') {
@@ -1105,12 +1105,18 @@
                                 window.location.reload();
                             });
                         } else {
-                            Swal.fire({ title:'Error', text: (resp && resp.message) ? resp.message : 'No se pudo eliminar', icon:'error' });
+                            const msg = (resp && (resp.message || resp.error)) ? (resp.message || resp.error) : 'No se pudo eliminar';
+                            Swal.fire({ title:'Error', text: msg, icon:'error' });
                         }
                     }).fail(function(xhr){
                         let msg = 'Error al eliminar';
-                        if (xhr && xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
-                        Swal.fire({ title:'Error', text: msg, icon:'error' });
+                        if (xhr && xhr.responseJSON && (xhr.responseJSON.message || xhr.responseJSON.error)) {
+                            msg = xhr.responseJSON.message || xhr.responseJSON.error;
+                        } else if (xhr && typeof xhr.responseText === 'string' && xhr.responseText.trim() !== '') {
+                            msg = xhr.responseText;
+                        }
+                        // Mostrar motivo específico cuando el backend devuelve 409/422 etc.
+                        Swal.fire({ title:'No se pudo eliminar', text: msg, icon:'error' });
                     });
                 });
             }
