@@ -373,37 +373,39 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="formPedidoEditar" action="<?= base_url('modulo1/editar') ?>" method="POST">
+                <?= csrf_field() ?>
                 <div class="modal-body text-dark">
                     <input type="hidden" name="id" id="pe-id" value="">
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
                             <label class="form-label">Folio</label>
-                            <input type="text" class="form-control" name="folio" id="pe-folio">
+                            <input type="text" class="form-control" name="folio" id="pe-folio" readonly>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Fecha</label>
-                            <input type="date" class="form-control" name="fecha" id="pe-fecha">
+                            <input type="date" class="form-control" name="fecha" id="pe-fecha" readonly>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Estatus</label>
-                            <select class="form-select" name="estatus" id="pe-estatus">
+                            <select class="form-select" name="estatus_dummy" id="pe-estatus" disabled>
                                 <option value="Pendiente">Pendiente</option>
                                 <option value="En proceso">En proceso</option>
                                 <option value="Completado">Completado</option>
                                 <option value="Cancelado">Cancelado</option>
                             </select>
+                            <input type="hidden" name="estatus" id="pe-estatus-hidden">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Moneda</label>
-                            <input type="text" class="form-control" name="moneda" id="pe-moneda">
+                            <input type="text" class="form-control" name="moneda" id="pe-moneda" readonly>
                         </div>
                     </div>
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Total</label>
-                            <input type="number" step="0.01" class="form-control" name="total" id="pe-total">
+                            <input type="number" step="0.01" class="form-control" name="total" id="pe-total" readonly>
                         </div>
                     </div>
                     <hr>
@@ -413,15 +415,15 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
                                 <label class="form-label">Nombre</label>
-                                <input type="text" class="form-control" id="pe-cli-nombre" name="cli_nombre">
+                                <input type="text" class="form-control" id="pe-cli-nombre" name="cli_nombre" readonly>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Email</label>
-                                <input type="email" class="form-control" id="pe-cli-email" name="cli_email">
+                                <input type="email" class="form-control" id="pe-cli-email" name="cli_email" readonly>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Telefono</label>
-                                <input type="text" class="form-control" id="pe-cli-telefono" name="cli_telefono">
+                                <input type="text" class="form-control" id="pe-cli-telefono" name="cli_telefono" readonly>
                             </div>
                         </div>
 
@@ -429,31 +431,31 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">Calle</label>
-                                <input type="text" class="form-control" id="pe-dir-calle" name="cli_calle">
+                                <input type="text" class="form-control" id="pe-dir-calle" name="cli_calle" readonly>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">Num. Ext</label>
-                                <input type="text" class="form-control" id="pe-dir-numext" name="cli_numext">
+                                <input type="text" class="form-control" id="pe-dir-numext" name="cli_numext" readonly>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">Num. Int</label>
-                                <input type="text" class="form-control" id="pe-dir-numint" name="cli_numint">
+                                <input type="text" class="form-control" id="pe-dir-numint" name="cli_numint" readonly>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Ciudad</label>
-                                <input type="text" class="form-control" id="pe-dir-ciudad" name="cli_ciudad">
+                                <input type="text" class="form-control" id="pe-dir-ciudad" name="cli_ciudad" readonly>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Estado</label>
-                                <input type="text" class="form-control" id="pe-dir-estado" name="cli_estado">
+                                <input type="text" class="form-control" id="pe-dir-estado" name="cli_estado" readonly>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">País</label>
-                                <input type="text" class="form-control" id="pe-dir-pais" name="cli_pais">
+                                <input type="text" class="form-control" id="pe-dir-pais" name="cli_pais" readonly>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">CP</label>
-                                <input type="text" class="form-control" id="pe-dir-cp" name="cli_cp">
+                                <input type="text" class="form-control" id="pe-dir-cp" name="cli_cp" readonly>
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Resumen</label>
@@ -485,31 +487,32 @@
                         <div class="row g-3 mb-0">
                             <div class="col-md-3">
                                 <label class="form-label">Catalogo</label>
-                                <input type="text" class="form-control" id="pe-dis-codigo" name="dis_codigo">
+                                <input type="text" class="form-control" id="pe-dis-codigo" name="dis_codigo" readonly>
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">Nombre</label>
-                                <input type="text" class="form-control" id="pe-dis-nombre" name="dis_nombre">
+                                <input type="text" class="form-control" id="pe-dis-nombre" name="dis_nombre" readonly>
                             </div>
                             <div class="col-md-12">
                                 <label class="form-label">Descripción</label>
-                                <textarea class="form-control" id="pe-dis-descripcion" name="dis_descripcion" rows="2"></textarea>
+                                <textarea class="form-control" id="pe-dis-descripcion" name="dis_descripcion" rows="2" readonly></textarea>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Versión</label>
-                                <input type="text" class="form-control" id="pe-dis-version" name="dis_version">
+                                <input type="text" class="form-control" id="pe-dis-version" name="dis_version" readonly>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Fecha versión</label>
-                                <input type="date" class="form-control" id="pe-dis-version-fecha" name="dis_version_fecha">
+                                <input type="date" class="form-control" id="pe-dis-version-fecha" name="dis_version_fecha" readonly>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Aprobado</label>
-                                <select class="form-select" id="pe-dis-version-aprobado" name="dis_version_aprobado">
+                                <select class="form-select" id="pe-dis-version-aprobado" name="dis_version_aprobado_dummy" disabled>
                                     <option value="">-</option>
                                     <option value="1">Sí</option>
                                     <option value="0">No</option>
                                 </select>
+                                <input type="hidden" id="pe-dis-version-aprobado-hidden" name="dis_version_aprobado">
                             </div>
                         </div>
                         <div class="row g-3 mb-3 mt-1">
@@ -520,6 +523,10 @@
                             <div class="col-md-3">
                                 <label class="form-label">Cantidad plan</label>
                                 <input type="number" class="form-control" id="pe-op-cantidadPlan" name="op_cantidadPlan" min="1">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Fin plan</label>
+                                <input type="date" class="form-control" id="pe-op-fechaFinPlan" name="op_fechaFinPlan">
                             </div>
                             <input type="hidden" id="pe-dis-version-id" name="disenoVersionId" value="">
                             <input type="hidden" id="pe-id" name="id" value="">
@@ -635,8 +642,8 @@
 
             // Recalcular siempre (permite ver 0.00 si falta alguno)
             const total = cant * precio;
-            if ($('#oc-total').length) { $('#oc-total').prop('readonly', true).val(total.toFixed(2)); }
-            if ($('#pe-total').length) { $('#pe-total').prop('readonly', true).val(total.toFixed(2)); }
+            if ($('#oc-total').length) { $('#oc-total').val(total.toFixed(2)); }
+            if ($('#pe-total').length) { $('#pe-total').val(total.toFixed(2)); }
         }
         const langES = {
             "sProcessing":     "Procesando...",
@@ -1257,6 +1264,7 @@
                 $('#pe-folio').val(data.folio || '');
                 $('#pe-fecha').val(data.fecha || '');
                 $('#pe-estatus').val(data.estatus || 'Pendiente');
+                if ($('#pe-estatus-hidden').length) { $('#pe-estatus-hidden').val($('#pe-estatus').val()); }
                 $('#pe-moneda').val(data.moneda || '');
                 const total = (data.total||'').toString().replace(/,/g,'');
                 $('#pe-total').val(total || '');
@@ -1269,6 +1277,12 @@
                 $('#pe-color').val(data.color || '');
                 $('#pe-materiales').val(data.materiales || '');
                 $('#pe-especificaciones').val(data.especificaciones || '');
+                // Fin plan si viene de la OP
+                if (data.op_fechaFinPlan) {
+                    const fpf = String(data.op_fechaFinPlan);
+                    const d = new Date(fpf);
+                    $('#pe-op-fechaFinPlan').val(isNaN(d) ? fpf.slice(0,10) : d.toISOString().slice(0,10));
+                } else { $('#pe-op-fechaFinPlan').val(''); }
 
                 const cli = data.cliente || {};
                 $('#pe-empresa').text(cli.nombre || (data.empresa||'-'));
@@ -1368,6 +1382,9 @@
                     }
                     const apr = (vAprob === 1 || vAprob === true || vAprob === '1') ? '1' : (vAprob === 0 || vAprob === false || vAprob === '0' ? '0' : '');
                     $('#pe-dis-version-aprobado').val(apr);
+                    if ($('#pe-dis-version-aprobado-hidden').length) { $('#pe-dis-version-aprobado-hidden').val(apr); }
+                    // recalcular total con el nuevo precio y cantidad
+                    setTimeout(recalcTotal, 0);
                     // set hidden version id if exists
                     if ($('#pe-dis-version-id').length && ver && ver.id) {
                         $('#pe-dis-version-id').val(ver.id);
@@ -1474,20 +1491,23 @@
             }).then((result) => {
                 if (!result.isConfirmed) return;
 
-                const fd = new FormData($form[0]);
-                // Forzar envío de total calculado
-                const pePrecio = parseFloat((($('#pe-dis-precio').val()||'')+'').replace(/,/g,'')) || 0;
-                const peCant   = parseFloat((($('#pe-op-cantidadPlan').val()||'')+'').replace(/,/g,'')) || 0;
-                const peTotal  = pePrecio * peCant;
-                fd.set('total', isFinite(peTotal) ? peTotal.toFixed(2) : (($('#pe-total').val()||'').toString().replace(/,/g,'')) );
-                // Asegurar envío de id
-                if (!fd.has('id') && $('#pe-id').length) {
-                    fd.set('id', $('#pe-id').val()||'');
-                }
-                // Asegurar envío de disenoVersionId si existe
-                if (!fd.has('disenoVersionId') && $('#pe-dis-version-id').length) {
-                    fd.set('disenoVersionId', $('#pe-dis-version-id').val()||'');
-                }
+                const fd = new FormData();
+                // Recolectar solo los campos permitidos por backend
+                const idVal = $('#pe-id').val()||'';
+                const verId = $('#pe-dis-version-id').val()||'';
+                const cant  = (parseFloat((($('#pe-op-cantidadPlan').val()||'')+'').replace(/,/g,'')) || 0);
+                const precio= (parseFloat((($('#pe-dis-precio').val()||'')+'').replace(/,/g,'')) || 0);
+                const fin   = $('#pe-op-fechaFinPlan').val()||'';
+                const total = (precio * cant).toFixed(2);
+
+                fd.set('id', idVal);
+                if (verId) fd.set('disenoVersionId', verId);
+                fd.set('op_cantidadPlan', String(cant));
+                if (fin) fd.set('op_fechaFinPlan', fin);
+                fd.set('total', total);
+                // Adjuntar CSRF si existe en el formulario
+                const $csrf = $('#formPedidoEditar input[type="hidden"]').filter(function(){ return this.name && this.name.toLowerCase().startsWith('csrf'); }).first();
+                if ($csrf.length) { fd.set($csrf.attr('name'), $csrf.val()); }
 
                 Swal.showLoading();
                 $.ajax({
@@ -1499,37 +1519,71 @@
                     dataType: 'json',
                     headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept':'application/json' },
                     success: function(resp){
+                        try { console.log('m1 editar payload', Object.fromEntries(fd.entries())); } catch(e) {}
+                        try { console.log('m1 editar resp', resp); } catch(e) {}
                         if (resp && (resp.success === true || resp.ok === true)) {
                             const rowsOC = Number(resp.rowsOC || 0);
                             const rowsOP = Number(resp.rowsOP || 0);
-                            if (rowsOC === 0 && rowsOP === 0) {
-                                Swal.fire({
-                                    icon:'warning',
-                                    title:'Guardado sin cambios',
-                                    html: 'La base no reportó filas afectadas.<br/>Posibles causas:<br/>- Mismos valores que ya tenía.<br/>- El pedido/OP no existe.<br/>- El ID no llegó en POST.<br/><br/>rowsOC: '+rowsOC+' · rowsOP: '+rowsOP,
-                                });
-                                return;
-                            }
-                            Swal.fire({icon:'success', title:'Guardado', text:'OC filas: '+rowsOC+' · OP filas: '+rowsOP}).then(()=>{ location.reload(); });
+                            // Intentar actualizar la fila de la tabla sin recargar
+                            let updatedInTable = false;
+                            try {
+                                const oc = resp.oc || {};
+                                const id = Number(oc.id || ($('#pe-id').val()||0));
+                                const folio = oc.folio || $('#pe-folio').val() || '-';
+                                const fecha = oc.fecha ? (new Date(oc.fecha).toISOString().slice(0,10)) : ($('#pe-fecha').val()||'-');
+                                const estatus = oc.estatus || $('#pe-estatus').val() || 'Pendiente';
+                                const moneda = oc.moneda || $('#pe-moneda').val() || '-';
+                                // Preferir total de respuesta; si no, del input
+                                const total = (oc.total != null) ? parseFloat(oc.total) : (parseFloat((($('#pe-total').val()||'')+'').replace(/,/g,'')) || 0);
+                                const totalFmt = total.toFixed(2);
+                                if (window.jQuery && $.fn.dataTable) {
+                                    const dt = $('#tablaPedidos').DataTable();
+                                    dt.rows().every(function(){
+                                        const data = this.data();
+                                        if (!data) return;
+                                        const firstCell = (Array.isArray(data) ? data[0] : null);
+                                        if (String(firstCell) === String(id)) {
+                                            const empresa = (Array.isArray(data) ? data[1] : '-');
+                                            const acciones = (Array.isArray(data) ? data[7] : '');
+                                            this.data([id, empresa, folio, fecha, estatus, moneda, totalFmt, acciones]);
+                                            updatedInTable = true;
+                                        }
+                                    });
+                                    if (updatedInTable) { dt.draw(false); }
+                                }
+                            } catch(e){ updatedInTable = false; }
+
+                            const msg = 'OC filas: '+rowsOC+' · OP filas: '+rowsOP + (updatedInTable ? ' · Tabla actualizada' : '');
+                            try { document.activeElement && document.activeElement.blur && document.activeElement.blur(); } catch(e) {}
+                            Swal.fire({
+                                icon: (rowsOC===0 && rowsOP===0)?'warning':'success',
+                                title: (rowsOC===0 && rowsOP===0)?'Guardado sin cambios':'Guardado',
+                                text: msg,
+                                didOpen: () => { try { Swal.getConfirmButton()?.focus(); } catch(e) {} }
+                            })
+                                .then(()=>{ if (!updatedInTable) { location.reload(); } });
                         } else if (resp && typeof resp === 'object') {
                             const msg = (resp.message || resp.error || 'Error desconocido');
-                            Swal.fire({icon:'error', title:'Error al actualizar', html: `<pre style="white-space:pre-wrap">${msg}</pre>`});
+                            try { document.activeElement && document.activeElement.blur && document.activeElement.blur(); } catch(e) {}
+                            Swal.fire({icon:'error', title:'Error al actualizar', html: `<pre style="white-space:pre-wrap">${msg}</pre>`, didOpen: () => { try { Swal.getConfirmButton()?.focus(); } catch(e) {} }});
                         } else {
                             // El servidor devolvió HTML (200). Asumimos éxito y recargamos.
                             try {
                                 const parsed = JSON.parse(resp);
                                 if (parsed && (parsed.success === true || parsed.ok === true)) {
-                                    Swal.fire({icon:'success', title:'Guardado'}).then(()=>{ location.reload(); });
+                                    try { document.activeElement && document.activeElement.blur && document.activeElement.blur(); } catch(e) {}
+                                    Swal.fire({icon:'success', title:'Guardado', didOpen: () => { try { Swal.getConfirmButton()?.focus(); } catch(e) {} }}).then(()=>{ location.reload(); });
                                     return;
                                 }
-                            } catch(_) {}
-                            Swal.fire({icon:'success', title:'Guardado'}).then(()=>{ location.reload(); });
+                            } catch (e) {}
+                            // Fallback plano
+                            try { document.activeElement && document.activeElement.blur && document.activeElement.blur(); } catch(e) {}
+                            Swal.fire({icon:'success', title:'Guardado', didOpen: () => { try { Swal.getConfirmButton()?.focus(); } catch(e) {} }}).then(()=>{ location.reload(); });
                         }
                     },
                     error: function(xhr){
                         if (xhr && xhr.status === 200) {
                             Swal.fire({icon:'success', title:'Guardado'}).then(()=>{ location.reload(); });
-                            return;
                         }
                         let msg = 'Error de conexión al actualizar el pedido';
                         try {

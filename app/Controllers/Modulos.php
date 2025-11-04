@@ -1274,7 +1274,8 @@ class Modulos extends BaseController
                 'tallas'           => $this->request->getPost('tallas') ?? null,
                 'color'            => $this->request->getPost('color') ?? null,
                 'fecha_entrega'    => $this->request->getPost('fecha_entrega') ?? null,
-                'estatus'          => $this->request->getPost('estatus') ?? 'Pendiente',
+                // Solo actualizar estatus si viene en POST; no establecer valor por defecto aquí
+                'estatus'          => $this->request->getPost('estatus'),
                 'fecha'            => $this->request->getPost('fecha') ?? null,
                 'folio'            => $this->request->getPost('folio') ?? null,
                 'moneda'           => $this->request->getPost('moneda') ?? null,
@@ -1282,7 +1283,7 @@ class Modulos extends BaseController
                 'progreso'         => $this->request->getPost('progreso') ?? null,
             ];
 
-            // Solo columnas válidas de orden_compra
+            // Solo columnas válidas de orden_compra (normalizar y filtrar)
             $ocData = [
                 'folio'   => $data['folio'],
                 'fecha'   => $data['fecha'],
@@ -1290,6 +1291,30 @@ class Modulos extends BaseController
                 'moneda'  => $data['moneda'],
                 'total'   => $data['total'],
             ];
+            // Normalizar fecha: aceptar dd/mm/yyyy -> yyyy-mm-dd
+            if (!empty($ocData['fecha']) && is_string($ocData['fecha'])) {
+                $f = trim($ocData['fecha']);
+                if (strpos($f, '/') !== false) {
+                    $parts = preg_split('/[\/]/', $f);
+                    if (count($parts) === 3) {
+                        // asume dd/mm/yyyy
+                        $dd = (int)$parts[0]; $mm = (int)$parts[1]; $yy = (int)$parts[2];
+                        if ($dd > 0 && $mm > 0 && $yy > 0) {
+                            $ocData['fecha'] = sprintf('%04d-%02d-%02d', $yy, $mm, $dd);
+                        }
+                    }
+                }
+                // Si tras normalizar queda inválida, no actualizar la fecha
+                if ($ocData['fecha'] === '' || strtolower($ocData['fecha']) === 'invalid date') {
+                    unset($ocData['fecha']);
+                }
+            }
+            // Filtrar cadenas vacías para no sobreescribir con ""
+            foreach (['folio','estatus','moneda'] as $k) {
+                if (!isset($ocData[$k]) || $ocData[$k] === '') { unset($ocData[$k]); }
+            }
+            // Si total es null, no lo enviamos; si es numérico, mantener
+            if ($ocData['total'] === null || $ocData['total'] === '') { unset($ocData['total']); }
 
             // Guardar
             try {
@@ -1309,7 +1334,22 @@ class Modulos extends BaseController
                     // Actualizar OP ligada (última por ordenCompraId) si llegaron campos
                     $opCantidadPlan    = $this->request->getPost('op_cantidadPlan');
                     $disenoVersionId   = $this->request->getPost('disenoVersionId');
-                    if ($opCantidadPlan !== null || $disenoVersionId !== null) {
+                    $opFechaFinPlanRaw = $this->request->getPost('op_fechaFinPlan');
+                    // Normalizar fecha fin plan si viene como dd/mm/yyyy
+                    $opFechaFinPlan = null;
+                    if ($opFechaFinPlanRaw !== null && $opFechaFinPlanRaw !== '') {
+                        $ff = trim((string)$opFechaFinPlanRaw);
+                        if (strpos($ff, '/') !== false) {
+                            $pp = preg_split('/[\/]/', $ff);
+                            if (count($pp) === 3) {
+                                $dd=(int)$pp[0]; $mm=(int)$pp[1]; $yy=(int)$pp[2];
+                                if ($dd>0 && $mm>0 && $yy>0) { $opFechaFinPlan = sprintf('%04d-%02d-%02d', $yy, $mm, $dd); }
+                            }
+                        } else {
+                            $opFechaFinPlan = $ff; // ya en yyyy-mm-dd
+                        }
+                    }
+                    if ($opCantidadPlan !== null || $disenoVersionId !== null || $opFechaFinPlan !== null) {
                         // $db ya definido
                         $op = null;
                         try {
@@ -1323,10 +1363,20 @@ class Modulos extends BaseController
                             $set = [];
                             if ($opCantidadPlan !== null && $opCantidadPlan !== '') { $set['cantidadPlan'] = (int)$opCantidadPlan; }
                             if ($disenoVersionId !== null && (int)$disenoVersionId > 0) { $set['disenoVersionId'] = (int)$disenoVersionId; }
+                            if ($opFechaFinPlan !== null && $opFechaFinPlan !== '') { $set['fechaFinPlan'] = $opFechaFinPlan; }
                             if (!empty($set)) {
-                                try { $db->table('orden_produccion')->where('id', (int)$op['id'])->update($set); $rowsOP = $db->affectedRows(); }
-                                catch (\Throwable $e3) {
-                                    try { $db->table('OrdenProduccion')->where('id', (int)$op['id'])->update($set); $rowsOP = $db->affectedRows(); } catch (\Throwable $e4) {}
+                                // Intentar con variantes de columna para fecha fin plan
+                                $variants = [$set];
+                                if (isset($set['fechaFinPlan'])) {
+                                    $alt1 = $set; $alt1['FechaFinPlan'] = $alt1['fechaFinPlan']; unset($alt1['fechaFinPlan']);
+                                    $alt2 = $set; $alt2['fecha_fin_plan'] = $alt2['fechaFinPlan']; unset($alt2['fechaFinPlan']);
+                                    $variants = [$set, $alt1, $alt2];
+                                }
+                                foreach ($variants as $trySet) {
+                                    try { $db->table('orden_produccion')->where('id', (int)$op['id'])->update($trySet); $rowsOP = max($rowsOP, $db->affectedRows()); }
+                                    catch (\Throwable $e3) {
+                                        try { $db->table('OrdenProduccion')->where('id', (int)$op['id'])->update($trySet); $rowsOP = max($rowsOP, $db->affectedRows()); } catch (\Throwable $e4) { /* siguiente variante */ }
+                                    }
                                 }
                             }
                         } else {
@@ -1337,12 +1387,21 @@ class Modulos extends BaseController
                                 'folio'           => null,
                                 'cantidadPlan'    => ($opCantidadPlan !== null && $opCantidadPlan !== '') ? (int)$opCantidadPlan : null,
                                 'fechaInicioPlan' => null,
-                                'fechaFinPlan'    => null,
+                                'fechaFinPlan'    => ($opFechaFinPlan !== null && $opFechaFinPlan !== '') ? $opFechaFinPlan : null,
                                 'status'          => 'Planeada',
                             ];
                             try { $db->table('orden_produccion')->insert($newOp); $rowsOP = $db->affectedRows(); }
                             catch (\Throwable $e5) {
-                                try { $db->table('OrdenProduccion')->insert($newOp); $rowsOP = $db->affectedRows(); } catch (\Throwable $e6) {}
+                                // Reintentar con variantes de columna para fecha fin plan
+                                $tryNew = $newOp;
+                                if (array_key_exists('fechaFinPlan', $tryNew)) {
+                                    $alt1 = $tryNew; $alt1['FechaFinPlan'] = $alt1['fechaFinPlan']; unset($alt1['fechaFinPlan']);
+                                    $alt2 = $tryNew; $alt2['fecha_fin_plan'] = $alt2['FechaFinPlan'] ?? ($tryNew['fechaFinPlan'] ?? null); unset($alt2['fechaFinPlan']); unset($alt2['FechaFinPlan']);
+                                    try { $db->table('OrdenProduccion')->insert($alt1); $rowsOP = $db->affectedRows(); }
+                                    catch (\Throwable $e6) { try { $db->table('OrdenProduccion')->insert($alt2); $rowsOP = $db->affectedRows(); } catch (\Throwable $e7) {} }
+                                } else {
+                                    try { $db->table('OrdenProduccion')->insert($tryNew); $rowsOP = $db->affectedRows(); } catch (\Throwable $e6) {}
+                                }
                             }
                         }
 
@@ -1547,20 +1606,131 @@ class Modulos extends BaseController
     }
     public function m1_perfilempleado()
     {
-        $empleado = [
-            'nombre' => session()->get('user_name') ?? 'Admin',
-            'email' => session()->get('user_email') ?? 'admin@fabrica.com',
-            'rol' => session()->get('user_role') ?? 'admin',
-            'departamento' => 'Administración',
-            'fecha_ingreso' => '2024-01-15',
-            'telefono' => '+52 555 123 4567',
-        ];
+        $uid = (int)(session()->get('user_id') ?? 0);
+        $empleado = [];
+        try {
+            $db = \Config\Database::connect();
+            // Query principal (snake case)
+            $row = null;
+            try {
+                $row = $db->query(
+                    'SELECT 
+                        e.noEmpleado, e.nombre, e.apellido, e.puesto,
+                        e.email, e.telefono, e.domicilio,
+                        e.fecha_nac, e.curp,
+                        TIMESTAMPDIFF(YEAR, e.fecha_nac, CURDATE()) AS edad,
+                        u.username, u.correo, u.active AS usuario_activo
+                     FROM empleado e INNER JOIN users u ON e.idusuario = u.id
+                     WHERE u.id = ? LIMIT 1', [$uid]
+                )->getRowArray();
+            } catch (\Throwable $e1) { $row = null; }
+            // Variantes por mayúsculas/campos alternos
+            if (!$row) {
+                try {
+                    $row = $db->query(
+                        'SELECT 
+                            e.noEmpleado, e.nombre, e.apellido, e.puesto,
+                            e.email, e.telefono, e.domicilio,
+                            e.fecha_nac, e.curp,
+                            TIMESTAMPDIFF(YEAR, e.fecha_nac, CURDATE()) AS edad,
+                            u.username, u.correo, u.active AS usuario_activo
+                         FROM Empleado e INNER JOIN Users u ON e.idusuario = u.id
+                         WHERE u.id = ? LIMIT 1', [$uid]
+                    )->getRowArray();
+                } catch (\Throwable $e2) { $row = null; }
+            }
+            if ($row) {
+                // Completar faltantes desde sesión (email/puesto)
+                if (!isset($row['email']) || $row['email'] === null || $row['email'] === '') {
+                    $row['email'] = $row['correo']
+                        ?? (string)(session()->get('user_email') ?? '')
+                        ?? (string)(session()->get('correo') ?? '');
+                }
+                if (!isset($row['puesto']) || $row['puesto'] === null || $row['puesto'] === '') {
+                    $row['puesto'] = (string)(session()->get('user_role') ?? session()->get('status') ?? '');
+                }
+                $empleado = $row;
+            }
+        } catch (\Throwable $e) { $empleado = []; }
 
         return view('modulos/perfilempleado', $this->payload([
             'title'      => 'Módulo 1 · Perfil de Empleado',
             'empleado'   => $empleado,
             'notifCount' => 0,
         ]));
+    }
+
+    /**
+     * Guardar datos de empleado del usuario logueado (insert/update).
+     * Entrada POST: nombre, apellido, email, telefono, domicilio, puesto, fecha_nac, curp, noEmpleado
+     * Respuesta JSON { success, updated|inserted }
+     */
+    public function m1_empleado_guardar()
+    {
+        if (strtolower($this->request->getMethod()) !== 'post') {
+            return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Método no permitido']);
+        }
+        $uid = (int)(session()->get('user_id') ?? 0);
+        if ($uid <= 0) {
+            return $this->response->setStatusCode(401)->setJSON(['success' => false, 'message' => 'Sesión no válida']);
+        }
+
+        $in = static function($k, $t='str') {
+            $v = trim((string)service('request')->getPost($k));
+            if ($t === 'date') { return $v === '' ? null : $v; }
+            return $v === '' ? null : $v;
+        };
+        $row = [
+            'noEmpleado' => $in('noEmpleado'),
+            'nombre'     => $in('nombre'),
+            'apellido'   => $in('apellido'),
+            'email'      => $in('email'),
+            'telefono'   => $in('telefono'),
+            'domicilio'  => $in('domicilio'),
+            'puesto'     => $in('puesto'),
+            'fecha_nac'  => $in('fecha_nac','date'),
+            'curp'       => $in('curp'),
+            'activo'     => 1,
+        ];
+
+        $db = \Config\Database::connect();
+        try {
+            // Defaults desde sesión si faltan
+            if (empty($row['noEmpleado'])) {
+                $row['noEmpleado'] = 'EMP0' . $uid;
+            }
+            if (empty($row['email'])) {
+                $row['email'] = (string)(session()->get('user_email') ?? '');
+            }
+            if (empty($row['puesto'])) {
+                $row['puesto'] = (string)(session()->get('user_role') ?? '');
+            }
+            // ¿Existe empleado ligado a este usuario?
+            $emp = null;
+            try { $emp = $db->table('empleado')->where('idusuario', $uid)->get()->getRowArray(); } catch (\Throwable $e) { $emp = null; }
+            if (!$emp) { try { $emp = $db->table('Empleado')->where('idusuario', $uid)->get()->getRowArray(); } catch (\Throwable $e2) { $emp = null; } }
+
+            if ($emp) {
+                // Update
+                $ok = false; $tables = ['empleado','Empleado'];
+                foreach ($tables as $t) {
+                    try { $ok = $db->table($t)->where('idusuario', $uid)->update($row); if ($ok) break; } catch (\Throwable $e) { /* try next */ }
+                }
+                if (!$ok) { throw new \Exception('No se pudo actualizar'); }
+                return $this->response->setJSON(['success' => true, 'updated' => true]);
+            } else {
+                // Insert con vínculo
+                $row['idusuario'] = $uid;
+                $ok = false; $tables = ['empleado','Empleado'];
+                foreach ($tables as $t) {
+                    try { $ok = $db->table($t)->insert($row); if ($ok) break; } catch (\Throwable $e) { /* try next */ }
+                }
+                if (!$ok) { throw new \Exception('No se pudo insertar'); }
+                return $this->response->setJSON(['success' => true, 'inserted' => true]);
+            }
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => $e->getMessage()]);
+        }
     }
 
     /* =========================================================
