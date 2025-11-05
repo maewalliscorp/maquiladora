@@ -1164,48 +1164,13 @@ class Modulos extends BaseController
 
     public function m1_ordenes()
     {
-        // Traer órdenes reales: orden_produccion -> orden_compra -> cliente
-        $db = \Config\Database::connect();
+        // Usar el modelo centralizado para evitar diferencias de esquema
         $ordenes = [];
-
-        // Variante minúsculas
-        $sql = "SELECT 
-                    COALESCE(op.folio, CONCAT('OP-', LPAD(op.id, 4, '0'))) AS op,
-                    c.nombre AS cliente,
-                    d.nombre AS diseno,
-                    op.fechaInicioPlan AS ini,
-                    op.fechaFinPlan AS fin,
-                    op.status AS estatus
-                FROM orden_produccion op
-                LEFT JOIN orden_compra oc ON oc.id = op.ordenCompraId
-                LEFT JOIN cliente c ON c.id = oc.clienteId
-                LEFT JOIN diseno_version dv ON dv.id = op.disenoVersionId
-                LEFT JOIN diseno d ON d.id = dv.disenoId
-                WHERE op.status IS NULL OR UPPER(op.status) <> 'COMPLETADA'
-                ORDER BY op.fechaInicioPlan DESC, op.id DESC";
         try {
-            $ordenes = $db->query($sql)->getResultArray();
+            $model = new \App\Models\OrdenProduccionModel();
+            $ordenes = $model->getListado();
         } catch (\Throwable $e) {
-            // Variante con mayúsculas en nombres de tabla
-            $sql2 = "SELECT 
-                        COALESCE(op.folio, CONCAT('OP-', LPAD(op.id, 4, '0'))) AS op,
-                        c.nombre AS cliente,
-                        d.nombre AS diseno,
-                        op.fechaInicioPlan AS ini,
-                        op.fechaFinPlan AS fin,
-                        op.status AS estatus
-                    FROM OrdenProduccion op
-                    LEFT JOIN OrdenCompra oc ON oc.id = op.ordenCompraId
-                    LEFT JOIN Cliente c ON c.id = oc.clienteId
-                    LEFT JOIN DisenoVersion dv ON dv.id = op.disenoVersionId
-                    LEFT JOIN Diseno d ON d.id = dv.disenoId
-                    WHERE op.status IS NULL OR UPPER(op.status) <> 'COMPLETADA'
-                    ORDER BY op.fechaInicioPlan DESC, op.id DESC";
-            try {
-                $ordenes = $db->query($sql2)->getResultArray();
-            } catch (\Throwable $e2) {
-                $ordenes = [];
-            }
+            $ordenes = [];
         }
 
         return view('modulos/m1_ordenes', $this->payload([

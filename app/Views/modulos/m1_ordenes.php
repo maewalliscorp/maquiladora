@@ -195,6 +195,7 @@
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         $(function(){
             const langES = {
@@ -212,6 +213,11 @@
             };
             const fecha = new Date().toISOString().slice(0,10);
             const fileName = 'ordenes_produccion_' + fecha;
+
+            function toLocalInput(dt){
+                const pad = n => String(n).padStart(2,'0');
+                return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate())+'T'+pad(dt.getHours())+':'+pad(dt.getMinutes());
+            }
 
             // DataTable + Botones
             $('#tablaOrdenes').DataTable({
@@ -240,6 +246,17 @@
                 $modal.find('#asg-opid').text(opId);
                 const $list = $modal.find('#asg-disponibles-list');
                 const $tbody = $modal.find('#asg-tabla tbody');
+                // Prefijar Desde con ahora
+                try { $modal.find('#asg-desde').val(toLocalInput(new Date())); } catch(e) {}
+                // Prefijar Hasta con fechaFinPlan de la OP
+                $.getJSON('<?= base_url('modulo1/ordenes') ?>/' + opId + '/json?t=' + Date.now())
+                    .done(function(det){
+                        const fin = det && (det.fechaFinPlan || det.fin);
+                        if (fin) {
+                            const d = new Date(String(fin).replace(' ', 'T'));
+                            if (!isNaN(d)) { try { $modal.find('#asg-hasta').val(toLocalInput(d)); } catch(e) {} }
+                        }
+                    });
                 $list.html('<div class="text-muted">Cargando empleados...</div>');
                 $tbody.html('<tr><td colspan="5" class="text-center text-muted">Cargando...</td></tr>');
                 $.getJSON('<?= base_url('modulo1/ordenes') ?>/' + opId + '/asignaciones?t=' + Date.now())
@@ -313,6 +330,7 @@
             });
 
             $(document).on('click', '#asg-btn-assign-selected', function(){
+                const $btn = $(this);
                 const $modal = $('#opAsignacionesModal');
                 const opId = $modal.data('opid');
                 const desde = $modal.find('#asg-desde').val() || '';
@@ -320,38 +338,75 @@
                 const empleados = $('#asg-disponibles-list .asg-chk:checked')
                     .map(function(){ return parseInt($(this).val(),10); }).get()
                     .filter(n=>!isNaN(n) && n>0);
-                if (!opId || empleados.length===0){ alert('Seleccione al menos un empleado.'); return; }
+                if (!opId || empleados.length===0){
+                    Swal.fire({icon:'info', title:'Seleccione empleados', text:'Seleccione al menos un empleado para asignar.'});
+                    return;
+                }
                 const url = empleados.length > 1
                     ? '<?= base_url('modulo1/ordenes/asignaciones/agregar-multiple') ?>'
                     : '<?= base_url('modulo1/ordenes/asignaciones/agregar') ?>';
                 const payload = empleados.length > 1
                     ? { opId, empleados, desde, hasta }
                     : { opId, empleadoId: empleados[0], desde, hasta };
-                $.ajax({ url, method: 'POST', data: payload, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                    .done(function(){
-                        cargarAsignaciones(opId);
-                    })
-                    .fail(function(xhr){
-                        alert('No se pudo asignar: ' + (xhr?.status||''));
-                        console.error('asignar fail', xhr?.status, xhr?.responseText);
-                    });
+
+                Swal.fire({
+                    title: 'Confirmar asignación',
+                    text: `Asignar ${empleados.length} empleado(s) a la OP ${opId}?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, asignar',
+                    cancelButtonText: 'Cancelar'
+                }).then(function(result){
+                    if (!result.isConfirmed) return;
+                    $btn.prop('disabled', true);
+                    Swal.fire({title:'Asignando...', allowOutsideClick:false, allowEscapeKey:false, didOpen:()=>Swal.showLoading()});
+                    $.ajax({ url, method: 'POST', data: payload, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .done(function(){
+                            Swal.fire({icon:'success', title:'Asignación exitosa', timer:1200, showConfirmButton:false});
+                            cargarAsignaciones(opId);
+                        })
+                        .fail(function(xhr){
+                            Swal.fire({icon:'error', title:'No se pudo asignar', text: 'HTTP ' + (xhr?.status||'')});
+                            console.error('asignar fail', xhr?.status, xhr?.responseText);
+                        })
+                        .always(function(){
+                            $btn.prop('disabled', false);
+                        });
+                });
             });
 
             $(document).on('click', '.asg-del', function(){
-                const asignacionId = $(this).data('id');
+                const $btn = $(this);
+                const asignacionId = $btn.data('id');
                 const opId = $('#opAsignacionesModal').data('opid');
                 if (!asignacionId || !opId) return;
-                if (!confirm('¿Eliminar esta asignación?')) return;
-                $.ajax({
-                    url: '<?= base_url('modulo1/ordenes/asignaciones/eliminar') ?>',
-                    method: 'POST',
-                    data: { asignacionId },
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                }).done(function(){
-                    cargarAsignaciones(opId);
-                }).fail(function(xhr){
-                    alert('No se pudo eliminar: ' + (xhr?.status||''));
-                    console.error('eliminar fail', xhr?.status, xhr?.responseText);
+                Swal.fire({
+                    title: '¿Eliminar asignación?',
+                    text: 'Esta acción no se puede deshacer.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
+                }).then(function(res){
+                    if (!res.isConfirmed) return;
+                    $btn.prop('disabled', true);
+                    Swal.fire({title:'Eliminando...', allowOutsideClick:false, allowEscapeKey:false, didOpen:()=>Swal.showLoading()});
+                    $.ajax({
+                        url: '<?= base_url('modulo1/ordenes/asignaciones/eliminar') ?>',
+                        method: 'POST',
+                        data: { asignacionId },
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    }).done(function(){
+                        Swal.fire({icon:'success', title:'Asignación eliminada', timer:1100, showConfirmButton:false});
+                        cargarAsignaciones(opId);
+                    }).fail(function(xhr){
+                        Swal.fire({icon:'error', title:'No se pudo eliminar', text:'HTTP ' + (xhr?.status||'')});
+                        console.error('eliminar fail', xhr?.status, xhr?.responseText);
+                    }).always(function(){
+                        $btn.prop('disabled', false);
+                    });
                 });
             });
 

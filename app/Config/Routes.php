@@ -127,9 +127,9 @@ $routes->group('modulo1', [], function ($routes) {
     // Endpoints para modales
     $routes->get('ordenes/folio/(:segment)/json', 'Produccion::orden_json_folio/$1');
     $routes->get('ordenes/(:num)/asignaciones',   'Produccion::asignaciones/$1');
-    $routes->post('ordenes/asignaciones/agregar', 'Produccion::asignaciones_agregar');
-    $routes->post('ordenes/asignaciones/agregar-multiple', 'Produccion::asignaciones_agregar_multiple');
-    $routes->post('ordenes/asignaciones/eliminar',         'Produccion::asignaciones_eliminar');
+    $routes->match(['post','options'],'ordenes/asignaciones/agregar',           'Produccion::asignaciones_agregar');
+    $routes->match(['post','options'],'ordenes/asignaciones/agregar-multiple',  'Produccion::asignaciones_agregar_multiple');
+    $routes->match(['post','options'],'ordenes/asignaciones/eliminar',          'Produccion::asignaciones_eliminar');
 
     // Evaluación
     $routes->get('evaluar/(:num)',      'Modulos::m1_evaluar/$1');

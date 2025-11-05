@@ -149,6 +149,7 @@ class EmpleadoModel extends Model
         $sql = "SELECT e.id, e.noEmpleado, e.nombre, e.apellido, e.puesto
                 FROM empleado e
                 WHERE e.activo = 1
+                  AND e.puesto = 'Empleado'
                   AND e.id NOT IN (
                       SELECT at.empleadoId FROM asignacion_tarea at WHERE at.ordenProduccionId = ?
                   )
@@ -173,6 +174,7 @@ class EmpleadoModel extends Model
         $sql = "SELECT e.id, e.noEmpleado, e.nombre, e.apellido, e.puesto
                 FROM empleado e
                 WHERE e.activo = 1
+                  AND e.puesto = 'Empleado'
                   AND e.id NOT IN (
                       SELECT at.empleadoId FROM asignacion_tarea at WHERE at.ordenProduccionId = ?
                   )" . $whereLike . "

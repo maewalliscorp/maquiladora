@@ -121,9 +121,9 @@ class Produccion extends BaseController
 
     public function asignaciones_agregar()
     {
-        if ($this->request->getMethod() !== 'post') {
-            return $this->response->setStatusCode(405)->setJSON(['error'=>'Método no permitido']);
-        }
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') { return $this->response->setJSON(['ok'=>true]); }
+        if ($method !== 'post') { return $this->response->setStatusCode(405)->setJSON(['error'=>'Método no permitido']); }
         $opId = (int)($this->request->getPost('opId') ?? 0);
         $empleadoId = (int)($this->request->getPost('empleadoId') ?? 0);
         $desde = $this->request->getPost('desde') ?: null;
@@ -139,9 +139,9 @@ class Produccion extends BaseController
 
     public function asignaciones_agregar_multiple()
     {
-        if ($this->request->getMethod() !== 'post') {
-            return $this->response->setStatusCode(405)->setJSON(['error'=>'Método no permitido']);
-        }
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') { return $this->response->setJSON(['ok'=>true]); }
+        if ($method !== 'post') { return $this->response->setStatusCode(405)->setJSON(['error'=>'Método no permitido']); }
         $opId = (int)($this->request->getPost('opId') ?? 0);
         $empleados = $this->request->getPost('empleados'); // array de IDs
         $desde = $this->request->getPost('desde') ?: null;
@@ -164,9 +164,9 @@ class Produccion extends BaseController
 
     public function asignaciones_eliminar()
     {
-        if ($this->request->getMethod() !== 'post') {
-            return $this->response->setStatusCode(405)->setJSON(['error'=>'Método no permitido']);
-        }
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') { return $this->response->setJSON(['ok'=>true]); }
+        if ($method !== 'post') { return $this->response->setStatusCode(405)->setJSON(['error'=>'Método no permitido']); }
         $asignacionId = (int)($this->request->getPost('asignacionId') ?? 0);
         if ($asignacionId<=0) return $this->response->setStatusCode(400)->setJSON(['error'=>'Parámetro inválido']);
         $asigModel = new AsignacionTareaModel();
