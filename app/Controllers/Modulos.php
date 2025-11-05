@@ -1647,7 +1647,14 @@ class Modulos extends BaseController
                         ?? (string)(session()->get('correo') ?? '');
                 }
                 if (!isset($row['puesto']) || $row['puesto'] === null || $row['puesto'] === '') {
-                    $row['puesto'] = (string)(session()->get('user_role') ?? session()->get('status') ?? '');
+                    $primary = session()->get('primary_role');
+                    $rnames  = session()->get('role_names');
+                    $row['puesto'] = (string)(
+                        ($primary ?: (is_array($rnames) && isset($rnames[0]) ? $rnames[0] : null))
+                        ?? session()->get('user_role')
+                        ?? session()->get('status')
+                        ?? ''
+                    );
                 }
                 $empleado = $row;
             }
@@ -1703,7 +1710,14 @@ class Modulos extends BaseController
                 $row['email'] = (string)(session()->get('user_email') ?? '');
             }
             if (empty($row['puesto'])) {
-                $row['puesto'] = (string)(session()->get('user_role') ?? '');
+                $primary = session()->get('primary_role');
+                $rnames  = session()->get('role_names');
+                $row['puesto'] = (string)(
+                    ($primary ?: (is_array($rnames) && isset($rnames[0]) ? $rnames[0] : null))
+                    ?? session()->get('user_role')
+                    ?? session()->get('status')
+                    ?? ''
+                );
             }
             // ¿Existe empleado ligado a este usuario?
             $emp = null;

@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', function(){
   // Prefill modal with current empleado (si existe)
   const data = <?php echo json_encode($empleado ?? []); ?>;
   const sessEmail  = '<?= esc(session()->get('user_email') ?? session()->get('correo') ?? '') ?>';
-  const sessPuesto = '<?= esc(session()->get('user_role') ?? session()->get('status') ?? '') ?>';
+  const sessPuesto = '<?= esc((session()->get('primary_role') ?? ((($tmp=session()->get('role_names')) && is_array($tmp) && isset($tmp[0])) ? $tmp[0] : null)) ?? session()->get('user_role') ?? session()->get('status') ?? '') ?>';
   const sessUid    = '<?= esc((string)(session()->get('user_id') ?? '')) ?>';
   let mode = 'edit'; // 'edit' | 'add'
   function fillForm(){
