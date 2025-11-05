@@ -26,9 +26,9 @@ class Database extends Config
      */
     public array $default = [
         'DSN'          => '',
-        'hostname'     => 'yamanote.proxy.rlwy.net',
+        'hostname'     => 'crossover.proxy.rlwy.net',
         'username'     => 'root',
-        'password'     => 'vCVyFjIxCVpoHSmxYmDXpxgHqrCiLwjT',
+        'password'     => 'SaSXBwEmVZTzZwGueNMNaPpEGDDnBEoS',
         'database'     => 'railway',
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
@@ -41,7 +41,7 @@ class Database extends Config
         'compress'     => false,
         'strictOn'     => false,
         'failover'     => [],
-        'port'         => 29810,
+        'port'         => 39515,
         'numberNative' => false,
         'foundRows'    => false,
         'dateFormat'   => [
