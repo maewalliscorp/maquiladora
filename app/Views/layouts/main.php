@@ -296,9 +296,14 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                         <?php if ($secMuestrasInspeccion && $secIncidencias): ?>
                             <div class="dropdown-divider"></div><?php endif; ?>
 
-                        <?php if (can('menu.incidencias')): ?><a class="dropdown-item"
-                                                                 href="<?= esc(base_url('modulo3/incidencias')) ?>"><i
-                                        class="bi bi-exclamation-triangle me-2"></i>Incidencias</a><?php endif; ?>
+                        <?php if (can('menu.incidencias')): ?>
+                            <?php $roleName = current_role_name(); $roleNorm = $roleName ? mb_strtolower(trim($roleName)) : ''; ?>
+                            <?php if ($roleNorm === 'empleado'): ?>
+                                <a class="dropdown-item js-open-incidencia-modal" href="#"><i class="bi bi-exclamation-triangle me-2"></i>Incidencias</a>
+                            <?php else: ?>
+                                <a class="dropdown-item" href="<?= esc(base_url('modulo3/incidencias')) ?>"><i class="bi bi-exclamation-triangle me-2"></i>Incidencias</a>
+                            <?php endif; ?>
+                        <?php endif; ?>
 
                         <?php if ($secIncidencias && $secPlanificacion): ?>
                             <div class="dropdown-divider"></div><?php endif; ?>
@@ -400,6 +405,26 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                 // Reemplaza la tabla por el wrapper y añade la tabla dentro del wrapper
                 parent.replaceChild(wrapper, tbl);
                 wrapper.appendChild(tbl);
+            });
+
+            // Abrir modal de incidencias en cuentas de Empleado
+            document.addEventListener('click', async (ev) => {
+                const a = ev.target.closest('.js-open-incidencia-modal');
+                if (!a) return;
+                ev.preventDefault();
+                try {
+                    const url = '<?= esc(base_url('modulo3/incidencias/modal')) ?>' + '?t=' + Date.now();
+                    const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                    const html = await res.text();
+                    let wrap = document.getElementById('incidencias-modal-wrap');
+                    if (!wrap) { wrap = document.createElement('div'); wrap.id = 'incidencias-modal-wrap'; document.body.appendChild(wrap); }
+                    wrap.innerHTML = html;
+                    const modalEl = document.getElementById('incidenciaModal');
+                    if (window.bootstrap && modalEl) {
+                        const m = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+                        m.show();
+                    }
+                } catch (e) { console.error('Error cargando modal incidencias', e); }
             });
         });
 

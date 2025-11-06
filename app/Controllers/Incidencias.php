@@ -71,4 +71,22 @@ class Incidencias extends BaseController
         (new IncidenciaModel())->delete((int)$id);
         return redirect()->back()->with('ok','Incidencia eliminada.');
     }
+
+    public function modal()
+    {
+        // Catálogos mínimos para el modal de alta
+        $empleados = (new EmpleadoModel())
+            ->select('id,nombre,apellido')
+            ->where('activo', 1)
+            ->orderBy('nombre','ASC')->findAll();
+
+        $ops = (new OrdenProduccionModel())
+            ->select('id,folio')
+            ->orderBy('folio','DESC')->findAll();
+
+        return view('modulos/incidencias_modal', [
+            'empleados' => $empleados,
+            'ops'       => $ops,
+        ]);
+    }
 }

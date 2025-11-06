@@ -121,6 +121,8 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->get('ordenes-produccion',   'Produccion::ordenes');
     $routes->post('ordenes/estatus',     'Produccion::actualizarEstatus');
     $routes->get('ordenes/(:num)/json',  'Produccion::orden_json/$1');
+    // Tareas del empleado (producción)
+    $routes->get('produccion/tareas',    'Produccion::tareas_empleado_json');
     // Crear pedido (OC + OP)
     $routes->post('pedidos/crear',       'Modulos::m1_pedidos_crear', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Calidad,Envios']);
 
@@ -200,6 +202,9 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
         $r->post('ocs/(:num)/editar',            'Mrp::editarOc/$1',            ['filter' => 'auth:Administrador,Jefe,Almacenista']);
         $r->get ('ocs/(:num)',                   'Mrp::verOc/$1',               ['filter' => 'auth:Administrador,Jefe,Almacenista']);
     });
+
+    // Incidencias - modal ligero
+    $routes->get ('incidencias/modal', 'Incidencias::modal', ['filter' => 'auth:Administrador,Jefe,Empleado,Almacenista,Calidad,Inspector,Diseñador']);
 
     // ===== ALIAS Calidad (Desperdicios & Reprocesos) bajo /modulo3 =====
     $routes->get ('desperdicios',                 'Calidad::desperdicios', ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);

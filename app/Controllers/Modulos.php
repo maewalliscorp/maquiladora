@@ -1182,9 +1182,22 @@ class Modulos extends BaseController
 
     public function m1_produccion()
     {
+        $empleadoId = null;
+        try {
+            $userId = (int)(session()->get('user_id') ?? 0);
+            if ($userId > 0) {
+                $emp = (new \App\Models\EmpleadoModel())
+                    ->where('idusuario', $userId)
+                    ->select('id')
+                    ->first();
+                if ($emp && isset($emp['id'])) { $empleadoId = (int)$emp['id']; }
+            }
+        } catch (\Throwable $e) { $empleadoId = null; }
+
         return view('modulos/produccion', $this->payload([
-            'title'      => 'Módulo 1 · Producción',
-            'notifCount' => 0,
+            'title'       => 'Módulo 1 · Producción',
+            'notifCount'  => 0,
+            'empleadoId'  => $empleadoId,
         ]));
     }
 
