@@ -45,7 +45,8 @@ class Inspeccion extends BaseController
                 'inspeccionId' => $row['inspeccionId'] ?? '',
                 'numero_inspeccion' => 'INSP-' . str_pad($row['inspeccionId'], 5, '0', STR_PAD_LEFT),
                 'ordenProduccionId' => $row['ordenProduccionId'] ?? 'N/A',
-                'puntoInspeccionId' => $row['punto_inspeccion'] ?? 'N/A',
+                // Usar el ID real del punto de inspección (no el texto)
+                'puntoInspeccionId' => $row['puntoInspeccionId'] ?? null,
                 'inspectorId' => $row['inspectorId'] ?? 'N/A',
                 'fecha' => $row['fecha'] ?? null,
                 'resultado' => $row['resultado'] ?? 'Pendiente',
@@ -117,49 +118,128 @@ class Inspeccion extends BaseController
 
     public function actualizarPunto()
     {
-        if (!$this->request->isAJAX()) {
+        try {
+            if (!$this->request->isAJAX()) {
+                return $this->response->setStatusCode(405)->setJSON([
+                    'success' => false,
+                    'message' => 'Solicitud no válida'
+                ]);
+            }
+
+            $idRaw = $this->request->getPost('id');
+            $puntoRaw = $this->request->getPost('puntoInspeccionId');
+            $id = (int)$idRaw;
+            $puntoInspeccionId = (int)$puntoRaw;
+
+            if ($id <= 0 || $puntoInspeccionId <= 0) {
+                return $this->response->setStatusCode(400)->setJSON([
+                    'success' => false,
+                    'message' => 'Datos inválidos'
+                ]);
+            }
+
+            $db = \Config\Database::connect();
+            $punto = $db->table('punto_inspeccion')
+                ->select('tipo')
+                ->where('id', $puntoInspeccionId)
+                ->get()
+                ->getRowArray();
+
+            if (!$punto) {
+                return $this->response->setStatusCode(404)->setJSON([
+                    'success' => false,
+                    'message' => 'Punto de inspección no encontrado'
+                ]);
+            }
+
+            $ok = $db->table('inspeccion')
+                ->where('id', $id)
+                ->update([
+                    'puntoInspeccionId' => $puntoInspeccionId,
+                ]);
+
+            if (!$ok) {
+                $err = $db->error();
+                $msg = $err['message'] ?? 'Error al actualizar';
+                return $this->response->setStatusCode(500)->setJSON([
+                    'success' => false,
+                    'message' => $msg
+                ]);
+            }
+
             return $this->response->setJSON([
+                'success' => true,
+                'punto_tipo' => $punto['tipo']
+            ]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
                 'success' => false,
-                'message' => 'Solicitud no válida'
+                'message' => 'Excepción: ' . $e->getMessage()
             ]);
         }
+    }
 
-        $id = $this->request->getPost('id');
-        $puntoInspeccionId = $this->request->getPost('puntoInspeccionId');
-
-        if (empty($id) || empty($puntoInspeccionId)) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Datos incompletos'
-            ]);
+    /**
+     * ===== CRUD PUNTOS DE INSPECCIÓN =====
+     */
+    public function puntosJson()
+    {
+        $db = \Config\Database::connect();
+        try {
+            $rows = $db->table('punto_inspeccion')->select('id, tipo, criterio')->orderBy('id','ASC')->get()->getResultArray();
+            return $this->response->setJSON(['success'=>true, 'data'=>$rows]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['success'=>false, 'message'=>$e->getMessage()]);
         }
+    }
 
-        // Obtener el tipo de punto de inspección
-        $punto = $this->db->table('punto_inspeccion')
-            ->select('tipo')
-            ->where('id', $puntoInspeccionId)
-            ->get()
-            ->getRowArray();
-
-        if (!$punto) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Punto de inspección no encontrado'
-            ]);
+    public function puntoCrear()
+    {
+        if (!$this->request->isAJAX()) { return $this->response->setStatusCode(405)->setJSON(['success'=>false,'message'=>'Método no permitido']); }
+        $tipo = trim((string)($this->request->getPost('tipo') ?? ''));
+        $criterio = trim((string)($this->request->getPost('criterio') ?? '')) ?: null;
+        if ($tipo === '') { return $this->response->setStatusCode(422)->setJSON(['success'=>false,'message'=>'El campo tipo es requerido']); }
+        $db = \Config\Database::connect();
+        try {
+            $ok = $db->table('punto_inspeccion')->insert(['tipo'=>$tipo, 'criterio'=>$criterio]);
+            if (!$ok) { $err = $db->error(); throw new \Exception($err['message'] ?? 'No se pudo crear'); }
+            $id = (int)$db->insertID();
+            return $this->response->setJSON(['success'=>true, 'data'=>['id'=>$id,'tipo'=>$tipo,'criterio'=>$criterio]]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['success'=>false, 'message'=>$e->getMessage()]);
         }
+    }
 
-        // Actualizar la inspección
-        $this->db->table('inspeccion')
-            ->where('id', $id)
-            ->update([
-                'puntoInspeccionId' => $puntoInspeccionId,
-                'fecha_actualizacion' => date('Y-m-d H:i:s')
-            ]);
+    public function puntoEditar()
+    {
+        if (!$this->request->isAJAX()) { return $this->response->setStatusCode(405)->setJSON(['success'=>false,'message'=>'Método no permitido']); }
+        $id = (int)($this->request->getPost('id') ?? 0);
+        $tipo = trim((string)($this->request->getPost('tipo') ?? ''));
+        $criterio = trim((string)($this->request->getPost('criterio') ?? '')) ?: null;
+        if ($id<=0 || $tipo==='') { return $this->response->setStatusCode(422)->setJSON(['success'=>false,'message'=>'Datos inválidos']); }
+        $db = \Config\Database::connect();
+        try {
+            $ok = $db->table('punto_inspeccion')->where('id',$id)->update(['tipo'=>$tipo,'criterio'=>$criterio]);
+            if (!$ok) { $err = $db->error(); throw new \Exception($err['message'] ?? 'No se pudo actualizar'); }
+            return $this->response->setJSON(['success'=>true]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['success'=>false, 'message'=>$e->getMessage()]);
+        }
+    }
 
-        return $this->response->setJSON([
-            'success' => true,
-            'punto_tipo' => $punto['tipo']
-        ]);
+    public function puntoEliminar()
+    {
+        if (!$this->request->isAJAX()) { return $this->response->setStatusCode(405)->setJSON(['success'=>false,'message'=>'Método no permitido']); }
+        $id = (int)($this->request->getPost('id') ?? 0);
+        if ($id<=0) { return $this->response->setStatusCode(422)->setJSON(['success'=>false,'message'=>'ID inválido']); }
+        $db = \Config\Database::connect();
+        try {
+            $ok = $db->table('punto_inspeccion')->where('id',$id)->delete();
+            if (!$ok) { $err = $db->error(); throw new \Exception($err['message'] ?? 'No se pudo eliminar'); }
+            return $this->response->setJSON(['success'=>true]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['success'=>false, 'message'=>$e->getMessage()]);
+        }
     }
 
     public function guardar()
@@ -280,6 +360,11 @@ class Inspeccion extends BaseController
         // Obtener los datos del formulario
         $data = $this->request->getPost();
         $defectos = json_decode($this->request->getPost('defectos') ?? '[]', true);
+        $conReproceso = (int)($this->request->getPost('con_reproceso') ?? 0) === 1;
+        $accionReproceso = trim((string)($this->request->getPost('accion_reproceso') ?? '')) ?: null;
+        $cantidadReproceso = $this->request->getPost('cantidad_reproceso');
+        $cantidadReproceso = ($cantidadReproceso === '' || $cantidadReproceso === null) ? null : (int)$cantidadReproceso;
+        $fechaReproceso = trim((string)($this->request->getPost('fecha_reproceso') ?? '')) ?: null;
 
         // Validar los datos
         $rules = [
@@ -295,27 +380,45 @@ class Inspeccion extends BaseController
             ])->setStatusCode(400);
         }
 
-        // Validar que si es rechazado, tenga al menos un defecto
-        if (($data['resultado'] === 'rechazado') && empty($defectos)) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Debe registrar al menos un defecto para una inspección rechazada'
-            ])->setStatusCode(400);
-        }
+        // Defectos opcionales: no bloquear guardado si están vacíos
 
         $db = \Config\Database::connect();
         $db->transStart();
 
         try {
-            // Actualizar la inspección
+            // Actualizar la inspección (estatus, observaciones, fecha)
             $model->update($id, [
                 'resultado'     => $data['resultado'],
                 'observaciones' => $data['observaciones'] ?? null,
                 'fecha'         => $data['fecha'],
             ]);
 
-            // Si hay defectos, guardarlos
-            if (!empty($defectos) && $data['resultado'] === 'rechazado') {
+            // Guardar/actualizar reproceso según toggle
+            if ($conReproceso) {
+                // upsert reproceso por inspeccionId
+                $rowRep = $db->table('reproceso')->where('inspeccionId', $id)->get()->getRowArray();
+                $payloadRep = [
+                    'accion' => $accionReproceso,
+                    'cantidad' => $cantidadReproceso ?? 0,
+                    'fecha' => $fechaReproceso,
+                ];
+                if ($rowRep) {
+                    $db->table('reproceso')->where('inspeccionId', $id)->update($payloadRep);
+                } else {
+                    $payloadRep['inspeccionId'] = $id;
+                    $db->table('reproceso')->insert($payloadRep);
+                }
+            } else {
+                // Si no hay reproceso, limpiar valores
+                $db->table('reproceso')->where('inspeccionId', $id)->update([
+                    'accion' => null,
+                    'cantidad' => 0,
+                    'fecha' => null,
+                ]);
+            }
+
+            // Si hay defectos (opcionales), guardarlos cuando venga rechazado
+            if ($conReproceso && !empty($defectos) && $data['resultado'] === 'rechazado') {
                 // Eliminar defectos existentes
                 $db->table('inspeccion_defecto')->where('inspeccion_id', $id)->delete();
 

@@ -71,7 +71,9 @@
     <div class="d-flex align-items-center mb-4">
         <h1 class="me-3">Inspecciones</h1>
         <span class="badge bg-info">Calidad</span>
-
+        <button type="button" id="btnPuntosInspeccion" class="btn btn-primary ms-auto">
+            <i class="fas fa-list-ul me-1"></i> Puntos de Inspección
+        </button>
     </div>
 
 <?php if (session()->getFlashdata('success')): ?>
@@ -113,7 +115,7 @@
                                         style="min-width: 150px;">
                                     <?php foreach ($puntosInspeccion as $punto): ?>
                                         <option value="<?= $punto['id'] ?>"
-                                                <?= (($item['puntoInspeccionId'] ?? '') == $punto['tipo']) ? 'selected' : '' ?>>
+                                                <?= (($item['puntoInspeccionId'] ?? '') == ($punto['id'] ?? '')) ? 'selected' : '' ?>>
                                             <?= esc($punto['tipo']) ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -175,12 +177,6 @@
                                         data-fecha-reproceso="<?= $item['fechaReproceso'] ?? '' ?>">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button type="button"
-                                        class="btn btn-sm btn-outline-danger btn-eliminar"
-                                        title="Eliminar"
-                                        data-id="<?= $item['inspeccionId'] ?? $item['id'] ?>">
-                                    <i class="fas fa-trash"></i>
-                                </button>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -192,6 +188,22 @@
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <!-- Lista oculta de Puntos de Inspección para mostrar en Swal -->
+    <div id="_listaPuntosHidden" class="d-none">
+        <ul class="list-group text-start">
+            <?php if (!empty($puntosInspeccion)): ?>
+                <?php foreach ($puntosInspeccion as $p): ?>
+                    <li class="list-group-item d-flex align-items-center">
+                        <span class="badge bg-secondary me-2">#<?= esc($p['id']) ?></span>
+                        <span><?= esc($p['tipo']) ?></span>
+                    </li>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <li class="list-group-item">No hay puntos configurados</li>
+            <?php endif; ?>
+        </ul>
     </div>
 
     <!-- Modal de Evaluación -->
@@ -249,7 +261,12 @@
                     </div>
 
                     <!-- Sección de Reproceso -->
-                    <div class="mb-3">
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="toggleReproceso">
+                        <label class="form-check-label" for="toggleReproceso">Registrar reproceso</label>
+                        <input type="hidden" name="con_reproceso" id="conReproceso" value="0">
+                    </div>
+                    <div class="mb-3 reproceso-section" style="display:none;">
                         <h5 class="fw-bold mb-3">Información de Reproceso</h5>
                         <input type="hidden" name="reproceso_id" id="reprocesoId">
                         <div class="mb-3">
@@ -262,7 +279,7 @@
                             <div class="col-md-6 mb-3">
                                 <label for="cantidadReproceso" class="form-label">Cantidad</label>
                                 <input type="number" class="form-control" id="cantidadReproceso"
-                                       name="cantidad_reproceso" min="1" value="0">
+                                       name="cantidad_reproceso" min="0" value="">
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="fechaReproceso" class="form-label">Fecha de Reproceso</label>
@@ -272,6 +289,7 @@
                     </div>
 
                     <input type="hidden" name="defectos" id="defectosJson" value="[]">
+                    <input type="hidden" name="fecha" id="fecha_inspeccion" value="<?= date('Y-m-d') ?>">
                 </div>
 
                 <!-- Botones en el footer correcto -->
@@ -304,6 +322,7 @@
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         $(document).ready(function () {
@@ -392,6 +411,181 @@
                 lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Todos"]]
             });
 
+            // Botón Puntos de Inspección (CRUD)
+            $(document).on('click', '#btnPuntosInspeccion', function(){
+                const cargarYMostrar = () => {
+                    $.getJSON('<?= base_url('modulo3/inspeccion/puntos/json') ?>', function(resp){
+                        if (!resp || resp.success !== true) {
+                            Swal.fire({ icon:'error', title:'Error', text:(resp && resp.message) ? resp.message : 'No se pudo cargar el catálogo' });
+                            return;
+                        }
+                        const rows = resp.data || [];
+                        const lista = rows.map(r => `
+                            <tr data-id="${r.id}">
+                                <td style="width:70px" class="text-muted">#${r.id}</td>
+                                <td><input type="text" class="form-control form-control-sm ip-tipo" value="${(r.tipo||'').replace(/"/g,'&quot;')}"/></td>
+                                <td><input type="text" class="form-control form-control-sm ip-criterio" value="${(r.criterio||'').replace(/"/g,'&quot;')}"/></td>
+                                <td class="text-nowrap" style="width:140px">
+                                    <button class="btn btn-sm btn-success me-1 btn-pi-guardar" title="Guardar"><i class="fas fa-save"></i></button>
+                                    <button class="btn btn-sm btn-danger btn-pi-eliminar" title="Eliminar"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>`).join('');
+
+                        const html = `
+                        <div class="mb-2 text-start">
+                          <div class="bg-light border rounded p-2 mb-3">
+                            <div class="row g-2 align-items-center">
+                              <div class="col-12 col-md-4">
+                                <div class="input-group input-group-sm">
+                                  <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                                  <input id="pi-nuevo-tipo" type="text" class="form-control" placeholder="Tipo (requerido)"/>
+                                </div>
+                              </div>
+                              <div class="col-12 col-md-6">
+                                <div class="input-group input-group-sm">
+                                  <span class="input-group-text"><i class="fas fa-filter"></i></span>
+                                  <input id="pi-nuevo-criterio" type="text" class="form-control" placeholder="Criterio (opcional)"/>
+                                </div>
+                              </div>
+                              <div class="col-12 col-md-2 text-md-end">
+                                <button id="pi-agregar" class="btn btn-primary btn-sm w-100"><i class="fas fa-plus me-1"></i>Agregar</button>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="table-responsive" style="max-height:50vh;">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                              <thead class="table-secondary"><tr><th>ID</th><th>Tipo</th><th>Criterio</th><th>Acciones</th></tr></thead>
+                              <tbody id="pi-tbody">${lista}</tbody>
+                            </table>
+                          </div>
+                        </div>`;
+
+                        Swal.fire({
+                            title: 'Puntos de Inspección',
+                            html: html,
+                            width: 800,
+                            showConfirmButton: false,
+                            showCloseButton: true,
+                            didOpen: () => {
+                                const Toast = Swal.mixin({ toast:true, position:'top-end', showConfirmButton:false, timer:1500, timerProgressBar:true });
+                                // Agregar
+                                $('#pi-agregar').on('click', function(){
+                                    const $btn = $(this);
+                                    if ($btn.prop('disabled')) return;
+                                    const tipo = ($('#pi-nuevo-tipo').val()||'').trim();
+                                    const criterio = ($('#pi-nuevo-criterio').val()||'').trim();
+                                    if (!tipo) { Swal.fire({icon:'warning',title:'Tipo requerido'}); return; }
+                                    const originalHtml = $btn.html();
+                                    $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Agregando...');
+                                    $.ajax({
+                                        url: '<?= base_url('modulo3/inspeccion/puntos/crear') ?>',
+                                        method: 'POST',
+                                        data: { tipo, criterio, <?= csrf_token()?>: '<?= csrf_hash()?>' },
+                                        dataType: 'json'
+                                    }).done(function(r){
+                                        if (r && r.success && r.data) {
+                                            // Agregar la nueva fila sin cerrar el Swal
+                                            const d = r.data;
+                                            const rowHtml = `
+                                              <tr data-id="${d.id}">
+                                                <td style="width:70px" class="text-muted">#${d.id}</td>
+                                                <td><input type="text" class="form-control form-control-sm ip-tipo" value="${(d.tipo||'').replace(/"/g,'&quot;')}"/></td>
+                                                <td><input type="text" class="form-control form-control-sm ip-criterio" value="${(d.criterio||'').replace(/"/g,'&quot;')}"/></td>
+                                                <td class="text-nowrap" style="width:140px">
+                                                  <button class="btn btn-sm btn-success me-1 btn-pi-guardar" title="Guardar"><i class="fas fa-save"></i></button>
+                                                  <button class="btn btn-sm btn-danger btn-pi-eliminar" title="Eliminar"><i class="fas fa-trash"></i></button>
+                                                </td>
+                                              </tr>`;
+                                            $('#pi-tbody').append(rowHtml);
+                                            $('#pi-nuevo-tipo').val('');
+                                            $('#pi-nuevo-criterio').val('');
+                                            Toast.fire({ icon:'success', title:'Agregado' });
+                                        } else {
+                                            Toast.fire({icon:'error',title:(r&&r.message)||'No se pudo crear'});
+                                        }
+                                    }).fail(function(xhr){
+                                        let msg='Error'; try{ if(xhr.responseJSON&&xhr.responseJSON.message){msg=xhr.responseJSON.message;} }catch(e){}
+                                        Toast.fire({icon:'error',title: msg||'No se pudo crear'});
+                                    }).always(function(){
+                                        $btn.prop('disabled', false).html(originalHtml);
+                                    });
+                                });
+
+                                // Guardar (editar)
+                                $(document).off('click','.btn-pi-guardar').on('click','.btn-pi-guardar', function(){
+                                    const $btn = $(this);
+                                    if ($btn.prop('disabled')) return;
+                                    const $tr = $btn.closest('tr');
+                                    const id = parseInt($tr.data('id'),10)||0;
+                                    const tipo = ($tr.find('.ip-tipo').val()||'').trim();
+                                    const criterio = ($tr.find('.ip-criterio').val()||'').trim();
+                                    if (!id || !tipo) { Swal.fire({icon:'warning',title:'Datos inválidos'}); return; }
+                                    const originalHtml = $btn.html();
+                                    $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+                                    $.ajax({
+                                        url: '<?= base_url('modulo3/inspeccion/puntos/editar') ?>',
+                                        method: 'POST',
+                                        data: { id, tipo, criterio, <?= csrf_token()?>: '<?= csrf_hash()?>' },
+                                        dataType: 'json'
+                                    }).done(function(r){
+                                        if (r && r.success) { Toast.fire({icon:'success',title:'Guardado'}); }
+                                        else { Toast.fire({icon:'error',title:(r&&r.message)||'No se pudo guardar'}); }
+                                    }).fail(function(xhr){
+                                        let msg='Error'; try{ if(xhr.responseJSON&&xhr.responseJSON.message){msg=xhr.responseJSON.message;} }catch(e){}
+                                        Toast.fire({icon:'error',title: msg||'No se pudo guardar'});
+                                    }).always(function(){
+                                        $btn.prop('disabled', false).html(originalHtml);
+                                    });
+                                });
+
+                                // Eliminar
+                                $(document).off('click','.btn-pi-eliminar').on('click','.btn-pi-eliminar', function(){
+                                    const $btn = $(this);
+                                    const $tr = $btn.closest('tr');
+                                    const id = parseInt($tr.data('id'),10)||0;
+                                    if (!id) return;
+                                    // Confirmación inline
+                                    const $cell = $btn.parent();
+                                    const original = $cell.html();
+                                    $cell.html(`
+                                      <div class="d-inline-flex gap-2">
+                                        <button class="btn btn-warning btn-sm btn-pi-cancelar-del"><i class="fas fa-times"></i></button>
+                                        <button class="btn btn-danger btn-sm btn-pi-confirmar-del"><i class="fas fa-check"></i></button>
+                                      </div>`);
+                                    $cell.off('click','.btn-pi-cancelar-del').on('click','.btn-pi-cancelar-del', function(){
+                                        $cell.html(original);
+                                    });
+                                    $cell.off('click','.btn-pi-confirmar-del').on('click','.btn-pi-confirmar-del', function(){
+                                        const $confirmBtn = $(this);
+                                        if ($confirmBtn.prop('disabled')) return;
+                                        const backup = $cell.html();
+                                        $cell.html('<span class="spinner-border spinner-border-sm"></span>');
+                                        $tr.find('input').prop('disabled', true);
+                                        $.ajax({
+                                            url: '<?= base_url('modulo3/inspeccion/puntos/eliminar') ?>',
+                                            method: 'POST',
+                                            data: { id, <?= csrf_token()?>: '<?= csrf_hash()?>' },
+                                            dataType: 'json'
+                                        }).done(function(r){
+                                            if (r && r.success) { $tr.remove(); Toast.fire({icon:'success',title:'Eliminado'}); }
+                                            else { $cell.html(backup); $tr.find('input').prop('disabled', false); Toast.fire({icon:'error',title:(r&&r.message)||'No se pudo eliminar'}); }
+                                        }).fail(function(xhr){
+                                            let msg='Error'; try{ if(xhr.responseJSON&&xhr.responseJSON.message){msg=xhr.responseJSON.message;} }catch(e){}
+                                            $cell.html(backup); $tr.find('input').prop('disabled', false);
+                                            Toast.fire({icon:'error',title: msg||'No se pudo eliminar'});
+                                        });
+                                    });
+                                });
+                            }
+                        });
+                    }).fail(function(xhr){
+                        let msg='Error'; try{ if(xhr.responseJSON&&xhr.responseJSON.message){msg=xhr.responseJSON.message;} }catch(e){}
+                        Swal.fire({ icon:'error', title:'Error', text: msg });
+                    });
+                };
+                cargarYMostrar();
+            });
+
             // Fix for Bootstrap 5 modal compatibility
             table.on('draw', function () {
                 $('[data-bs-toggle="tooltip"]').tooltip();
@@ -412,13 +606,12 @@
                 $('#defectosJson').val('[]');
             });
 
-            // Show/hide defectos section based on resultado
-            $('select[name="resultado"]').on('change', function() {
-                if ($(this).val() === 'rechazado') {
-                    $('#defectosContainer').show();
-                } else {
-                    $('#defectosContainer').hide();
-                }
+            // Toggle reproceso section
+            $('#toggleReproceso').on('change', function(){
+                const on = $(this).is(':checked');
+                $('#conReproceso').val(on ? '1' : '0');
+                if (on) { $('.reproceso-section').show(); $('#defectosContainer').show(); }
+                else { $('.reproceso-section').hide(); $('#defectosContainer').hide(); }
             });
 
             // Agregar defecto functionality
@@ -520,7 +713,9 @@
                 if (inspeccionId) $('#inspeccion_id').val(inspeccionId);
                 if (numeroInspeccion) $('#numero_inspeccion_display').text(numeroInspeccion);
                 if (ordenProduccion) $('#orden_produccion_display').text(ordenProduccion);
-                if (puntoInspeccion) $('#punto_inspeccion_display').text(puntoInspeccion);
+                // Mostrar texto del punto de inspección desde el select de la fila
+                const puntoTexto = $boton.closest('tr').find('.punto-inspeccion-select option:selected').text() || (puntoInspeccion || 'N/A');
+                $('#punto_inspeccion_display').text(puntoTexto);
                 if (fecha) $('#fecha_display').text(fecha);
                 if (resultado) $('#resultado_select').val(resultado).trigger('change');
                 if (observaciones) $('#observaciones_text').val(observaciones);
@@ -588,6 +783,11 @@
                 } catch (e) {
                     console.error('Error al procesar defectos:', e);
                     $('#tablaDefectos').empty();
+                }
+
+                // Ajustar action del formulario al endpoint correcto con ID
+                if (inspeccionId) {
+                    $('#formEvaluar').attr('action', '<?= base_url('modulo3/inspeccion/evaluar/guardar') ?>/' + inspeccionId);
                 }
 
                 // Mostrar el modal
@@ -689,106 +889,144 @@
             $('#formEvaluar').on('submit', function(e) {
                 e.preventDefault();
 
-                // Validar que si es rechazado, tenga al menos un defecto
-                if ($('#resultado_select').val() === 'rechazado' && defectos.length === 0) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Defectos requeridos',
-                        text: 'Debe registrar al menos un defecto para una inspección rechazada',
-                        confirmButtonColor: '#0d6efd'
-                    });
-                    return false;
-                }
-
                 // Mostrar indicador de carga
                 const submitBtn = $(this).find('button[type="submit"]');
                 const originalText = submitBtn.html();
                 submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...');
+
+                // Normalizar cantidad de reproceso si toggle apagado
+                if ($('#conReproceso').val() !== '1') {
+                    $('#accionReproceso').val('');
+                    $('#cantidadReproceso').val('0');
+                    $('#fechaReproceso').val('');
+                    $('#defectosJson').val('[]');
+                } else {
+                    if ($('#cantidadReproceso').val() === '') { $('#cantidadReproceso').val('0'); }
+                }
 
                 // Enviar el formulario vía AJAX
                 $.ajax({
                     url: $(this).attr('action'),
                     type: 'POST',
                     data: $(this).serialize(),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
                     dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
+                    success: function(response, textStatus, xhr) {
+                        try {
+                            if (response && response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '¡Éxito!',
+                                    text: response.message || 'La inspección se ha guardado correctamente',
+                                    confirmButtonColor: '#198754',
+                                    allowOutsideClick: false
+                                }).then(() => location.reload());
+                                return;
+                            }
+                        } catch(e) { /* ignore */ }
+                        // Si no viene JSON válido pero el status es 200, asumir éxito
+                        if (xhr && xhr.status >= 200 && xhr.status < 300) {
                             Swal.fire({
                                 icon: 'success',
                                 title: '¡Éxito!',
-                                text: response.message || 'La inspección se ha guardado correctamente',
+                                text: 'La inspección se ha guardado correctamente',
                                 confirmButtonColor: '#198754',
                                 allowOutsideClick: false
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    location.reload();
-                                }
-                            });
+                            }).then(() => location.reload());
                         } else {
-                            throw new Error(response.message || 'Error al guardar la inspección');
+                            Swal.fire({ icon:'error', title:'Error', text:'No se pudo guardar la inspección' });
                         }
                     },
-                    error: function(xhr) {
-                        let errorMessage = 'Error al procesar la solicitud';
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
-                            errorMessage = xhr.responseJSON.message;
+                    error: function(xhr, status, errorThrown) {
+                        // Si hubo parsererror pero el servidor devolvió 200/201, tratar como éxito
+                        if ((status === 'parsererror') && xhr && xhr.status >= 200 && xhr.status < 300) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Éxito!',
+                                text: 'La inspección se ha guardado correctamente',
+                                confirmButtonColor: '#198754',
+                                allowOutsideClick: false
+                            }).then(() => location.reload());
+                            return;
                         }
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: errorMessage,
-                            confirmButtonColor: '#dc3545'
-                        });
+                        let errorMessage = 'Error al procesar la solicitud';
+                        if (xhr.responseJSON && xhr.responseJSON.message) { errorMessage = xhr.responseJSON.message; }
+                        Swal.fire({ icon:'error', title:'Error', text:errorMessage, confirmButtonColor:'#dc3545' });
                     },
                     complete: function() {
                         submitBtn.prop('disabled', false).html(originalText);
                     }
                 });
             });
-            // Manejar el cambio de punto de inspección
+            // Guardar valor previo en focus
+            $(document).on('focusin', '.punto-inspeccion-select', function(){
+                $(this).data('prev', $(this).val());
+            });
+
+            // Manejar el cambio de punto de inspección con confirmación
             $(document).on('change', '.punto-inspeccion-select', function() {
                 const select = $(this);
+                const prevVal = select.data('prev');
                 const inspeccionId = select.data('inspeccion-id');
                 const nuevoPuntoId = select.val();
 
-                // Mostrar indicador de carga
-                const originalHtml = select.html();
-                select.prop('disabled', true).addClass('opacity-75');
-
-                // Enviar la actualización al servidor
-                $.ajax({
-                    url: '<?= base_url('inspeccion/actualizar-punto') ?>',
-                    method: 'POST',
-                    data: {
-                        id: inspeccionId,
-                        puntoInspeccionId: nuevoPuntoId,
-                        <?= csrf_token()?>: '<?= csrf_hash()?>'
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            // Actualizar el texto mostrado en la tabla
-                            select.find('option:selected').text(response.punto_tipo);
-
-                            // Mostrar notificación de éxito
-                            const toast = new bootstrap.Toast(document.querySelector('.toast'));
-                            $('.toast .toast-body').text('Punto de inspección actualizado correctamente');
-                            $('.toast').toast('show');
-                        } else {
-                            // Mostrar error
-                            alert('Error al actualizar el punto de inspección: ' + (response.message || 'Error desconocido'));
-                            // Recargar la página para restaurar los valores
-                            location.reload();
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error en la petición AJAX:', error);
-                        alert('Error al conectar con el servidor');
-                        location.reload();
-                    },
-                    complete: function() {
-                        select.prop('disabled', false).removeClass('opacity-75');
+                Swal.fire({
+                    title: '¿Cambiar punto de inspección?',
+                    text: 'Se actualizará el punto de inspección de esta evaluación.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Sí, actualizar',
+                    cancelButtonText: 'Cancelar'
+                }).then(function(res){
+                    if (!res.isConfirmed) {
+                        // Revertir selección
+                        select.val(prevVal);
+                        return;
                     }
+
+                    select.prop('disabled', true).addClass('opacity-75');
+
+                    $.ajax({
+                        url: '<?= base_url('modulo3/inspeccion/actualizar-punto') ?>',
+                        method: 'POST',
+                        data: {
+                            id: inspeccionId,
+                            puntoInspeccionId: nuevoPuntoId,
+                            <?= csrf_token()?>: '<?= csrf_hash()?>'
+                        },
+                        dataType: 'json',
+                        success: function(response) {
+                            if (response.success) {
+                                // Actualizar etiqueta del seleccionado (por si cambia texto)
+                                select.find('option:selected').text(response.punto_tipo);
+                                Swal.fire({
+                                    title: '¡Actualizado!',
+                                    text: 'Punto de inspección actualizado correctamente.',
+                                    icon: 'success'
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'No se pudo actualizar',
+                                    text: response.message || 'Error desconocido'
+                                });
+                                // Revertir al valor previo
+                                select.val(prevVal);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error en la petición AJAX:', error, xhr.responseText);
+                            let msg = 'Error al conectar con el servidor';
+                            try { if (xhr.responseJSON && xhr.responseJSON.message) { msg = xhr.responseJSON.message; } } catch(e){}
+                            Swal.fire({ icon:'error', title:'No se pudo actualizar', text: msg });
+                            select.val(prevVal);
+                        },
+                        complete: function() {
+                            select.prop('disabled', false).removeClass('opacity-75');
+                        }
+                    });
                 });
             });
         });

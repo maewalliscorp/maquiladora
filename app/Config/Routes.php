@@ -120,11 +120,13 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->get('clientes/json',        'Clientes::json_catalogo');
     $routes->get('ordenes-produccion',   'Produccion::ordenes');
     $routes->post('ordenes/estatus',     'Produccion::actualizarEstatus');
+    $routes->post('ordenes/eliminar',    'Produccion::orden_eliminar');
     $routes->get('ordenes/(:num)/json',  'Produccion::orden_json/$1');
     // Tareas del empleado (producción)
     $routes->get('produccion/tareas',    'Produccion::tareas_empleado_json');
-    // Crear pedido (OC + OP)
+    // Crear/Eliminar pedido (OC + OP)
     $routes->post('pedidos/crear',       'Modulos::m1_pedidos_crear', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Calidad,Envios']);
+    $routes->post('pedidos/eliminar',    'Modulos::m1_pedido_eliminar', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Calidad,Envios']);
 
     // Endpoints para modales
     $routes->get('ordenes/folio/(:segment)/json', 'Produccion::orden_json_folio/$1');
@@ -237,6 +239,12 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
         $routes->get ('eliminar/(:num)',        'Inspeccion::eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
         $routes->get ('evaluar/(:num)',         'Inspeccion::evaluar/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
         $routes->post('evaluar/guardar/(:num)', 'Inspeccion::guardarEvaluacion/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->post('actualizar-punto',       'Inspeccion::actualizarPunto', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        // CRUD puntos de inspección
+        $routes->get ('puntos/json',            'Inspeccion::puntosJson', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->post('puntos/crear',           'Inspeccion::puntoCrear',  ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->post('puntos/editar',          'Inspeccion::puntoEditar', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->post('puntos/eliminar',        'Inspeccion::puntoEliminar', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
     });
 
     // Inventario / Mantenimiento (modulo3)

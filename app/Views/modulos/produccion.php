@@ -97,13 +97,23 @@
                     const status = it.status || '-';
                     const desde = it.asignadoDesde || '-';
                     const hasta = it.asignadoHasta || '-';
+                    const lower = String(status).toLowerCase();
+                    const showStart = (lower === 'en proceso');
+                    const right = (
+                        '<div class="d-flex align-items-center gap-2">'
+                        + '<span class="badge bg-info text-dark">' + status + '</span>'
+                        + (showStart
+                           ? ('<button class="btn btn-sm btn-success btn-start-production" data-folio="' + (folio||'') + '" data-id="' + (it.id||'') + '"><i class="bi bi-play-circle me-1"></i>Iniciar producción</button>')
+                           : '')
+                        + '</div>'
+                    );
                     return (
                         '<div class="border rounded p-3 mb-2 d-flex justify-content-between align-items-center">'
                         + '<div>'
                         + '<div class="fw-semibold">OP ' + folio + '</div>'
                         + '<div class="text-muted small">Desde: ' + desde + ' · Hasta: ' + hasta + '</div>'
                         + '</div>'
-                        + '<span class="badge bg-info text-dark">' + status + '</span>'
+                        + right
                         + '</div>'
                     );
                 };
@@ -124,5 +134,18 @@
                 if ($pendList) $pendList.innerHTML = '<div class="text-danger">No se pudieron cargar los pendientes.</div>';
             });
     })();
+
+    // Abrir modal al hacer clic en Iniciar producción (siempre activo)
+    document.addEventListener('click', function(ev){
+        const btn = ev.target.closest('.btn-start-production');
+        if (!btn) return;
+        const folio = btn.getAttribute('data-folio') || '';
+        const modalEl = document.getElementById('startProductionModal');
+        if (modalEl) {
+            document.getElementById('modalOrderCode').textContent = folio;
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        }
+    });
     </script>
 <?= $this->endSection() ?>

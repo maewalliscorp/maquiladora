@@ -24,22 +24,164 @@ class Produccion extends BaseController
 
     public function actualizarEstatus()
     {
-        if ($this->request->getMethod() !== 'post') {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') {
+            return $this->response->setJSON(['ok' => true]);
+        }
+        if ($method !== 'post') {
             return $this->response->setStatusCode(405)->setJSON(['error' => 'Método no permitido']);
         }
-        $id = (int)($this->request->getPost('id') ?? 0);
-        $estatus = trim((string)($this->request->getPost('estatus') ?? ''));
+        // Aceptar id como 'id' u 'opId'
+        $id = (int)($this->request->getPost('id') ?? $this->request->getVar('id') ?? $this->request->getPost('opId') ?? $this->request->getVar('opId') ?? 0);
+        // Aceptar estatus como 'estatus' o 'status'
+        $estatus = trim((string)($this->request->getPost('estatus') ?? $this->request->getVar('estatus') ?? $this->request->getPost('status') ?? $this->request->getVar('status') ?? ''));
         if ($id <= 0 || $estatus === '') {
             return $this->response->setStatusCode(400)->setJSON(['error' => 'Parámetros inválidos']);
         }
         try {
-            $model = new OrdenProduccionModel();
-            if (!$model->updateEstatus($id, $estatus)) {
+            $db = \Config\Database::connect();
+            $db->transStart();
+
+            // Actualizar estatus de la OP con transacción explícita
+            $okUpd = $db->table('orden_produccion')->where('id', $id)->update(['status' => $estatus]);
+            if (!$okUpd) {
+                $db->transRollback();
                 return $this->response->setStatusCode(500)->setJSON(['error' => 'No se pudo actualizar el estatus']);
             }
-            return $this->response->setJSON(['ok' => true]);
+
+            $insId = null; $repId = null;
+            // Si cambia a "En proceso", generar inspección y reproceso (si no existen)
+            if (strcasecmp($estatus, 'En proceso') === 0) {
+                // Verificar si ya existe inspección para esta OP
+                $rowExist = null;
+                try {
+                    $rowExist = $db->query('SELECT id FROM inspeccion WHERE ordenProduccionId = ? LIMIT 1', [$id])->getRowArray();
+                } catch (\Throwable $e) {
+                    try { $rowExist = $db->query('SELECT id FROM Inspeccion WHERE ordenProduccionId = ? LIMIT 1', [$id])->getRowArray(); } catch (\Throwable $e2) { $rowExist = null; }
+                }
+                if ($rowExist && isset($rowExist['id'])) {
+                    $insId = (int)$rowExist['id'];
+                } else {
+                    // Insertar inspección base
+                    $rowIns = [
+                        'ordenProduccionId' => $id,
+                        'puntoInspeccionId' => null,
+                        'inspectorId'       => null,
+                        'fecha'             => null,
+                        'resultado'         => null,
+                        'observaciones'     => null,
+                    ];
+                    $db->table('inspeccion')->insert($rowIns);
+                    $insId = (int)$db->insertID();
+                    if ($insId === 0) { try { $db->table('Inspeccion')->insert($rowIns); $insId = (int)$db->insertID(); } catch (\Throwable $e) { $insId = 0; } }
+                    if ($insId <= 0) { throw new \Exception('No se pudo crear la inspección inicial'); }
+                }
+
+                // Verificar o crear reproceso para esa inspección
+                $rowRepExist = null;
+                if ($insId > 0) {
+                    try {
+                        $rowRepExist = $db->query('SELECT id FROM reproceso WHERE inspeccionId = ? LIMIT 1', [$insId])->getRowArray();
+                    } catch (\Throwable $e) {
+                        try { $rowRepExist = $db->query('SELECT id FROM Reproceso WHERE inspeccionId = ? LIMIT 1', [$insId])->getRowArray(); } catch (\Throwable $e2) { $rowRepExist = null; }
+                    }
+                    if ($rowRepExist && isset($rowRepExist['id'])) {
+                        $repId = (int)$rowRepExist['id'];
+                    } else {
+                        $rowRep = [
+                            'inspeccionId' => $insId,
+                            'accion'       => null,
+                            'cantidad'     => null,
+                            'fecha'        => null,
+                        ];
+                        $db->table('reproceso')->insert($rowRep);
+                        $repId = (int)$db->insertID();
+                        if ($repId === 0) { try { $db->table('Reproceso')->insert($rowRep); $repId = (int)$db->insertID(); } catch (\Throwable $e) { $repId = 0; } }
+                        if ($repId <= 0) { throw new \Exception('No se pudo crear el reproceso inicial'); }
+                    }
+                }
+            }
+
+            $db->transComplete();
+            if ($db->transStatus() === false) { throw new \Exception('Error en la transacción'); }
+
+            return $this->response->setJSON(['ok' => true, 'id' => $id, 'status' => $estatus, 'inspeccionId' => $insId, 'reprocesoId' => $repId]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['error' => 'Error al actualizar: ' . $e->getMessage()]);
+        }
+    }
+
+    /** Eliminar una OP y dependencias (asignaciones, inspeccion, reproceso) */
+    public function orden_eliminar()
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') { return $this->response->setJSON(['ok'=>true]); }
+        if ($method !== 'post') { return $this->response->setStatusCode(405)->setJSON(['error'=>'Método no permitido']); }
+        $id = (int)($this->request->getPost('id') ?? $this->request->getVar('id') ?? $this->request->getPost('opId') ?? 0);
+        if ($id <= 0) { return $this->response->setStatusCode(400)->setJSON(['error'=>'ID inválido']); }
+        $db = \Config\Database::connect();
+        try {
+            $db->transStart();
+
+            // Obtener ordenCompraId de la OP
+            $ocId = null;
+            try {
+                $rowOP = $db->query('SELECT ordenCompraId FROM orden_produccion WHERE id = ?', [$id])->getRowArray();
+                if ($rowOP && isset($rowOP['ordenCompraId'])) { $ocId = (int)$rowOP['ordenCompraId']; }
+            } catch (\Throwable $e) {
+                try { $rowOP = $db->query('SELECT ordenCompraId FROM OrdenProduccion WHERE id = ?', [$id])->getRowArray(); if ($rowOP && isset($rowOP['ordenCompraId'])) { $ocId = (int)$rowOP['ordenCompraId']; } } catch (\Throwable $e2) {}
+            }
+
+            // Obtener IDs de inspección ligados a la OP
+            $insIds = [];
+            try {
+                $rows = $db->query('SELECT id FROM inspeccion WHERE ordenProduccionId = ?', [$id])->getResultArray();
+                foreach ($rows as $r) { if (isset($r['id'])) $insIds[] = (int)$r['id']; }
+            } catch (\Throwable $e) {
+                try {
+                    $rows = $db->query('SELECT id FROM Inspeccion WHERE ordenProduccionId = ?', [$id])->getResultArray();
+                    foreach ($rows as $r) { if (isset($r['id'])) $insIds[] = (int)$r['id']; }
+                } catch (\Throwable $e2) { /* ignore */ }
+            }
+
+            if (!empty($insIds)) {
+                // Borrar reprocesos por inspeccionId
+                try { $db->table('reproceso')->whereIn('inspeccionId', $insIds)->delete(); } catch (\Throwable $e) {
+                    try { $db->table('Reproceso')->whereIn('inspeccionId', $insIds)->delete(); } catch (\Throwable $e2) { /* ignore */ }
+                }
+            }
+            // Borrar inspecciones por OP
+            try { $db->table('inspeccion')->where('ordenProduccionId', $id)->delete(); } catch (\Throwable $e) {
+                try { $db->table('Inspeccion')->where('ordenProduccionId', $id)->delete(); } catch (\Throwable $e2) { /* ignore */ }
+            }
+
+            // Borrar asignaciones de tarea por OP
+            try { $db->table('asignacion_tarea')->where('ordenProduccionId', $id)->delete(); } catch (\Throwable $e) { /* ignore si no existe */ }
+
+            // Borrar la OP
+            $okDel = false;
+            try { $okDel = (bool)$db->table('orden_produccion')->where('id', $id)->delete(); } catch (\Throwable $e) { $okDel = false; }
+            if (!$okDel) {
+                try { $okDel = (bool)$db->table('OrdenProduccion')->where('id', $id)->delete(); } catch (\Throwable $e2) { $okDel = false; }
+            }
+            if (!$okDel) { throw new \Exception('No se pudo eliminar la Orden de Producción'); }
+
+            // Si había orden_compra ligada, eliminarla también
+            if ($ocId && $ocId > 0) {
+                $okOc = false;
+                try { $okOc = (bool)$db->table('orden_compra')->where('id', $ocId)->delete(); } catch (\Throwable $e) { $okOc = false; }
+                if (!$okOc) {
+                    try { $okOc = (bool)$db->table('OrdenCompra')->where('id', $ocId)->delete(); } catch (\Throwable $e2) { $okOc = false; }
+                }
+                // No forzar excepción si no existe, pero registrar fallo lógico
+            }
+
+            $db->transComplete();
+            if ($db->transStatus() === false) { throw new \Exception('Error en la transacción'); }
+            return $this->response->setJSON(['ok'=>true, 'id'=>$id]);
+        } catch (\Throwable $e) {
+            try { $db->transRollback(); } catch (\Throwable $e2) {}
+            return $this->response->setStatusCode(500)->setJSON(['error'=>'Error al eliminar: '.$e->getMessage()]);
         }
     }
 

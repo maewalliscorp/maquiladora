@@ -68,6 +68,9 @@
                                 <button type="button" class="btn btn-sm btn-outline-secondary btn-agregar-op" data-id="<?= esc($orden['opId'] ?? '') ?>" data-folio="<?= esc($orden['op'] ?? '') ?>" data-bs-toggle="modal" data-bs-target="#opAsignacionesModal">
                                     <i class="bi bi-person-plus"></i> Agregar
                                 </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-op" data-id="<?= esc($orden['opId'] ?? '') ?>" data-folio="<?= esc($orden['op'] ?? '') ?>">
+                                    <i class="bi bi-trash"></i> Eliminar
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -240,6 +243,41 @@
                 ]
             });
 
+            // Eliminar OP
+            $(document).on('click', '.btn-eliminar-op', function(){
+                const $btn = $(this);
+                const id = parseInt($btn.data('id')||0,10);
+                const folio = ($btn.data('folio')||'').toString();
+                if (!id) return;
+                Swal.fire({
+                    title: '¿Eliminar orden?',
+                    text: `Se eliminará la OP ${folio||('#'+id)} y sus datos (inspección, reproceso y asignaciones).`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
+                }).then(function(res){
+                    if (!res.isConfirmed) return;
+                    $btn.prop('disabled', true);
+                    Swal.fire({title:'Eliminando...', allowOutsideClick:false, allowEscapeKey:false, didOpen:()=>Swal.showLoading()});
+                    $.ajax({
+                        url: '<?= base_url('modulo1/ordenes/eliminar') ?>',
+                        method: 'POST',
+                        data: { id },
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    }).done(function(resp){
+                        Swal.fire({ icon:'success', title:'Eliminada', text:'La OP y sus datos relacionados fueron eliminados.', timer:1400, showConfirmButton:false });
+                        try { $btn.closest('tr').remove(); } catch(e) {}
+                    }).fail(function(xhr){
+                        Swal.fire({ icon:'error', title:'Error', text:'No se pudo eliminar la orden.' });
+                    }).always(function(){
+                        $btn.prop('disabled', false);
+                    });
+                });
+            });
+
             // ---------------- Asignaciones ----------------
             function cargarAsignaciones(opId){
                 const $modal = $('#opAsignacionesModal');
@@ -410,34 +448,58 @@
                 });
             });
 
-            // Guardar estatus inline
+            // Guardar estatus con confirmación y alertas
             $(document).on('change', '.op-estatus-select', function(){
                 const $sel = $(this);
                 const id = $sel.data('id');
-                const estatus = $sel.val();
+                const estatus = ($sel.val() || '').toString();
+                const prev = ($sel.data('prev') || '').toString();
                 const $td = $sel.closest('td');
                 const $spin = $td.find('.op-estatus-saving');
                 if (!id || !estatus) return;
-                $sel.prop('disabled', true);
-                $spin.show();
-                $.ajax({
-                    url: '<?= base_url('modulo1/ordenes/estatus') ?>',
-                    method: 'POST',
-                    data: { id, estatus },
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                }).done(function(){
-                    $sel.addClass('is-valid');
-                    setTimeout(()=> $sel.removeClass('is-valid'), 1200);
-                }).fail(function(){
-                    const prev = $sel.data('prev') || '';
-                    if (prev) $sel.val(prev);
-                    $sel.addClass('is-invalid');
-                    setTimeout(()=> $sel.removeClass('is-invalid'), 1500);
-                    alert('No se pudo actualizar el estatus de la OP.');
-                }).always(function(){
-                    $sel.data('prev', estatus);
-                    $sel.prop('disabled', false);
-                    $spin.hide();
+
+                Swal.fire({
+                    title: '¿Confirmar cambio?',
+                    text: `Cambiar estatus a "${estatus}"`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Sí, cambiar',
+                    cancelButtonText: 'Cancelar'
+                }).then(function(result){
+                    if (!result.isConfirmed) { if (prev) $sel.val(prev); return; }
+                    $sel.prop('disabled', true);
+                    $spin.show();
+                    $.ajax({
+                        url: '<?= base_url('modulo1/ordenes/estatus') ?>',
+                        method: 'POST',
+                        data: { id, estatus },
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    }).done(function(resp){
+                        $sel.addClass('is-valid');
+                        setTimeout(()=> $sel.removeClass('is-valid'), 1200);
+                        $sel.data('prev', estatus);
+                        try {
+                            if (resp && resp.ok) {
+                                let msg = 'Estatus actualizado correctamente.';
+                                if (estatus === 'En proceso' && (resp.inspeccionId || resp.reprocesoId)) {
+                                    msg = `Estatus actualizado. Inspección #${resp.inspeccionId||'-'} y Reproceso #${resp.reprocesoId||'-'} creados.`;
+                                }
+                                Swal.fire({ icon:'success', title:'Listo', text: msg, timer: 1600, showConfirmButton:false });
+                            } else {
+                                Swal.fire({ icon:'success', title:'Listo', text:'Estatus actualizado', timer: 1400, showConfirmButton:false });
+                            }
+                        } catch(e) { /* noop */ }
+                    }).fail(function(xhr){
+                        if (prev) $sel.val(prev);
+                        $sel.addClass('is-invalid');
+                        setTimeout(()=> $sel.removeClass('is-invalid'), 1500);
+                        Swal.fire({ icon:'error', title:'Error', text:'No se pudo actualizar el estatus de la OP.' });
+                    }).always(function(){
+                        $sel.prop('disabled', false);
+                        $spin.hide();
+                    });
                 });
             });
 

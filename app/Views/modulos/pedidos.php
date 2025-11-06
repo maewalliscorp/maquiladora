@@ -587,6 +587,9 @@
                             <?php else: ?>
                                 <span class="text-muted">—</span>
                             <?php endif; ?>
+                            <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-pedido" data-id="<?= (int)$p['id'] ?>" title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </button>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -682,6 +685,40 @@
                     exportOptions:{ columns: ':visible' } },
                 { extend:'print', text:'Imprimir', exportOptions:{ columns: ':visible' } }
             ]
+        });
+
+        // Eliminar Pedido (OC + cascada OP/inspeccion/reproceso/asignaciones)
+        $(document).on('click', '.btn-eliminar-pedido', function(){
+            const $btn = $(this);
+            const id = parseInt($btn.data('id')||0,10);
+            if (!id) return;
+            Swal.fire({
+                title: '¿Eliminar pedido?',
+                text: 'Se eliminará la Orden de Compra y sus datos relacionados (OP, inspección, reproceso y asignaciones).',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then(function(res){
+                if (!res.isConfirmed) return;
+                $btn.prop('disabled', true);
+                Swal.fire({title:'Eliminando...', allowOutsideClick:false, allowEscapeKey:false, didOpen:()=>Swal.showLoading()});
+                $.ajax({
+                    url: '<?= base_url('modulo1/pedidos/eliminar') ?>',
+                    method: 'POST',
+                    data: { id },
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                }).done(function(resp){
+                    Swal.fire({ icon:'success', title:'Eliminado', text:'Pedido eliminado correctamente.', timer:1400, showConfirmButton:false });
+                    try { dtPedidos.row($btn.closest('tr')).remove().draw(false); } catch(e) { $btn.closest('tr').remove(); }
+                }).fail(function(xhr){
+                    Swal.fire({ icon:'error', title:'Error', text:'No se pudo eliminar el pedido.' });
+                }).always(function(){
+                    $btn.prop('disabled', false);
+                });
+            });
         });
 
         // Guardar pedido (OC + OP) con confirmación SweetAlert y bloqueo anti-duplicados

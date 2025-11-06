@@ -15,6 +15,72 @@ class Modulos extends BaseController
         return array_merge($base, $data);
     }
 
+    /** Eliminar un pedido (orden_compra) y en cascada su OP y dependencias */
+    public function m1_pedido_eliminar()
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') { return $this->response->setJSON(['ok'=>true]); }
+        if ($method !== 'post') { return $this->response->setStatusCode(405)->setJSON(['error'=>'Método no permitido']); }
+        $ocId = (int)($this->request->getPost('id') ?? $this->request->getVar('id') ?? $this->request->getPost('ocId') ?? 0);
+        if ($ocId <= 0) { return $this->response->setStatusCode(400)->setJSON(['error'=>'ID inválido']); }
+        $db = \Config\Database::connect();
+        try {
+            $db->transStart();
+
+            // Buscar OPs relacionadas con esta OC
+            $opIds = [];
+            try {
+                $rows = $db->query('SELECT id FROM orden_produccion WHERE ordenCompraId = ?', [$ocId])->getResultArray();
+                foreach ($rows as $r) { if (isset($r['id'])) $opIds[] = (int)$r['id']; }
+            } catch (\Throwable $e) {
+                try {
+                    $rows = $db->query('SELECT id FROM OrdenProduccion WHERE ordenCompraId = ?', [$ocId])->getResultArray();
+                    foreach ($rows as $r) { if (isset($r['id'])) $opIds[] = (int)$r['id']; }
+                } catch (\Throwable $e2) { /* ignore */ }
+            }
+
+            foreach ($opIds as $opId) {
+                // Borrar Reproceso -> Inspeccion -> Asignaciones por OP
+                $insIds = [];
+                try {
+                    $rins = $db->query('SELECT id FROM inspeccion WHERE ordenProduccionId = ?', [$opId])->getResultArray();
+                    foreach ($rins as $ri) { if (isset($ri['id'])) $insIds[] = (int)$ri['id']; }
+                } catch (\Throwable $e) {
+                    try {
+                        $rins = $db->query('SELECT id FROM Inspeccion WHERE ordenProduccionId = ?', [$opId])->getResultArray();
+                        foreach ($rins as $ri) { if (isset($ri['id'])) $insIds[] = (int)$ri['id']; }
+                    } catch (\Throwable $e2) { /* ignore */ }
+                }
+                if (!empty($insIds)) {
+                    try { $db->table('reproceso')->whereIn('inspeccionId', $insIds)->delete(); } catch (\Throwable $e) {
+                        try { $db->table('Reproceso')->whereIn('inspeccionId', $insIds)->delete(); } catch (\Throwable $e2) { /* ignore */ }
+                    }
+                }
+                try { $db->table('inspeccion')->where('ordenProduccionId', $opId)->delete(); } catch (\Throwable $e) {
+                    try { $db->table('Inspeccion')->where('ordenProduccionId', $opId)->delete(); } catch (\Throwable $e2) { /* ignore */ }
+                }
+                try { $db->table('asignacion_tarea')->where('ordenProduccionId', $opId)->delete(); } catch (\Throwable $e) { /* ignore */ }
+                // Borrar OP
+                $okDelOp = false;
+                try { $okDelOp = (bool)$db->table('orden_produccion')->where('id', $opId)->delete(); } catch (\Throwable $e) { $okDelOp = false; }
+                if (!$okDelOp) { try { $okDelOp = (bool)$db->table('OrdenProduccion')->where('id', $opId)->delete(); } catch (\Throwable $e2) { $okDelOp = false; } }
+            }
+
+            // Finalmente, borrar la Orden de Compra
+            $okOc = false;
+            try { $okOc = (bool)$db->table('orden_compra')->where('id', $ocId)->delete(); } catch (\Throwable $e) { $okOc = false; }
+            if (!$okOc) { try { $okOc = (bool)$db->table('OrdenCompra')->where('id', $ocId)->delete(); } catch (\Throwable $e2) { $okOc = false; } }
+            if (!$okOc) { throw new \Exception('No se pudo eliminar el pedido (Orden de Compra)'); }
+
+            $db->transComplete();
+            if ($db->transStatus() === false) { throw new \Exception('Error en la transacción'); }
+            return $this->response->setJSON(['ok'=>true, 'id'=>$ocId]);
+        } catch (\Throwable $e) {
+            try { $db->transRollback(); } catch (\Throwable $e2) {}
+            return $this->response->setStatusCode(500)->setJSON(['error'=>'Error al eliminar pedido: '.$e->getMessage()]);
+        }
+    }
+
     /**
      * Obtener datos de un usuario (JSON) + catálogos (roles, maquiladoras)
      */
@@ -2434,6 +2500,14 @@ public function m11_usuarios()
             }
             if (!$ocId) { throw new \Exception('No se pudo crear la Orden de Compra'); }
 
+            // Forzar folio único de OC: OC-YYYY-<ocId>
+            $nuevoOCFolio = 'OC-'.date('Y').'-'.$ocId;
+            $okUpdOCFolio = false;
+            try { $okUpdOCFolio = (bool)$db->table('orden_compra')->where('id', $ocId)->update(['folio' => $nuevoOCFolio]); } catch (\Throwable $e) { $okUpdOCFolio = false; }
+            if (!$okUpdOCFolio) {
+                try { $okUpdOCFolio = (bool)$db->table('OrdenCompra')->where('id', $ocId)->update(['folio' => $nuevoOCFolio]); } catch (\Throwable $e2) { /* ignore */ }
+            }
+
             // Insertar orden_produccion (nombres exactos)
             $rowOP = [
                 'ordenCompraId'   => $ocId,
@@ -2451,6 +2525,49 @@ public function m11_usuarios()
                 $opId = (int)$db->insertID();
             }
             if (!$opId) { throw new \Exception('No se pudo crear la Orden de Producción'); }
+
+            // Forzar folio único de OP: OP-YYYY-<opId>
+            $nuevoFolio = 'OP-'.date('Y').'-'.$opId;
+            $okUpdFolio = false;
+            try {
+                $okUpdFolio = (bool)$db->table('orden_produccion')->where('id', $opId)->update(['folio' => $nuevoFolio]);
+            } catch (\Throwable $e) { $okUpdFolio = false; }
+            if (!$okUpdFolio) {
+                try { $okUpdFolio = (bool)$db->table('OrdenProduccion')->where('id', $opId)->update(['folio' => $nuevoFolio]); } catch (\Throwable $e2) { /* ignore */ }
+            }
+
+            // Crear registro inicial en inspeccion vinculado a la OP (otros campos en NULL)
+            $rowIns = [
+                'ordenProduccionId' => $opId,
+                'puntoInspeccionId' => null,
+                'inspectorId'       => null,
+                'fecha'             => null,
+                'resultado'         => null,
+                'observaciones'     => null,
+            ];
+            $db->table('inspeccion')->insert($rowIns);
+            $insId = (int)$db->insertID();
+            if ($insId === 0) {
+                // Fallback por mayúsculas
+                $db->table('Inspeccion')->insert($rowIns);
+                $insId = (int)$db->insertID();
+            }
+            if (!$insId) { throw new \Exception('No se pudo crear la inspeccion inicial'); }
+
+            // Crear registro inicial en reproceso vinculado a la inspeccion (otros campos en NULL)
+            $rowRep = [
+                'inspeccionId' => $insId,
+                'accion'       => null,
+                'cantidad'     => null,
+                'fecha'        => null,
+            ];
+            $db->table('reproceso')->insert($rowRep);
+            $repId = (int)$db->insertID();
+            if ($repId === 0) {
+                // Fallback por mayúsculas
+                $db->table('Reproceso')->insert($rowRep);
+                $repId = (int)$db->insertID();
+            }
 
             $db->transComplete();
             if ($db->transStatus() === false) { throw new \Exception('Error en la transacción'); }
