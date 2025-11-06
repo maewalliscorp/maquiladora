@@ -7,75 +7,38 @@
         <span class="badge bg-primary">Módulo 1</span>
     </div>
 
-    <!-- Sección de búsqueda -->
+    <!-- Secciones con pestañas: Pendientes / Finalizados -->
     <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <h4 class="mb-3">Buscar pedidos pendientes</h4>
-
-            <ul class="nav nav-tabs mb-3" id="searchTabs" role="tablist">
+            <ul class="nav nav-tabs mb-3" id="prodTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="code-tab" data-bs-toggle="tab" data-bs-target="#code" type="button" role="tab">
-                        <i class="bi bi-upc-scan me-1"></i> Buscar por código
+                    <button class="nav-link active" id="tab-pend" data-bs-toggle="tab" data-bs-target="#pane-pend" type="button" role="tab">
+                        <i class="bi bi-list-ul me-1"></i> Pendientes
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="camera-tab" data-bs-toggle="tab" data-bs-target="#camera" type="button" role="tab">
-                        <i class="bi bi-camera me-1"></i> Escanear código QR
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="list-tab" data-bs-toggle="tab" data-bs-target="#list" type="button" role="tab">
-                        <i class="bi bi-list-ul me-1"></i> Ver todos los pendientes
+                    <button class="nav-link" id="tab-done" data-bs-toggle="tab" data-bs-target="#pane-done" type="button" role="tab">
+                        <i class="bi bi-check2-circle me-1"></i> Finalizados
                     </button>
                 </li>
             </ul>
-
-            <div class="tab-content" id="searchTabsContent">
-                <!-- Búsqueda por código -->
-                <div class="tab-pane fade show active" id="code" role="tabpanel">
-                    <form id="searchByCodeForm" class="p-3 border rounded bg-light">
-                        <div class="mb-3">
-                            <label for="orderCode" class="form-label">Código del pedido</label>
-                            <input type="text" class="form-control" id="orderCode" placeholder="Ingresa el código del pedido">
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-search me-1"></i> Buscar pedido
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Escaneo por cámara -->
-                <div class="tab-pane fade" id="camera" role="tabpanel">
-                    <div class="p-3 border rounded bg-light">
-                        <div class="camera-preview border p-4 rounded text-center mb-3" id="cameraPreview">
-                            <i class="bi bi-camera" style="font-size: 2rem;"></i>
-                            <p class="mt-2">Haz clic para activar la cámara</p>
-                        </div>
-                        <div class="d-flex justify-content-between mb-3">
-                            <button class="btn btn-outline-secondary" id="toggleCamera">
-                                <i class="bi bi-camera-video"></i> Activar/Desactivar
-                            </button>
-                            <button class="btn btn-outline-primary" id="captureImage">
-                                <i class="bi bi-camera-fill"></i> Capturar
-                            </button>
-                        </div>
-                        <div>
-                            <p class="text-muted small">O sube una imagen del código QR</p>
-                            <input type="file" class="form-control" id="uploadQR" accept="image/*">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Lista de todos los pendientes -->
-                <div class="tab-pane fade" id="list" role="tabpanel">
+            <div class="tab-content" id="prodTabsContent">
+                <div class="tab-pane fade show active" id="pane-pend" role="tabpanel">
                     <div class="p-3 border rounded bg-light">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5 class="mb-0">Todos los pedidos pendientes</h5>
                             <span class="badge bg-secondary" id="pendingCount">0 pendientes</span>
                         </div>
-                        <div id="pendingOrdersList">
-                            <!-- Los pedidos se cargarán aquí dinámicamente -->
+                        <div id="pendingOrdersList"></div>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="pane-done" role="tabpanel">
+                    <div class="p-3 border rounded bg-light">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">Pedidos finalizados</h5>
+                            <span class="badge bg-success" id="completedCount">0</span>
                         </div>
+                        <div id="completedOrdersList"></div>
                     </div>
                 </div>
             </div>
@@ -84,6 +47,8 @@
 
     <!-- Resultados de búsqueda -->
     <div id="searchResults" class="mt-4"></div>
+
+    
 </div>
 
 <!-- Modal para confirmar inicio de producción -->
@@ -110,4 +75,54 @@
         </div>
     </div>
 </div>
+<?= $this->endSection() ?>
+
+<?= $this->section('scripts') ?>
+<script>
+    (function(){
+        const empId = <?= json_encode($empleadoId ?? null) ?>;
+        const base = '<?= base_url('modulo1/produccion/tareas') ?>';
+        const url = base + (empId ? ('?empleadoId=' + encodeURIComponent(empId)) : '') + (empId ? '&' : '?') + 't=' + Date.now();
+        const $pendList = document.getElementById('pendingOrdersList');
+        const $pendCount = document.getElementById('pendingCount');
+        const $doneList = document.getElementById('completedOrdersList');
+        const $doneCount = document.getElementById('completedCount');
+        if ($pendList) { $pendList.innerHTML = '<div class="text-muted">Cargando pendientes...</div>'; }
+        fetch(url, { headers: { 'X-Requested-With':'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(data => {
+                const items = Array.isArray(data.items) ? data.items : [];
+                const renderCard = (it) => {
+                    const folio = it.folio || '-';
+                    const status = it.status || '-';
+                    const desde = it.asignadoDesde || '-';
+                    const hasta = it.asignadoHasta || '-';
+                    return (
+                        '<div class="border rounded p-3 mb-2 d-flex justify-content-between align-items-center">'
+                        + '<div>'
+                        + '<div class="fw-semibold">OP ' + folio + '</div>'
+                        + '<div class="text-muted small">Desde: ' + desde + ' · Hasta: ' + hasta + '</div>'
+                        + '</div>'
+                        + '<span class="badge bg-info text-dark">' + status + '</span>'
+                        + '</div>'
+                    );
+                };
+
+                if ($pendList && $pendCount) {
+                    const pending = items.filter(it => String(it.status || '').toLowerCase() !== 'completada');
+                    $pendCount.textContent = pending.length + ' pendientes';
+                    $pendList.innerHTML = pending.length ? pending.map(renderCard).join('') : '<div class="text-muted">No hay pedidos pendientes.</div>';
+                }
+
+                if ($doneList && $doneCount) {
+                    const done = items.filter(it => String(it.status || '').toLowerCase() === 'completada');
+                    $doneCount.textContent = done.length;
+                    $doneList.innerHTML = done.length ? done.map(renderCard).join('') : '<div class="text-muted">No hay pedidos finalizados.</div>';
+                }
+            })
+            .catch(() => {
+                if ($pendList) $pendList.innerHTML = '<div class="text-danger">No se pudieron cargar los pendientes.</div>';
+            });
+    })();
+    </script>
 <?= $this->endSection() ?>

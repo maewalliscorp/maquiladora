@@ -28,6 +28,23 @@ class AsignacionTareaModel extends Model
         return $this->db->query($sql, [$opId])->getResultArray();
     }
 
+    public function listarPorEmpleado(int $empleadoId): array
+    {
+        if ($empleadoId <= 0) return [];
+        $sql = "SELECT at.id,
+                       at.ordenProduccionId AS opId,
+                       at.rutaOperacionId,
+                       at.asignadoDesde,
+                       at.asignadoHasta,
+                       op.folio,
+                       op.status
+                FROM asignacion_tarea at
+                JOIN orden_produccion op ON op.id = at.ordenProduccionId
+                WHERE at.empleadoId = ?
+                ORDER BY at.asignadoDesde IS NULL, at.asignadoDesde ASC, at.id DESC";
+        return $this->db->query($sql, [$empleadoId])->getResultArray();
+    }
+
     public function agregar(int $opId, int $empleadoId, ?string $desde = null, ?string $hasta = null, ?int $rutaOperacionId = null): bool
     {
         if ($opId <= 0 || $empleadoId <= 0) return false;

@@ -190,5 +190,44 @@ class Produccion extends BaseController
         }, $rows);
         return $this->response->setJSON(['results'=>$results]);
     }
+
+    public function tareas_empleado_json($empleadoId = null)
+    {
+        try {
+            // Permitir query param ?empleadoId=8
+            $empleadoId = (int)($this->request->getGet('empleadoId') ?? $empleadoId ?? 0);
+            if ($empleadoId <= 0) {
+                $empModel = new EmpleadoModel();
+                // 1) por idusuario
+                $userId = (int)(session()->get('user_id') ?? 0);
+                if ($userId > 0 && $empleadoId <= 0) {
+                    $emp = $empModel->where('idusuario', $userId)->select('id').first();
+                    if ($emp && isset($emp['id'])) { $empleadoId = (int)$emp['id']; }
+                }
+                // 2) por email
+                $email = (string)(session()->get('email') ?? '');
+                if ($empleadoId <= 0 && $email !== '') {
+                    $emp = $empModel->where('email', $email)->select('id').first();
+                    if ($emp && isset($emp['id'])) { $empleadoId = (int)$emp['id']; }
+                }
+                // 3) por user_name contra noEmpleado o nombre
+                $uname = (string)(session()->get('user_name') ?? '');
+                if ($empleadoId <= 0 && $uname !== '') {
+                    $emp = $empModel->groupStart()
+                            ->where('noEmpleado', $uname)
+                            ->orWhere('nombre', $uname)
+                        ->groupEnd()->select('id').first();
+                    if ($emp && isset($emp['id'])) { $empleadoId = (int)$emp['id']; }
+                }
+            }
+            if ($empleadoId <= 0) {
+                return $this->response->setStatusCode(400)->setJSON(['error' => 'No se pudo resolver el empleado actual']);
+            }
+            $rows = (new AsignacionTareaModel())->listarPorEmpleado($empleadoId);
+            return $this->response->setJSON(['empleadoId' => $empleadoId, 'items' => $rows]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['error' => 'Error al obtener tareas', 'message' => $e->getMessage()]);
+        }
+    }
 }
 
