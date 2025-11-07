@@ -54,6 +54,7 @@
                                 <div class="spinner-border spinner-border-sm text-primary op-estatus-saving" role="status" style="display:none;" aria-hidden="true"></div>
                                 <select class="form-select form-select-sm op-estatus-select" data-id="<?= esc($orden['opId'] ?? '') ?>" data-prev="<?= esc($estatusActual) ?>" style="min-width: 150px;">
                                     <option value="Planificada" <?= strcasecmp($estatusActual,'Planificada')===0 ? 'selected' : '' ?>>Planificada</option>
+                                    <option value="En corte"     <?= strcasecmp($estatusActual,'En corte')===0 ? 'selected' : '' ?>>En corte</option>
                                     <option value="En proceso"  <?= strcasecmp($estatusActual,'En proceso')===0 ? 'selected' : '' ?>>En proceso</option>
                                     <option value="Completada"  <?= strcasecmp($estatusActual,'Completada')===0 ? 'selected' : '' ?>>Completada</option>
                                     <option value="Pausada"     <?= strcasecmp($estatusActual,'Pausada')===0 ? 'selected' : '' ?>>Pausada</option>
@@ -145,6 +146,9 @@
                         <div class="col-md-6">
                             <label class="form-label">Empleados disponibles (marque para asignar)</label>
                             <div id="asg-disponibles-list" class="border rounded p-2" style="max-height:260px; overflow:auto;"></div>
+                            <div class="mt-3"></div>
+                            <label class="form-label">Personal de Corte (marque para asignar)</label>
+                            <div id="asg-corte-list" class="border rounded p-2" style="max-height:260px; overflow:auto;"></div>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Desde</label>
@@ -283,6 +287,7 @@
                 const $modal = $('#opAsignacionesModal');
                 $modal.find('#asg-opid').text(opId);
                 const $list = $modal.find('#asg-disponibles-list');
+                const $listCorte = $modal.find('#asg-corte-list');
                 const $tbody = $modal.find('#asg-tabla tbody');
                 // Prefijar Desde con ahora
                 try { $modal.find('#asg-desde').val(toLocalInput(new Date())); } catch(e) {}
@@ -296,21 +301,39 @@
                         }
                     });
                 $list.html('<div class="text-muted">Cargando empleados...</div>');
+                $listCorte.html('<div class="text-muted">Cargando personal de Corte...</div>');
                 $tbody.html('<tr><td colspan="5" class="text-center text-muted">Cargando...</td></tr>');
                 $.getJSON('<?= base_url('modulo1/ordenes') ?>/' + opId + '/asignaciones?t=' + Date.now())
                     .done(function(data){
                         const emps = data.empleados || [];
-                        if (!emps.length) {
-                            $list.html('<div class="text-muted">No hay empleados disponibles.</div>');
-                        } else {
-                            const items = emps.map(function(e){
-                                const label = (e.noEmpleado?('['+e.noEmpleado+'] '):'') + e.nombre + ' ' + (e.apellido||'');
+                        const isCorte = e => String(e?.puesto||'').trim().toLowerCase() === 'corte';
+                        const corte = emps.filter(isCorte);
+                        const otros = emps.filter(e => !isCorte(e));
+
+                        if (otros.length) {
+                            const itemsOtros = otros.map(function(e){
+                                const label = (e.noEmpleado?('['+e.noEmpleado+'] '):'') + (e.nombre||'') + ' ' + (e.apellido||'');
                                 return `<div class="form-check">
                         <input class="form-check-input asg-chk" type="checkbox" value="${e.id}" id="asg-chk-${e.id}">
                         <label class="form-check-label" for="asg-chk-${e.id}">${label}</label>
                       </div>`;
                             });
-                            $list.html(items.join(''));
+                            $list.html(itemsOtros.join(''));
+                        } else {
+                            $list.html('<div class="text-muted">No hay empleados disponibles.</div>');
+                        }
+
+                        if (corte.length) {
+                            const itemsCorte = corte.map(function(e){
+                                const label = (e.noEmpleado?('['+e.noEmpleado+'] '):'') + (e.nombre||'') + ' ' + (e.apellido||'');
+                                return `<div class="form-check">
+                        <input class="form-check-input asg-chk" type="checkbox" value="${e.id}" id="asg-chk-${e.id}">
+                        <label class="form-check-label" for="asg-chk-${e.id}">${label}</label>
+                      </div>`;
+                            });
+                            $listCorte.html(itemsCorte.join(''));
+                        } else {
+                            $listCorte.html('<div class="text-muted">No hay personal de Corte disponible.</div>');
                         }
                         $tbody.empty();
                         if (!data.asignadas || !data.asignadas.length){
@@ -373,7 +396,7 @@
                 const opId = $modal.data('opid');
                 const desde = $modal.find('#asg-desde').val() || '';
                 const hasta = $modal.find('#asg-hasta').val() || '';
-                const empleados = $('#asg-disponibles-list .asg-chk:checked')
+                const empleados = $('#asg-disponibles-list .asg-chk:checked, #asg-corte-list .asg-chk:checked')
                     .map(function(){ return parseInt($(this).val(),10); }).get()
                     .filter(n=>!isNaN(n) && n>0);
                 if (!opId || empleados.length===0){

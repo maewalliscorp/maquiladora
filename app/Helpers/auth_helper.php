@@ -84,6 +84,13 @@ if (!function_exists('can_menu')) {
             ];
             return in_array($perm, $allowed, true);
         }
+        if ($roleNorm === 'corte') {
+            $allowed = [
+                'menu.produccion',
+                'menu.incidencias',
+            ];
+            return in_array($perm, $allowed, true);
+        }
         if ($roleNorm === 'diseñador' || $roleNorm === 'disenador') { // soportar sin tilde
             $allowed = [
                 'menu.catalogo_disenos',

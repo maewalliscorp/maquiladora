@@ -92,10 +92,10 @@ $routes->get ('muestras/archivo/(:num)', 'Muestras::archivo/$1', ['filter' => 'a
  * Legacy
  * ------------------------------------------------------------------*/
 $routes->get('/perfilempleado',        'Modulos::m1_perfilempleado', ['filter' => 'auth']);
-$routes->get('/pedidos',               'Modulos::m1_pedidos',        ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Calidad,Envios']);
-$routes->get('/agregar_pedido',        'Modulos::m1_agregar',        ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Calidad,Envios']);
-$routes->get('/editarpedido/(:num)',   'Modulos::m1_editar/$1',      ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Calidad,Envios']);
-$routes->get('/detalle_pedido/(:num)', 'Modulos::m1_detalles/$1',    ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Calidad,Envios']);
+$routes->get('/pedidos',               'Modulos::m1_pedidos',        ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
+$routes->get('/agregar_pedido',        'Modulos::m1_agregar',        ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
+$routes->get('/editarpedido/(:num)',   'Modulos::m1_editar/$1',      ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
+$routes->get('/detalle_pedido/(:num)', 'Modulos::m1_detalles/$1',    ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
 $routes->get('/perfildisenador',       'Modulos::m2_perfildisenador', ['filter' => 'auth']);
 $routes->get('/catalogodisenos',       'Modulos::m2_catalogodisenos', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
 $routes->get('/agregardiseno',         'Modulos::m2_agregardiseno',   ['filter' => 'auth:Administrador,Jefe,Diseñador']);
@@ -105,15 +105,15 @@ $routes->get('/agregardiseno',         'Modulos::m2_agregardiseno',   ['filter' 
  * ------------------------------------------------------------------*/
 $routes->group('modulo1', [], function ($routes) {
     $routes->get('/',               'Modulos::m1_index');
-    $routes->get('pedidos',         'Modulos::m1_pedidos',    ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Calidad,Envios']);
-    $routes->get('produccion',      'Modulos::m1_produccion', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado']);
-    $routes->get('agregar',         'Modulos::m1_agregar',    ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Calidad,Envios']);
-    $routes->get('agregar_pedido',  'Modulos::m1_agregar',    ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Calidad,Envios']);
-    $routes->get('editar/(:num)',   'Modulos::m1_editar/$1',  ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Calidad,Envios']);
-    $routes->post('editar',         'Modulos::m1_editar',     ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Calidad,Envios']);
-    $routes->get('detalles/(:num)', 'Modulos::m1_detalles/$1',['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Calidad,Envios']);
+    $routes->get('pedidos',         'Modulos::m1_pedidos',    ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
+    $routes->get('produccion',      'Modulos::m1_produccion', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte']);
+    $routes->get('agregar',         'Modulos::m1_agregar',    ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
+    $routes->get('agregar_pedido',  'Modulos::m1_agregar',    ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
+    $routes->get('editar/(:num)',   'Modulos::m1_editar/$1',  ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
+    $routes->post('editar',         'Modulos::m1_editar',     ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
+    $routes->get('detalles/(:num)', 'Modulos::m1_detalles/$1',['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
     $routes->get('perfilempleado',  'Modulos::m1_perfilempleado');
-    $routes->get('ordenes',         'Modulos::m1_ordenes',    ['filter' => 'auth:Administrador,Jefe,Inspector,Empleado,RH']);
+    $routes->get('ordenes',         'Modulos::m1_ordenes',    ['filter' => 'auth:Administrador,Jefe,Inspector,Empleado,Corte,RH']);
     $routes->post('empleado/guardar', 'Modulos::m1_empleado_guardar', ['filter' => 'auth']);
     // APIs / Producción
     $routes->get('pedido/(:num)/json',   'Modulos::m1_pedido_json/$1');
@@ -125,8 +125,8 @@ $routes->group('modulo1', [], function ($routes) {
     // Tareas del empleado (producción)
     $routes->get('produccion/tareas',    'Produccion::tareas_empleado_json');
     // Crear/Eliminar pedido (OC + OP)
-    $routes->post('pedidos/crear',       'Modulos::m1_pedidos_crear', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Calidad,Envios']);
-    $routes->post('pedidos/eliminar',    'Modulos::m1_pedido_eliminar', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Calidad,Envios']);
+    $routes->post('pedidos/crear',       'Modulos::m1_pedidos_crear', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
+    $routes->post('pedidos/eliminar',    'Modulos::m1_pedido_eliminar', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
 
     // Endpoints para modales
     $routes->get('ordenes/folio/(:segment)/json', 'Produccion::orden_json_folio/$1');
@@ -147,7 +147,7 @@ $routes->get('diag/ping', fn () => 'OK DIAG PING');
 $routes->get('diag/agregar', function () {
     return view('modulos/agregar_pedido', ['title'=>'Diag · Agregar Pedido', 'notifCount'=>0]);
 });
-$routes->get('clientes', 'ClientesPage::index', ['filter' => 'auth:Administrador,Jefe,Empleado,Envios,Calidad,Almacenista,RH,Inspector,Diseñador']);
+$routes->get('clientes', 'ClientesPage::index', ['filter' => 'auth:Administrador,Jefe,Empleado,Corte,Envios,Calidad,Almacenista,RH,Inspector,Diseñador']);
 
 /* --------------------------------------------------------------------
  * Módulo 2
@@ -218,15 +218,15 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->post('reprocesos/(:num)/editar',     'Calidad::editarReproceso/$1', ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
 
     // WIP
-    $routes->get ('wip',                   'Wip::index',          ['filter' => 'auth:Administrador,Jefe,Inspector,Empleado']);
-    $routes->get ('wip/json',              'Wip::json',           ['filter' => 'auth:Administrador,Jefe,Inspector,Empleado']);
-    $routes->get ('wip/debug',             'Wip::debug',          ['filter' => 'auth:Administrador,Jefe,Inspector,Empleado']);
-    $routes->post('wip/actualizar/(:num)', 'Wip::actualizar/$1',  ['filter' => 'auth:Administrador,Jefe,Inspector,Empleado']);
+    $routes->get ('wip',                   'Wip::index',          ['filter' => 'auth:Administrador,Jefe,Inspector,Empleado,Corte']);
+    $routes->get ('wip/json',              'Wip::json',           ['filter' => 'auth:Administrador,Jefe,Inspector,Empleado,Corte']);
+    $routes->get ('wip/debug',             'Wip::debug',          ['filter' => 'auth:Administrador,Jefe,Inspector,Empleado,Corte']);
+    $routes->post('wip/actualizar/(:num)', 'Wip::actualizar/$1',  ['filter' => 'auth:Administrador,Jefe,Inspector,Empleado,Corte']);
 
     // Inspección / Incidencias
-    $routes->get ('incidencias',                 'Incidencias::index',     ['filter' => 'auth:Administrador,Jefe,Empleado,Almacenista,Calidad']);
-    $routes->post('incidencias/crear',           'Incidencias::store',     ['filter' => 'auth:Administrador,Jefe,Empleado,Almacenista,Calidad']);
-    $routes->get ('incidencias/eliminar/(:num)', 'Incidencias::delete/$1', ['filter' => 'auth:Administrador,Jefe,Empleado,Almacenista,Calidad']);
+    $routes->get ('incidencias',                 'Incidencias::index',     ['filter' => 'auth:Administrador,Jefe,Empleado,Corte,Almacenista,Calidad']);
+    $routes->post('incidencias/crear',           'Incidencias::store',     ['filter' => 'auth:Administrador,Jefe,Empleado,Corte,Almacenista,Calidad']);
+    $routes->get ('incidencias/eliminar/(:num)', 'Incidencias::delete/$1', ['filter' => 'auth:Administrador,Jefe,Empleado,Corte,Almacenista,Calidad']);
 
     // Grupo Inspección
     $routes->group('inspeccion', function($routes) {
@@ -311,7 +311,7 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->post('storage/list', 'StorageProxy::list');
 
     // Órdenes de clientes
-    $routes->get('ordenesclientes', 'Modulos::m1_ordenesclientes', ['filter' => 'auth:Administrador,Jefe,Empleado,Envios,Calidad,Almacenista,RH,Inspector,Diseñador']);
+    $routes->get('ordenesclientes', 'Modulos::m1_ordenesclientes', ['filter' => 'auth:Administrador,Jefe,Empleado,Corte,Envios,Calidad,Almacenista,RH,Inspector,Diseñador']);
 });
 
 /* --------------------------------------------------------------------
