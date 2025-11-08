@@ -16,6 +16,11 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
+<?php
+    // Cargar helper de autenticación para obtener el rol actual
+    if (!function_exists('current_role_name')) { helper('auth'); }
+    $__roleName = function_exists('current_role_name') ? (string)current_role_name() : '';
+?>
 <div class="d-flex align-items-center mb-4">
     <h1 class="me-3">Órdenes de Producción</h1>
     {{ ... }}
@@ -55,6 +60,7 @@
                                 <select class="form-select form-select-sm op-estatus-select" data-id="<?= esc($orden['opId'] ?? '') ?>" data-prev="<?= esc($estatusActual) ?>" style="min-width: 150px;">
                                     <option value="Planificada" <?= strcasecmp($estatusActual,'Planificada')===0 ? 'selected' : '' ?>>Planificada</option>
                                     <option value="En corte"     <?= strcasecmp($estatusActual,'En corte')===0 ? 'selected' : '' ?>>En corte</option>
+                                    <option value="Corte finalizado"     <?= strcasecmp($estatusActual,'Corte finalizado')===0 ? 'selected' : '' ?>>Corte finalizado</option>
                                     <option value="En proceso"  <?= strcasecmp($estatusActual,'En proceso')===0 ? 'selected' : '' ?>>En proceso</option>
                                     <option value="Completada"  <?= strcasecmp($estatusActual,'Completada')===0 ? 'selected' : '' ?>>Completada</option>
                                     <option value="Pausada"     <?= strcasecmp($estatusActual,'Pausada')===0 ? 'selected' : '' ?>>Pausada</option>
@@ -69,6 +75,14 @@
                                 <button type="button" class="btn btn-sm btn-outline-secondary btn-agregar-op" data-id="<?= esc($orden['opId'] ?? '') ?>" data-folio="<?= esc($orden['op'] ?? '') ?>" data-bs-toggle="modal" data-bs-target="#opAsignacionesModal">
                                     <i class="bi bi-person-plus"></i> Agregar
                                 </button>
+                                <?php
+                                $__isEnCorte = (isset($estatusActual) && strcasecmp(trim($estatusActual), 'En corte') === 0);
+                                $__isRolCorte = (strcasecmp(trim($__roleName), 'corte') === 0);
+                                if ($__isEnCorte && $__isRolCorte): ?>
+                                    <a href="<?= base_url('modulo1/produccion') ?>" class="btn btn-sm btn-success btn-empezar-produccion">
+                                        <i class="bi bi-play-circle"></i> Empezar
+                                    </a>
+                                <?php endif; ?>
                                 <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-op" data-id="<?= esc($orden['opId'] ?? '') ?>" data-folio="<?= esc($orden['op'] ?? '') ?>">
                                     <i class="bi bi-trash"></i> Eliminar
                                 </button>
@@ -204,6 +218,7 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        const __isRolCorte = <?= json_encode(strcasecmp(trim($__roleName), 'corte') === 0) ?>;
         $(function(){
             const langES = {
                 sProcessing:"Procesando...",
@@ -415,6 +430,8 @@
                     text: `Asignar ${empleados.length} empleado(s) a la OP ${opId}?`,
                     icon: 'question',
                     showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
                     confirmButtonText: 'Sí, asignar',
                     cancelButtonText: 'Cancelar'
                 }).then(function(result){
@@ -512,6 +529,15 @@
                                 Swal.fire({ icon:'success', title:'Listo', text: msg, timer: 1600, showConfirmButton:false });
                             } else {
                                 Swal.fire({ icon:'success', title:'Listo', text:'Estatus actualizado', timer: 1400, showConfirmButton:false });
+                            }
+                            const $row = $sel.closest('tr');
+                            const $actions = $row.find('td').last().find('.d-flex');
+                            if (String(estatus).toLowerCase() === 'en corte' && __isRolCorte) {
+                                if ($actions.find('.btn-empezar-produccion').length === 0) {
+                                    $actions.prepend('<a href="<?= base_url('modulo1/produccion') ?>" class="btn btn-sm btn-success btn-empezar-produccion"><i class="bi bi-play-circle"></i> Empezar</a>');
+                                }
+                            } else {
+                                $actions.find('.btn-empezar-produccion').remove();
                             }
                         } catch(e) { /* noop */ }
                     }).fail(function(xhr){

@@ -31,6 +31,8 @@ class AsignacionTareaModel extends Model
     public function listarPorEmpleado(int $empleadoId): array
     {
         if ($empleadoId <= 0) return [];
+        // Forzar nueva conexión para evitar caché
+        $db = \Config\Database::connect();
         $sql = "SELECT at.id,
                        at.ordenProduccionId AS opId,
                        at.rutaOperacionId,
@@ -42,7 +44,8 @@ class AsignacionTareaModel extends Model
                 JOIN orden_produccion op ON op.id = at.ordenProduccionId
                 WHERE at.empleadoId = ?
                 ORDER BY at.asignadoDesde IS NULL, at.asignadoDesde ASC, at.id DESC";
-        return $this->db->query($sql, [$empleadoId])->getResultArray();
+        // Usar query directo para evitar caché del modelo
+        return $db->query($sql, [$empleadoId])->getResultArray();
     }
 
     public function agregar(int $opId, int $empleadoId, ?string $desde = null, ?string $hasta = null, ?int $rutaOperacionId = null): bool

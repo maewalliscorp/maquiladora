@@ -124,6 +124,9 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->get('ordenes/(:num)/json',  'Produccion::orden_json/$1');
     // Tareas del empleado (producción)
     $routes->get('produccion/tareas',    'Produccion::tareas_empleado_json');
+    // Tiempo de trabajo
+    $routes->match(['post','options'],'produccion/tiempo/iniciar',   'Produccion::tiempo_trabajo_iniciar');
+    $routes->match(['post','options'],'produccion/tiempo/finalizar', 'Produccion::tiempo_trabajo_finalizar');
     // Crear/Eliminar pedido (OC + OP)
     $routes->post('pedidos/crear',       'Modulos::m1_pedidos_crear', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
     $routes->post('pedidos/eliminar',    'Modulos::m1_pedido_eliminar', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
