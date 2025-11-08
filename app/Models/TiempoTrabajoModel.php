@@ -73,26 +73,95 @@ class TiempoTrabajoModel extends Model
             return false;
         }
 
-        $fin = date('Y-m-d H:i:s');
-        $inicio = $registro['inicio'];
+        $inicio = trim($registro['inicio'] ?? '');
+        if (empty($inicio)) {
+            log_message('error', "Registro de tiempo_trabajo {$id} no tiene fecha de inicio válida");
+            return false;
+        }
 
-        // Calcular horas entre inicio y fin
+        $fin = date('Y-m-d H:i:s');
+        
+        // Validar que la fecha de inicio sea válida
         $inicioTimestamp = strtotime($inicio);
         $finTimestamp = strtotime($fin);
         
         if ($inicioTimestamp === false || $finTimestamp === false) {
+            log_message('error', "Error al convertir fechas. Inicio: {$inicio}, Fin: {$fin}");
             return false;
         }
 
         $diferenciaSegundos = $finTimestamp - $inicioTimestamp;
+        if ($diferenciaSegundos < 0) {
+            log_message('warning', "La fecha de fin es anterior a la de inicio para registro {$id}");
+            return false;
+        }
+
         $horas = $diferenciaSegundos / 3600; // Convertir segundos a horas
 
-        $data = [
-            'fin'   => $fin,
-            'horas' => round($horas, 2), // Redondear a 2 decimales
-        ];
+        // Calcular horas redondeadas
+        $horasCalculadas = round($horas, 2);
+        
+        // Validar que los valores sean correctos antes de actualizar
+        if (empty($fin) || !preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $fin)) {
+            log_message('error', "Fecha de fin inválida para registro {$id}: '{$fin}'");
+            return false;
+        }
+        
+        if (!is_numeric($horasCalculadas) || $horasCalculadas < 0) {
+            log_message('error', "Horas calculadas inválidas para registro {$id}: '{$horasCalculadas}'");
+            return false;
+        }
 
-        return $this->update($id, $data);
+        // Usar actualización SQL directa con prepared statements
+        // Esto evita problemas con campos DATETIME que puedan tener valores vacíos
+        try {
+            $db = \Config\Database::connect();
+            
+            // Deshabilitar el modo estricto temporalmente si está causando problemas
+            // Pero primero intentar con la actualización normal
+            
+            // Usar SQL directo con prepared statements para máximo control
+            $sql = "UPDATE tiempo_trabajo SET fin = ?, horas = ? WHERE id = ?";
+            
+            // Preparar los valores asegurándonos de que sean del tipo correcto
+            $params = [
+                $fin,                    // DATETIME - ya validado
+                (float)$horasCalculadas, // DECIMAL/FLOAT
+                (int)$id                 // INT
+            ];
+            
+            log_message('debug', "Intentando actualizar tiempo_trabajo {$id} con fin='{$fin}', horas={$horasCalculadas}");
+            
+            $result = $db->query($sql, $params);
+            
+            // Verificar errores de la base de datos
+            $error = $db->error();
+            if (!empty($error) && !empty($error['code'])) {
+                $errorMsg = $error['message'] ?? 'Error desconocido';
+                $errorCode = $error['code'] ?? 0;
+                log_message('error', "Error SQL al actualizar registro {$id}. Código: {$errorCode}, Mensaje: {$errorMsg}");
+                log_message('error', "Valores intentados - fin: '{$fin}', horas: '{$horasCalculadas}', id: {$id}");
+                return false;
+            }
+            
+            // Verificar que se haya actualizado al menos una fila
+            $affectedRows = $db->affectedRows();
+            if ($affectedRows === 0) {
+                log_message('warning', "No se actualizó ninguna fila para el registro {$id}. Puede que el registro no exista.");
+                return false;
+            }
+            
+            log_message('debug', "Tiempo de trabajo {$id} finalizado correctamente. Fin: {$fin}, Horas: {$horasCalculadas}, Filas afectadas: {$affectedRows}");
+            return true;
+        } catch (\Exception $e) {
+            log_message('error', "Excepción al finalizar tiempo de trabajo {$id}: " . $e->getMessage());
+            log_message('error', "Stack trace: " . $e->getTraceAsString());
+            return false;
+        } catch (\Throwable $e) {
+            log_message('error', "Error fatal al finalizar tiempo de trabajo {$id}: " . $e->getMessage());
+            log_message('error', "Stack trace: " . $e->getTraceAsString());
+            return false;
+        }
     }
 
     /**
@@ -114,6 +183,37 @@ class TiempoTrabajoModel extends Model
     }
 
     /**
+     * Verificar si ya existe un tiempo de trabajo finalizado para un empleado y orden de producción
+     * @param int $empleadoId
+     * @param int $ordenProduccionId
+     * @return bool
+     */
+    public function tieneFinalizado(int $empleadoId, int $ordenProduccionId): bool
+    {
+        if ($empleadoId <= 0 || $ordenProduccionId <= 0) {
+            return false;
+        }
+
+        try {
+            // Obtener la conexión de base de datos
+            $db = \Config\Database::connect();
+            
+            // Usar consulta SQL directa para verificar si hay un registro finalizado
+            // Solo verificar si fin IS NOT NULL (evita comparar con cadena vacía que causa error DATETIME)
+            $sql = "SELECT id FROM tiempo_trabajo 
+                    WHERE empleadoId = ? AND ordenProduccionId = ? AND fin IS NOT NULL
+                    LIMIT 1";
+            $finalizado = $db->query($sql, [$empleadoId, $ordenProduccionId])->getRowArray();
+
+            return !empty($finalizado);
+        } catch (\Throwable $e) {
+            // Si hay un error, retornar false para no bloquear el proceso
+            log_message('error', 'Error en tieneFinalizado: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Verificar si todos los empleados de un tipo específico (Corte o Empleado) han finalizado su tiempo de trabajo
      * @param int $ordenProduccionId
      * @param string $puesto 'Corte' o 'Empleado'
@@ -128,6 +228,9 @@ class TiempoTrabajoModel extends Model
         // Normalizar el puesto para la comparación
         $puestoNormalizado = trim($puesto);
 
+        // Forzar una nueva conexión para evitar caché
+        $this->db->reconnect();
+
         // Obtener todos los empleados asignados a esta OP con el puesto especificado
         $sql = "SELECT DISTINCT at.empleadoId, e.puesto, e.nombre, e.apellido
                 FROM asignacion_tarea at
@@ -136,8 +239,11 @@ class TiempoTrabajoModel extends Model
         
         $empleadosAsignados = $this->db->query($sql, [$ordenProduccionId, $puestoNormalizado])->getResultArray();
         
+        log_message('debug', "todosHanFinalizado - OP: {$ordenProduccionId}, Puesto: '{$puestoNormalizado}', Empleados encontrados: " . count($empleadosAsignados));
+        
         if (empty($empleadosAsignados)) {
             // Si no hay empleados asignados de ese tipo, considerar que todos han finalizado
+            log_message('debug', "No hay empleados asignados con puesto '{$puestoNormalizado}' para OP {$ordenProduccionId}, retornando true");
             return true;
         }
 
@@ -149,29 +255,35 @@ class TiempoTrabajoModel extends Model
         // y que no tengan ningún tiempo_trabajo activo (sin finalizar)
         foreach ($empleadoIds as $empId) {
             // Verificar si tiene algún registro activo (sin finalizar)
+            // Solo verificar si fin IS NULL, no comparar con cadena vacía (causa error DATETIME)
             $sqlActivo = "SELECT id FROM tiempo_trabajo 
-                         WHERE empleadoId = ? AND ordenProduccionId = ? AND (fin IS NULL OR fin = '')
+                         WHERE empleadoId = ? AND ordenProduccionId = ? AND fin IS NULL
                          LIMIT 1";
             $activo = $this->db->query($sqlActivo, [$empId, $ordenProduccionId])->getRowArray();
             if (!empty($activo)) {
                 // Hay al menos un registro activo, no todos han finalizado
+                log_message('debug', "Empleado {$empId} tiene registro activo (sin finalizar) para OP {$ordenProduccionId}");
                 return false;
             }
 
             // Verificar si tiene al menos un registro finalizado
-            // Usar una consulta más explícita
+            // Solo verificar si fin IS NOT NULL (evita comparar con cadena vacía)
             $sqlFinalizado = "SELECT id, fin FROM tiempo_trabajo 
-                             WHERE empleadoId = ? AND ordenProduccionId = ? AND fin IS NOT NULL AND fin != ''
+                             WHERE empleadoId = ? AND ordenProduccionId = ? AND fin IS NOT NULL
                              LIMIT 1";
             $finalizado = $this->db->query($sqlFinalizado, [$empId, $ordenProduccionId])->getRowArray();
             
             if (empty($finalizado)) {
                 // Este empleado no tiene ningún registro finalizado, no todos han finalizado
+                log_message('debug', "Empleado {$empId} NO tiene registro finalizado para OP {$ordenProduccionId}");
                 return false;
+            } else {
+                log_message('debug', "Empleado {$empId} tiene registro finalizado para OP {$ordenProduccionId} (fin: " . ($finalizado['fin'] ?? 'N/A') . ")");
             }
         }
 
         // Todos tienen al menos un registro finalizado y ninguno tiene registros activos
+        log_message('debug', "Todos los empleados con puesto '{$puestoNormalizado}' han finalizado para OP {$ordenProduccionId}");
         return true;
     }
 }

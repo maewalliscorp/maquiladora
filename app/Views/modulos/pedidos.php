@@ -542,6 +542,36 @@
     </div>
 </div>
 
+<!-- Modal Bootstrap: Documento PDF del pedido -->
+<div class="modal fade" id="pedidoDocumentoModal" tabindex="-1" aria-labelledby="pedidoDocumentoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pedidoDocumentoModalLabel">Documento del Pedido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="pedido-documento-loading" class="text-center p-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando documento...</span>
+                    </div>
+                    <p class="mt-2">Cargando documento PDF...</p>
+                </div>
+                <iframe id="pedido-documento-iframe" src="" style="width: 100%; height: 80vh; border: none; display: none;"></iframe>
+            </div>
+            <div class="modal-footer">
+                <a id="pedido-documento-download-pdf" href="#" class="btn btn-primary" download>
+                    <i class="bi bi-file-earmark-pdf"></i> Descargar PDF
+                </a>
+                <a id="pedido-documento-download-excel" href="#" class="btn btn-success" download>
+                    <i class="bi bi-file-earmark-excel"></i> Descargar Excel
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card shadow-sm">
     <div class="card-header">
         <strong>Lista de Pedidos</strong>
@@ -579,14 +609,10 @@
                             <a class="btn btn-sm btn-outline-primary" href="<?= base_url('modulo1/editar/' . (int)$p['id']) ?>" role="button" onclick="return false;">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <?php $docUrl = $p['documento_url'] ?? null; ?>
-                            <?php if ($docUrl): ?>
-                                <a class="btn btn-sm btn-outline-secondary" target="_blank" href="<?= esc($docUrl) ?>">
-                                    <i class="bi bi-file-earmark-text"></i>
-                                </a>
-                            <?php else: ?>
-                                <span class="text-muted">—</span>
-                            <?php endif; ?>
+                            <button type="button" class="btn btn-sm btn-outline-secondary btn-ver-documento"
+                                    data-id="<?= (int)$p['id'] ?>" data-bs-toggle="modal" data-bs-target="#pedidoDocumentoModal" title="Ver documento PDF">
+                                <i class="bi bi-file-earmark-pdf"></i>
+                            </button>
                             <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-pedido" data-id="<?= (int)$p['id'] ?>" title="Eliminar">
                                 <i class="bi bi-trash"></i>
                             </button>
@@ -1777,6 +1803,88 @@
         });
 
         // Hint: aquí puedes implementar el POST para crear OC y OP con estos datos cuando des a Continuar/Guardar.
+
+        // Manejar click en botón de ver documento PDF
+        $(document).on('click', '.btn-ver-documento', function(){
+            const id = $(this).data('id');
+            if (!id) return;
+            
+            const $modal = $('#pedidoDocumentoModal');
+            const $loading = $('#pedido-documento-loading');
+            const $iframe = $('#pedido-documento-iframe');
+            const $downloadPdf = $('#pedido-documento-download-pdf');
+            const $downloadExcel = $('#pedido-documento-download-excel');
+            
+            // Mostrar loading y ocultar iframe
+            $loading.show();
+            $iframe.hide();
+            
+            // URLs del PDF y Excel
+            const pdfUrl = '<?= base_url('modulo1/pedido') ?>/' + id + '/pdf';
+            const excelUrl = '<?= base_url('modulo1/pedido') ?>/' + id + '/excel';
+            
+            // Configurar iframe y enlaces de descarga
+            $iframe.attr('src', pdfUrl);
+            $downloadPdf.attr('href', pdfUrl);
+            $downloadExcel.attr('href', excelUrl);
+            
+            // Resetear estado de botones al abrir modal
+            $downloadPdf.prop('disabled', false).html('<i class="bi bi-file-earmark-pdf"></i> Descargar PDF');
+            $downloadExcel.prop('disabled', false).html('<i class="bi bi-file-earmark-excel"></i> Descargar Excel');
+            
+            // Cuando el iframe cargue, ocultar loading y mostrar iframe
+            $iframe.on('load', function(){
+                $loading.hide();
+                $iframe.show();
+            });
+        });
+
+        // Manejar click en botón de descargar PDF
+        $(document).on('click', '#pedido-documento-download-pdf', function(e){
+            const $btn = $(this);
+            if ($btn.prop('disabled')) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Bloquear botón
+            $btn.prop('disabled', true);
+            const originalHtml = $btn.html();
+            $btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Descargando...');
+            
+            // Re-habilitar después de 5 segundos (tiempo suficiente para iniciar descarga)
+            setTimeout(function(){
+                $btn.prop('disabled', false).html(originalHtml);
+            }, 5000);
+        });
+
+        // Manejar click en botón de descargar Excel
+        $(document).on('click', '#pedido-documento-download-excel', function(e){
+            const $btn = $(this);
+            if ($btn.prop('disabled')) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Bloquear botón
+            $btn.prop('disabled', true);
+            const originalHtml = $btn.html();
+            $btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Descargando...');
+            
+            // Re-habilitar después de 5 segundos (tiempo suficiente para iniciar descarga)
+            setTimeout(function(){
+                $btn.prop('disabled', false).html(originalHtml);
+            }, 5000);
+        });
+        
+        // Limpiar iframe al cerrar el modal
+        $('#pedidoDocumentoModal').on('hidden.bs.modal', function(){
+            $('#pedido-documento-iframe').attr('src', '').hide();
+            $('#pedido-documento-loading').show();
+            // Resetear botones al cerrar modal
+            $('#pedido-documento-download-pdf').prop('disabled', false).html('<i class="bi bi-file-earmark-pdf"></i> Descargar PDF');
+            $('#pedido-documento-download-excel').prop('disabled', false).html('<i class="bi bi-file-earmark-excel"></i> Descargar Excel');
+        });
     });
 </script>
 

@@ -118,14 +118,28 @@
                     const status = it.status || '-';
                     const desde = it.asignadoDesde || '-';
                     const hasta = it.asignadoHasta || '-';
+                    const tieneFinalizado = it.tieneFinalizado === true;
                     const lower = String(status).toLowerCase();
-                    const showStart = (__isRolEmpleado && lower === 'en proceso') || (__isRolCorte && lower === 'en corte');
+                    // Mostrar botón si: el estatus es "En proceso" o "En corte" (permite reactivar cuando vuelve a proceso)
+                    // O si no tiene finalizado y el estatus es correcto
+                    const isEnProceso = (__isRolEmpleado && lower === 'en proceso');
+                    const isEnCorte = (__isRolCorte && lower === 'en corte');
+                    const showStart = (isEnProceso || isEnCorte) && 
+                                     (lower !== 'completada' && lower !== 'corte finalizado');
+                    
+                    let actionButton = '';
+                    if (showStart) {
+                        // Si está en proceso/corte, mostrar botón incluso si tiene finalizado (permite reactivar)
+                        actionButton = '<button class="btn btn-sm btn-success btn-start-production" data-folio="' + (folio||'') + '" data-id="' + (it.opId||it.id||'') + '"><i class="bi bi-play-circle me-1"></i>Empezar</button>';
+                    } else if (tieneFinalizado && !showStart) {
+                        // Solo mostrar "Ya finalizado" si no está en proceso/corte
+                        actionButton = '<span class="badge bg-secondary">Ya finalizado</span>';
+                    }
+                    
                     const right = (
                         '<div class="d-flex align-items-center w-100">'
                         + '<div class="flex-grow-1 d-flex justify-content-center gap-2">'
-                        + (showStart
-                           ? ('<button class="btn btn-sm btn-success btn-start-production" data-folio="' + (folio||'') + '" data-id="' + (it.id||'') + '"><i class="bi bi-play-circle me-1"></i>Empezar</button>')
-                           : '')
+                        + actionButton
                         + '</div>'
                         + '<span class="badge bg-info text-dark status-badge ms-auto">' + status + '</span>'
                         + '</div>'
@@ -295,10 +309,9 @@
                         }
                     }
                     
+                    // Mostrar mensaje principal sin mencionar el cambio de estatus (se mostrará después si aplica)
                     let mensaje = 'La producción fue finalizada. Horas trabajadas: ' + (data.horas ? parseFloat(data.horas).toFixed(2) : '0.00');
-                    if (data.estatusActualizado && data.nuevoEstatus) {
-                        mensaje += '\nEstatus actualizado a: ' + data.nuevoEstatus;
-                    } else if (data.todosFinalizados === false) {
+                    if (data.todosFinalizados === false) {
                         mensaje += '\nEsperando que otros empleados finalicen...';
                     }
                     
@@ -306,23 +319,35 @@
                         icon:'success', 
                         title:'Finalizado', 
                         text: mensaje, 
-                        timer:3000, 
+                        timer:2000, 
                         showConfirmButton:false 
                     });
                     
-                    // Si el estatus se actualizó, recargar la lista de órdenes
+                    // Si el estatus se actualizó, mostrar una notificación separada más discreta y recargar
                     if (data.estatusActualizado && data.nuevoEstatus) {
                         console.log('Recargando lista de órdenes porque el estatus se actualizó a:', data.nuevoEstatus);
+                        // Mostrar notificación discreta después de un breve delay
+                        setTimeout(() => {
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'Estatus actualizado',
+                                text: 'La orden ahora está: ' + data.nuevoEstatus,
+                                timer: 2000,
+                                showConfirmButton: false,
+                                toast: true,
+                                position: 'top-end'
+                            });
+                        }, 2500);
                         // Esperar más tiempo para asegurar que la actualización se haya completado en la BD
                         setTimeout(() => {
                             cargarOrdenes();
-                        }, 1000);
+                        }, 1500);
                     } else if (data.todosFinalizados === true && data.nuevoEstatus) {
                         // Si todos finalizaron pero no se actualizó, recargar de todas formas
                         console.log('Recargando lista de órdenes porque todos finalizaron:', data.nuevoEstatus);
                         setTimeout(() => {
                             cargarOrdenes();
-                        }, 1000);
+                        }, 1500);
                     }
                 } else {
                     Swal.fire({ icon:'error', title:'Error', text: data.error || 'No se pudo finalizar el tiempo de trabajo.' });

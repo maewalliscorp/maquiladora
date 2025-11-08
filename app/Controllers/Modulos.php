@@ -898,6 +898,375 @@ class Modulos extends BaseController
     }
 
     /**
+     * Generar PDF del pedido
+     */
+    public function m1_pedido_pdf($id = null)
+    {
+        $id = (int)($id ?? 0);
+        if ($id <= 0) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'ID inválido']);
+        }
+
+        try {
+            $pedidoModel = new \App\Models\PedidoModel();
+            // Obtener detalle completo del pedido
+            $detalle = $pedidoModel->getPedidoDetalle($id);
+            
+            if (!$detalle) {
+                $basic = $pedidoModel->getPedidoPorId($id);
+                if (!$basic) {
+                    return $this->response->setStatusCode(404)->setJSON(['error' => 'Pedido no encontrado']);
+                }
+                $detalle = [
+                    'id' => (int)($basic['id'] ?? $id),
+                    'folio' => $basic['folio'] ?? '',
+                    'fecha' => $basic['fecha'] ?? null,
+                    'estatus' => $basic['estatus'] ?? '',
+                    'moneda' => $basic['moneda'] ?? '',
+                    'total' => $basic['total'] ?? 0,
+                    'cliente' => [
+                        'nombre' => $basic['empresa'] ?? '',
+                    ],
+                    'items' => [],
+                    'op_cantidadPlan' => $basic['op_cantidadPlan'] ?? null,
+                ];
+            }
+
+            // Rellenar diseño si está vacío (mismo código que m1_pedido_json)
+            if (empty($detalle['diseno'])) {
+                $db = \Config\Database::connect();
+                $row = null;
+                try {
+                    $row = $db->query(
+                        "SELECT dv.*, d.id AS d_id, d.codigo AS d_codigo, d.nombre AS d_nombre, d.descripcion AS d_descripcion,
+                                COALESCE(dv.precio_unidad, dv.precioUnidad, d.precio_unidad, d.precioUnidad) AS precio_unidad
+                         FROM orden_produccion op
+                         LEFT JOIN diseno_version dv ON dv.id = op.disenoVersionId
+                         LEFT JOIN diseno d ON d.id = dv.disenoId
+                         WHERE op.ordenCompraId = ?
+                         ORDER BY op.id DESC
+                         LIMIT 1",
+                        [$id]
+                    )->getRowArray();
+                } catch (\Throwable $e) { $row = null; }
+                if (!$row) {
+                    try {
+                        $row = $db->query(
+                            "SELECT dv.*, d.id AS d_id, d.codigo AS d_codigo, d.nombre AS d_nombre, d.descripcion AS d_descripcion,
+                                    COALESCE(dv.precio_unidad, dv.precioUnidad, d.precio_unidad, d.precioUnidad) AS precio_unidad
+                             FROM OrdenProduccion op
+                             LEFT JOIN DisenoVersion dv ON dv.id = op.disenoVersionId
+                             LEFT JOIN Diseno d ON d.id = dv.disenoId
+                             WHERE op.ordenCompraId = ?
+                             ORDER BY op.id DESC
+                             LIMIT 1",
+                            [$id]
+                        )->getRowArray();
+                    } catch (\Throwable $e2) { $row = null; }
+                }
+                if ($row && isset($row['d_id'])) {
+                    $detalle['diseno'] = [
+                        'id' => $row['d_id'],
+                        'codigo' => $row['d_codigo'] ?? '',
+                        'nombre' => $row['d_nombre'] ?? '',
+                        'descripcion' => $row['d_descripcion'] ?? '',
+                        'precio_unidad' => $row['precio_unidad'] ?? $row['precioUnidad'] ?? null,
+                        'version' => [
+                            'id' => $row['id'] ?? null,
+                            'version' => $row['version'] ?? null,
+                            'fecha' => $row['fecha'] ?? null,
+                            'aprobado' => $row['aprobado'] ?? null,
+                        ],
+                    ];
+                }
+            }
+
+            // Preparar datos para la vista del PDF
+            $data = [
+                'pedido' => [
+                    'id' => (int)($detalle['id'] ?? $id),
+                    'folio' => $detalle['folio'] ?? '',
+                    'fecha' => isset($detalle['fecha']) ? date('d/m/Y', strtotime($detalle['fecha'])) : date('d/m/Y'),
+                    'estatus' => $detalle['estatus'] ?? '',
+                    'moneda' => $detalle['moneda'] ?? 'MXN',
+                    'total' => isset($detalle['total']) ? number_format((float)$detalle['total'], 2) : '0.00',
+                ],
+                'cliente' => $detalle['cliente'] ?? [],
+                'diseno' => $detalle['diseno'] ?? null,
+                'op_cantidadPlan' => $detalle['op_cantidadPlan'] ?? null,
+                'op_fechaInicioPlan' => isset($detalle['op_fechaInicioPlan']) ? date('d/m/Y', strtotime($detalle['op_fechaInicioPlan'])) : null,
+                'op_fechaFinPlan' => isset($detalle['op_fechaFinPlan']) ? date('d/m/Y', strtotime($detalle['op_fechaFinPlan'])) : null,
+            ];
+
+            // Renderizar HTML de la vista
+            $html = view('modulos/pedido_pdf', $data);
+
+            // Configurar Dompdf
+            $opt = new \Dompdf\Options();
+            $opt->set('isRemoteEnabled', true);
+            $opt->set('isHtml5ParserEnabled', true);
+            $dompdf = new \Dompdf\Dompdf($opt);
+
+            $dompdf->loadHtml($html, 'UTF-8');
+            $dompdf->setPaper('letter', 'portrait');
+            $dompdf->render();
+
+            $pdfBytes = $dompdf->output();
+
+            // Limpiar cualquier output buffer
+            while (ob_get_level() > 0) { @ob_end_clean(); }
+
+            // Responder con el PDF
+            $filename = 'pedido_' . ($data['pedido']['folio'] ?: $id) . '.pdf';
+
+            return $this->response
+                ->setStatusCode(200)
+                ->setHeader('Content-Type', 'application/pdf')
+                ->setHeader('Content-Disposition', 'inline; filename="'.$filename.'"')
+                ->setHeader('Cache-Control', 'private, max-age=0, must-revalidate')
+                ->setHeader('Pragma', 'public')
+                ->setBody($pdfBytes);
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al generar PDF del pedido: ' . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON([
+                'error' => 'Error al generar el PDF',
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Generar Excel del pedido
+     */
+    public function m1_pedido_excel($id = null)
+    {
+        $id = (int)($id ?? 0);
+        if ($id <= 0) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'ID inválido']);
+        }
+
+        try {
+            $pedidoModel = new \App\Models\PedidoModel();
+            // Obtener detalle completo del pedido
+            $detalle = $pedidoModel->getPedidoDetalle($id);
+            
+            if (!$detalle) {
+                $basic = $pedidoModel->getPedidoPorId($id);
+                if (!$basic) {
+                    return $this->response->setStatusCode(404)->setJSON(['error' => 'Pedido no encontrado']);
+                }
+                $detalle = [
+                    'id' => (int)($basic['id'] ?? $id),
+                    'folio' => $basic['folio'] ?? '',
+                    'fecha' => $basic['fecha'] ?? null,
+                    'estatus' => $basic['estatus'] ?? '',
+                    'moneda' => $basic['moneda'] ?? '',
+                    'total' => $basic['total'] ?? 0,
+                    'cliente' => [
+                        'nombre' => $basic['empresa'] ?? '',
+                    ],
+                    'items' => [],
+                    'op_cantidadPlan' => $basic['op_cantidadPlan'] ?? null,
+                ];
+            }
+
+            // Rellenar diseño si está vacío (mismo código que m1_pedido_json)
+            if (empty($detalle['diseno'])) {
+                $db = \Config\Database::connect();
+                $row = null;
+                try {
+                    $row = $db->query(
+                        "SELECT dv.*, d.id AS d_id, d.codigo AS d_codigo, d.nombre AS d_nombre, d.descripcion AS d_descripcion,
+                                COALESCE(dv.precio_unidad, dv.precioUnidad, d.precio_unidad, d.precioUnidad) AS precio_unidad
+                         FROM orden_produccion op
+                         LEFT JOIN diseno_version dv ON dv.id = op.disenoVersionId
+                         LEFT JOIN diseno d ON d.id = dv.disenoId
+                         WHERE op.ordenCompraId = ?
+                         ORDER BY op.id DESC
+                         LIMIT 1",
+                        [$id]
+                    )->getRowArray();
+                } catch (\Throwable $e) { $row = null; }
+                if (!$row) {
+                    try {
+                        $row = $db->query(
+                            "SELECT dv.*, d.id AS d_id, d.codigo AS d_codigo, d.nombre AS d_nombre, d.descripcion AS d_descripcion,
+                                    COALESCE(dv.precio_unidad, dv.precioUnidad, d.precio_unidad, d.precioUnidad) AS precio_unidad
+                             FROM OrdenProduccion op
+                             LEFT JOIN DisenoVersion dv ON dv.id = op.disenoVersionId
+                             LEFT JOIN Diseno d ON d.id = dv.disenoId
+                             WHERE op.ordenCompraId = ?
+                             ORDER BY op.id DESC
+                             LIMIT 1",
+                            [$id]
+                        )->getRowArray();
+                    } catch (\Throwable $e2) { $row = null; }
+                }
+                if ($row && isset($row['d_id'])) {
+                    $detalle['diseno'] = [
+                        'id' => $row['d_id'],
+                        'codigo' => $row['d_codigo'] ?? '',
+                        'nombre' => $row['d_nombre'] ?? '',
+                        'descripcion' => $row['d_descripcion'] ?? '',
+                        'precio_unidad' => $row['precio_unidad'] ?? $row['precioUnidad'] ?? null,
+                        'version' => [
+                            'id' => $row['id'] ?? null,
+                            'version' => $row['version'] ?? null,
+                            'fecha' => $row['fecha'] ?? null,
+                            'aprobado' => $row['aprobado'] ?? null,
+                        ],
+                    ];
+                }
+            }
+
+            // Preparar datos
+            $pedido = [
+                'id' => (int)($detalle['id'] ?? $id),
+                'folio' => $detalle['folio'] ?? '',
+                'fecha' => isset($detalle['fecha']) ? date('d/m/Y', strtotime($detalle['fecha'])) : date('d/m/Y'),
+                'estatus' => $detalle['estatus'] ?? '',
+                'moneda' => $detalle['moneda'] ?? 'MXN',
+                'total' => isset($detalle['total']) ? number_format((float)$detalle['total'], 2) : '0.00',
+            ];
+            $cliente = $detalle['cliente'] ?? [];
+            $diseno = $detalle['diseno'] ?? null;
+            $op_cantidadPlan = $detalle['op_cantidadPlan'] ?? null;
+            $op_fechaInicioPlan = isset($detalle['op_fechaInicioPlan']) ? date('d/m/Y', strtotime($detalle['op_fechaInicioPlan'])) : null;
+            $op_fechaFinPlan = isset($detalle['op_fechaFinPlan']) ? date('d/m/Y', strtotime($detalle['op_fechaFinPlan'])) : null;
+
+            // Generar Excel usando formato XML SpreadsheetML
+            $xml = '<?xml version="1.0"?>' . "\n";
+            $xml .= '<?mso-application progid="Excel.Sheet"?>' . "\n";
+            $xml .= '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"' . "\n";
+            $xml .= ' xmlns:o="urn:schemas-microsoft-com:office:office"' . "\n";
+            $xml .= ' xmlns:x="urn:schemas-microsoft-com:office:excel"' . "\n";
+            $xml .= ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"' . "\n";
+            $xml .= ' xmlns:html="http://www.w3.org/TR/REC-html40">' . "\n";
+            $xml .= '<Worksheet ss:Name="Pedido">' . "\n";
+            $xml .= '<Table>' . "\n";
+
+            // Función helper para agregar fila
+            $addRow = function($cells) use (&$xml) {
+                $xml .= '<Row>' . "\n";
+                foreach ($cells as $cell) {
+                    $type = is_numeric($cell) ? 'Number' : 'String';
+                    $xml .= '<Cell><Data ss:Type="' . $type . '">' . htmlspecialchars($cell, ENT_XML1) . '</Data></Cell>' . "\n";
+                }
+                $xml .= '</Row>' . "\n";
+            };
+
+            // Encabezado
+            $addRow(['ORDEN DE COMPRA']);
+            $addRow(['Folio:', $pedido['folio']]);
+            $addRow([]);
+
+            // Información General
+            $addRow(['INFORMACIÓN GENERAL']);
+            $addRow(['Folio:', $pedido['folio']]);
+            $addRow(['Fecha:', $pedido['fecha']]);
+            $addRow(['Estatus:', $pedido['estatus']]);
+            $addRow(['Moneda:', $pedido['moneda']]);
+            $addRow([]);
+
+            // Datos del Cliente
+            $addRow(['DATOS DEL CLIENTE']);
+            if (!empty($cliente['nombre'])) {
+                $addRow(['Nombre:', $cliente['nombre']]);
+            }
+            if (!empty($cliente['email'])) {
+                $addRow(['Email:', $cliente['email']]);
+            }
+            if (!empty($cliente['telefono'])) {
+                $addRow(['Teléfono:', $cliente['telefono']]);
+            }
+            if (!empty($cliente['direccion_detalle'])) {
+                $dir = $cliente['direccion_detalle'];
+                $direccion = ($dir['calle'] ?? '');
+                if (!empty($dir['numExt'])) $direccion .= ' #' . $dir['numExt'];
+                if (!empty($dir['numInt'])) $direccion .= ' Int. ' . $dir['numInt'];
+                if (!empty($dir['ciudad'])) $direccion .= ', ' . $dir['ciudad'];
+                if (!empty($dir['estado'])) $direccion .= ', ' . $dir['estado'];
+                if (!empty($dir['cp'])) $direccion .= ' CP ' . $dir['cp'];
+                if (!empty($dir['pais'])) $direccion .= ', ' . $dir['pais'];
+                if ($direccion) {
+                    $addRow(['Dirección:', $direccion]);
+                }
+            }
+            $addRow([]);
+
+            // Diseño / Modelo
+            if (!empty($diseno)) {
+                $addRow(['DISEÑO / MODELO']);
+                if (!empty($diseno['codigo'])) {
+                    $addRow(['Código:', $diseno['codigo']]);
+                }
+                if (!empty($diseno['nombre'])) {
+                    $addRow(['Nombre:', $diseno['nombre']]);
+                }
+                if (!empty($diseno['descripcion'])) {
+                    $addRow(['Descripción:', $diseno['descripcion']]);
+                }
+                if (!empty($diseno['precio_unidad'])) {
+                    $addRow(['Precio Unitario:', $pedido['moneda'] . ' ' . number_format((float)$diseno['precio_unidad'], 2)]);
+                }
+                if (!empty($diseno['version'])) {
+                    $ver = is_array($diseno['version']) ? $diseno['version'] : ['version' => $diseno['version']];
+                    if (!empty($ver['version'])) {
+                        $addRow(['Versión:', $ver['version']]);
+                    }
+                    if (!empty($ver['fecha'])) {
+                        $addRow(['Fecha Versión:', date('d/m/Y', strtotime($ver['fecha']))]);
+                    }
+                }
+                $addRow([]);
+            }
+
+            // Plan
+            $addRow(['PLAN']);
+            $addRow(['Concepto', 'Valor']);
+            if (!empty($op_cantidadPlan)) {
+                $addRow(['Cantidad Plan', number_format((float)$op_cantidadPlan, 0) . ' unidades']);
+            }
+            if (!empty($diseno['precio_unidad']) && !empty($op_cantidadPlan)) {
+                $addRow(['Precio Unitario', $pedido['moneda'] . ' ' . number_format((float)$diseno['precio_unidad'], 2)]);
+                $addRow(['Subtotal', $pedido['moneda'] . ' ' . number_format((float)$diseno['precio_unidad'] * (float)$op_cantidadPlan, 2)]);
+            }
+            if (!empty($op_fechaInicioPlan)) {
+                $addRow(['Fecha Inicio Plan', $op_fechaInicioPlan]);
+            }
+            if (!empty($op_fechaFinPlan)) {
+                $addRow(['Fecha Fin Plan', $op_fechaFinPlan]);
+            }
+            $addRow([]);
+            $addRow(['TOTAL', $pedido['moneda'] . ' ' . $pedido['total']]);
+
+            $xml .= '</Table>' . "\n";
+            $xml .= '</Worksheet>' . "\n";
+            $xml .= '</Workbook>';
+
+            // Limpiar cualquier output buffer
+            while (ob_get_level() > 0) { @ob_end_clean(); }
+
+            // Responder con el Excel
+            $filename = 'pedido_' . ($pedido['folio'] ?: $id) . '.xls';
+
+            return $this->response
+                ->setStatusCode(200)
+                ->setHeader('Content-Type', 'application/vnd.ms-excel')
+                ->setHeader('Content-Disposition', 'attachment; filename="'.$filename.'"')
+                ->setHeader('Cache-Control', 'private, max-age=0, must-revalidate')
+                ->setHeader('Pragma', 'public')
+                ->setBody($xml);
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al generar Excel del pedido: ' . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON([
+                'error' => 'Error al generar el Excel',
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
      * Eliminar un diseño: borra sus versiones y materiales asociados.
      * Acepta POST/OPTIONS
      */

@@ -103,6 +103,43 @@ class Produccion extends BaseController
                 }
             }
 
+            // Si cambia a "Completada", actualizar también el estatus de orden_compra a "Finalizada"
+            if (strcasecmp($estatus, 'Completada') === 0) {
+                // Obtener ordenCompraId de la OP
+                $ocId = null;
+                try {
+                    $rowOP = $db->query('SELECT ordenCompraId FROM orden_produccion WHERE id = ?', [$id])->getRowArray();
+                    if ($rowOP && isset($rowOP['ordenCompraId'])) {
+                        $ocId = (int)$rowOP['ordenCompraId'];
+                    }
+                } catch (\Throwable $e) {
+                    try {
+                        $rowOP = $db->query('SELECT ordenCompraId FROM OrdenProduccion WHERE id = ?', [$id])->getRowArray();
+                        if ($rowOP && isset($rowOP['ordenCompraId'])) {
+                            $ocId = (int)$rowOP['ordenCompraId'];
+                        }
+                    } catch (\Throwable $e2) {
+                        // Ignorar si no existe la tabla con mayúsculas
+                    }
+                }
+
+                // Actualizar estatus de orden_compra a "Finalizada" si existe
+                if ($ocId && $ocId > 0) {
+                    try {
+                        $okOc = $db->table('orden_compra')->where('id', $ocId)->update(['estatus' => 'Finalizada']);
+                        if (!$okOc) {
+                            try {
+                                $db->table('OrdenCompra')->where('id', $ocId)->update(['estatus' => 'Finalizada']);
+                            } catch (\Throwable $e) {
+                                log_message('warning', "No se pudo actualizar estatus de orden_compra ID: {$ocId}");
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        log_message('warning', "Error al actualizar estatus de orden_compra ID: {$ocId}: " . $e->getMessage());
+                    }
+                }
+            }
+
             $db->transComplete();
             if ($db->transStatus() === false) { throw new \Exception('Error en la transacción'); }
 
@@ -344,13 +381,13 @@ class Produccion extends BaseController
                 // 1) por idusuario
                 $userId = (int)(session()->get('user_id') ?? 0);
                 if ($userId > 0 && $empleadoId <= 0) {
-                    $emp = $empModel->where('idusuario', $userId)->select('id').first();
+                    $emp = $empModel->where('idusuario', $userId)->select('id')->first();
                     if ($emp && isset($emp['id'])) { $empleadoId = (int)$emp['id']; }
                 }
                 // 2) por email
                 $email = (string)(session()->get('email') ?? '');
                 if ($empleadoId <= 0 && $email !== '') {
-                    $emp = $empModel->where('email', $email)->select('id').first();
+                    $emp = $empModel->where('email', $email)->select('id')->first();
                     if ($emp && isset($emp['id'])) { $empleadoId = (int)$emp['id']; }
                 }
                 // 3) por user_name contra noEmpleado o nombre
@@ -359,7 +396,7 @@ class Produccion extends BaseController
                     $emp = $empModel->groupStart()
                             ->where('noEmpleado', $uname)
                             ->orWhere('nombre', $uname)
-                        ->groupEnd()->select('id').first();
+                        ->groupEnd()->select('id')->first();
                     if ($emp && isset($emp['id'])) { $empleadoId = (int)$emp['id']; }
                 }
             }
@@ -367,44 +404,95 @@ class Produccion extends BaseController
                 return $this->response->setStatusCode(400)->setJSON(['error' => 'No se pudo resolver el empleado actual']);
             }
             
-            // Usar consulta directa para evitar caché del modelo
+            // Forzar una nueva conexión para evitar caché
             $db = \Config\Database::connect();
+            $db->reconnect();
+            
+            // Usar consulta directa para evitar caché del modelo
+            // Obtener primero solo los datos básicos sin el JOIN del estatus
             $sql = "SELECT at.id,
                            at.ordenProduccionId AS opId,
                            at.rutaOperacionId,
                            at.asignadoDesde,
-                           at.asignadoHasta,
-                           op.folio,
-                           op.status
+                           at.asignadoHasta
                     FROM asignacion_tarea at
-                    JOIN orden_produccion op ON op.id = at.ordenProduccionId
                     WHERE at.empleadoId = ?
                     ORDER BY at.asignadoDesde IS NULL, at.asignadoDesde ASC, at.id DESC";
             $rows = $db->query($sql, [$empleadoId])->getResultArray();
             
-            // Verificar el estatus directamente desde la BD para cada orden
-            // Usar una nueva conexión para evitar caché y forzar lectura fresca
+            // Asegurar que rows sea un array
+            if (!is_array($rows)) {
+                $rows = [];
+            }
+            
+            // Obtener el folio y estatus directamente desde la BD para cada orden
+            // Usar consultas individuales con conexión fresca para evitar caché
+            $tiempoModel = new TiempoTrabajoModel();
             foreach ($rows as &$row) {
-                $estatusOriginal = $row['status'] ?? '';
-                $dbNueva = \Config\Database::connect();
-                // Forzar una consulta fresca sin caché - usar SQL directo
-                $sqlStatus = "SELECT status FROM orden_produccion WHERE id = ? LIMIT 1";
-                $statusRow = $dbNueva->query($sqlStatus, [$row['opId']])->getRowArray();
-                if ($statusRow && isset($statusRow['status'])) {
-                    $estatusObtenido = trim($statusRow['status']);
-                    // Siempre sobrescribir con el estatus de la BD
-                    $row['status'] = $estatusObtenido;
-                    // Log para debug
-                    log_message('debug', "OP {$row['opId']} - Estatus obtenido de BD: '{$estatusObtenido}' (original del JOIN: '{$estatusOriginal}')");
-                } else {
-                    // Si no se encontró, mantener el original pero loguear
-                    log_message('warning', "OP {$row['opId']} - No se pudo obtener estatus de BD, usando: '{$estatusOriginal}'");
+                $opId = (int)($row['opId'] ?? 0);
+                if ($opId <= 0) {
+                    $row['folio'] = '';
+                    $row['status'] = '';
+                    $row['tieneFinalizado'] = false;
+                    continue;
+                }
+                
+                try {
+                    // Forzar una nueva conexión para cada consulta de estatus
+                    $dbStatus = \Config\Database::connect();
+                    $dbStatus->reconnect();
+                    
+                    // Consulta directa SQL para obtener folio y estatus actualizado
+                    $sqlOp = "SELECT folio, status FROM orden_produccion WHERE id = ? LIMIT 1";
+                    $opRow = $dbStatus->query($sqlOp, [$opId])->getRowArray();
+                    
+                    if ($opRow) {
+                        $row['folio'] = $opRow['folio'] ?? '';
+                        $row['status'] = trim($opRow['status'] ?? '');
+                        
+                        // Verificar si ya hay un tiempo de trabajo finalizado para este empleado y orden
+                        try {
+                            $row['tieneFinalizado'] = $tiempoModel->tieneFinalizado($empleadoId, $opId);
+                        } catch (\Throwable $e) {
+                            // Si falla la verificación, asumir que no tiene finalizado
+                            $row['tieneFinalizado'] = false;
+                            log_message('warning', "Error al verificar tiempo finalizado para OP {$opId}: " . $e->getMessage());
+                        }
+                        
+                        log_message('debug', "OP {$opId} - Estatus obtenido: '{$row['status']}', tieneFinalizado: " . ($row['tieneFinalizado'] ? 'true' : 'false'));
+                    } else {
+                        $row['folio'] = '';
+                        $row['status'] = '';
+                        $row['tieneFinalizado'] = false;
+                        log_message('warning', "OP {$opId} - No se encontró en BD");
+                    }
+                } catch (\Throwable $e) {
+                    // Si hay un error, establecer valores por defecto
+                    $row['folio'] = '';
+                    $row['status'] = '';
+                    $row['tieneFinalizado'] = false;
+                    log_message('error', "Error al obtener datos de OP {$opId}: " . $e->getMessage());
                 }
             }
             
-            return $this->response->setJSON(['empleadoId' => $empleadoId, 'items' => $rows]);
+            // Asegurar que siempre devolvamos un array válido
+            if (!is_array($rows)) {
+                $rows = [];
+            }
+            
+            return $this->response->setJSON([
+                'empleadoId' => $empleadoId, 
+                'items' => $rows
+            ]);
         } catch (\Throwable $e) {
-            return $this->response->setStatusCode(500)->setJSON(['error' => 'Error al obtener tareas', 'message' => $e->getMessage()]);
+            log_message('error', 'Error en tareas_empleado_json: ' . $e->getMessage());
+            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
+            return $this->response->setStatusCode(500)->setJSON([
+                'error' => 'Error al obtener tareas', 
+                'message' => $e->getMessage(),
+                'empleadoId' => $empleadoId ?? 0,
+                'items' => []
+            ]);
         }
     }
 
@@ -465,6 +553,26 @@ class Produccion extends BaseController
                 return $this->response->setStatusCode(400)->setJSON(['error' => 'No se pudo resolver el empleado actual']);
             }
 
+            // Verificar el estatus de la orden de producción
+            $db = \Config\Database::connect();
+            $db->reconnect(); // Forzar conexión fresca
+            $sqlStatus = "SELECT status FROM orden_produccion WHERE id = ? LIMIT 1";
+            $opRow = $db->query($sqlStatus, [$ordenProduccionId])->getRowArray();
+            
+            if (!$opRow || !isset($opRow['status'])) {
+                return $this->response->setStatusCode(404)->setJSON(['error' => 'Orden de producción no encontrada']);
+            }
+            
+            $estatusOP = trim($opRow['status']);
+            $estatusLower = strtolower($estatusOP);
+            
+            // Solo permitir iniciar si el estatus es "En proceso" o "En corte"
+            if ($estatusLower !== 'en proceso' && $estatusLower !== 'en corte') {
+                return $this->response->setStatusCode(400)->setJSON([
+                    'error' => 'Solo se puede iniciar el cronómetro cuando la orden está "En proceso" o "En corte". Estatus actual: ' . $estatusOP
+                ]);
+            }
+
             // Verificar si ya existe un registro activo (sin finalizar)
             $tiempoModel = new TiempoTrabajoModel();
             $activo = $tiempoModel->obtenerActivo($empleadoId, $ordenProduccionId);
@@ -476,6 +584,19 @@ class Produccion extends BaseController
                     'inicio' => $activo['inicio'] ?? null,
                 ]);
             }
+
+            // Si la orden está en "En proceso" o "En corte", permitir iniciar el cronómetro
+            // incluso si hay un tiempo finalizado anterior (permite reactivar cuando la orden vuelve a proceso)
+            // Solo bloquear si la orden NO está en proceso/corte Y ya hay un tiempo finalizado
+            if ($estatusLower !== 'en proceso' && $estatusLower !== 'en corte') {
+                // Si la orden no está en proceso/corte, verificar si ya hay un tiempo finalizado
+                if ($tiempoModel->tieneFinalizado($empleadoId, $ordenProduccionId)) {
+                    return $this->response->setStatusCode(400)->setJSON([
+                        'error' => 'Ya se finalizó el tiempo de trabajo para esta orden. Solo se puede iniciar nuevamente cuando la orden vuelva a estar "En proceso" o "En corte".'
+                    ]);
+                }
+            }
+            // Si la orden está en proceso/corte, permitir iniciar incluso si hay tiempos finalizados anteriores
 
             // Crear nuevo registro
             $id = $tiempoModel->iniciar($empleadoId, $ordenProduccionId);
@@ -560,9 +681,34 @@ class Produccion extends BaseController
             $ordenProduccionId = (int)($registroAntes['ordenProduccionId'] ?? 0);
 
             // Finalizar el registro
-            $resultado = $tiempoModel->finalizar($tiempoTrabajoId);
-            if (!$resultado) {
-                return $this->response->setStatusCode(500)->setJSON(['error' => 'No se pudo finalizar el tiempo de trabajo']);
+            try {
+                // Verificar que el registro existe antes de intentar finalizarlo
+                $registroVerificar = $tiempoModel->find($tiempoTrabajoId);
+                if (!$registroVerificar) {
+                    log_message('error', "No se encontró el registro tiempo_trabajo ID: {$tiempoTrabajoId} para finalizar");
+                    return $this->response->setStatusCode(404)->setJSON([
+                        'error' => 'Registro no encontrado',
+                        'message' => 'No se encontró el registro de tiempo de trabajo para finalizar.'
+                    ]);
+                }
+                
+                log_message('debug', "Registro antes de finalizar - ID: {$tiempoTrabajoId}, Inicio: " . ($registroVerificar['inicio'] ?? 'N/A') . ", Fin: " . ($registroVerificar['fin'] ?? 'N/A'));
+                
+                $resultado = $tiempoModel->finalizar($tiempoTrabajoId);
+                if (!$resultado) {
+                    log_message('error', "No se pudo finalizar tiempo_trabajo ID: {$tiempoTrabajoId}");
+                    return $this->response->setStatusCode(500)->setJSON([
+                        'error' => 'No se pudo finalizar el tiempo de trabajo',
+                        'message' => 'El registro no pudo ser actualizado. Verifique los logs para más detalles.'
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                log_message('error', "Excepción al finalizar tiempo_trabajo ID: {$tiempoTrabajoId} - " . $e->getMessage());
+                log_message('error', "Stack trace: " . $e->getTraceAsString());
+                return $this->response->setStatusCode(500)->setJSON([
+                    'error' => 'Error al finalizar tiempo de trabajo',
+                    'message' => $e->getMessage()
+                ]);
             }
 
             // Obtener el registro finalizado para devolver los datos
@@ -576,106 +722,91 @@ class Produccion extends BaseController
             // Verificar si todos los empleados de ese tipo han finalizado
             $todosFinalizados = false;
             $nuevoEstatus = null;
-            $debugInfo = [];
 
             if (!empty($puesto) && $ordenProduccionId > 0) {
                 // Normalizar el puesto (comparar sin importar mayúsculas/minúsculas)
                 $puestoLower = strtolower(trim($puesto));
-                $debugInfo['puesto'] = $puesto;
-                $debugInfo['puestoLower'] = $puestoLower;
+                
+                log_message('debug', "Verificando finalización para OP {$ordenProduccionId}, puesto: '{$puesto}' (normalizado: '{$puestoLower}')");
+                
+                // Forzar una nueva conexión para evitar caché al verificar
+                $db = \Config\Database::connect();
+                $db->reconnect();
                 
                 if ($puestoLower === 'corte') {
                     $todosFinalizados = $tiempoModel->todosHanFinalizado($ordenProduccionId, 'Corte');
-                    $debugInfo['tipoVerificado'] = 'Corte';
+                    log_message('debug', "Corte - todosHanFinalizado para OP {$ordenProduccionId}: " . ($todosFinalizados ? 'true' : 'false'));
                     if ($todosFinalizados) {
                         $nuevoEstatus = 'Corte finalizado';
                     }
                 } elseif ($puestoLower === 'empleado') {
                     $todosFinalizados = $tiempoModel->todosHanFinalizado($ordenProduccionId, 'Empleado');
-                    $debugInfo['tipoVerificado'] = 'Empleado';
-                    $debugInfo['todosFinalizados'] = $todosFinalizados;
-                    
-                    // Información adicional de debug
-                    $asigModel = new AsignacionTareaModel();
-                    $asignaciones = $asigModel->listarPorOP($ordenProduccionId);
-                    $empleadosAsignados = array_filter($asignaciones, function($a) {
-                        return isset($a['puesto']) && strtolower(trim($a['puesto'])) === 'empleado';
-                    });
-                    $debugInfo['empleadosAsignados'] = count($empleadosAsignados);
-                    $debugInfo['asignaciones'] = array_map(function($a) {
-                        return [
-                            'empleadoId' => $a['empleadoId'] ?? null,
-                            'nombre' => ($a['nombre'] ?? '') . ' ' . ($a['apellido'] ?? ''),
-                            'puesto' => $a['puesto'] ?? null
-                        ];
-                    }, $empleadosAsignados);
-                    
-                    // Verificar registros de tiempo_trabajo
-                    $db = \Config\Database::connect();
-                    $sqlTiempos = "SELECT tt.id, tt.empleadoId, tt.inicio, tt.fin, e.nombre, e.puesto
-                                  FROM tiempo_trabajo tt
-                                  INNER JOIN empleado e ON e.id = tt.empleadoId
-                                  WHERE tt.ordenProduccionId = ? AND LOWER(TRIM(e.puesto)) = 'empleado'";
-                    $tiempos = $db->query($sqlTiempos, [$ordenProduccionId])->getResultArray();
-                    $debugInfo['registrosTiempo'] = count($tiempos);
-                    $debugInfo['tiempos'] = array_map(function($t) {
-                        return [
-                            'id' => $t['id'] ?? null,
-                            'empleadoId' => $t['empleadoId'] ?? null,
-                            'nombre' => $t['nombre'] ?? '',
-                            'inicio' => $t['inicio'] ?? null,
-                            'fin' => $t['fin'] ?? null,
-                            'finalizado' => !empty($t['fin'])
-                        ];
-                    }, $tiempos);
-                    
+                    log_message('debug', "Empleado - todosHanFinalizado para OP {$ordenProduccionId}: " . ($todosFinalizados ? 'true' : 'false'));
                     if ($todosFinalizados) {
                         $nuevoEstatus = 'Completada';
                     }
                 } else {
-                    $debugInfo['tipoVerificado'] = 'desconocido';
-                    $debugInfo['todosFinalizados'] = false;
+                    log_message('debug', "Puesto '{$puestoLower}' no coincide con 'corte' ni 'empleado'");
                 }
             } else {
-                $debugInfo['error'] = 'Puesto vacío o ordenProduccionId inválido';
-                $debugInfo['puesto'] = $puesto;
-                $debugInfo['ordenProduccionId'] = $ordenProduccionId;
+                log_message('debug', "No se puede verificar finalización - puesto vacío o ordenProduccionId inválido. Puesto: '{$puesto}', OP: {$ordenProduccionId}");
             }
 
             // Actualizar el estatus de la OP si todos han finalizado
             $estatusActualizado = false;
-            $estatusAnterior = null;
             if ($todosFinalizados && $nuevoEstatus !== null && $ordenProduccionId > 0) {
                 try {
                     $db = \Config\Database::connect();
-                    
-                    // Obtener el estatus actual antes de actualizar
-                    $opActual = $db->table('orden_produccion')
-                        ->where('id', $ordenProduccionId)
-                        ->select('status')
-                        ->get()
-                        ->getRowArray();
-                    $estatusAnterior = $opActual['status'] ?? null;
-                    $debugInfo['estatusAnterior'] = $estatusAnterior;
-                    
-                    // Actualizar el estatus usando el método del modelo (igual que actualizarEstatus)
                     $db->transStart();
                     
-                    // Usar el mismo método que actualizarEstatus para asegurar consistencia
+                    // Actualizar el estatus usando el mismo método que actualizarEstatus
                     $okUpd = $db->table('orden_produccion')->where('id', $ordenProduccionId)->update(['status' => $nuevoEstatus]);
                     
-                    // Verificar cuántas filas se afectaron
-                    $affectedRows = $db->affectedRows();
-                    $debugInfo['affectedRows'] = $affectedRows;
-                    $debugInfo['resultadoUpdate'] = $okUpd;
-                    
-                    if (!$okUpd || $affectedRows === 0) {
+                    if (!$okUpd) {
                         $db->transRollback();
-                        log_message('error', "No se actualizó ninguna fila para OP {$ordenProduccionId}. Método update retornó: " . var_export($okUpd, true) . ", Filas afectadas: {$affectedRows}");
-                        throw new \Exception("No se pudo actualizar el estatus. No se afectaron filas.");
+                        log_message('error', "No se pudo actualizar el estatus de OP {$ordenProduccionId}");
+                        throw new \Exception("No se pudo actualizar el estatus");
                     }
                     
-                    // Confirmar la transacción
+                    // Si el nuevo estatus es "Completada", actualizar también orden_compra a "Finalizada"
+                    if (strcasecmp($nuevoEstatus, 'Completada') === 0) {
+                        // Obtener ordenCompraId de la OP
+                        $ocId = null;
+                        try {
+                            $rowOP = $db->query('SELECT ordenCompraId FROM orden_produccion WHERE id = ?', [$ordenProduccionId])->getRowArray();
+                            if ($rowOP && isset($rowOP['ordenCompraId'])) {
+                                $ocId = (int)$rowOP['ordenCompraId'];
+                            }
+                        } catch (\Throwable $e) {
+                            try {
+                                $rowOP = $db->query('SELECT ordenCompraId FROM OrdenProduccion WHERE id = ?', [$ordenProduccionId])->getRowArray();
+                                if ($rowOP && isset($rowOP['ordenCompraId'])) {
+                                    $ocId = (int)$rowOP['ordenCompraId'];
+                                }
+                            } catch (\Throwable $e2) {
+                                // Ignorar si no existe la tabla con mayúsculas
+                            }
+                        }
+
+                        // Actualizar estatus de orden_compra a "Finalizada" si existe
+                        if ($ocId && $ocId > 0) {
+                            try {
+                                $okOc = $db->table('orden_compra')->where('id', $ocId)->update(['estatus' => 'Finalizada']);
+                                if (!$okOc) {
+                                    try {
+                                        $db->table('OrdenCompra')->where('id', $ocId)->update(['estatus' => 'Finalizada']);
+                                    } catch (\Throwable $e) {
+                                        log_message('warning', "No se pudo actualizar estatus de orden_compra ID: {$ocId}");
+                                    }
+                                } else {
+                                    log_message('info', "Estatus de orden_compra ID: {$ocId} actualizado a 'Finalizada'");
+                                }
+                            } catch (\Throwable $e) {
+                                log_message('warning', "Error al actualizar estatus de orden_compra ID: {$ocId}: " . $e->getMessage());
+                            }
+                        }
+                    }
+                    
                     $db->transComplete();
                     
                     if ($db->transStatus() === false) {
@@ -683,39 +814,24 @@ class Produccion extends BaseController
                         throw new \Exception("Error en la transacción al actualizar estatus");
                     }
                     
-                    // Verificar que realmente se actualizó usando una nueva consulta SQL directa
-                    // Esperar un momento para asegurar que la actualización se haya completado
-                    usleep(500000); // 500ms
-                    
-                    // Usar una nueva conexión y consulta SQL directa para evitar caché
-                    $dbNueva = \Config\Database::connect();
+                    // Verificar que el estatus se haya actualizado realmente
+                    // Forzar una nueva conexión para leer el estatus actualizado
+                    $dbVerificar = \Config\Database::connect();
+                    $dbVerificar->reconnect();
                     $sqlVerificar = "SELECT status FROM orden_produccion WHERE id = ? LIMIT 1";
-                    $opDespues = $dbNueva->query($sqlVerificar, [$ordenProduccionId])->getRowArray();
-                    $estatusDespues = $opDespues['status'] ?? null;
+                    $opVerificada = $dbVerificar->query($sqlVerificar, [$ordenProduccionId])->getRowArray();
+                    $estatusVerificado = $opVerificada && isset($opVerificada['status']) ? trim($opVerificada['status']) : '';
                     
-                    // Log para debug
-                    log_message('debug', "Actualización de estatus OP {$ordenProduccionId}: Anterior='{$estatusAnterior}', Nuevo='{$nuevoEstatus}', Verificado='{$estatusDespues}', Filas afectadas={$affectedRows}");
-                    
-                    $estatusActualizado = ($estatusDespues === $nuevoEstatus);
-                    $debugInfo['estatusActualizado'] = $estatusActualizado;
-                    $debugInfo['nuevoEstatus'] = $nuevoEstatus;
-                    $debugInfo['estatusDespues'] = $estatusDespues;
-                    $debugInfo['resultadoUpdate'] = $resultado;
-                    
-                    if (!$estatusActualizado) {
-                        log_message('error', "No se pudo actualizar estatus de OP {$ordenProduccionId}. Anterior: {$estatusAnterior}, Esperado: {$nuevoEstatus}, Actual: {$estatusDespues}");
+                    if ($estatusVerificado === $nuevoEstatus) {
+                        $estatusActualizado = true;
+                        log_message('info', "Estatus de OP {$ordenProduccionId} actualizado correctamente a '{$nuevoEstatus}'");
+                    } else {
+                        log_message('warning', "Estatus de OP {$ordenProduccionId} no se actualizó correctamente. Esperado: '{$nuevoEstatus}', Obtenido: '{$estatusVerificado}'");
                     }
                 } catch (\Throwable $e) {
                     // Log el error pero no fallar la respuesta
                     log_message('error', 'Error al actualizar estatus de OP: ' . $e->getMessage());
-                    $debugInfo['errorActualizacion'] = $e->getMessage();
-                    $debugInfo['errorTrace'] = $e->getTraceAsString();
                 }
-            } else {
-                $debugInfo['noActualizado'] = 'Condiciones no cumplidas';
-                $debugInfo['todosFinalizados'] = $todosFinalizados;
-                $debugInfo['nuevoEstatus'] = $nuevoEstatus;
-                $debugInfo['ordenProduccionId'] = $ordenProduccionId;
             }
 
             return $this->response->setJSON([
@@ -727,7 +843,6 @@ class Produccion extends BaseController
                 'todosFinalizados' => $todosFinalizados,
                 'nuevoEstatus' => $nuevoEstatus,
                 'estatusActualizado' => $estatusActualizado,
-                'debug' => $debugInfo,
             ]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON([

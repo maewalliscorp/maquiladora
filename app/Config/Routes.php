@@ -117,6 +117,8 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->post('empleado/guardar', 'Modulos::m1_empleado_guardar', ['filter' => 'auth']);
     // APIs / Producción
     $routes->get('pedido/(:num)/json',   'Modulos::m1_pedido_json/$1');
+    $routes->get('pedido/(:num)/pdf',    'Modulos::m1_pedido_pdf/$1');
+    $routes->get('pedido/(:num)/excel',  'Modulos::m1_pedido_excel/$1');
     $routes->get('clientes/json',        'Clientes::json_catalogo');
     $routes->get('ordenes-produccion',   'Produccion::ordenes');
     $routes->post('ordenes/estatus',     'Produccion::actualizarEstatus');
