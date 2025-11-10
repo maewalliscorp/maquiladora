@@ -208,4 +208,33 @@ class MantenimientoCorrectivo extends BaseController
         ];
         return $this->response->setJSON($data);
     }
+
+    /* ============================================================
+     * NUEVO · Endpoint JSON: Historial por máquina
+     * ============================================================ */
+    public function historialPorMaquina($maquinaId)
+    {
+        $maquinaId = (int)$maquinaId;
+        if (!$maquinaId) {
+            return $this->response->setJSON(['data' => []]);
+        }
+
+        $sql = "SELECT 
+                    m.id                           AS Folio,
+                    m.fechaApertura                AS Apertura,
+                    m.tipo                         AS Tipo,
+                    m.estatus                      AS Estatus,
+                    m.descripcion                  AS Descripcion,
+                    m.fechaCierre                  AS Cierre,
+                    COALESCE(SUM(d.tiempoHoras),0) AS Horas
+                FROM mtto m
+                LEFT JOIN mtto_detectado d ON d.otMttoId = m.id
+                WHERE m.maquinaId = ?
+                GROUP BY m.id, m.fechaApertura, m.tipo, m.estatus, m.descripcion, m.fechaCierre
+                ORDER BY m.fechaApertura DESC";
+
+        $rows = $this->db->query($sql, [$maquinaId])->getResultArray();
+
+        return $this->response->setJSON(['data' => $rows]);
+    }
 }

@@ -4,29 +4,19 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 <style>
-    /* Separar botones de export de DataTables */
     .dt-buttons.btn-group .btn{
-        margin-left: 0 !important;
-        margin-right: .5rem;
-        border-radius: .375rem !important;
+        margin-left:0!important;margin-right:.5rem;border-radius:.375rem!important;
     }
-    .dt-buttons.btn-group .btn:last-child{ margin-right: 0; }
-
-    /* Columna Acciones centrada */
+    .dt-buttons.btn-group .btn:last-child{ margin-right:0; }
     .tabla-acciones-centradas th:last-child,
     .tabla-acciones-centradas td:last-child{
-        text-align:center !important;
-        white-space:nowrap;
+        text-align:center!important;white-space:nowrap;
     }
     .tabla-acciones-centradas td:last-child .acciones-wrap{
-        display:inline-flex;
-        align-items:center;
-        gap:.5rem;
+        display:inline-flex;align-items:center;gap:.5rem;
     }
-    .tabla-acciones-centradas td:last-child .acciones-wrap .btn{
-        padding:.25rem .45rem;
-        border-radius:.5rem;
-        line-height:1;
+    .tabla-acciones-centradas td:last-child .btn{
+        padding:.25rem .45rem;border-radius:.5rem;line-height:1;
     }
 </style>
 <?= $this->endSection() ?>
@@ -35,21 +25,32 @@
 $tableId   = $tableId   ?? 'tablaMtto';
 $columns   = $columns   ?? ['Folio','Apertura','Máquina','Tipo','Estatus','Descripción','Cierre','Horas','Acciones'];
 $rows      = is_array($rows ?? null) ? $rows : [];
-$maquinas  = $maquinas  ?? []; // id, codigo/clave/serie/modelo/nombre/descripcion
-$empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres, apellido/apellidos
+$maquinas  = $maquinas  ?? [];
+$empleados = $empleados ?? [];
 ?>
 
 <?= $this->section('content') ?>
 
-<!-- Encabezado + Agregar -->
+<!-- Encabezado + Acciones -->
 <div class="d-flex align-items-center justify-content-between mb-3">
     <div class="d-flex align-items-center">
         <h1 class="me-3">Mantenimiento Correctivo</h1>
         <span class="badge bg-danger">Averías</span>
     </div>
-    <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#modalMtto">
-        <i class="bi bi-plus-circle me-1"></i> Agregar
-    </button>
+    <div class="d-flex gap-2">
+        <!-- Botón global: Historial por máquina -->
+        <button class="btn btn-outline-secondary"
+                type="button"
+                data-bs-toggle="modal"
+                data-bs-target="#modalHistorialMaquina">
+            <i class="bi bi-clock-history me-1"></i> Historial por máquina
+        </button>
+
+        <!-- Agregar OT -->
+        <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#modalMtto">
+            <i class="bi bi-plus-circle me-1"></i> Agregar
+        </button>
+    </div>
 </div>
 
 <?php if (session()->getFlashdata('success')): ?>
@@ -77,7 +78,6 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
                             <input name="fechaApertura" id="f-fechaApertura" type="datetime-local" class="form-control" required>
                         </div>
 
-                        <!-- Máquina: SELECT con fallbacks de columnas -->
                         <div class="col-md-4">
                             <label class="form-label fw-semibold text-dark">Máquina *</label>
                             <select name="maquinaId" class="form-select" required>
@@ -94,7 +94,6 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
                             </select>
                         </div>
 
-                        <!-- Responsable: SELECT con fallbacks -->
                         <div class="col-md-4">
                             <label class="form-label fw-semibold text-dark">Responsable</label>
                             <select name="responsableId" class="form-select">
@@ -218,7 +217,16 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
                                     <i class="bi bi-eye"></i>
                                 </button>
 
-                                <!-- Editar (con confirmación antes de abrir modal) -->
+                                <!-- Historial por máquina (prefija el select del modal) -->
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-secondary btn-hist"
+                                        title="Historial por máquina"
+                                        data-bs-toggle="modal" data-bs-target="#modalHistorialMaquina"
+                                        data-maquinaid="<?= esc($maquinaId, 'attr') ?>">
+                                    <i class="bi bi-clock-history"></i>
+                                </button>
+
+                                <!-- Editar -->
                                 <button type="button"
                                         class="btn btn-sm btn-outline-primary btn-editar"
                                         title="Editar"
@@ -233,7 +241,7 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
                                     <i class="bi bi-pencil"></i>
                                 </button>
 
-                                <!-- Eliminar (SweetAlert directo, sin modal) -->
+                                <!-- Eliminar -->
                                 <button type="button"
                                         class="btn btn-sm btn-outline-danger btn-eliminar"
                                         title="Eliminar"
@@ -297,7 +305,6 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
                             <input name="fechaApertura" id="e-apertura" type="datetime-local" class="form-control" required>
                         </div>
 
-                        <!-- Máquina: SELECT -->
                         <div class="col-md-4">
                             <label class="form-label fw-semibold text-dark">Máquina *</label>
                             <select name="maquinaId" id="e-maquinaId" class="form-select" required>
@@ -314,7 +321,6 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
                             </select>
                         </div>
 
-                        <!-- Responsable: SELECT -->
                         <div class="col-md-4">
                             <label class="form-label fw-semibold text-dark">Responsable</label>
                             <select name="responsableId" id="e-responsableId" class="form-select">
@@ -365,8 +371,7 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
     </div>
 </div>
 
-<!-- ====================== (Opcional) MODAL ELIMINAR LEGADO ======================
-     Se mantiene por compatibilidad, pero el flujo usa SweetAlert2 directo -->
+<!-- ====================== MODAL ELIMINAR (legacy) ====================== -->
 <div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -391,25 +396,78 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
     </div>
 </div>
 
+<!-- ====================== MODAL · HISTORIAL POR MÁQUINA ====================== -->
+<div class="modal fade" id="modalHistorialMaquina" tabindex="-1" aria-labelledby="hmLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-semibold text-dark">
+                    Historial por máquina
+                    <span class="badge bg-light text-dark ms-2" id="hm-badge">—</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark">Máquina</label>
+                        <select id="hm-maquinaId" class="form-select">
+                            <option value="">— Selecciona máquina —</option>
+                            <?php foreach ($maquinas as $m): ?>
+                                <?php
+                                $codigo = $m['codigo'] ?? $m['clave'] ?? $m['serie'] ?? $m['modelo'] ?? $m['id'];
+                                $nombre = $m['nombre'] ?? $m['descripcion'] ?? $m['modelo'] ?? $m['serie'] ?? 'Sin nombre';
+                                ?>
+                                <option value="<?= esc($m['id'],'attr') ?>">[<?= esc($codigo) ?>] <?= esc($nombre) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-primary w-100" id="hm-cargar">
+                            <i class="bi bi-arrow-repeat me-1"></i> Cargar historial
+                        </button>
+                    </div>
+                </div>
+
+                <hr class="my-3">
+
+                <div class="table-responsive">
+                    <table id="tablaHistorialMaquina" class="table table-striped table-bordered align-middle w-100">
+                        <thead class="table-primary">
+                        <tr>
+                            <th>Folio</th>
+                            <th>Apertura</th>
+                            <th>Tipo</th>
+                            <th>Estatus</th>
+                            <th>Descripción</th>
+                            <th>Cierre</th>
+                            <th>Horas</th>
+                        </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-
-<!-- Export helpers -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-
-<!-- DataTables Buttons -->
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
-
-<!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
@@ -437,7 +495,7 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
             Swal.fire({title, allowOutsideClick:false, didOpen:()=>Swal.showLoading()});
         };
 
-        // ===== DataTables =====
+        // ===== DataTables (principal) =====
         const langES = {
             sEmptyTable:"Sin datos", sZeroRecords:"No se encontraron resultados",
             sInfo:"Mostrando _START_–_END_ de _TOTAL_", sInfoEmpty:"Mostrando 0–0 de 0",
@@ -468,7 +526,7 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
             ]
         });
 
-        // ====== Modales (prefills) ======
+        // ====== Prefills ======
         const crear = document.getElementById('modalMtto');
         if (crear) {
             crear.addEventListener('show.bs.modal', () => {
@@ -502,7 +560,7 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
             });
         });
 
-        // EDITAR (confirmación antes de abrir + prefill)
+        // EDITAR
         document.querySelectorAll('.btn-editar').forEach(btn=>{
             btn.addEventListener('click', async (ev)=>{
                 ev.preventDefault();
@@ -523,13 +581,12 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
                 document.getElementById('e-descripcion').value   = d.descripcion || '';
                 document.getElementById('e-cierre').value        = toLocalInputValue(d.cierre || '');
 
-                // Abrir modal de edición
                 const modal = new bootstrap.Modal(document.getElementById('modalEditar'));
                 modal.show();
             });
         });
 
-        // ELIMINAR (SweetAlert directo con CSRF, sin abrir el modal)
+        // ELIMINAR
         document.querySelectorAll('.btn-eliminar').forEach(btn=>{
             btn.addEventListener('click', async (ev)=>{
                 ev.preventDefault();
@@ -538,7 +595,6 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
                 if (!(await confirmAsync('¿Eliminar orden #'+ id +'?', 'Esta acción no se puede deshacer.', 'warning', 'Sí, eliminar')))
                     return;
 
-                // Enviar POST al endpoint usando el form oculto (con CSRF)
                 const form = document.getElementById('formEliminar');
                 form.action = '<?= site_url("mantenimiento/correctivo/eliminar") ?>' + '/' + id;
 
@@ -547,8 +603,7 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
             });
         });
 
-        // ====== SweetAlert2 en submits ======
-        // Crear
+        // ====== Submits con confirmación ======
         const formCrear = document.getElementById('formCrear');
         if (formCrear){
             formCrear.addEventListener('submit', async (e)=>{
@@ -560,7 +615,6 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
             });
         }
 
-        // Editar (confirmación al guardar cambios)
         const formEditar = document.getElementById('formEditar');
         if (formEditar){
             formEditar.addEventListener('submit', async (e)=>{
@@ -572,13 +626,96 @@ $empleados = $empleados ?? []; // id, noEmpleado/numeroEmpleado, nombre/nombres,
             });
         }
 
-        // ====== Mostrar flashdata con SweetAlert (además del alert Bootstrap) ======
+        // ====== Flash con SweetAlert ======
         <?php if (session()->getFlashdata('success')): ?>
         toast('<?= esc(session()->getFlashdata('success')) ?>', 'success');
         <?php endif; ?>
         <?php if (session()->getFlashdata('error')): ?>
         Swal.fire('Error', '<?= esc(session()->getFlashdata('error')) ?>', 'error');
         <?php endif; ?>
+
+        /* =================================================================
+         *  HISTORIAL POR MÁQUINA (modal con DataTable que NO se re-inicializa)
+         * ================================================================= */
+        const HIST_URL = '<?= site_url('mantenimiento/correctivo/historial/maquina') ?>';
+        const modalEl   = document.getElementById('modalHistorialMaquina');
+        const selectEl  = document.getElementById('hm-maquinaId');
+        const badgeEl   = document.getElementById('hm-badge');
+        const btnCargar = document.getElementById('hm-cargar');
+
+        let dtHist = null;
+
+        function ensureDt(){
+            if (dtHist) return dtHist;
+            dtHist = $('#tablaHistorialMaquina').DataTable({
+                language: langES,
+                data: [],
+                columns: [
+                    { data: 'Folio'       },
+                    { data: 'Apertura'    },
+                    { data: 'Tipo'        },
+                    { data: 'Estatus'     },
+                    { data: 'Descripcion' },
+                    { data: 'Cierre'      },
+                    { data: 'Horas',
+                        render: d => (d!=null && d!=='') ? parseFloat(d).toFixed(2) : '0.00',
+                        className:'text-end'
+                    }
+                ],
+                order: [[1,'desc']],
+                destroy: false
+            });
+            return dtHist;
+        }
+
+        function actualizarBadge(){
+            const opt = selectEl.options[selectEl.selectedIndex];
+            const etiqueta = opt ? (opt.text.match(/\[(.*?)\]/)?.[1] || opt.text) : '—';
+            badgeEl.textContent = etiqueta || '—';
+        }
+
+        async function cargarHistorial(maquinaId){
+            if (!maquinaId) { ensureDt().clear().draw(); actualizarBadge(); return; }
+            actualizarBadge();
+            try{
+                const res  = await fetch(`${HIST_URL}/${maquinaId}`, { headers:{'Accept':'application/json'} });
+                const json = await res.json();
+                const list = Array.isArray(json) ? json : (json.data || []);
+                const rows = list.map(r => ({
+                    Folio:       r.Folio ?? r.id ?? '',
+                    Apertura:    r.Apertura ?? r.fechaApertura ?? '',
+                    Tipo:        r.Tipo ?? r.tipo ?? '',
+                    Estatus:     r.Estatus ?? r.estatus ?? '',
+                    Descripcion: r.Descripcion ?? r.descripcion ?? '',
+                    Cierre:      (r.Cierre ?? r.fechaCierre ?? '') || '-',
+                    Horas:       r.Horas ?? r.tiempoHoras ?? 0
+                }));
+                const dt = ensureDt();
+                dt.clear().rows.add(rows).draw();
+            }catch(e){
+                ensureDt().clear().draw();
+                console.error('Historial error:', e);
+            }
+        }
+
+        modalEl.addEventListener('show.bs.modal', (ev)=>{
+            const trg = ev.relatedTarget;
+            if (trg && trg.dataset && trg.dataset.maquinaid){
+                selectEl.value = trg.dataset.maquinaid;
+            }
+            ensureDt();
+            if (selectEl.value) cargarHistorial(selectEl.value);
+            else actualizarBadge();
+        });
+
+        btnCargar.addEventListener('click', ()=> cargarHistorial(selectEl.value));
+        selectEl.addEventListener('change', ()=> cargarHistorial(selectEl.value));
+
+        document.addEventListener('click', (e)=>{
+            const btn = e.target.closest('.btn-hist');
+            if (!btn) return;
+            // Nada más; el show.bs.modal hará el prefijo por data-maquinaid
+        });
     })();
 </script>
 <?= $this->endSection() ?>

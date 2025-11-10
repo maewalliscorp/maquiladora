@@ -130,8 +130,8 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->match(['post','options'],'produccion/tiempo/iniciar',   'Produccion::tiempo_trabajo_iniciar');
     $routes->match(['post','options'],'produccion/tiempo/finalizar', 'Produccion::tiempo_trabajo_finalizar');
     // Crear/Eliminar pedido (OC + OP)
-    $routes->post('pedidos/crear',       'Modulos::m1_pedidos_crear', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
-    $routes->post('pedidos/eliminar',    'Modulos::m1_pedido_eliminar', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
+    $routes->post('pedidos/crear',       'Modulos::m1_pedidos_crear',     ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
+    $routes->post('pedidos/eliminar',    'Modulos::m1_pedido_eliminar',   ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
 
     // Endpoints para modales
     $routes->get('ordenes/folio/(:segment)/json', 'Produccion::orden_json_folio/$1');
@@ -187,6 +187,9 @@ $routes->group('mantenimiento', static function($r){
     $r->post('correctivo/crear',             'MantenimientoCorrectivo::crear', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
     $r->post('correctivo/actualizar/(:num)', 'MantenimientoCorrectivo::actualizar/$1', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
     $r->post('correctivo/eliminar/(:num)',   'MantenimientoCorrectivo::eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
+
+    // NUEVO: endpoint JSON para Historial por máquina
+    $r->get('correctivo/historial/maquina/(:num)', 'MantenimientoCorrectivo::historialPorMaquina/$1', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
 });
 
 /* --------------------------------------------------------------------
