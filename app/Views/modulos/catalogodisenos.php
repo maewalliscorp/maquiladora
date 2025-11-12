@@ -19,9 +19,23 @@
 <?= $this->section('content') ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="me-3">CATÁLOGO DE DISEÑOS</h1>
+    <div class="d-flex gap-2">
     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#nuevoDisenoModal">
         <i class="bi bi-plus-circle"></i> NUEVO DISEÑO
     </button>
+        <button type="button" class="btn btn-outline-primary" title="Sexo" data-bs-toggle="modal" data-bs-target="#modalSexo">
+            <i class="bi bi-gender-ambiguous"></i>
+        </button>
+        <button type="button" class="btn btn-outline-primary" title="Tallas" data-bs-toggle="modal" data-bs-target="#modalTallas">
+            <i class="bi bi-rulers"></i>
+        </button>
+        <button type="button" class="btn btn-outline-primary" title="Corte" data-bs-toggle="modal" data-bs-target="#modalCorte">
+            <i class="bi bi-scissors"></i>
+        </button>
+        <button type="button" class="btn btn-outline-primary" title="Tipo de ropa" data-bs-toggle="modal" data-bs-target="#modalTipoRopa">
+            <i class="bi bi-bag"></i>
+        </button>
+    </div>
 </div>
 <div class="card shadow-sm">
     <div class="card-body">
@@ -470,6 +484,223 @@
         </div>
     </div>
 </div>
+
+<!-- Modal: Catálogo Sexo -->
+<div class="modal fade" id="modalSexo" tabindex="-1" aria-labelledby="modalSexoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalSexoLabel">Catálogo de Sexo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Formulario para agregar/editar -->
+                <div class="card bg-light mb-3">
+                    <div class="card-body">
+                        <form id="formSexo" class="row g-2 align-items-end">
+                            <input type="hidden" id="sexo-id-edit" value="">
+                            <div class="col-md-4">
+                                <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="sexo-nombre" required placeholder="Ej: Masculino">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Descripción</label>
+                                <input type="text" class="form-control" id="sexo-descripcion" placeholder="Descripción opcional">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary w-100" id="btnSexoGuardar">
+                                    <i class="bi bi-plus-circle"></i> Agregar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <!-- Tabla de datos -->
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered" id="tablaSexo">
+                        <thead class="table-light">
+                        <tr>
+                            <th style="width:10%">ID</th>
+                            <th style="width:30%">Nombre</th>
+                            <th style="width:45%">Descripción</th>
+                            <th style="width:15%">Acciones</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr><td colspan="4" class="text-center text-muted">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Catálogo Tallas -->
+<div class="modal fade" id="modalTallas" tabindex="-1" aria-labelledby="modalTallasLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTallasLabel">Catálogo de Tallas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Formulario para agregar/editar -->
+                <div class="card bg-light mb-3">
+                    <div class="card-body">
+                        <form id="formTallas" class="row g-2 align-items-end">
+                            <input type="hidden" id="tallas-id-edit" value="">
+                            <div class="col-md-4">
+                                <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="tallas-nombre" required placeholder="Ej: Chica">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Descripción</label>
+                                <input type="text" class="form-control" id="tallas-descripcion" placeholder="Descripción opcional">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary w-100" id="btnTallasGuardar">
+                                    <i class="bi bi-plus-circle"></i> Agregar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <!-- Tabla de datos -->
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered" id="tablaTallas">
+                        <thead class="table-light">
+                        <tr>
+                            <th style="width:10%">ID</th>
+                            <th style="width:30%">Nombre</th>
+                            <th style="width:45%">Descripción</th>
+                            <th style="width:15%">Acciones</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr><td colspan="4" class="text-center text-muted">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Catálogo Tipo de Corte -->
+<div class="modal fade" id="modalCorte" tabindex="-1" aria-labelledby="modalCorteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalCorteLabel">Catálogo de Tipo de Corte</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Formulario para agregar/editar -->
+                <div class="card bg-light mb-3">
+                    <div class="card-body">
+                        <form id="formCorte" class="row g-2 align-items-end">
+                            <input type="hidden" id="corte-id-edit" value="">
+                            <div class="col-md-4">
+                                <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="corte-nombre" required placeholder="Ej: Recto">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Descripción</label>
+                                <input type="text" class="form-control" id="corte-descripcion" placeholder="Descripción opcional">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary w-100" id="btnCorteGuardar">
+                                    <i class="bi bi-plus-circle"></i> Agregar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <!-- Tabla de datos -->
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered" id="tablaCorte">
+                        <thead class="table-light">
+                        <tr>
+                            <th style="width:10%">ID</th>
+                            <th style="width:30%">Nombre</th>
+                            <th style="width:45%">Descripción</th>
+                            <th style="width:15%">Acciones</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr><td colspan="4" class="text-center text-muted">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Catálogo Tipo de Ropa -->
+<div class="modal fade" id="modalTipoRopa" tabindex="-1" aria-labelledby="modalTipoRopaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTipoRopaLabel">Catálogo de Tipo de Ropa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Formulario para agregar/editar -->
+                <div class="card bg-light mb-3">
+                    <div class="card-body">
+                        <form id="formTipoRopa" class="row g-2 align-items-end">
+                            <input type="hidden" id="tiporopa-id-edit" value="">
+                            <div class="col-md-4">
+                                <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="tiporopa-nombre" required placeholder="Ej: Camisa">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Descripción</label>
+                                <input type="text" class="form-control" id="tiporopa-descripcion" placeholder="Descripción opcional">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary w-100" id="btnTipoRopaGuardar">
+                                    <i class="bi bi-plus-circle"></i> Agregar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <!-- Tabla de datos -->
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered" id="tablaTipoRopa">
+                        <thead class="table-light">
+                        <tr>
+                            <th style="width:10%">ID</th>
+                            <th style="width:30%">Nombre</th>
+                            <th style="width:45%">Descripción</th>
+                            <th style="width:15%">Acciones</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr><td colspan="4" class="text-center text-muted">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -1196,6 +1427,436 @@
                 .fail(function () {
                     $('#m-descripcion').text('No fue posible cargar los datos');
                 });
+        });
+
+        // Configuración de catálogos
+        const catalogosConfig = {
+            sexo: {
+                url: '<?= base_url('modulo2/catalogos/sexo') ?>',
+                tabla: '#tablaSexo',
+                form: '#formSexo',
+                idEdit: '#sexo-id-edit',
+                nombre: '#sexo-nombre',
+                descripcion: '#sexo-descripcion',
+                btnGuardar: '#btnSexoGuardar',
+                tablaNombre: 'sexo',
+                idField: 'id_sexo'
+            },
+            tallas: {
+                url: '<?= base_url('modulo2/catalogos/tallas') ?>',
+                tabla: '#tablaTallas',
+                form: '#formTallas',
+                idEdit: '#tallas-id-edit',
+                nombre: '#tallas-nombre',
+                descripcion: '#tallas-descripcion',
+                btnGuardar: '#btnTallasGuardar',
+                tablaNombre: 'tallas',
+                idField: 'id_talla'
+            },
+            corte: {
+                url: '<?= base_url('modulo2/catalogos/tipo-corte') ?>',
+                tabla: '#tablaCorte',
+                form: '#formCorte',
+                idEdit: '#corte-id-edit',
+                nombre: '#corte-nombre',
+                descripcion: '#corte-descripcion',
+                btnGuardar: '#btnCorteGuardar',
+                tablaNombre: 'tipo-corte',
+                idField: 'id_tipo_corte'
+            },
+            tiporopa: {
+                url: '<?= base_url('modulo2/catalogos/tipo-ropa') ?>',
+                tabla: '#tablaTipoRopa',
+                form: '#formTipoRopa',
+                idEdit: '#tiporopa-id-edit',
+                nombre: '#tiporopa-nombre',
+                descripcion: '#tiporopa-descripcion',
+                btnGuardar: '#btnTipoRopaGuardar',
+                tablaNombre: 'tipo-ropa',
+                idField: 'id_tipo_ropa'
+            }
+        };
+
+        // Función genérica para cargar datos de catálogo en una tabla
+        function cargarCatalogoEnModal(config) {
+            const $tbody = $(config.tabla + ' tbody');
+            $tbody.html('<tr><td colspan="4" class="text-center text-muted">Cargando...</td></tr>');
+            
+            $.getJSON(config.url + '?t=' + Date.now())
+                .done(function(resp) {
+                    const items = (resp && resp.items) ? resp.items : [];
+                    $tbody.empty();
+                    
+                    if (items.length === 0) {
+                        $tbody.html('<tr><td colspan="4" class="text-center text-muted">No hay registros</td></tr>');
+                        return;
+                    }
+                    
+                    items.forEach(function(item) {
+                        const id = item.id || '-';
+                        const nombre = $('<div>').text(item.nombre || '').html();
+                        const descripcion = $('<div>').text(item.descripcion || '').html();
+                        const row = '<tr data-id="' + id + '">' +
+                            '<td>#' + id + '</td>' +
+                            '<td><input type="text" class="form-control form-control-sm" value="' + nombre + '" data-field="nombre" readonly></td>' +
+                            '<td><input type="text" class="form-control form-control-sm" value="' + descripcion + '" data-field="descripcion" readonly></td>' +
+                            '<td class="text-center">' +
+                            '<button type="button" class="btn btn-sm btn-success btn-editar-item" data-id="' + id + '" title="Editar">' +
+                            '<i class="bi bi-pencil"></i></button> ' +
+                            '<button type="button" class="btn btn-sm btn-danger btn-eliminar-item" data-id="' + id + '" title="Eliminar">' +
+                            '<i class="bi bi-trash"></i></button>' +
+                            '</td>' +
+                            '</tr>';
+                        $tbody.append(row);
+                    });
+                })
+                .fail(function(xhr) {
+                    $tbody.html('<tr><td colspan="4" class="text-center text-danger">Error al cargar los datos</td></tr>');
+                    console.error('Error cargando catálogo:', xhr);
+                });
+        }
+
+        // Función para limpiar formulario
+        function limpiarFormulario(config) {
+            $(config.idEdit).val('');
+            $(config.nombre).val('');
+            $(config.descripcion).val('');
+            $(config.btnGuardar).html('<i class="bi bi-plus-circle"></i> Agregar');
+        }
+
+        // Función para cargar datos en formulario para editar
+        function cargarEnFormulario(config, id, nombre, descripcion) {
+            $(config.idEdit).val(id);
+            $(config.nombre).val(nombre);
+            $(config.descripcion).val(descripcion);
+            $(config.btnGuardar).html('<i class="bi bi-floppy"></i> Guardar');
+        }
+
+        // Obtener token CSRF
+        function getCsrfToken() {
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            if (meta) return meta.getAttribute('content');
+            const input = document.querySelector('input[name="csrf_test_name"]');
+            if (input) return input.value;
+            return '';
+        }
+        
+        // Obtener nombre del campo CSRF
+        function getCsrfTokenName() {
+            return 'csrf_test_name';
+        }
+
+        // Función para guardar (crear o actualizar)
+        function guardarCatalogo(config) {
+            const $btn = $(config.btnGuardar);
+            
+            // Bloquear botón si ya está procesando
+            if ($btn.prop('disabled')) {
+                return;
+            }
+            
+            const id = $(config.idEdit).val();
+            const nombre = $(config.nombre).val().trim();
+            const descripcion = $(config.descripcion).val().trim();
+            
+            if (!nombre) {
+                Swal.fire({ icon: 'warning', title: 'Campo requerido', text: 'El nombre es obligatorio' });
+                return;
+            }
+
+            // Bloquear botón y campos del formulario
+            const originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Guardando...');
+            $(config.nombre).prop('disabled', true);
+            $(config.descripcion).prop('disabled', true);
+
+            const url = id ? 
+                '<?= base_url('modulo2/catalogos') ?>/' + config.tablaNombre + '/actualizar/' + id :
+                '<?= base_url('modulo2/catalogos') ?>/' + config.tablaNombre + '/crear';
+            
+            const method = 'POST';
+            const csrfToken = getCsrfToken();
+            const data = {
+                nombre: nombre,
+                descripcion: descripcion || null
+            };
+            
+            // Agregar token CSRF si existe (en body y header)
+            const headers = { 
+                'X-Requested-With': 'XMLHttpRequest'
+            };
+            if (csrfToken) {
+                data[getCsrfTokenName()] = csrfToken;
+                headers['X-CSRF-TOKEN'] = csrfToken;
+            }
+
+            $.ajax({
+                url: url,
+                method: method,
+                data: data,
+                processData: true,
+                contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+                headers: headers
+            })
+            .done(function(resp) {
+                console.log('Respuesta del servidor:', resp);
+                // Manejar respuesta como texto si no es JSON
+                if (typeof resp === 'string') {
+                    try {
+                        resp = JSON.parse(resp);
+                    } catch(e) {
+                        console.error('Error parseando respuesta:', e);
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Respuesta inválida del servidor' });
+                        return;
+                    }
+                }
+                
+                if (resp && (resp.ok === true || resp.success === true)) {
+                    Swal.fire({ icon: 'success', title: 'Guardado', text: id ? 'Registro actualizado' : 'Registro creado', timer: 1500, showConfirmButton: false });
+                    limpiarFormulario(config);
+                    cargarCatalogoEnModal(config);
+                } else {
+                    const msg = resp && resp.message ? resp.message : (resp && resp.error ? resp.error : 'No se pudo guardar');
+                    console.error('Error en respuesta:', resp);
+                    Swal.fire({ icon: 'error', title: 'Error', text: msg });
+                }
+            })
+            .always(function() {
+                // Desbloquear botón y campos siempre (éxito o error)
+                $btn.prop('disabled', false).html(originalHtml);
+                $(config.nombre).prop('disabled', false);
+                $(config.descripcion).prop('disabled', false);
+            })
+            .fail(function(xhr) {
+                console.error('Error guardando catálogo:', xhr.status, xhr.statusText, xhr.responseText);
+                let msg = 'Error al guardar';
+                
+                if (xhr.status === 403) {
+                    msg = 'Error de autenticación CSRF. Por favor, recarga la página.';
+                } else if (xhr.status === 404) {
+                    msg = 'Endpoint no encontrado. Verifica la URL.';
+                } else if (xhr.status === 500) {
+                    msg = 'Error interno del servidor.';
+                }
+                
+                if (xhr.responseJSON) {
+                    if (xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                    else if (xhr.responseJSON.error) msg = xhr.responseJSON.error;
+                } else if (xhr.responseText) {
+                    try {
+                        const resp = JSON.parse(xhr.responseText);
+                        msg = resp.message || resp.error || msg;
+                    } catch(e) {
+                        if (xhr.responseText.length < 200) {
+                            msg = xhr.responseText;
+                        }
+                    }
+                }
+                
+                Swal.fire({ 
+                    icon: 'error', 
+                    title: 'Error (' + xhr.status + ')', 
+                    text: msg,
+                    footer: 'URL: ' + url
+                });
+            });
+        }
+
+        // Función para eliminar
+        function eliminarCatalogo(config, id, $btnEliminar) {
+            Swal.fire({
+                title: '¿Eliminar registro?',
+                text: 'Esta acción no se puede deshacer',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (!result.isConfirmed) return;
+                
+                // Bloquear botón si ya está procesando
+                if ($btnEliminar && $btnEliminar.prop('disabled')) {
+                    return;
+                }
+                
+                // Bloquear botón y mostrar estado de procesamiento
+                let originalHtml = '';
+                if ($btnEliminar) {
+                    originalHtml = $btnEliminar.html();
+                    $btnEliminar.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+                }
+                
+                const csrfToken = getCsrfToken();
+                const data = {};
+                const headers = { 
+                    'X-Requested-With': 'XMLHttpRequest'
+                };
+                if (csrfToken) {
+                    data[getCsrfTokenName()] = csrfToken;
+                    headers['X-CSRF-TOKEN'] = csrfToken;
+                }
+                
+                $.ajax({
+                    url: '<?= base_url('modulo2/catalogos') ?>/' + config.tablaNombre + '/eliminar/' + id,
+                    method: 'POST',
+                    data: data,
+                    processData: true,
+                    contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+                    headers: headers
+                })
+                .done(function(resp) {
+                    if (resp && (resp.ok || resp.success)) {
+                        Swal.fire({ icon: 'success', title: 'Eliminado', text: 'Registro eliminado', timer: 1500, showConfirmButton: false });
+                        cargarCatalogoEnModal(config);
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Error', text: resp.message || 'No se pudo eliminar' });
+                    }
+                })
+                .always(function() {
+                    // Desbloquear botón siempre (éxito o error)
+                    if ($btnEliminar && originalHtml) {
+                        $btnEliminar.prop('disabled', false).html(originalHtml);
+                    }
+                })
+                .fail(function(xhr) {
+                    let msg = 'Error al eliminar';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    } else if (xhr.responseText) {
+                        try {
+                            const resp = JSON.parse(xhr.responseText);
+                            msg = resp.message || msg;
+                        } catch(e) {
+                            msg = xhr.responseText.substring(0, 100);
+                        }
+                    }
+                    console.error('Error eliminando catálogo:', xhr.status, xhr.responseText);
+                    Swal.fire({ icon: 'error', title: 'Error', text: msg });
+                });
+            });
+        }
+
+        // Mapeo de keys a IDs de modales
+        const modalIds = {
+            sexo: 'Sexo',
+            tallas: 'Tallas',
+            corte: 'Corte',
+            tiporopa: 'TipoRopa'
+        };
+
+        // Event handlers para cada catálogo
+        Object.keys(catalogosConfig).forEach(function(key) {
+            const config = catalogosConfig[key];
+            const modalId = '#modal' + modalIds[key];
+            
+            // Cargar datos al abrir modal
+            $(modalId).on('show.bs.modal', function() {
+                limpiarFormulario(config);
+                cargarCatalogoEnModal(config);
+            });
+
+            // Submit del formulario
+            $(config.form).on('submit', function(e) {
+                e.preventDefault();
+                guardarCatalogo(config);
+            });
+
+            // Editar item (hacer campos editables y cambiar botón)
+            $(document).on('click', config.tabla + ' .btn-editar-item', function() {
+                const $btn = $(this);
+                
+                // Bloquear botón si ya está procesando
+                if ($btn.prop('disabled')) {
+                    return;
+                }
+                
+                const $row = $btn.closest('tr');
+                const id = $row.data('id');
+                const $inputs = $row.find('input[data-field]');
+                
+                if ($btn.hasClass('editing')) {
+                    // Guardar cambios inline
+                    const nombre = $row.find('input[data-field="nombre"]').val().trim();
+                    const descripcion = $row.find('input[data-field="descripcion"]').val().trim();
+                    
+                    if (!nombre) {
+                        Swal.fire({ icon: 'warning', title: 'Campo requerido', text: 'El nombre es obligatorio' });
+                        return;
+                    }
+
+                    // Bloquear botón y mostrar estado de procesamiento
+                    const originalHtml = $btn.html();
+                    $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+
+                    const csrfToken = getCsrfToken();
+                    const data = { nombre: nombre, descripcion: descripcion || null };
+                    const headers = { 
+                        'X-Requested-With': 'XMLHttpRequest'
+                    };
+                    if (csrfToken) {
+                        data[getCsrfTokenName()] = csrfToken;
+                        headers['X-CSRF-TOKEN'] = csrfToken;
+                    }
+
+                    $.ajax({
+                        url: '<?= base_url('modulo2/catalogos') ?>/' + config.tablaNombre + '/actualizar/' + id,
+                        method: 'POST',
+                        data: data,
+                        processData: true,
+                        contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+                        headers: headers
+                    })
+                    .done(function(resp) {
+                        if (resp && (resp.ok || resp.success)) {
+                            $inputs.prop('readonly', true);
+                            $btn.removeClass('editing').html('<i class="bi bi-pencil"></i>').attr('title', 'Editar');
+                            Swal.fire({ icon: 'success', title: 'Guardado', timer: 1500, showConfirmButton: false });
+                            // Recargar tabla para reflejar cambios
+                            cargarCatalogoEnModal(config);
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: resp.message || 'No se pudo guardar' });
+                        }
+                    })
+                    .always(function() {
+                        // Desbloquear botón siempre (éxito o error)
+                        if (!$btn.hasClass('editing')) {
+                            // Si ya no está en modo edición, restaurar icono de lápiz
+                            $btn.prop('disabled', false).html('<i class="bi bi-pencil"></i>').attr('title', 'Editar');
+                        } else {
+                            // Si sigue en modo edición, restaurar icono de check
+                            $btn.prop('disabled', false).html('<i class="bi bi-check"></i>').attr('title', 'Guardar');
+                        }
+                    })
+                    .fail(function(xhr) {
+                        let msg = 'Error al guardar';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            msg = xhr.responseJSON.message;
+                        } else if (xhr.responseText) {
+                            try {
+                                const resp = JSON.parse(xhr.responseText);
+                                msg = resp.message || msg;
+                            } catch(e) {
+                                msg = xhr.responseText.substring(0, 100);
+                            }
+                        }
+                        console.error('Error actualizando catálogo:', xhr.status, xhr.responseText);
+                        Swal.fire({ icon: 'error', title: 'Error', text: msg });
+                    });
+                } else {
+                    // Activar edición inline
+                    $inputs.prop('readonly', false);
+                    $btn.addClass('editing').html('<i class="bi bi-check"></i>').attr('title', 'Guardar');
+                }
+            });
+
+            // Eliminar item
+            $(document).on('click', config.tabla + ' .btn-eliminar-item', function() {
+                const $btn = $(this);
+                const id = $btn.data('id');
+                eliminarCatalogo(config, id, $btn);
+            });
         });
     });
 </script>

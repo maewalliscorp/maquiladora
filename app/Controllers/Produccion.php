@@ -103,39 +103,52 @@ class Produccion extends BaseController
                 }
             }
 
-            // Si cambia a "Completada", actualizar también el estatus de orden_compra a "Finalizada"
-            if (strcasecmp($estatus, 'Completada') === 0) {
-                // Obtener ordenCompraId de la OP
-                $ocId = null;
+            // Obtener ordenCompraId de la OP para actualizar estatus de OC según el estatus de OP
+            $ocId = null;
+            try {
+                $rowOP = $db->query('SELECT ordenCompraId FROM orden_produccion WHERE id = ?', [$id])->getRowArray();
+                if ($rowOP && isset($rowOP['ordenCompraId'])) {
+                    $ocId = (int)$rowOP['ordenCompraId'];
+                }
+            } catch (\Throwable $e) {
                 try {
-                    $rowOP = $db->query('SELECT ordenCompraId FROM orden_produccion WHERE id = ?', [$id])->getRowArray();
+                    $rowOP = $db->query('SELECT ordenCompraId FROM OrdenProduccion WHERE id = ?', [$id])->getRowArray();
                     if ($rowOP && isset($rowOP['ordenCompraId'])) {
                         $ocId = (int)$rowOP['ordenCompraId'];
                     }
-                } catch (\Throwable $e) {
-                    try {
-                        $rowOP = $db->query('SELECT ordenCompraId FROM OrdenProduccion WHERE id = ?', [$id])->getRowArray();
-                        if ($rowOP && isset($rowOP['ordenCompraId'])) {
-                            $ocId = (int)$rowOP['ordenCompraId'];
-                        }
-                    } catch (\Throwable $e2) {
-                        // Ignorar si no existe la tabla con mayúsculas
-                    }
+                } catch (\Throwable $e2) {
+                    // Ignorar si no existe la tabla con mayúsculas
                 }
+            }
 
-                // Actualizar estatus de orden_compra a "Finalizada" si existe
-                if ($ocId && $ocId > 0) {
+            // Actualizar estatus de orden_compra según el estatus de la OP
+            if ($ocId && $ocId > 0) {
+                $nuevoEstatusOC = null;
+                
+                // Reglas de mapeo de estatus OP -> OC
+                if (strcasecmp($estatus, 'En corte') === 0) {
+                    $nuevoEstatusOC = 'Aceptada';
+                } elseif (strcasecmp($estatus, 'En proceso') === 0) {
+                    $nuevoEstatusOC = 'En proceso';
+                } elseif (strcasecmp($estatus, 'Pausada') === 0) {
+                    $nuevoEstatusOC = 'Pausada';
+                } elseif (strcasecmp($estatus, 'Completada') === 0) {
+                    $nuevoEstatusOC = 'Finalizada';
+                }
+                
+                // Actualizar estatus de orden_compra si hay un mapeo definido
+                if ($nuevoEstatusOC !== null) {
                     try {
-                        $okOc = $db->table('orden_compra')->where('id', $ocId)->update(['estatus' => 'Finalizada']);
+                        $okOc = $db->table('orden_compra')->where('id', $ocId)->update(['estatus' => $nuevoEstatusOC]);
                         if (!$okOc) {
                             try {
-                                $db->table('OrdenCompra')->where('id', $ocId)->update(['estatus' => 'Finalizada']);
+                                $db->table('OrdenCompra')->where('id', $ocId)->update(['estatus' => $nuevoEstatusOC]);
                             } catch (\Throwable $e) {
-                                log_message('warning', "No se pudo actualizar estatus de orden_compra ID: {$ocId}");
+                                log_message('warning', "No se pudo actualizar estatus de orden_compra ID: {$ocId} a '{$nuevoEstatusOC}'");
                             }
                         }
                     } catch (\Throwable $e) {
-                        log_message('warning', "Error al actualizar estatus de orden_compra ID: {$ocId}: " . $e->getMessage());
+                        log_message('warning', "Error al actualizar estatus de orden_compra ID: {$ocId} a '{$nuevoEstatusOC}': " . $e->getMessage());
                     }
                 }
             }

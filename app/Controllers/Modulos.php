@@ -788,6 +788,338 @@ class Modulos extends BaseController
         return $this->response->setJSON(['items'=>$rows]);
     }
 
+    // ====== CRUD Catálogo Sexo ======
+    public function m2_catalogo_sexo_crear()
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+        
+        $nombre = trim((string)$this->request->getPost('nombre'));
+        $descripcion = trim((string)$this->request->getPost('descripcion')) ?: null;
+        if (!$nombre) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'Nombre requerido']);
+        
+        $db = \Config\Database::connect();
+        try {
+            $tablas = ['sexo', 'Sexo'];
+            $insertado = false;
+            foreach ($tablas as $tabla) {
+                try {
+                    $db->table($tabla)->insert(['nombre' => $nombre, 'descripcion' => $descripcion]);
+                    $insertado = true;
+                    break;
+                } catch (\Throwable $e) {}
+            }
+            if (!$insertado) throw new \Exception('No se pudo insertar');
+            return $this->response->setJSON(['ok' => true, 'id' => $db->insertID()]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function m2_catalogo_sexo_actualizar($id = null)
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+        
+        $id = (int)($id ?? 0);
+        $nombre = trim((string)$this->request->getPost('nombre'));
+        $descripcion = trim((string)$this->request->getPost('descripcion')) ?: null;
+        if ($id <= 0 || !$nombre) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID y nombre requeridos']);
+        
+        $db = \Config\Database::connect();
+        try {
+            $tablas = ['sexo', 'Sexo'];
+            $actualizado = false;
+            foreach ($tablas as $tabla) {
+                try {
+                    $ok = $db->table($tabla)->where('id_sexo', $id)->update(['nombre' => $nombre, 'descripcion' => $descripcion]);
+                    if ($ok) { $actualizado = true; break; }
+                } catch (\Throwable $e) {}
+            }
+            if (!$actualizado) throw new \Exception('No se pudo actualizar');
+            return $this->response->setJSON(['ok' => true]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function m2_catalogo_sexo_eliminar($id = null)
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+        
+        $id = (int)($id ?? 0);
+        if ($id <= 0) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
+        
+        $db = \Config\Database::connect();
+        try {
+            $tablas = ['sexo', 'Sexo'];
+            $eliminado = false;
+            foreach ($tablas as $tabla) {
+                try {
+                    $ok = $db->table($tabla)->where('id_sexo', $id)->delete();
+                    if ($ok) { $eliminado = true; break; }
+                } catch (\Throwable $e) {}
+            }
+            if (!$eliminado) throw new \Exception('No se pudo eliminar');
+            return $this->response->setJSON(['ok' => true]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    // ====== CRUD Catálogo Tallas ======
+    public function m2_catalogo_tallas_crear()
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+        
+        $nombre = trim((string)$this->request->getPost('nombre'));
+        $descripcion = trim((string)$this->request->getPost('descripcion')) ?: null;
+        if (!$nombre) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'Nombre requerido']);
+        
+        $db = \Config\Database::connect();
+        try {
+            $tablas = ['tallas', 'Tallas'];
+            $insertado = false;
+            foreach ($tablas as $tabla) {
+                try {
+                    $db->table($tabla)->insert(['nombre' => $nombre, 'descripcion' => $descripcion]);
+                    $insertado = true;
+                    break;
+                } catch (\Throwable $e) {}
+            }
+            if (!$insertado) throw new \Exception('No se pudo insertar');
+            return $this->response->setJSON(['ok' => true, 'id' => $db->insertID()]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function m2_catalogo_tallas_actualizar($id = null)
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+        
+        $id = (int)($id ?? 0);
+        $nombre = trim((string)$this->request->getPost('nombre'));
+        $descripcion = trim((string)$this->request->getPost('descripcion')) ?: null;
+        if ($id <= 0 || !$nombre) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID y nombre requeridos']);
+        
+        $db = \Config\Database::connect();
+        try {
+            $tablas = ['tallas', 'Tallas'];
+            $actualizado = false;
+            foreach ($tablas as $tabla) {
+                try {
+                    $ok = $db->table($tabla)->where('id_talla', $id)->update(['nombre' => $nombre, 'descripcion' => $descripcion]);
+                    if ($ok) { $actualizado = true; break; }
+                } catch (\Throwable $e) {}
+            }
+            if (!$actualizado) throw new \Exception('No se pudo actualizar');
+            return $this->response->setJSON(['ok' => true]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function m2_catalogo_tallas_eliminar($id = null)
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+        
+        $id = (int)($id ?? 0);
+        if ($id <= 0) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
+        
+        $db = \Config\Database::connect();
+        try {
+            $tablas = ['tallas', 'Tallas'];
+            $eliminado = false;
+            foreach ($tablas as $tabla) {
+                try {
+                    $ok = $db->table($tabla)->where('id_talla', $id)->delete();
+                    if ($ok) { $eliminado = true; break; }
+                } catch (\Throwable $e) {}
+            }
+            if (!$eliminado) throw new \Exception('No se pudo eliminar');
+            return $this->response->setJSON(['ok' => true]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    // ====== CRUD Catálogo Tipo de Corte ======
+    public function m2_catalogo_tipo_corte_crear()
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+        
+        $nombre = trim((string)$this->request->getPost('nombre'));
+        $descripcion = trim((string)$this->request->getPost('descripcion')) ?: null;
+        if (!$nombre) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'Nombre requerido']);
+        
+        $db = \Config\Database::connect();
+        try {
+            $tablas = ['tipo_corte', 'Tipo_Corte', 'tipocorte'];
+            $insertado = false;
+            foreach ($tablas as $tabla) {
+                try {
+                    $db->table($tabla)->insert(['nombre' => $nombre, 'descripcion' => $descripcion]);
+                    $insertado = true;
+                    break;
+                } catch (\Throwable $e) {}
+            }
+            if (!$insertado) throw new \Exception('No se pudo insertar');
+            return $this->response->setJSON(['ok' => true, 'id' => $db->insertID()]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function m2_catalogo_tipo_corte_actualizar($id = null)
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+        
+        $id = (int)($id ?? 0);
+        $nombre = trim((string)$this->request->getPost('nombre'));
+        $descripcion = trim((string)$this->request->getPost('descripcion')) ?: null;
+        if ($id <= 0 || !$nombre) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID y nombre requeridos']);
+        
+        $db = \Config\Database::connect();
+        try {
+            $tablas = ['tipo_corte', 'Tipo_Corte', 'tipocorte'];
+            $actualizado = false;
+            foreach ($tablas as $tabla) {
+                try {
+                    $ok = $db->table($tabla)->where('id_tipo_corte', $id)->update(['nombre' => $nombre, 'descripcion' => $descripcion]);
+                    if ($ok) { $actualizado = true; break; }
+                } catch (\Throwable $e) {}
+            }
+            if (!$actualizado) throw new \Exception('No se pudo actualizar');
+            return $this->response->setJSON(['ok' => true]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function m2_catalogo_tipo_corte_eliminar($id = null)
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+        
+        $id = (int)($id ?? 0);
+        if ($id <= 0) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
+        
+        $db = \Config\Database::connect();
+        try {
+            $tablas = ['tipo_corte', 'Tipo_Corte', 'tipocorte'];
+            $eliminado = false;
+            foreach ($tablas as $tabla) {
+                try {
+                    $ok = $db->table($tabla)->where('id_tipo_corte', $id)->delete();
+                    if ($ok) { $eliminado = true; break; }
+                } catch (\Throwable $e) {}
+            }
+            if (!$eliminado) throw new \Exception('No se pudo eliminar');
+            return $this->response->setJSON(['ok' => true]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    // ====== CRUD Catálogo Tipo de Ropa ======
+    public function m2_catalogo_tipo_ropa_crear()
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+        
+        $nombre = trim((string)$this->request->getPost('nombre'));
+        $descripcion = trim((string)$this->request->getPost('descripcion')) ?: null;
+        if (!$nombre) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'Nombre requerido']);
+        
+        $db = \Config\Database::connect();
+        try {
+            $tablas = ['tipo_ropa', 'Tipo_Ropa', 'tiporopa'];
+            $insertado = false;
+            foreach ($tablas as $tabla) {
+                try {
+                    $db->table($tabla)->insert(['nombre' => $nombre, 'descripcion' => $descripcion]);
+                    $insertado = true;
+                    break;
+                } catch (\Throwable $e) {}
+            }
+            if (!$insertado) throw new \Exception('No se pudo insertar');
+            return $this->response->setJSON(['ok' => true, 'id' => $db->insertID()]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function m2_catalogo_tipo_ropa_actualizar($id = null)
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+        
+        $id = (int)($id ?? 0);
+        $nombre = trim((string)$this->request->getPost('nombre'));
+        $descripcion = trim((string)$this->request->getPost('descripcion')) ?: null;
+        if ($id <= 0 || !$nombre) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID y nombre requeridos']);
+        
+        $db = \Config\Database::connect();
+        try {
+            $tablas = ['tipo_ropa', 'Tipo_Ropa', 'tiporopa'];
+            $actualizado = false;
+            foreach ($tablas as $tabla) {
+                try {
+                    $ok = $db->table($tabla)->where('id_tipo_ropa', $id)->update(['nombre' => $nombre, 'descripcion' => $descripcion]);
+                    if ($ok) { $actualizado = true; break; }
+                } catch (\Throwable $e) {}
+            }
+            if (!$actualizado) throw new \Exception('No se pudo actualizar');
+            return $this->response->setJSON(['ok' => true]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function m2_catalogo_tipo_ropa_eliminar($id = null)
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+        
+        $id = (int)($id ?? 0);
+        if ($id <= 0) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
+        
+        $db = \Config\Database::connect();
+        try {
+            $tablas = ['tipo_ropa', 'Tipo_Ropa', 'tiporopa'];
+            $eliminado = false;
+            foreach ($tablas as $tabla) {
+                try {
+                    $ok = $db->table($tabla)->where('id_tipo_ropa', $id)->delete();
+                    if ($ok) { $eliminado = true; break; }
+                } catch (\Throwable $e) {}
+            }
+            if (!$eliminado) throw new \Exception('No se pudo eliminar');
+            return $this->response->setJSON(['ok' => true]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
     /** JSON detalle normalizado de pedido. */
     public function m1_pedido_json($id = null)
     {

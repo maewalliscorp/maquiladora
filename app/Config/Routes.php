@@ -174,9 +174,24 @@ $routes->group('modulo2', [], function ($routes) {
     $routes->get('articulos/json',      'Modulos::m2_articulos_json', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
 
     $routes->get ('catalogos/sexo',      'Modulos::m2_catalogo_sexo',        ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->post('catalogos/sexo/crear', 'Modulos::m2_catalogo_sexo_crear',  ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->post('catalogos/sexo/actualizar/(:num)', 'Modulos::m2_catalogo_sexo_actualizar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->post('catalogos/sexo/eliminar/(:num)', 'Modulos::m2_catalogo_sexo_eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    
     $routes->get ('catalogos/tallas',    'Modulos::m2_catalogo_tallas',      ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->post('catalogos/tallas/crear', 'Modulos::m2_catalogo_tallas_crear',  ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->post('catalogos/tallas/actualizar/(:num)', 'Modulos::m2_catalogo_tallas_actualizar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->post('catalogos/tallas/eliminar/(:num)', 'Modulos::m2_catalogo_tallas_eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    
     $routes->get ('catalogos/tipo-corte','Modulos::m2_catalogo_tipo_corte',  ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->post('catalogos/tipo-corte/crear', 'Modulos::m2_catalogo_tipo_corte_crear',  ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->post('catalogos/tipo-corte/actualizar/(:num)', 'Modulos::m2_catalogo_tipo_corte_actualizar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->post('catalogos/tipo-corte/eliminar/(:num)', 'Modulos::m2_catalogo_tipo_corte_eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    
     $routes->get ('catalogos/tipo-ropa', 'Modulos::m2_catalogo_tipo_ropa',   ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->post('catalogos/tipo-ropa/crear', 'Modulos::m2_catalogo_tipo_ropa_crear',  ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->post('catalogos/tipo-ropa/actualizar/(:num)', 'Modulos::m2_catalogo_tipo_ropa_actualizar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
+    $routes->post('catalogos/tipo-ropa/eliminar/(:num)', 'Modulos::m2_catalogo_tipo_ropa_eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
 });
 
 /* --------------------------------------------------------------------
