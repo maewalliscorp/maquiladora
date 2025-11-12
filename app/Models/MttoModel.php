@@ -1,6 +1,5 @@
 <?php
 // app/Models/MttoModel.php
-// app/Models/MttoModel.php
 namespace App\Models;
 
 use CodeIgniter\Model;
@@ -12,11 +11,17 @@ class MttoModel extends Model
     protected $returnType    = 'array';
     protected $useTimestamps = false;
 
+    // ⬅️ Añadimos: programacion_id, fecha_programada, observaciones
     protected $allowedFields = [
         'maquinaId', 'responsableId', 'tipo', 'estatus',
-        'descripcion', 'fechaApertura', 'fechaCierre'
+        'descripcion', 'fechaApertura', 'fechaCierre',
+        'programacion_id', 'fecha_programada', 'observaciones'
     ];
 
+    /**
+     * Listado con suma de horas registradas en mtto_detectado.
+     * Incluye datos de máquina y fecha_programada para agenda/calendario.
+     */
     public function getListado(): array
     {
         $db = $this->db;
@@ -32,19 +37,27 @@ class MttoModel extends Model
                 'm.estatus AS Estatus',
                 'm.descripcion AS Descripcion',
                 'm.fechaCierre AS Cierre',
+                'm.fecha_programada AS Programada',
+                'm.programacion_id AS ProgramacionId',
                 'COALESCE(SUM(d.tiempoHoras), 0) AS Horas',
+                // Bandera de vencido (opcional, útil para pintar en UI)
+                "(CASE WHEN m.estatus = 'pendiente' AND m.fecha_programada IS NOT NULL AND m.fecha_programada < CURDATE() THEN 1 ELSE 0 END) AS Vencido"
             ])
             ->join('maquina mx', 'mx.id = m.maquinaId', 'left')
             ->join('mtto_detectado d', 'd.otMttoId = m.id', 'left')
             ->groupBy([
                 'm.id','m.fechaApertura','mx.codigo','m.maquinaId','m.responsableId',
-                'm.tipo','m.estatus','m.descripcion','m.fechaCierre'
+                'm.tipo','m.estatus','m.descripcion','m.fechaCierre',
+                'm.fecha_programada','m.programacion_id'
             ])
             ->orderBy('m.fechaApertura', 'DESC');
 
         return $builder->get()->getResultArray();
     }
 
+    /**
+     * Listado simple sin agregados, incluyendo la fecha programada.
+     */
     public function getListadoSimple(): array
     {
         return $this->db->table('mtto m')
@@ -58,12 +71,17 @@ class MttoModel extends Model
                 'm.estatus AS Estatus',
                 'm.descripcion AS Descripcion',
                 'm.fechaCierre AS Cierre',
+                'm.fecha_programada AS Programada',
+                'm.programacion_id AS ProgramacionId'
             ])
             ->join('maquina mx', 'mx.id = m.maquinaId', 'left')
             ->orderBy('m.fechaApertura', 'DESC')
             ->get()->getResultArray();
     }
 
+    /**
+     * Inserta detalle/parte-trabajo (evita registros vacíos).
+     */
     public function insertDetalle(int $mttoId, ?string $accion, ?string $repuestos, ?float $horas): bool
     {
         if (!$mttoId) return false;
@@ -76,12 +94,76 @@ class MttoModel extends Model
         }
         $det = new \App\Models\MttoDetectadoModel();
         return (bool) $det->insert([
-            'otMttoId'       => $mttoId,
-            'accion'         => $accion ?: null,
-            'repuestosUsados'=> $repuestos ?: null,
-            'tiempoHoras'    => $horas ?: 0,
+            'otMttoId'        => $mttoId,
+            'accion'          => $accion ?: null,
+            'repuestosUsados' => $repuestos ?: null,
+            'tiempoHoras'     => $horas ?: 0,
+        ]);
+    }
+
+    /* ===========================================================
+     * Helpers OPCIONALES (útiles para calendario y alertas)
+     * Si ya usas el query directo en el Controller, puedes omitirlos.
+     * ===========================================================
+     */
+
+    /**
+     * Eventos para FullCalendar (rango de fechas).
+     * Devuelve arreglo listo para el widget: id, title, start, color.
+     */
+    public function getEventosCalendario(string $start, string $end): array
+    {
+        $rows = $this->db->table('mtto m')
+            ->select('m.id, m.fecha_programada, m.estatus, mx.codigo AS maquinaCodigo')
+            ->join('maquina mx', 'mx.id = m.maquinaId', 'left')
+            ->where('m.fecha_programada >=', $start)
+            ->where('m.fecha_programada <=', $end)
+            ->get()->getResultArray();
+
+        return array_map(function($r){
+            $color = ($r['estatus']==='hecho')
+                ? '#198754'
+                : (($r['estatus']==='vencido') ? '#dc3545' : '#ffc107');
+            return [
+                'id'    => (int)$r['id'],
+                'title' => 'Rev. '.($r['maquinaCodigo'] ?? 'Máquina').' ('.$r['estatus'].')',
+                'start' => $r['fecha_programada'],
+                'color' => $color
+            ];
+        }, $rows);
+    }
+
+    /**
+     * Pendientes próximos: devuelve OT programadas entre hoy y hoy+N días.
+     */
+    public function getPendientesProximos(int $dias = 7): array
+    {
+        return $this->where('estatus', 'pendiente')
+            ->where('fecha_programada IS NOT NULL', null, false)
+            ->where('fecha_programada BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL '.$dias.' DAY)', null, false)
+            ->orderBy('fecha_programada', 'ASC')
+            ->findAll();
+    }
+
+    /**
+     * Marca una OT como completa.
+     */
+    public function marcarHecho(int $id): bool
+    {
+        return $this->update($id, [
+            'estatus'     => 'hecho',
+            'fechaCierre' => date('Y-m-d')
+        ]);
+    }
+
+    /**
+     * Reprograma una OT (y marca estatus reprogramado).
+     */
+    public function reprogramarFecha(int $id, string $nuevaFecha): bool
+    {
+        return $this->update($id, [
+            'estatus'          => 'reprogramado',
+            'fecha_programada' => $nuevaFecha
         ]);
     }
 }
-
-

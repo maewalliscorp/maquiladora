@@ -20,14 +20,9 @@
 
     <style>
         /* Estilos mínimos en línea */
-        .hover-color:hover {
-            color: #0d6efd !important;
-        }
-
-        /* Mejora visual del toggler para que se vea en temas claros */
-        .navbar-custom .navbar-toggler {
-            border: none;
-        }
+        .hover-color:hover { color: #0d6efd !important; }
+        .navbar-custom .navbar-toggler { border: none; }
+        .badge-dot{display:inline-block;width:.6rem;height:.6rem;border-radius:50%;margin-right:.35rem}
     </style>
 
     <?= $this->renderSection('head') ?>
@@ -41,7 +36,7 @@ $secGestion = can('menu.catalogo_disenos') || can('menu.pedidos') || can('menu.o
 $secMuestrasInspeccion = can('menu.muestras') || can('menu.inspeccion');
 $secIncidencias = can('menu.incidencias') || can('menu.wip');
 $secPlanificacion = can('menu.planificacion_materiales') || can('menu.desperdicios');
-$secMantenimiento = can('menu.inv_maquinas') || can('menu.mant_correctivo');
+$secMantenimiento = can('menu.inv_maquinas') || can('menu.mant_correctivo'); // usaremos este para mostrar Programado
 $secLogistica = can('menu.logistica_preparacion') || can('menu.logistica_gestion') || can('menu.logistica_documentos') || can('menu.inventario_almacen');
 $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
 ?>
@@ -49,8 +44,7 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
     <div class="container-fluid">
         <a class="navbar-brand d-flex align-items-center" href="<?= esc(base_url('modulo3/dashboard')) ?>">
             <img src="<?= esc(base_url('img/logo_Maquiladora.png')) ?>" alt="Logo" width="32" class="me-1 d-lg-none">
-            <img src="<?= esc(base_url('img/logo_Maquiladora.png')) ?>" alt="Logo" width="48"
-                 class="me-2 d-none d-lg-block">
+            <img src="<?= esc(base_url('img/logo_Maquiladora.png')) ?>" alt="Logo" width="48" class="me-2 d-none d-lg-block">
             <span class="fw-bold text-dark d-none d-md-inline">Sistema de Maquiladora</span>
         </a>
 
@@ -63,8 +57,9 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                 <?= esc(session()->get('user_name') ?? 'Usuario') ?>
             </a>
 
+            <!-- ENLACE ACTUALIZADO: Notificaciones -> notificaciones1 -->
             <a class="nav-link position-relative text-dark hover-color ms-lg-2"
-               href="<?= esc(base_url('modulo3/notificaciones')) ?>" aria-label="Notificaciones">
+               href="<?= esc(base_url('notificaciones1')) ?>" aria-label="Notificaciones">
                 <i class="bi bi-bell fs-5" aria-hidden="true"></i>
                 <?php if ($notifCount > 0): ?>
                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -100,9 +95,10 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
         <div class="collapse navbar-collapse" id="topnav">
             <!-- Menú móvil (colapsado) -->
             <ul class="navbar-nav d-lg-none">
+                <!-- ENLACE ACTUALIZADO -->
                 <li class="nav-item">
                     <a class="nav-link position-relative text-dark ms-lg-2"
-                       href="<?= esc(base_url('modulo3/notificaciones')) ?>">
+                       href="<?= esc(base_url('notificaciones1')) ?>">
                         <i class="bi bi-bell fs-5" aria-hidden="true"></i>
                         <?php if ($notifCount > 0): ?>
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -136,10 +132,7 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                                     class="bi bi-people me-2"></i>Clientes</a></li>
                 <?php endif; ?>
 
-                <?php if ($secGestion && $secMuestrasInspeccion): ?>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li><?php endif; ?>
+                <?php if ($secGestion && $secMuestrasInspeccion): ?><li><hr class="dropdown-divider"></li><?php endif; ?>
 
                 <?php if (can('menu.muestras')): ?>
                     <li class="nav-item"><a class="nav-link text-dark" href="<?= esc(base_url('muestras')) ?>"><i
@@ -149,20 +142,14 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                                             href="<?= esc(base_url('modulo3/inspeccion')) ?>"><i
                                 class="bi bi-search me-2"></i>Inspección</a></li><?php endif; ?>
 
-                <?php if ($secMuestrasInspeccion && $secIncidencias): ?>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li><?php endif; ?>
+                <?php if ($secMuestrasInspeccion && $secIncidencias): ?><li><hr class="dropdown-divider"></li><?php endif; ?>
 
                 <?php if (can('menu.incidencias')): ?>
                     <li class="nav-item"><a class="nav-link text-dark"
                                             href="<?= esc(base_url('modulo3/incidencias')) ?>"><i
                                 class="bi bi-exclamation-triangle me-2"></i>Incidencias</a></li><?php endif; ?>
 
-                <?php if ($secIncidencias && $secPlanificacion): ?>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li><?php endif; ?>
+                <?php if ($secIncidencias && $secPlanificacion): ?><li><hr class="dropdown-divider"></li><?php endif; ?>
 
                 <?php if (can('menu.planificacion_materiales')): ?>
                     <li class="nav-item"><a class="nav-link text-dark" href="<?= esc(base_url('modulo3/mrp')) ?>"><i
@@ -172,24 +159,27 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                                             href="<?= esc(base_url('modulo3/desperdicios')) ?>"><i
                                 class="bi bi-recycle me-2"></i>Desperdicios</a></li><?php endif; ?>
 
-                <?php if ($secPlanificacion && $secMantenimiento): ?>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li><?php endif; ?>
+                <?php if ($secPlanificacion && $secMantenimiento): ?><li><hr class="dropdown-divider"></li><?php endif; ?>
 
                 <?php if (can('menu.inv_maquinas')): ?>
                     <li class="nav-item"><a class="nav-link text-dark"
                                             href="<?= esc(base_url('modulo3/mantenimiento_inventario')) ?>"><i
                                 class="bi bi-tools me-2"></i>Inventario Maq.</a></li><?php endif; ?>
+                <?php if ($secMantenimiento): ?>
+                    <!-- NUEVOS: Programación y Calendario -->
+                    <li class="nav-item"><a class="nav-link text-dark"
+                                            href="<?= esc(base_url('mtto/programacion')) ?>"><i
+                                    class="bi bi-calendar-check me-2"></i>Prog. Mtto</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark"
+                                            href="<?= esc(base_url('mtto/calendario')) ?>"><i
+                                    class="bi bi-calendar3 me-2"></i>Calendario Mtto</a></li>
+                <?php endif; ?>
                 <?php if (can('menu.mant_correctivo')): ?>
                     <li class="nav-item"><a class="nav-link text-dark"
                                             href="<?= esc(base_url('modulo3/mantenimiento_correctivo')) ?>"><i
                                 class="bi bi-wrench-adjustable-circle me-2"></i>Correctivo</a></li><?php endif; ?>
 
-                <?php if ($secMantenimiento && $secLogistica): ?>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li><?php endif; ?>
+                <?php if ($secMantenimiento && $secLogistica): ?><li><hr class="dropdown-divider"></li><?php endif; ?>
 
                 <?php if (can('menu.logistica_preparacion')): ?>
                     <li class="nav-item"><a class="nav-link text-dark"
@@ -208,10 +198,7 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                                             href="<?= esc(base_url('almacen/inventario')) ?>"><i
                                 class="bi bi-boxes me-2"></i>Inventario Almacén</a></li><?php endif; ?>
 
-                <?php if ($secLogistica && $secAdmin): ?>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li><?php endif; ?>
+                <?php if ($secLogistica && $secAdmin): ?><li><hr class="dropdown-divider"></li><?php endif; ?>
 
                 <?php if (can('menu.reportes')): ?>
                     <li class="nav-item"><a class="nav-link text-dark"
@@ -247,10 +234,10 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                     </ul>
                 </li>
 
-                <!-- Notificaciones -->
+                <!-- Notificaciones (ACTUALIZADO) -->
                 <li class="nav-item ms-lg-2">
                     <a class="nav-link text-dark position-relative d-inline-block hover-color"
-                       href="<?= esc(base_url('modulo3/notificaciones')) ?>" title="Notificaciones"
+                       href="<?= esc(base_url('notificaciones1')) ?>" title="Notificaciones"
                        data-bs-toggle="tooltip" data-bs-placement="bottom" aria-label="Notificaciones">
                         <i class="bi bi-bell fs-5" aria-hidden="true"></i>
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -283,8 +270,7 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                         <?php if (can('menu.produccion')): ?><a class="dropdown-item"
                                                                 href="<?= esc(base_url('modulo1/produccion')) ?>"><i
                                         class="bi bi-gear-wide-connected me-2"></i>Producción</a><?php endif; ?>
-                        <?php if ($secGestion && $secMuestrasInspeccion): ?>
-                            <div class="dropdown-divider"></div><?php endif; ?>
+                        <?php if ($secGestion && $secMuestrasInspeccion): ?><div class="dropdown-divider"></div><?php endif; ?>
 
                         <?php if (can('menu.muestras')): ?><a class="dropdown-item"
                                                               href="<?= esc(base_url('muestras')) ?>"><i
@@ -293,8 +279,7 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                                                                 href="<?= esc(base_url('modulo3/inspeccion')) ?>"><i
                                         class="bi bi-search me-2"></i>Inspección</a><?php endif; ?>
 
-                        <?php if ($secMuestrasInspeccion && $secIncidencias): ?>
-                            <div class="dropdown-divider"></div><?php endif; ?>
+                        <?php if ($secMuestrasInspeccion && $secIncidencias): ?><div class="dropdown-divider"></div><?php endif; ?>
 
                         <?php if (can('menu.incidencias')): ?>
                             <?php $roleName = current_role_name(); $roleNorm = $roleName ? mb_strtolower(trim($roleName)) : ''; ?>
@@ -305,8 +290,7 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                             <?php endif; ?>
                         <?php endif; ?>
 
-                        <?php if ($secIncidencias && $secPlanificacion): ?>
-                            <div class="dropdown-divider"></div><?php endif; ?>
+                        <?php if ($secIncidencias && $secPlanificacion): ?><div class="dropdown-divider"></div><?php endif; ?>
 
                         <?php if (can('menu.planificacion_materiales')): ?><a class="dropdown-item"
                                                                               href="<?= esc(base_url('modulo3/mrp')) ?>">
@@ -315,18 +299,25 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                                                                   href="<?= esc(base_url('modulo3/desperdicios')) ?>"><i
                                         class="bi bi-recycle me-2"></i>Desperdicios</a><?php endif; ?>
 
-                        <?php if ($secPlanificacion && $secMantenimiento): ?>
-                            <div class="dropdown-divider"></div><?php endif; ?>
+                        <?php if ($secPlanificacion && $secMantenimiento): ?><div class="dropdown-divider"></div><?php endif; ?>
 
                         <?php if (can('menu.inv_maquinas')): ?><a class="dropdown-item"
                                                                   href="<?= esc(base_url('modulo3/mantenimiento_inventario')) ?>">
                                 <i class="bi bi-tools me-2"></i>Inventario Maq.</a><?php endif; ?>
+
+                        <?php if ($secMantenimiento): ?>
+                            <!-- NUEVOS ACCESOS RÁPIDOS -->
+                            <a class="dropdown-item" href="<?= esc(base_url('mtto/programacion')) ?>">
+                                <i class="bi bi-calendar-check me-2"></i>Prog. Mtto</a>
+                            <a class="dropdown-item" href="<?= esc(base_url('mtto/calendario')) ?>">
+                                <i class="bi bi-calendar3 me-2"></i>Calendario Mtto</a>
+                        <?php endif; ?>
+
                         <?php if (can('menu.mant_correctivo')): ?><a class="dropdown-item"
                                                                      href="<?= esc(base_url('modulo3/mantenimiento_correctivo')) ?>">
                                 <i class="bi bi-wrench-adjustable-circle me-2"></i>Mant. Correctivo</a><?php endif; ?>
 
-                        <?php if ($secMantenimiento && $secLogistica): ?>
-                            <div class="dropdown-divider"></div><?php endif; ?>
+                        <?php if ($secMantenimiento && $secLogistica): ?><div class="dropdown-divider"></div><?php endif; ?>
 
                         <?php if (can('menu.logistica_preparacion')): ?><a class="dropdown-item"
                                                                            href="<?= esc(base_url('modulo3/logistica_preparacion')) ?>">
@@ -341,8 +332,7 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                                                                         href="<?= esc(base_url('almacen/inventario')) ?>">
                                 <i class="bi bi-boxes me-2"></i>Inventario Almacén</a><?php endif; ?>
 
-                        <?php if ($secLogistica && $secAdmin): ?>
-                            <div class="dropdown-divider"></div><?php endif; ?>
+                        <?php if ($secLogistica && $secAdmin): ?><div class="dropdown-divider"></div><?php endif; ?>
 
                         <?php if (can('menu.reportes')): ?><a class="dropdown-item"
                                                               href="<?= esc(base_url('modulo3/reportes')) ?>"><i
@@ -374,40 +364,26 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js" defer></script>
 
 <script>
-    // Ejecutar cuando el script de bootstrap ya esté disponible
     (function () {
-        // Mejora: espera DOMContentLoaded para manipular DOM y usa replaceChild para envolver tablas
         document.addEventListener('DOMContentLoaded', () => {
-            // Inicializar tooltips si bootstrap existe
             try {
                 if (window.bootstrap && typeof window.bootstrap.Tooltip === 'function') {
                     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
                         new bootstrap.Tooltip(el);
                     });
                 }
-            } catch (err) {
-                console.warn('Error inicializando tooltips', err);
-            }
+            } catch (err) { console.warn('Error inicializando tooltips', err); }
 
-            // Abrir tablas responsivas automáticamente y añadir clases útiles de bootstrap
             document.querySelectorAll('table').forEach(tbl => {
                 tbl.classList.add('table', 'table-striped', 'table-hover', 'align-middle');
-
-                const parent = tbl.parentElement;
-                if (!parent) return;
-
-                // No envolver si ya está dentro de un .table-responsive
+                const parent = tbl.parentElement; if (!parent) return;
                 if (parent.classList && parent.classList.contains('table-responsive')) return;
-
                 const wrapper = document.createElement('div');
                 wrapper.className = 'table-responsive';
-
-                // Reemplaza la tabla por el wrapper y añade la tabla dentro del wrapper
                 parent.replaceChild(wrapper, tbl);
                 wrapper.appendChild(tbl);
             });
 
-            // Abrir modal de incidencias en cuentas de Empleado
             document.addEventListener('click', async (ev) => {
                 const a = ev.target.closest('.js-open-incidencia-modal');
                 if (!a) return;
@@ -420,24 +396,13 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                     if (!wrap) { wrap = document.createElement('div'); wrap.id = 'incidencias-modal-wrap'; document.body.appendChild(wrap); }
                     wrap.innerHTML = html;
                     const modalEl = document.getElementById('incidenciaModal');
-                    if (window.bootstrap && modalEl) {
-                        const m = new bootstrap.Modal(modalEl, { backdrop: 'static' });
-                        m.show();
-                    }
+                    if (window.bootstrap && modalEl) { const m = new bootstrap.Modal(modalEl, { backdrop: 'static' }); m.show(); }
                 } catch (e) { console.error('Error cargando modal incidencias', e); }
             });
         });
 
-        // Forzar recarga si se vuelve desde bfcache para validar sesión
-        window.addEventListener('pageshow', function (e) {
-            if (e.persisted) {
-                location.reload();
-            }
-        });
-
-        // Listener 'unload' vacío para ayudar en ciertos navegadores con caches agresivos
-        window.addEventListener('unload', function () {
-        });
+        window.addEventListener('pageshow', function (e) { if (e.persisted) { location.reload(); } });
+        window.addEventListener('unload', function () {});
     })();
 </script>
 

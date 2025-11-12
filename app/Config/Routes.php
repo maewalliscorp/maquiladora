@@ -188,9 +188,27 @@ $routes->group('mantenimiento', static function($r){
     $r->post('correctivo/actualizar/(:num)', 'MantenimientoCorrectivo::actualizar/$1', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
     $r->post('correctivo/eliminar/(:num)',   'MantenimientoCorrectivo::eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
 
-    // NUEVO: endpoint JSON para Historial por máquina
+    // JSON: Historial por máquina
     $r->get('correctivo/historial/maquina/(:num)', 'MantenimientoCorrectivo::historialPorMaquina/$1', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
 });
+
+/* --------------------------------------------------------------------
+ * *** NUEVO ***  Notificaciones + Mantenimiento Programado
+ * ------------------------------------------------------------------*/
+// Notificaciones (vista nueva)
+$routes->get ('notificaciones1',               'Notificaciones1::index', ['filter' => 'auth']);
+$routes->post('notificaciones1/marcar/(:num)', 'Notificaciones1::marcar/$1', ['filter' => 'auth']);
+$routes->post('notificaciones1/borrar/(:num)', 'Notificaciones1::borrar/$1', ['filter' => 'auth']);
+// Compatibilidad con enlaces antiguos del menú
+$routes->get('modulo3/notificaciones', 'Notificaciones1::index', ['filter' => 'auth']);
+
+// Programación/Calendario/Alertas (mantenimiento preventivo)
+$routes->get ('mtto/calendario',                  'MttoProgramacion::calendario',   ['filter' => 'auth']);
+$routes->get ('mtto/programacion',                'MttoProgramacion::index',        ['filter' => 'auth']); // compat
+$routes->get ('mtto/api/revisiones',              'MttoProgramacion::apiRevisiones',['filter' => 'auth']);
+
+// “Cron” HTTP para generar instancias y notificaciones (proteger con token si lo deseas)
+$routes->get ('mtto/alertas/run',                 'MttoAlertas::run');
 
 /* --------------------------------------------------------------------
  * Módulo 3 (Dashboard, WIP, Inspección, Mantenimiento, Logística, MRP alias)
