@@ -14,16 +14,19 @@ class EmpleadoModel extends Model
     protected $protectFields    = true;
 
     protected $allowedFields = [
-        'noEmpleado',
-        'nombre',
-        'apellido',
-        'email',
-        'telefono',
-        'domicilio',
-        'puesto',
-        'activo',
-        'idusuario',
-    ];
+    'noEmpleado',
+    'nombre',
+    'apellido',
+    'email',
+    'telefono',
+    'domicilio',
+    'puesto',
+    'activo',
+    'idusuario',
+    'foto',  // Agregar este campo
+    'fecha_nac',  // Agregar si no está
+    'curp'        // Agregar si no está
+];
 
     // Dates
     protected $useTimestamps = false;

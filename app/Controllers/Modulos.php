@@ -2362,7 +2362,7 @@ class Modulos extends BaseController
                     'SELECT 
                         e.noEmpleado, e.nombre, e.apellido, e.puesto,
                         e.email, e.telefono, e.domicilio,
-                        e.fecha_nac, e.curp,
+                        e.fecha_nac, e.curp, e.foto,
                         TIMESTAMPDIFF(YEAR, e.fecha_nac, CURDATE()) AS edad,
                         u.username, u.correo, u.active AS usuario_activo
                      FROM empleado e INNER JOIN users u ON e.idusuario = u.id
@@ -2376,7 +2376,7 @@ class Modulos extends BaseController
                         'SELECT 
                             e.noEmpleado, e.nombre, e.apellido, e.puesto,
                             e.email, e.telefono, e.domicilio,
-                            e.fecha_nac, e.curp,
+                            e.fecha_nac, e.curp, e.foto,
                             TIMESTAMPDIFF(YEAR, e.fecha_nac, CURDATE()) AS edad,
                             u.username, u.correo, u.active AS usuario_activo
                          FROM Empleado e INNER JOIN Users u ON e.idusuario = u.id
@@ -2390,6 +2390,11 @@ class Modulos extends BaseController
                     $row['email'] = $row['correo']
                         ?? (string)(session()->get('user_email') ?? '')
                         ?? (string)(session()->get('correo') ?? '');
+                }
+                
+                // Codificar la imagen en base64 si existe
+                if (!empty($row['foto'])) {
+                    $row['foto'] = base64_encode($row['foto']);
                 }
                 if (!isset($row['puesto']) || $row['puesto'] === null || $row['puesto'] === '') {
                     $primary = session()->get('primary_role');
@@ -2432,6 +2437,19 @@ class Modulos extends BaseController
             if ($t === 'date') { return $v === '' ? null : $v; }
             return $v === '' ? null : $v;
         };
+        
+        // Procesar la foto si se subió
+        $fotoData = null;
+        $fotoFile = $this->request->getFile('foto');
+        if ($fotoFile && $fotoFile->isValid() && !$fotoFile->hasMoved()) {
+            // Validar tipo de archivo
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            if (in_array($fotoFile->getMimeType(), $allowedTypes)) {
+                // Leer el contenido del archivo
+                $fotoData = file_get_contents($fotoFile->getTempName());
+            }
+        }
+
         $row = [
             'noEmpleado' => $in('noEmpleado'),
             'nombre'     => $in('nombre'),
@@ -2444,6 +2462,11 @@ class Modulos extends BaseController
             'curp'       => $in('curp'),
             'activo'     => 1,
         ];
+        
+        // Solo actualizar la foto si se subió una nueva
+        if ($fotoData !== null) {
+            $row['foto'] = $fotoData;
+        }
 
         $db = \Config\Database::connect();
         try {
@@ -2466,8 +2489,25 @@ class Modulos extends BaseController
             }
             // ¿Existe empleado ligado a este usuario?
             $emp = null;
-            try { $emp = $db->table('empleado')->where('idusuario', $uid)->get()->getRowArray(); } catch (\Throwable $e) { $emp = null; }
-            if (!$emp) { try { $emp = $db->table('Empleado')->where('idusuario', $uid)->get()->getRowArray(); } catch (\Throwable $e2) { $emp = null; } }
+            try { 
+                $emp = $db->table('empleado')
+                         ->select('*')
+                         ->select('foto') // Asegurarse de obtener la foto actual
+                         ->where('idusuario', $uid)
+                         ->get()
+                         ->getRowArray(); 
+            } catch (\Throwable $e) { $emp = null; }
+            
+            if (!$emp) { 
+                try { 
+                    $emp = $db->table('Empleado')
+                             ->select('*')
+                             ->select('foto') // Asegurarse de obtener la foto actual
+                             ->where('idusuario', $uid)
+                             ->get()
+                             ->getRowArray(); 
+                } catch (\Throwable $e2) { $emp = null; } 
+            }
 
             if ($emp) {
                 // Update
