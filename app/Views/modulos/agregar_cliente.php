@@ -51,6 +51,7 @@
                         <th>Nombre</th>
                         <th>Email</th>
                         <th>Teléfono</th>
+                        <th>Tipo Persona</th>
                         <th style="width: 160px;">Fecha Registro</th>
                         <th style="width: 140px;">Acciones</th>
                     </tr>
@@ -81,6 +82,14 @@
                         <div class="col-md-6">
                             <label class="form-label">Teléfono</label>
                             <input type="text" class="form-control" name="v_telefono" readonly>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">RFC</label>
+                            <input type="text" class="form-control" name="v_rfc" readonly>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo Persona</label>
+                            <input type="text" class="form-control" name="v_tipo_persona" readonly>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Fecha registro</label>
@@ -211,12 +220,15 @@
                             const nombre = row.nombre ?? row.name ?? '';
                             const email = row.email ?? row.correo ?? '';
                             const tel = row.telefono ?? row.tel ?? '';
+                            const rfc = row.rfc ?? '';
+                            const tipoPersona = row.tipo_persona ?? '';
                             const fecha = row.fechaRegistro ?? row.fecha ?? row.created_at ?? '';
 
                             tabla.row.add([
                                 fmt(nombre),
                                 fmt(email),
                                 fmt(tel),
+                                fmt(tipoPersona === 'FISICA' ? 'Física' : (tipoPersona === 'MORAL' ? 'Moral' : tipoPersona)),
                                 toDate(fecha),
                                 `
                         <div class="d-flex gap-2">
@@ -298,6 +310,8 @@
                 m.find('[name="nombre"]').val(data.nombre || '');
                 m.find('[name="email"]').val(data.email || '');
                 m.find('[name="telefono"]').val(data.telefono || '');
+                m.find('[name="rfc"]').val(data.rfc || '');
+                m.find('[name="tipo_persona"]').val(data.tipo_persona || '');
                 m.find('[name="fechaRegistro"]').val(toDate(data.fechaRegistro) || '');
                 const d = data.direccion || {};
                 m.find('[name="calle"]').val(d.calle || '');
@@ -355,7 +369,9 @@
                 m.find('[name="nombre"]').val('');
                 m.find('[name="email"]').val('');
                 m.find('[name="telefono"]').val('');
-                m.find('[name="fechaRegistro"]').val('');
+                m.find('[name="rfc"]').val('');
+                m.find('[name="tipo_persona"]').val('');
+                m.find('[name="fechaRegistro"]').val(new Date().toLocaleDateString('en-CA'));
                 m.find('[name="calle"]').val('');
                 m.find('[name="numExt"]').val('');
                 m.find('[name="numInt"]').val('');
@@ -379,6 +395,8 @@
                     m.find('[name="v_nombre"]').val(data.nombre || '');
                     m.find('[name="v_email"]').val(data.email || '');
                     m.find('[name="v_telefono"]').val(data.telefono || '');
+                    m.find('[name="v_rfc"]').val(data.rfc || '');
+                    m.find('[name="v_tipo_persona"]').val(data.tipo_persona === 'FISICA' ? 'Física' : (data.tipo_persona === 'MORAL' ? 'Moral' : data.tipo_persona));
                     m.find('[name="v_fechaRegistro"]').val(toDate(data.fechaRegistro) || '');
                     const d = data.direccion || {};
                     m.find('[name="v_calle"]').val(d.calle || '');
@@ -431,9 +449,21 @@
                                 <label class="form-label">Teléfono</label>
                                 <input type="text" class="form-control" name="telefono">
                             </div>
+                            <div class="col-md-3">
+                                <label class="form-label">RFC</label>
+                                <input type="text" class="form-control" name="rfc" maxlength="13" placeholder="RFC (13 caracteres)">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Tipo Persona</label>
+                                <select class="form-control" name="tipo_persona">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="FISICA">Física</option>
+                                    <option value="MORAL">Moral</option>
+                                </select>
+                            </div>
                             <div class="col-md-6">
                                 <label class="form-label">Fecha registro</label>
-                                <input type="date" class="form-control" name="fechaRegistro">
+                                <input type="date" class="form-control" name="fechaRegistro" readonly>
                             </div>
                             <div class="col-12"><hr class="my-2"></div>
                             <div class="col-md-6">

@@ -26,6 +26,8 @@ class Clientes extends BaseController
                                        c.nombre,
                                        c.email,
                                        c.telefono,
+                                       c.rfc,
+                                       c.tipo_persona,
                                        c.fechaRegistro,
                                        d.*,
                                        cc.clasificacionId AS clasificacionId,
@@ -57,6 +59,9 @@ class Clientes extends BaseController
                 }
                 return $default;
             };
+            
+            // Log the raw row for debugging
+            log_message('debug', 'Raw client row in catalog: ' . json_encode($r));
 
             $dir = [
                 'calle'  => $getv($r, ['calle', 'Calle']),
@@ -77,6 +82,8 @@ class Clientes extends BaseController
                 'nombre'   => $getv($r, ['nombre', 'Nombre'], ''),
                 'email'    => $getv($r, ['email', 'Email', 'correo', 'Correo'], ''),
                 'telefono' => $getv($r, ['telefono', 'Telefono', 'tel', 'Tel'], ''),
+                'rfc'      => $getv($r, ['rfc', 'RFC'], ''),
+                'tipo_persona' => $getv($r, ['tipo_persona', 'tipoPersona'], ''),
                 'fechaRegistro' => $getv($r, ['fechaRegistro', 'fecha', 'created_at'], ''),
                 'direccion_detalle'=> $dir,
                 'clasificacion' => [
@@ -139,6 +146,8 @@ class Clientes extends BaseController
             'nombre' => $row['nombre'] ?? '',
             'email' => $row['email'] ?? '',
             'telefono' => $row['telefono'] ?? '',
+            'rfc' => $row['rfc'] ?? $row['RFC'] ?? '',
+            'tipo_persona' => $row['tipo_persona'] ?? $row['tipo_persona'] ?? '',
             'fechaRegistro' => $row['fechaRegistro'] ?? null,
             'direccion' => $addr ? [
                 'id' => (int)($addr['id'] ?? 0),
@@ -163,6 +172,8 @@ class Clientes extends BaseController
         $nombre = trim((string)$this->request->getPost('nombre'));
         $email = trim((string)$this->request->getPost('email'));
         $telefono = trim((string)$this->request->getPost('telefono'));
+        $rfc = trim((string)$this->request->getPost('rfc'));
+        $tipo_persona = trim((string)$this->request->getPost('tipo_persona'));
         $fechaRegistro = $this->request->getPost('fechaRegistro');
         if ($fechaRegistro) {
             $fr = trim((string)$fechaRegistro);
@@ -192,7 +203,10 @@ class Clientes extends BaseController
                 if ($nombre !== '') $data['nombre'] = $nombre;
                 if ($email !== '') $data['email'] = $email;
                 if ($telefono !== '') $data['telefono'] = $telefono;
-                if ($fechaRegistro !== null && $fechaRegistro !== '') $data['fechaRegistro'] = $fechaRegistro;
+                if ($rfc !== '') $data['rfc'] = $rfc;
+                else $data['rfc'] = null;
+                if ($tipo_persona !== '') $data['tipo_persona'] = $tipo_persona;
+                else $data['tipo_persona'] = null;
                 if ($data) { $db->table($t)->where('id',$id)->update($data); $aff1 = $db->affectedRows(); }
                 $ok1 = true; break;
             } catch (\Throwable $e) {}
@@ -242,6 +256,8 @@ class Clientes extends BaseController
         $nombre = trim((string)$this->request->getPost('nombre'));
         $email = trim((string)$this->request->getPost('email'));
         $telefono = trim((string)$this->request->getPost('telefono'));
+        $rfc = trim((string)$this->request->getPost('rfc'));
+        $tipo_persona = trim((string)$this->request->getPost('tipo_persona'));
         $fechaRegistro = $this->request->getPost('fechaRegistro');
         if ($fechaRegistro) {
             $fr = trim((string)$fechaRegistro);
@@ -277,7 +293,9 @@ class Clientes extends BaseController
             'nombre' => $nombre,
             'email' => $email !== '' ? $email : null,
             'telefono' => $telefono !== '' ? $telefono : null,
-            'fechaRegistro' => $fechaRegistro ?: date('Y-m-d'),
+            'rfc' => $rfc !== '' ? $rfc : null,
+            'tipo_persona' => $tipo_persona !== '' ? $tipo_persona : null,
+            'fechaRegistro' => date('Y-m-d'),
         ]);
         $newId = (int)$db->insertID();
 

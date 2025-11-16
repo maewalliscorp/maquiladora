@@ -233,6 +233,7 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->get('/',         'Dashboard::index');
     $routes->get('dashboard', 'Dashboard::index');
     $routes->get('ordenes',   'Modulos::ordenes');
+    $routes->get('reportes',  'Modulos::reportes');
 
     // ===== MRP (ALIAS bajo /modulo3/mrp) =====
     $routes->group('mrp', function($r){
@@ -389,6 +390,10 @@ $routes->group('modulo11', ['filter' => 'auth:Administrador,Jefe,RH'], function 
     $routes->get('roles',                   'Modulos::m11_roles');
     $routes->post('roles/actualizar',       'Modulos::m11_roles_actualizar');
     $routes->post('roles/agregar',          'Modulos::m11_roles_agregar');
+    $routes->post('roles/eliminar',         'Modulos::m11_roles_eliminar');
+    $routes->post('roles/permisos',         'Modulos::m11_roles_permisos');
+    $routes->post('roles/guardar_permisos', 'Modulos::m11_roles_guardar_permisos');
+    $routes->get('roles/inicializar_permisos', 'Modulos::m11_roles_inicializar_permisos');
     $routes->get('usuarios',                'Modulos::m11_usuarios');
     $routes->get('usuarios/agregar',        'Modulos::m11_agregar_usuario');
     $routes->post('usuarios/agregar',       'Modulos::m11_agregar_usuario');

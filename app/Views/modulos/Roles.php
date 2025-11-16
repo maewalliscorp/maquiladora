@@ -41,6 +41,20 @@
                                     title="Editar rol">
                                 <i class="bi bi-pencil"></i>
                             </button>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger btn-rol-eliminar ms-1"
+                                    data-id="<?= (int)$r['id'] ?>"
+                                    data-nombre="<?= esc($r['nombre'] ?? '', 'attr') ?>"
+                                    title="Eliminar rol">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-info btn-rol-permisos ms-1"
+                                    data-id="<?= (int)$r['id'] ?>"
+                                    data-nombre="<?= esc($r['nombre'] ?? '', 'attr') ?>"
+                                    title="Ver permisos del rol">
+                                <i class="bi bi-key"></i>
+                            </button>
                         </td>
                     </tr>
                 <?php endforeach; endif; ?>
@@ -79,11 +93,11 @@
 
     <!-- Modal Editar Rol -->
     <div class="modal fade" id="modalEditarRol" tabindex="-1" aria-labelledby="modalEditarRolLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
+                <div class="modal-header">
                     <h5 class="modal-title" id="modalEditarRolLabel">Editar Rol</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="formEditarRol">
                     <div class="modal-body">
@@ -99,9 +113,173 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar</button>
+                        <button type="submit" class="btn btn-primary" id="btnEditarGuardar">Guardar</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Permisos del Rol -->
+    <div class="modal fade" id="modalPermisosRol" tabindex="-1" aria-labelledby="modalPermisosRolLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalPermisosRolLabel">
+                        Permisos del Rol: <span id="permisos-rol-nombre"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary mb-3">Gestión</h6>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.catalogo_disenos" id="perm_catalogo_disenos">
+                                <label class="form-check-label" for="perm_catalogo_disenos">
+                                    Catálogo de Diseños
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.pedidos" id="perm_pedidos">
+                                <label class="form-check-label" for="perm_pedidos">
+                                    Pedidos
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.ordenes" id="perm_ordenes">
+                                <label class="form-check-label" for="perm_ordenes">
+                                    Órdenes en proceso
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.produccion" id="perm_produccion">
+                                <label class="form-check-label" for="perm_produccion">
+                                    Producción
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.ordenes_clientes" id="perm_ordenes_clientes">
+                                <label class="form-check-label" for="perm_ordenes_clientes">
+                                    Clientes
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-success mb-3">Muestras e Inspección</h6>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.muestras" id="perm_muestras">
+                                <label class="form-check-label" for="perm_muestras">
+                                    Muestras
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.inspeccion" id="perm_inspeccion">
+                                <label class="form-check-label" for="perm_inspeccion">
+                                    Inspección
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.incidencias" id="perm_incidencias">
+                                <label class="form-check-label" for="perm_incidencias">
+                                    Incidencias
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.wip" id="perm_wip">
+                                <label class="form-check-label" for="perm_wip">
+                                    WIP
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <h6 class="text-warning mb-3">Planificación</h6>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.planificacion_materiales" id="perm_planificacion_materiales">
+                                <label class="form-check-label" for="perm_planificacion_materiales">
+                                    Planificación Materiales
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.desperdicios" id="perm_desperdicios">
+                                <label class="form-check-label" for="perm_desperdicios">
+                                    Desperdicios
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-danger mb-3">Mantenimiento</h6>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.inv_maquinas" id="perm_inv_maquinas">
+                                <label class="form-check-label" for="perm_inv_maquinas">
+                                    Inventario Maq.
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.mant_correctivo" id="perm_mant_correctivo">
+                                <label class="form-check-label" for="perm_mant_correctivo">
+                                    Correctivo
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <h6 class="text-info mb-3">Logística</h6>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.logistica_preparacion" id="perm_logistica_preparacion">
+                                <label class="form-check-label" for="perm_logistica_preparacion">
+                                    Prep. Envíos
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.logistica_gestion" id="perm_logistica_gestion">
+                                <label class="form-check-label" for="perm_logistica_gestion">
+                                    Gestión
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.logistica_documentos" id="perm_logistica_documentos">
+                                <label class="form-check-label" for="perm_logistica_documentos">
+                                    Documentos
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.inventario_almacen" id="perm_inventario_almacen">
+                                <label class="form-check-label" for="perm_inventario_almacen">
+                                    Inventario Almacén
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-dark mb-3">Administración</h6>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.reportes" id="perm_reportes">
+                                <label class="form-check-label" for="perm_reportes">
+                                    Reportes
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.roles" id="perm_roles">
+                                <label class="form-check-label" for="perm_roles">
+                                    Roles
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.usuarios" id="perm_usuarios">
+                                <label class="form-check-label" for="perm_usuarios">
+                                    Gestión Usuarios
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-info" id="btnGuardarPermisos">Guardar Permisos</button>
+                </div>
             </div>
         </div>
     </div>
@@ -109,6 +287,7 @@
 
 <?= $this->section('scripts') ?>
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script>
@@ -143,7 +322,15 @@
                     nombre: $('#ar-nombre').val().trim(),
                     descripcion: $('#ar-descripcion').val().trim()
                 };
-                if (!payload.nombre) { alert('El nombre es obligatorio'); return; }
+                if (!payload.nombre) { 
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'El nombre es obligatorio',
+                        icon: 'warning',
+                        confirmButtonColor: '#3085d6'
+                    }); 
+                    return; 
+                }
                 // Evitar envíos múltiples
                 const $btn = $('#btnAgregarGuardar');
                 if ($btn.prop('disabled')) return; // ya en curso
@@ -155,6 +342,7 @@
                     dataType: 'json'
                 })
                     .done(function(r){
+                        console.log('Response agregar:', r);
                         if (r && r.success && r.id) {
                             // Añadir fila a la DataTable
                             const accionHtml = '<button type="button" class="btn btn-sm btn-outline-primary btn-rol-editar"'
@@ -163,21 +351,115 @@
                                 + ' data-descripcion="'+ $('<div>').text(payload.descripcion).html() +'"'
                                 + ' title="Editar rol">'
                                 + ' <i class="bi bi-pencil"></i>'
+                                + '</button>'
+                                + '<button type="button" class="btn btn-sm btn-outline-danger btn-rol-eliminar ms-1"'
+                                + ' data-id="'+ r.id +'"'
+                                + ' data-nombre="'+ $('<div>').text(payload.nombre).html() +'"'
+                                + ' title="Eliminar rol">'
+                                + ' <i class="bi bi-trash"></i>'
+                                + '</button>'
+                                + '<button type="button" class="btn btn-sm btn-outline-info btn-rol-permisos ms-1"'
+                                + ' data-id="'+ r.id +'"'
+                                + ' data-nombre="'+ $('<div>').text(payload.nombre).html() +'"'
+                                + ' title="Ver permisos del rol">'
+                                + ' <i class="bi bi-key"></i>'
                                 + '</button>';
                             dt.row.add([r.id, payload.nombre, payload.descripcion, accionHtml]).draw(false);
+                            Swal.fire({
+                                title: '¡Agregado!',
+                                text: 'Rol agregado correctamente',
+                                icon: 'success',
+                                confirmButtonColor: '#3085d6'
+                            });
                             bootstrap.Modal.getInstance(document.getElementById('modalAgregarRol'))?.hide();
+                            // Limpiar formulario
+                            $('#formAgregarRol')[0].reset();
                         } else {
-                            alert(r && r.message ? r.message : 'No se pudo agregar el rol');
+                            Swal.fire({
+                                title: 'Error',
+                                text: r && r.message ? r.message : 'No se pudo agregar el rol',
+                                icon: 'error',
+                                confirmButtonColor: '#3085d6'
+                            });
                         }
                     })
                     .fail(function(xhr){
                         let msg = 'Error al agregar el rol';
                         try { const j = JSON.parse(xhr.responseText); if (j.message) msg = j.message; } catch(e) {}
-                        alert(msg);
+                        Swal.fire({
+                            title: 'Error',
+                            text: msg,
+                            icon: 'error',
+                            confirmButtonColor: '#3085d6'
+                        });
                     })
                     .always(function(){
                         $btn.prop('disabled', false).text('Guardar');
                     });
+            });
+
+            // Eliminar rol
+            $(document).on('click', '.btn-rol-eliminar', function(){
+                const id = $(this).data('id');
+                const nombre = $(this).data('nombre') || '';
+                
+                Swal.fire({
+                    title: "¿Estás seguro?",
+                    text: `Eliminarás el rol "${nombre}". ¡No podrás revertir esto!`,
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#3085d6",
+                    cancelButtonColor: "#d33",
+                    confirmButtonText: "Sí, eliminar"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: '<?= base_url('modulo11/roles/eliminar') ?>',
+                            method: 'POST',
+                            data: { id: id },
+                            dataType: 'json'
+                        })
+                        .done(function(response){
+                        console.log('Response actualizar:', response);
+                        if (response && response.success) {
+                                Swal.fire({
+                                    title: "¡Eliminado!",
+                                    text: "El rol ha sido eliminado correctamente.",
+                                    icon: "success",
+                                    confirmButtonColor: "#3085d6"
+                                });
+                                // Eliminar fila de la DataTable
+                                const $row = $('#tablaRoles tbody tr').filter(function(){ 
+                                    return $(this).find('td:first').text().trim() == String(id); 
+                                });
+                                if ($row.length) {
+                                    const dt = $('#tablaRoles').DataTable();
+                                    dt.row($row).remove().draw(false);
+                                }
+                            } else {
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: response && response.message ? response.message : 'No se pudo eliminar el rol',
+                                    icon: 'error',
+                                    confirmButtonColor: '#3085d6'
+                                });
+                            }
+                        })
+                        .fail(function(xhr){
+                            let msg = 'Error al eliminar el rol';
+                            try { 
+                                const j = JSON.parse(xhr.responseText); 
+                                if (j.message) msg = j.message; 
+                            } catch(e) {}
+                            Swal.fire({
+                                title: 'Error',
+                                text: msg,
+                                icon: 'error',
+                                confirmButtonColor: '#3085d6'
+                            });
+                        });
+                    }
+                });
             });
 
             // Abrir modal con datos
@@ -192,6 +474,111 @@
                 m.show();
             });
 
+            // Abrir modal de permisos
+            $(document).on('click', '.btn-rol-permisos', function(){
+                const id = $(this).data('id');
+                const nombre = $(this).data('nombre') || '';
+                
+                // Mostrar nombre del rol en el modal
+                $('#permisos-rol-nombre').text(nombre);
+                
+                // Limpiar checkboxes
+                $('.permiso-checkbox').prop('checked', false);
+                
+                // Cargar permisos del rol desde el servidor
+                $.ajax({
+                    url: '<?= base_url('modulo11/roles/permisos') ?>',
+                    method: 'POST',
+                    data: { rol_id: id },
+                    dataType: 'json'
+                })
+                .done(function(response){
+                    console.log('Response editar:', response);
+                    if (response && response.success) {
+                        // Marcar los permisos que tiene el rol
+                        response.permisos.forEach(function(permiso) {
+                            $('.permiso-checkbox[value="' + permiso + '"]').prop('checked', true);
+                        });
+                    }
+                })
+                .fail(function(xhr){
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'Error al cargar permisos del rol',
+                        icon: 'error',
+                        confirmButtonColor: '#3085d6'
+                    });
+                });
+                
+                // Guardar el ID del rol para uso posterior
+                $('#modalPermisosRol').data('rol-id', id);
+                
+                // Abrir el modal
+                const m = new bootstrap.Modal(document.getElementById('modalPermisosRol'));
+                m.show();
+            });
+
+            // Guardar permisos del rol
+            $('#btnGuardarPermisos').on('click', function(){
+                const rolId = $('#modalPermisosRol').data('rol-id');
+                const permisosSeleccionados = [];
+                
+                // Recopilar permisos seleccionados
+                $('.permiso-checkbox:checked').each(function(){
+                    permisosSeleccionados.push($(this).val());
+                });
+                
+                const $btn = $(this);
+                if ($btn.prop('disabled')) return;
+                
+                $btn.prop('disabled', true).text('Guardando...');
+                
+                $.ajax({
+                    url: '<?= base_url('modulo11/roles/guardar_permisos') ?>',
+                    method: 'POST',
+                    data: {
+                        rol_id: rolId,
+                        permisos: permisosSeleccionados
+                    },
+                    dataType: 'json'
+                })
+                .done(function(response){
+                    console.log('Response permisos:', response);
+                    if (response && response.success) {
+                        Swal.fire({
+                            title: '¡Guardado!',
+                            text: 'Permisos guardados correctamente',
+                            icon: 'success',
+                            confirmButtonColor: '#3085d6'
+                        });
+                        bootstrap.Modal.getInstance(document.getElementById('modalPermisosRol')).hide();
+                    } else {
+                        Swal.fire({
+                            title: 'Error',
+                            text: response && response.message ? response.message : 'Error al guardar permisos',
+                            icon: 'error',
+                            confirmButtonColor: '#3085d6'
+                        });
+                    }
+                })
+                .fail(function(xhr){
+                    let msg = 'Error al guardar los permisos';
+                    try { 
+                        const j = JSON.parse(xhr.responseText); 
+                        if (j.message) msg = j.message; 
+                    } catch(e) {}
+                    Swal.fire({
+                        title: 'Error',
+                        text: msg,
+                        icon: 'error',
+                        confirmButtonColor: '#3085d6'
+                    });
+                })
+                .always(function(){
+                    $btn.prop('disabled', false).text('Guardar Permisos');
+                });
+            });
+
             // Guardar cambios (AJAX)
             $('#formEditarRol').on('submit', function(e){
                 e.preventDefault();
@@ -200,7 +587,19 @@
                     nombre: $('#er-nombre').val().trim(),
                     descripcion: $('#er-descripcion').val().trim()
                 };
-                if (!payload.nombre) { alert('El nombre es obligatorio'); return; }
+                if (!payload.nombre) { 
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'El nombre es obligatorio',
+                        icon: 'warning',
+                        confirmButtonColor: '#3085d6'
+                    }); 
+                    return; 
+                }
+                // Evitar envíos múltiples
+                const $btn = $('#btnEditarGuardar');
+                if ($btn.prop('disabled')) return; // ya en curso
+                $btn.prop('disabled', true).text('Guardando...');
                 $.ajax({
                     url: '<?= base_url('modulo11/roles/actualizar') ?>',
                     method: 'POST',
@@ -208,6 +607,7 @@
                     dataType: 'json'
                 })
                     .done(function(r){
+                        console.log('Response actualizar:', r);
                         if (r && r.success) {
                             // Refrescar fila en DataTable usando API
                             const id = payload.id;
@@ -219,18 +619,49 @@
                                     + ' data-descripcion="'+ $('<div>').text(payload.descripcion).html() +'"'
                                     + ' title="Editar rol">'
                                     + ' <i class="bi bi-pencil"></i>'
+                                    + '</button>'
+                                    + '<button type="button" class="btn btn-sm btn-outline-danger btn-rol-eliminar ms-1"'
+                                    + ' data-id="'+ id +'"'
+                                    + ' data-nombre="'+ $('<div>').text(payload.nombre).html() +'"'
+                                    + ' title="Eliminar rol">'
+                                    + ' <i class="bi bi-trash"></i>'
+                                    + '</button>'
+                                    + '<button type="button" class="btn btn-sm btn-outline-info btn-rol-permisos ms-1"'
+                                    + ' data-id="'+ id +'"'
+                                    + ' data-nombre="'+ $('<div>').text(payload.nombre).html() +'"'
+                                    + ' title="Ver permisos del rol">'
+                                    + ' <i class="bi bi-key"></i>'
                                     + '</button>';
                                 dt.row($row).data([id, payload.nombre, payload.descripcion, accionHtml]).draw(false);
                             }
+                            Swal.fire({
+                                title: '¡Actualizado!',
+                                text: 'Rol actualizado correctamente',
+                                icon: 'success',
+                                confirmButtonColor: '#3085d6'
+                            });
                             bootstrap.Modal.getInstance(document.getElementById('modalEditarRol'))?.hide();
                         } else {
-                            alert(r && r.message ? r.message : 'No se pudo actualizar el rol');
+                            Swal.fire({
+                                title: 'Error',
+                                text: r && r.message ? r.message : 'No se pudo actualizar el rol',
+                                icon: 'error',
+                                confirmButtonColor: '#3085d6'
+                            });
                         }
                     })
                     .fail(function(xhr){
                         let msg = 'Error al actualizar el rol';
                         try { const j = JSON.parse(xhr.responseText); if (j.message) msg = j.message; } catch(e) {}
-                        alert(msg);
+                        Swal.fire({
+                            title: 'Error',
+                            text: msg,
+                            icon: 'error',
+                            confirmButtonColor: '#3085d6'
+                        });
+                    })
+                    .always(function(){
+                        $btn.prop('disabled', false).text('Guardar');
                     });
             });
         });

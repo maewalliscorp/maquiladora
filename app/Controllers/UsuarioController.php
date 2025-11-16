@@ -40,16 +40,37 @@ class UsuarioController extends Controller
             $roleIds = [];
             $roleNames = [];
             try {
+                // Optimización: una sola consulta para obtener roles y pre-cargar permisos
                 $db = \Config\Database::connect();
                 $rows = $db->query(
                     'SELECT r.id, r.nombre FROM usuario_rol ur JOIN rol r ON r.id = ur.rolIdFK WHERE ur.usuarioIdFK = ?',
                     [$user['id']]
                 )->getResultArray();
+                
                 foreach ($rows as $r) {
                     if (isset($r['id'])) { $roleIds[] = (int)$r['id']; }
                     if (isset($r['nombre'])) { $roleNames[] = (string)$r['nombre']; }
                 }
+                
+                // Pre-cargar permisos para evitar consultas futuras
+                if (!empty($roleIds)) {
+                    $permissions = [];
+                    $roleIdsStr = implode(',', array_map('intval', $roleIds));
+                    $permRows = $db->query(
+                        'SELECT DISTINCT permiso FROM rol_permiso WHERE rol_id IN (' . $roleIdsStr . ')'
+                    )->getResultArray();
+                    
+                    foreach ($permRows as $row) {
+                        if (isset($row['permiso'])) {
+                            $permissions[] = $row['permiso'];
+                        }
+                    }
+                    
+                    session()->set('cached_permissions', $permissions);
+                }
+                
             } catch (\Throwable $e) { /* sin roles => arrays vacíos */ }
+            
             session()->set([
                 'user_id'     => $user['id'],
                 'user_name'   => $user['username'] ?? ($user['nombre'] ?? $user['correo']),
@@ -57,6 +78,7 @@ class UsuarioController extends Controller
                 'role_ids'    => $roleIds,
                 'role_names'  => $roleNames,
                 'primary_role'=> isset($roleNames[0]) ? (string)$roleNames[0] : null,
+                'cached_roles'=> $roleNames, // Cache adicional
             ]);
 
             return redirect()->to('/dashboard');
@@ -89,11 +111,9 @@ class UsuarioController extends Controller
         $response->setHeader('Pragma', 'no-cache');
         $response->setHeader('Expires', '0');
         
-        // Redirigir al login
-        return redirect()->to('/login')
-            ->with('message', 'Has cerrado sesión correctamente.')
-            ->withCookies();
+        return redirect()->to('/login');
     }
+    
     public function index()
     {
         $maquiladoraModel = new MaquiladoraModel();

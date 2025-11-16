@@ -9,7 +9,7 @@ class ClienteModel extends Model
     protected $table         = 'cliente';
     protected $primaryKey    = 'id';
     protected $returnType    = 'array';
-    protected $allowedFields = ['nombre']; // agrega los que uses
+    protected $allowedFields = ['nombre', 'email', 'telefono', 'rfc', 'tipo_persona', 'fechaRegistro']; // agrega los que uses
 
     public function listado(): array
     {

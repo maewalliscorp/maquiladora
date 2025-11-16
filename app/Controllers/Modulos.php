@@ -2669,7 +2669,7 @@ class Modulos extends BaseController
             throw new \Exception($msg);
         }
         $id = $db->insertID();
-        return $this->response->setJSON(['success' => true, 'id' => (int)$id]);
+        return $this->response->setJSON(['success' => true, 'id' => (int)$id, 'message' => 'Rol agregado correctamente']);
     } catch (\Throwable $e) {
         return $this->response->setStatusCode(500)->setJSON([
             'success' => false,
@@ -2707,7 +2707,7 @@ class Modulos extends BaseController
                 $msg = $err['message'] ?? 'No se pudo actualizar';
                 throw new \Exception($msg);
             }
-            return $this->response->setJSON(['success' => true]);
+            return $this->response->setJSON(['success' => true, 'message' => 'Rol actualizado correctamente']);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON([
                 'success' => false,
@@ -2715,6 +2715,308 @@ class Modulos extends BaseController
             ]);
         }
     }
+
+    /**
+     * Obtener los permisos de un rol (POST): rol_id
+     * Respuesta: JSON { success, permisos[] }
+     */
+    public function m11_roles_permisos()
+    {
+        $rolId = (int)($this->request->getPost('rol_id') ?? $this->request->getVar('rol_id') ?? 0);
+        
+        if ($rolId <= 0) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'message' => 'ID de rol inválido'
+            ]);
+        }
+
+        $db = \Config\Database::connect();
+        
+        // Verificar si existe la tabla rol_permiso
+        $this->crearTablaRolPermisoSiNoExiste($db);
+        
+        try {
+            // Obtener permisos del rol desde la tabla rol_permiso
+            $permisos = $db->table('rol_permiso')
+                ->select('permiso')
+                ->where('rol_id', $rolId)
+                ->get()
+                ->getResultArray();
+            
+            $permisoList = array_column($permisos, 'permiso');
+            
+            return $this->response->setJSON([
+                'success' => true,
+                'permisos' => $permisoList
+            ]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'Error al obtener permisos: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Guardar los permisos de un rol (POST): rol_id, permisos[]
+     * Respuesta: JSON { success, message? }
+     */
+    public function m11_roles_guardar_permisos()
+    {
+        $rolId = (int)($this->request->getPost('rol_id') ?? $this->request->getVar('rol_id') ?? 0);
+        $permisos = $this->request->getPost('permisos') ?? [];
+        
+        // Depuración
+        log_message('debug', 'Guardando permisos - rol_id: ' . $rolId . ', permisos: ' . json_encode($permisos));
+        
+        if ($rolId <= 0) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'message' => 'ID de rol inválido: ' . $rolId
+            ]);
+        }
+
+        $db = \Config\Database::connect();
+        
+        // Verificar si existe la tabla rol_permiso
+        $this->crearTablaRolPermisoSiNoExiste($db);
+        
+        try {
+            // Iniciar transacción
+            $db->transStart();
+            
+            // Eliminar todos los permisos actuales del rol
+            $db->table('rol_permiso')->where('rol_id', $rolId)->delete();
+            
+            // Insertar los nuevos permisos
+            if (!empty($permisos)) {
+                $data = [];
+                foreach ($permisos as $permiso) {
+                    $data[] = [
+                        'rol_id' => $rolId,
+                        'permiso' => trim($permiso)
+                    ];
+                }
+                log_message('debug', 'Datos a insertar: ' . json_encode($data));
+                $db->table('rol_permiso')->insertBatch($data);
+            }
+            
+            // Completar transacción
+            $db->transComplete();
+            
+            if ($db->transStatus() === false) {
+                // Obtener el error de la base de datos
+                $error = $db->error();
+                throw new \Exception('Error en la transacción: ' . ($error['message'] ?? 'Error desconocido'));
+            }
+            
+            log_message('debug', 'Permisos guardados exitosamente para rol_id: ' . $rolId);
+            
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'Permisos guardados correctamente'
+            ]);
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al guardar permisos para rol_id ' . $rolId . ': ' . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'Error al guardar permisos: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Verificar y crear la tabla rol_permiso si no existe
+     */
+    private function crearTablaRolPermisoSiNoExiste($db)
+    {
+        try {
+            // Verificar si la tabla existe
+            $query = $db->query("SHOW TABLES LIKE 'rol_permiso'");
+            if ($query->getNumRows() == 0) {
+                // La tabla no existe, crearla sin clave foránea para evitar conflictos
+                $sql = "
+                CREATE TABLE `rol_permiso` (
+                    `id` int(11) NOT NULL AUTO_INCREMENT,
+                    `rol_id` int(11) NOT NULL,
+                    `permiso` varchar(100) NOT NULL,
+                    `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `idx_rol_permiso_rol_id` (`rol_id`),
+                    KEY `idx_rol_permiso_permiso` (`permiso`),
+                    UNIQUE KEY `unique_rol_permiso` (`rol_id`, `permiso`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Permisos asignados a los roles';
+                ";
+                $db->query($sql);
+                
+                // Insertar permisos predeterminados
+                $this->insertarPermisosPredeterminados($db);
+            }
+        } catch (\Throwable $e) {
+            // Si hay error, lo registramos pero continuamos
+            log_message('error', 'Error al verificar/crear tabla rol_permiso: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Insertar permisos predeterminados para todos los roles
+     */
+    private function insertarPermisosPredeterminados($db)
+    {
+        try {
+            // Obtener todos los roles
+            $roles = $db->table('rol')->get()->getResultArray();
+            
+            // Definir permisos por rol
+            $permisosPorRol = [
+                'Administrador' => [
+                    'menu.catalogo_disenos', 'menu.pedidos', 'menu.ordenes', 'menu.produccion',
+                    'menu.muestras', 'menu.inspeccion', 'menu.inventario_almacen', 'menu.inv_maquinas',
+                    'menu.desperdicios', 'menu.incidencias', 'menu.logistica_preparacion',
+                    'menu.logistica_gestion', 'menu.logistica_documentos', 'menu.planificacion_materiales',
+                    'menu.mant_correctivo', 'menu.mant_programacion', 'menu.mrp', 'menu.ordenes_clientes',
+                    'menu.usuarios', 'menu.roles'
+                ],
+                'Jefe' => [
+                    'menu.catalogo_disenos', 'menu.pedidos', 'menu.ordenes', 'menu.produccion',
+                    'menu.muestras', 'menu.inspeccion', 'menu.inventario_almacen', 'menu.inv_maquinas',
+                    'menu.desperdicios', 'menu.incidencias', 'menu.logistica_preparacion',
+                    'menu.logistica_gestion', 'menu.logistica_documentos', 'menu.planificacion_materiales',
+                    'menu.mant_correctivo', 'menu.mant_programacion', 'menu.mrp', 'menu.ordenes_clientes',
+                    'menu.usuarios', 'menu.roles'
+                ],
+                'Empleado' => [
+                    'menu.produccion', 'menu.incidencias'
+                ],
+                'Inspector' => [
+                    'menu.pedidos', 'menu.ordenes', 'menu.produccion', 'menu.muestras', 'menu.inspeccion'
+                ],
+                'Almacenista' => [
+                    'menu.inventario_almacen', 'menu.inv_maquinas', 'menu.desperdicios',
+                    'menu.incidencias', 'menu.logistica_preparacion', 'menu.logistica_gestion',
+                    'menu.logistica_documentos', 'menu.planificacion_materiales', 'menu.mant_correctivo'
+                ],
+                'Calidad' => [
+                    'menu.inspeccion', 'menu.muestras', 'menu.pedidos', 'menu.logistica_preparacion',
+                    'menu.logistica_gestion', 'menu.logistica_documentos', 'menu.desperdicios'
+                ],
+                'Diseñador' => [
+                    'menu.catalogo_disenos', 'menu.pedidos', 'menu.produccion', 'menu.muestras', 'menu.desperdicios'
+                ],
+                'RH' => [
+                    'menu.ordenes_clientes', 'menu.ordenes', 'menu.usuarios', 'menu.roles'
+                ]
+            ];
+            
+            // Insertar permisos para cada rol
+            foreach ($roles as $rol) {
+                $rolNombre = $rol['nombre'];
+                if (isset($permisosPorRol[$rolNombre])) {
+                    $data = [];
+                    foreach ($permisosPorRol[$rolNombre] as $permiso) {
+                        $data[] = [
+                            'rol_id' => $rol['id'],
+                            'permiso' => $permiso
+                        ];
+                    }
+                    if (!empty($data)) {
+                        $db->table('rol_permiso')->insertBatch($data);
+                    }
+                }
+            }
+            
+            log_message('info', 'Permisos predeterminados insertados correctamente');
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al insertar permisos predeterminados: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Eliminar un rol (POST): id
+     * Respuesta: JSON { success, message? }
+     */
+    public function m11_roles_eliminar()
+    {
+        $id = (int)($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
+        
+        if ($id <= 0) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'message' => 'ID de rol inválido'
+            ]);
+        }
+
+        $db = \Config\Database::connect();
+        try {
+            // Verificar si el rol está siendo utilizado por usuarios
+            $usuariosConRol = $db->table('usuario_rol')
+                ->where('rolIdFK', $id)
+                ->countAllResults();
+                
+            if ($usuariosConRol > 0) {
+                return $this->response->setStatusCode(400)->setJSON([
+                    'success' => false,
+                    'message' => 'No se puede eliminar el rol porque está asignado a ' . $usuariosConRol . ' usuario(s)'
+                ]);
+            }
+
+            // Eliminar permisos del rol primero
+            $db->table('rol_permiso')->where('rol_id', $id)->delete();
+            
+            // Eliminar el rol
+            $ok = $db->table('rol')->where('id', $id)->delete();
+            
+            if (!$ok) {
+                $err = $db->error(); 
+                $msg = $err['message'] ?? 'No se pudo eliminar el rol';
+                throw new \Exception($msg);
+            }
+            
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'Rol eliminado correctamente'
+            ]);
+            
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'Error al eliminar el rol: ' . $e->getMessage()
+            ]);
+        }
+    }
+    
+    /**
+     * Inicializar permisos predeterminados (GET)
+     * Endpoint: modulo11/roles/inicializar_permisos
+     */
+    public function m11_roles_inicializar_permisos()
+    {
+        try {
+            $db = \Config\Database::connect();
+            
+            // Verificar si la tabla existe
+            $this->crearTablaRolPermisoSiNoExiste($db);
+            
+            // Limpiar permisos existentes
+            $db->table('rol_permiso')->emptyTable();
+            
+            // Insertar permisos predeterminados
+            $this->insertarPermisosPredeterminados($db);
+            
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'Permisos inicializados correctamente'
+            ]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'Error al inicializar permisos: ' . $e->getMessage()
+            ]);
+        }
+    }
+
 public function m11_usuarios()
 {
     $usuarioModel = new \App\Models\UsuarioModel();

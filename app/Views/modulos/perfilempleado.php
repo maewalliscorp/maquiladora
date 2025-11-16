@@ -1,6 +1,13 @@
 <?= $this->extend('layouts/main') ?>
 
 <?= $this->section('content') ?>
+<?php 
+// Depuración temporal - verificar sesión
+$userId = session()->get('user_id');
+$userName = session()->get('user_name');
+$logged_in = session()->get('logged_in');
+?>
+<!-- DEBUG: Sesión activa: <?php var_dump($userId); ?> | <?php var_dump($userName); ?> | <?php var_dump($logged_in); ?> -->
 <?php $hasEmpleado = !empty($empleado); ?>
 <div class="d-flex align-items-center mb-4">
     <h1 class="me-3">Perfil del Empleado</h1>
@@ -11,6 +18,7 @@
         <?php else: ?>
             <button type="button" class="btn btn-success" id="btnAgregarEmp">Agregar</button>
         <?php endif; ?>
+       
     </div>
     </div>
 <div class="row justify-content-center">
@@ -82,10 +90,20 @@
                        class="rounded-circle border" 
                        style="width: 150px; height: 150px; object-fit: cover;"
                        alt="Foto de perfil">
-                  <label for="emp-foto" class="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-2" style="cursor: pointer;">
-                    <i class="bi bi-camera"></i>
-                    <input type="file" class="d-none" id="emp-foto" name="foto" accept="image/*">
-                  </label>
+                  <div class="position-absolute bottom-0 start-0 d-flex gap-1">
+                    <label for="emp-foto" class="bg-primary text-white rounded-circle p-2" style="cursor: pointer;" title="Subir archivo">
+                      <i class="bi bi-upload"></i>
+                      <input type="file" class="d-none" id="emp-foto" name="foto" accept="image/*">
+                    </label>
+                    <label for="emp-foto-cam" class="bg-success text-white rounded-circle p-2" style="cursor: pointer;" title="Tomar foto" onclick="abrirCamaraMovil(event)">
+                      <i class="bi bi-camera"></i>
+                      <input type="file" class="d-none" id="emp-foto-cam" name="foto" accept="image/*" capture="environment">
+                    </label>
+                    <label for="emp-foto-webcam" class="bg-info text-white rounded-circle p-2" style="cursor: pointer;" title="Cámara web" onclick="abrirWebcam(event)">
+                      <i class="bi bi-webcam"></i>
+                      <input type="file" class="d-none" id="emp-foto-webcam" name="foto" accept="image/*">
+                    </label>
+                  </div>
                 </div>
               </div>
               <div>
@@ -142,67 +160,302 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<!-- jQuery first, then Bootstrap, then DataTables -->
+<!-- jQuery first, then SweetAlert2 (Bootstrap ya lo carga el layout) -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-$(document).ready(function(){
+// Esperar a que jQuery y Bootstrap estén cargados
+document.addEventListener('DOMContentLoaded', function() {
+  // Verificar si jQuery está cargado
+  if (typeof jQuery === 'undefined') {
+    console.error('jQuery no está cargado');
+    return;
+  }
+  console.log('jQuery versión:', jQuery.fn.jquery);
+  
   // Configuración global para evitar conflictos con $ de jQuery
   var $j = jQuery.noConflict();
   
+  // Verificar si Bootstrap está cargado
+  if (typeof bootstrap === 'undefined') {
+    console.error('Bootstrap no está cargado');
+  } else {
+    console.log('Bootstrap está cargado');
+  }
+  
   // Mostrar el modal al hacer clic en Editar/Agregar
-  $j(document).on('click', '#btnEditarEmp, #btnAgregarEmp', function(e) {
-    e.preventDefault();
-    const mode = $j(this).attr('id') === 'btnEditarEmp' ? 'edit' : 'add';
-    openModal(mode);
+  $j(document).ready(function() {
+    // Verificar si los botones existen
+    console.log('Botón Editar encontrado:', $j('#btnEditarEmp').length > 0);
+    console.log('Botón Agregar encontrado:', $j('#btnAgregarEmp').length > 0);
+    
+    $j('#btnEditarEmp, #btnAgregarEmp').on('click', function(e) {
+      e.preventDefault();
+      console.log('Botón clickeado:', $j(this).attr('id'));
+      const mode = $j(this).attr('id') === 'btnEditarEmp' ? 'edit' : 'add';
+      console.log('Modo:', mode);
+      openModal(mode);
+    });
   });
+  
+  
   // Prefill modal with current empleado (si existe)
   const data = <?php echo json_encode($empleado ?? []); ?>;
   
   // Mostrar vista previa de la imagen al seleccionar archivo
   const fotoInput = document.getElementById('emp-foto');
-  if (fotoInput) {
-    fotoInput.addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (file) {
-        // Validar tamaño (2MB máximo)
-        if (file.size > 2 * 1024 * 1024) {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'La imagen no debe pesar más de 2MB',
-            confirmButtonText: 'Entendido'
-          });
-          e.target.value = '';
-          return;
+  const fotoCamInput = document.getElementById('emp-foto-cam');
+  const fotoWebcamInput = document.getElementById('emp-foto-webcam');
+  
+  function setupFotoPreview(input) {
+    if (input) {
+      input.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          // Validar tamaño (2MB máximo)
+          if (file.size > 2 * 1024 * 1024) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'La imagen no debe pesar más de 2MB',
+              confirmButtonText: 'Entendido'
+            });
+            e.target.value = '';
+            return;
+          }
+          
+          // Validar tipo de archivo
+          const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+          if (!validTypes.includes(file.type)) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Formato de archivo no válido. Use JPG, PNG o GIF',
+              confirmButtonText: 'Entendido'
+            });
+            e.target.value = '';
+            return;
+          }
+          
+          // Mostrar vista previa
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            document.getElementById('foto-preview').src = event.target.result;
+          };
+          reader.readAsDataURL(file);
         }
+      });
+    }
+  }
+  
+  setupFotoPreview(fotoInput);
+  setupFotoPreview(fotoCamInput);
+  setupFotoPreview(fotoWebcamInput);
+  
+  // Función para abrir cámara del móvil
+  window.abrirCamaraMovil = function(event) {
+    event.preventDefault();
+    
+    // Detectar si es un dispositivo móvil
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // Para móviles, usar la API de MediaDevices si está disponible
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // Crear modal para la cámara del móvil
+        const mobileCameraModal = document.createElement('div');
+        mobileCameraModal.className = 'modal fade';
+        mobileCameraModal.id = 'mobileCameraModal';
+        mobileCameraModal.innerHTML = `
+          <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Cámara del Móvil</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body text-center p-0">
+                <video id="mobileCameraVideo" style="width: 100%; height: auto; max-height: 70vh; object-fit: cover;"></video>
+                <canvas id="mobileCameraCanvas" style="display: none;"></canvas>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="capturarFotoMovil()">
+                  <i class="bi bi-camera-fill"></i> Capturar Foto
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
         
-        // Validar tipo de archivo
-        const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
-        if (!validTypes.includes(file.type)) {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Formato de archivo no válido. Use JPG, PNG o GIF',
-            confirmButtonText: 'Entendido'
-          });
-          e.target.value = '';
-          return;
-        }
+        document.body.appendChild(mobileCameraModal);
         
-        // Mostrar vista previa
-        const reader = new FileReader();
-        reader.onload = function(event) {
-          const imgPreview = document.getElementById('foto-preview');
-          if (imgPreview) {
-            imgPreview.src = event.target.result;
+        const modal = new bootstrap.Modal(mobileCameraModal);
+        modal.show();
+        
+        // Configuración para cámara trasera del móvil
+        const video = document.getElementById('mobileCameraVideo');
+        const constraints = {
+          video: {
+            facingMode: 'environment', // Cámara trasera
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
           }
         };
-        reader.readAsDataURL(file);
+        
+        navigator.mediaDevices.getUserMedia(constraints)
+          .then(function(stream) {
+            video.srcObject = stream;
+            window.mobileCameraStream = stream;
+          })
+          .catch(function(err) {
+            console.error('Error al acceder a la cámara del móvil:', err);
+            // Si falla, intentar con el input file
+            fallbackToInputFile();
+            modal.hide();
+          });
+        
+        // Limpiar al cerrar el modal
+        mobileCameraModal.addEventListener('hidden.bs.modal', function() {
+          if (window.mobileCameraStream) {
+            window.mobileCameraStream.getTracks().forEach(track => track.stop());
+          }
+          document.body.removeChild(mobileCameraModal);
+        });
+        
+        // Función para capturar foto del móvil
+        window.capturarFotoMovil = function() {
+          const video = document.getElementById('mobileCameraVideo');
+          const canvas = document.getElementById('mobileCameraCanvas');
+          const context = canvas.getContext('2d');
+          
+          // Configurar canvas con las dimensiones del video
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          
+          // Dibujar el frame actual
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+          
+          // Convertir a base64 y mostrar en el preview
+          const imageData = canvas.toDataURL('image/jpeg', 0.8);
+          document.getElementById('foto-preview').src = imageData;
+          
+          // Crear un archivo para el formulario
+          canvas.toBlob(function(blob) {
+            const file = new File([blob], 'mobile_photo.jpg', { type: 'image/jpeg' });
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            document.getElementById('emp-foto-cam').files = dataTransfer.files;
+          }, 'image/jpeg', 0.8);
+          
+          // Cerrar el modal
+          const mobileCameraModal = document.getElementById('mobileCameraModal');
+          const modalInstance = bootstrap.Modal.getInstance(mobileCameraModal);
+          modalInstance.hide();
+        };
+      } else {
+        // Fallback para móviles que no soportan MediaDevices
+        fallbackToInputFile();
       }
+    } else {
+      // Para desktop, usar el input file normal
+      fallbackToInputFile();
+    }
+    
+    function fallbackToInputFile() {
+      // Simular clic en el input file
+      document.getElementById('emp-foto-cam').click();
+    }
+  };
+  
+  // Función para abrir cámara web con MediaDevices API
+  window.abrirWebcam = function(event) {
+    event.preventDefault();
+    
+    // Crear modal para la cámara web
+    const webcamModal = document.createElement('div');
+    webcamModal.className = 'modal fade';
+    webcamModal.id = 'webcamModal';
+    webcamModal.innerHTML = `
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Cámara Web</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body text-center">
+            <video id="webcamVideo" width="400" height="300" autoplay style="border-radius: 8px;"></video>
+            <canvas id="webcamCanvas" width="400" height="300" style="display: none;"></canvas>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="capturarFoto()">Capturar Foto</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(webcamModal);
+    
+    const modal = new bootstrap.Modal(webcamModal);
+    modal.show();
+    
+    // Iniciar la cámara
+    const video = document.getElementById('webcamVideo');
+    const canvas = document.getElementById('webcamCanvas');
+    const context = canvas.getContext('2d');
+    
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(function(stream) {
+        video.srcObject = stream;
+        window.webcamStream = stream;
+      })
+      .catch(function(err) {
+        console.error('Error al acceder a la cámara:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'No se pudo acceder a la cámara web. Verifique los permisos.',
+          confirmButtonText: 'Entendido'
+        });
+        modal.hide();
+      });
+    
+    // Limpiar al cerrar el modal
+    webcamModal.addEventListener('hidden.bs.modal', function() {
+      if (window.webcamStream) {
+        window.webcamStream.getTracks().forEach(track => track.stop());
+      }
+      document.body.removeChild(webcamModal);
     });
-  }
+  };
+  
+  // Función para capturar la foto
+  window.capturarFoto = function() {
+    const video = document.getElementById('webcamVideo');
+    const canvas = document.getElementById('webcamCanvas');
+    const context = canvas.getContext('2d');
+    
+    // Dibujar el frame actual del video en el canvas
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Convertir a base64 y mostrar en el preview
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+    document.getElementById('foto-preview').src = imageData;
+    
+    // Crear un archivo para el formulario
+    canvas.toBlob(function(blob) {
+      const file = new File([blob], 'webcam_photo.jpg', { type: 'image/jpeg' });
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      document.getElementById('emp-foto-webcam').files = dataTransfer.files;
+    }, 'image/jpeg', 0.8);
+    
+    // Cerrar el modal
+    const webcamModal = document.getElementById('webcamModal');
+    const modal = bootstrap.Modal.getInstance(webcamModal);
+    modal.hide();
+  };
+  
   const sessEmail  = '<?= esc(session()->get('user_email') ?? session()->get('correo') ?? '') ?>';
   const sessPuesto = '<?= esc((session()->get('primary_role') ?? ((($tmp=session()->get('role_names')) && is_array($tmp) && isset($tmp[0])) ? $tmp[0] : null)) ?? session()->get('user_role') ?? session()->get('status') ?? '') ?>';
   const sessUid    = '<?= esc((string)(session()->get('user_id') ?? '')) ?>';
@@ -232,8 +485,10 @@ $(document).ready(function(){
 
   // Función para abrir el modal
   function openModal(mode = 'edit') {
+    console.log('openModal llamado con modo:', mode);
     // Mostrar el modal
     const modal = $j('#modalEmpleado');
+    console.log('Modal encontrado:', modal.length > 0);
     
     // Reiniciar el formulario y la vista previa de la imagen
     const form = document.getElementById('formEmpleado');
@@ -287,28 +542,17 @@ $(document).ready(function(){
     }
     
     // Mostrar el modal al final de la función
-    modal.modal('show');
+    console.log('Intentando mostrar modal...');
+    try {
+      const modalInstance = new bootstrap.Modal(modal[0]);
+      modalInstance.show();
+      console.log('Modal mostrado exitosamente');
+    } catch (error) {
+      console.error('Error al mostrar modal:', error);
+    }
   }
   
-  // Manejadores de eventos para los botones
-  const btnEdit = document.getElementById('btnEditarEmp');
-  const btnAdd = document.getElementById('btnAgregarEmp');
-  
-  if (btnEdit) {
-    btnEdit.addEventListener('click', function(){
-      this.disabled = true;
-      setTimeout(() => { this.disabled = false; }, 800);
-      openModal('edit');
-    });
-  }
-  
-  if (btnAdd) {
-    btnAdd.addEventListener('click', function(){
-      this.disabled = true;
-      setTimeout(() => { this.disabled = false; }, 800);
-      openModal('add');
-    });
-  }
+  // Los manejadores de eventos ya están configurados arriba con jQuery
 
   // Submit via fetch (JSON)
   const form = document.getElementById('formEmpleado');

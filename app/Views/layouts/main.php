@@ -52,12 +52,13 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
         </a>
 
         <!-- Usuario y notificaciones (móvil) -->
+        <?php if(session()->get('logged_in') || session()->get('user_id')): ?>
         <div class="d-flex align-items-center d-lg-none">
             <a class="nav-link d-flex align-items-center text-dark text-decoration-none hover-color ms-lg-2"
                href="#" id="userMenuMobile" role="button" data-bs-toggle="dropdown" aria-expanded="false"
                aria-label="Usuario">
                 <i class="fa-solid fa-user-circle me-2 fs-5" aria-hidden="true"></i>
-                <?= esc(session()->get('user_name') ?? 'Usuario') ?>
+                <?= esc(session()->get('user_name') ?? session()->get('username') ?? 'Usuario') ?>
             </a>
 
             <!-- ENLACE ACTUALIZADO: Notificaciones -> notificaciones1 -->
@@ -94,6 +95,7 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                 <span class="navbar-toggler-icon"></span>
             </button>
         </div>
+        <?php endif; ?>
 
         <div class="collapse navbar-collapse" id="topnav">
             <!-- Menú móvil (colapsado) -->
@@ -216,6 +218,7 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
             </ul>
 
             <!-- Menú escritorio -->
+            <?php if(session()->get('logged_in') || session()->get('user_id')): ?>
             <ul class="navbar-nav ms-auto d-none d-lg-flex align-items-lg-center">
                 <!-- Usuario -->
                 <li class="nav-item dropdown ms-lg-2">
@@ -223,7 +226,7 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                        href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false"
                        title="Menú de usuario">
                         <i class="fa-solid fa-user-circle me-2 fs-5" aria-hidden="true"></i>
-                        <span class="d-none d-lg-inline fw-medium"><?= esc(session()->get('user_name') ?? 'Usuario') ?></span>
+                        <span class="d-none d-lg-inline fw-medium"><?= esc(session()->get('user_name') ?? session()->get('username') ?? 'Usuario') ?></span>
                     </a>
 
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0 animate__animated animate__fadeIn"
@@ -349,6 +352,7 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                     </div>
                 </li>
             </ul>
+        <?php endif; ?>
         </div>
     </div>
 </nav>
