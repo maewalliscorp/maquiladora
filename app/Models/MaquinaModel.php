@@ -13,7 +13,8 @@ class MaquinaModel extends Model
 
     // Ajusta a tus columnas existentes en BD
     protected $allowedFields    = [
-        'codigo', 'modelo', 'fabricante', 'serie', 'fechaCompra', 'activa', 'ubicacion'
+        'codigo', 'modelo', 'fabricante', 'serie', 'fechaCompra', 'activa', 'ubicacion',
+        'maquiladoraID'
     ];
 
     // Añade el texto de estado a partir de 'activa'

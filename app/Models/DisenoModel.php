@@ -33,7 +33,7 @@
          * 
          * @return array Lista de diseños [{id, nombre, descripcion, version, materiales[]}, ...]
          */
-        public function getCatalogoDisenos(): array
+        public function getCatalogoDisenos($maquiladoraId = null): array
         {
             $db = $this->db;
     
@@ -68,8 +68,23 @@
                     LEFT JOIN ($sub) dvsel ON dvsel.disenoId = d.id
                     LEFT JOIN diseno_version dv ON dv.id = dvsel.id
                     LEFT JOIN lista_materiales lm ON lm.disenoVersionId = dv.id
-                    LEFT JOIN articulo a ON a.id = lm.articuloId
-                    GROUP BY d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, dv.version, dv.fecha, dv.aprobado
+                    LEFT JOIN articulo a ON a.id = lm.articuloId";
+            
+            // Agregar filtro por maquiladora si está disponible y existe el campo
+            if ($maquiladoraId) {
+                // Intentar filtrar si la tabla diseno tiene maquiladoraIdFK
+                $sql .= " WHERE (d.maquiladoraIdFK = " . (int)$maquiladoraId . " OR d.maquiladoraIdFK IS NULL)";
+                
+                // También filtrar por órdenes de producción si no tiene el campo directo
+                $sql .= " AND d.id IN (
+                    SELECT DISTINCT op.disenoVersionId 
+                    FROM orden_produccion op 
+                    JOIN pedido p ON p.id = op.ordenCompraId 
+                    WHERE p.maquiladoraIdFK = " . (int)$maquiladoraId . "
+                )";
+            }
+            
+            $sql .= " GROUP BY d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, dv.version, dv.fecha, dv.aprobado
                     ORDER BY d.id";
     
             try {
@@ -135,7 +150,7 @@
          * 
          * @return array
          */
-        public function getCatalogoDisenosTodasVersiones(): array
+        public function getCatalogoDisenosTodasVersiones($maquiladoraId = null): array
         {
             $db = $this->db;
 
@@ -161,8 +176,14 @@
                     LEFT JOIN diseno_version dv ON dv.disenoId = d.id
                     LEFT JOIN lista_materiales lm ON lm.disenoVersionId = dv.id
                     LEFT JOIN articulo a ON a.id = lm.articuloId
-                    WHERE dv.id IS NOT NULL
-                    GROUP BY d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, dv.id, dv.version, dv.fecha, dv.aprobado
+                    WHERE dv.id IS NOT NULL";
+
+            // Filtro por maquiladora si viene desde sesión
+            if ($maquiladoraId) {
+                $sql .= " AND d.maquiladoraID = " . (int)$maquiladoraId;
+            }
+
+            $sql .= " GROUP BY d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, dv.id, dv.version, dv.fecha, dv.aprobado
                     ORDER BY d.id, dv.fecha DESC, dv.id DESC";
 
             try {
@@ -183,8 +204,13 @@
                           LEFT JOIN disenoversion dv ON dv.disenoId = d.id
                           LEFT JOIN listamateriales lm ON lm.disenoVersionId = dv.id
                           LEFT JOIN Articulo a ON a.id = lm.articuloId
-                          WHERE dv.id IS NOT NULL
-                          GROUP BY d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, dv.id, dv.version, dv.fecha, dv.aprobado
+                          WHERE dv.id IS NOT NULL";
+
+                if ($maquiladoraId) {
+                    $sql2 .= " AND d.maquiladoraID = " . (int)$maquiladoraId;
+                }
+
+                $sql2 .= " GROUP BY d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, dv.id, dv.version, dv.fecha, dv.aprobado
                           ORDER BY d.id, dv.fecha DESC, dv.id DESC";
                 try {
                     $result = $db->query($sql2)->getResultArray();

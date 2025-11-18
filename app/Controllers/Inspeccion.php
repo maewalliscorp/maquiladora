@@ -24,8 +24,15 @@ class Inspeccion extends BaseController
             ->select('pi.tipo as punto_inspeccion, r.id AS reprocesoId, r.accion, r.cantidad, r.fecha AS fechaReproceso')
             ->join('punto_inspeccion pi', 'pi.id = i.puntoInspeccionId', 'left')
             ->join('reproceso r', 'i.id = r.inspeccionId', 'left')
+            ->join('orden_produccion op', 'op.id = i.ordenProduccionId', 'left')
             ->orderBy('i.id', 'DESC')
             ->orderBy('r.fecha', 'DESC');
+
+        // Filtrar por maquiladora si está en sesión
+        $maquiladoraId = session()->get('maquiladora_id');
+        if ($maquiladoraId) {
+            $builder->where('op.maquiladoraID', (int)$maquiladoraId);
+        }
 
         $inspecciones = $builder->get()->getResultArray();
 

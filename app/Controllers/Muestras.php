@@ -15,10 +15,11 @@ class Muestras extends BaseController
 
     public function index()
     {
+        $maquiladoraId = session()->get('maquiladora_id');
         $data = [
             'title' => 'Gestión de Muestras',
-            'muestras' => $this->muestraModel->getMuestrasConPrototipo(),
-            'muestrasDecision' => $this->muestraModel->getMuestrasConDecision()
+            'muestras' => $this->muestraModel->getMuestrasConPrototipo($maquiladoraId),
+            'muestrasDecision' => $this->muestraModel->getMuestrasConDecision($maquiladoraId)
         ];
 
         return view('modulos/muestras', $data);
@@ -27,7 +28,8 @@ class Muestras extends BaseController
     // Método para la API de DataTables
     public function data()
     {
-        $data = $this->muestraModel->getMuestrasConPrototipo();
+        $maquiladoraId = session()->get('maquiladora_id');
+        $data = $this->muestraModel->getMuestrasConPrototipo($maquiladoraId);
 
         return $this->response->setJSON([
             'draw' => (int)($this->request->getPost('draw') ?? 1),

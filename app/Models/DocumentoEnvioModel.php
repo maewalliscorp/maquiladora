@@ -12,6 +12,6 @@ class DocumentoEnvioModel extends Model
     protected $useTimestamps = false;
     protected $protectFields = true;
     protected $allowedFields = [
-        'embarqueId','tipo','archivoRuta','numero','fecha','estado','urlPdf','archivoPdf'
+        'embarqueId','tipo','archivoRuta','numero','fecha','estado','urlPdf','archivoPdf','maquiladoraID'
     ];
 }

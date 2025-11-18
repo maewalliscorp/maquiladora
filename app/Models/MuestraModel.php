@@ -17,11 +17,11 @@ class MuestraModel extends Model
         'observaciones'
     ];
 
-    public function getMuestrasConPrototipo()
+    public function getMuestrasConPrototipo($maquiladoraId = null)
     {
         $db = \Config\Database::connect();
 
-        $query = $db->query("
+        $sql = "
             SELECT 
                 m.id AS muestraId,
                 p.codigo AS codigoPrototipo,
@@ -32,9 +32,24 @@ class MuestraModel extends Model
                 m.observaciones
             FROM muestra m
             INNER JOIN prototipo p ON m.prototipoId = p.id
-            ORDER BY m.id
-        ");
+            LEFT JOIN diseno_version dv ON dv.id = p.disenoVersionId
+            LEFT JOIN diseno d ON d.id = dv.disenoId
+        ";
 
+        $params = [];
+        if ($maquiladoraId) {
+            // Permitir que la maquiladora esté en diseno_version, diseno o muestra
+            $sql .= "\n            WHERE (dv.maquiladoraID = ? OR d.maquiladoraID = ? OR m.maquiladoraID = ?)";
+            $params[] = (int)$maquiladoraId;
+            $params[] = (int)$maquiladoraId;
+            $params[] = (int)$maquiladoraId;
+        }
+
+        $sql .= "
+            ORDER BY m.id
+        ";
+
+        $query = $db->query($sql, $params);
         return $query->getResultArray();
     }
 
@@ -63,7 +78,7 @@ class MuestraModel extends Model
         return $query->getRowArray();
     }
 
-    public function getMuestrasConDecision()
+    public function getMuestrasConDecision($maquiladoraId = null)
     {
         $db = \Config\Database::connect();
 
@@ -84,10 +99,21 @@ class MuestraModel extends Model
             FROM muestra m
             INNER JOIN aprobacion_muestra a ON m.id = a.muestraId
             LEFT JOIN cliente c ON a.clienteId = c.id
+            LEFT JOIN prototipo p ON p.id = m.prototipoId
+            LEFT JOIN diseno_version dv ON dv.id = p.disenoVersionId
+            LEFT JOIN diseno d ON d.id = dv.disenoId
             WHERE a.decision IS NOT NULL
         ";
 
-        $query = $db->query($sql);
+        $params = [];
+        if ($maquiladoraId) {
+            $sql .= "\n              AND (dv.maquiladoraID = ? OR d.maquiladoraID = ? OR m.maquiladoraID = ?)";
+            $params[] = (int)$maquiladoraId;
+            $params[] = (int)$maquiladoraId;
+            $params[] = (int)$maquiladoraId;
+        }
+
+        $query = $db->query($sql, $params);
         return $query->getResultArray();
     }
 }

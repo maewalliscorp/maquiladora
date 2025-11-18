@@ -304,7 +304,9 @@ class Produccion extends BaseController
         $asigModel = new AsignacionTareaModel();
         $empModel  = new EmpleadoModel();
         $asignadas = $asigModel->listarPorOP($opId);
-        $empleados = $empModel->listarDisponiblesParaOP($opId);
+        // Filtrar empleados por maquiladora del usuario autenticado
+        $maquiladoraId = session()->get('maquiladora_id');
+        $empleados = $empModel->listarDisponiblesParaOP($opId, $maquiladoraId);
         return $this->response->setJSON([
             'opId'      => $opId,
             'asignadas' => $asignadas,
@@ -376,7 +378,9 @@ class Produccion extends BaseController
         if ($opId <= 0) return $this->response->setStatusCode(400)->setJSON(['results'=>[]]);
         $term = trim((string)($this->request->getGet('term') ?? ''));
         $empModel = new EmpleadoModel();
-        $rows = $empModel->buscarDisponiblesParaOP($opId, $term, 20);
+        // Filtrar por maquiladora del usuario autenticado
+        $maquiladoraId = session()->get('maquiladora_id');
+        $rows = $empModel->buscarDisponiblesParaOP($opId, $term, 20, $maquiladoraId);
         $results = array_map(function($r){
             $text = ($r['noEmpleado'] ? ('['.$r['noEmpleado'].'] ') : '') . $r['nombre'] . ' ' . ($r['apellido'] ?? '');
             return ['id' => (int)$r['id'], 'text' => $text];

@@ -296,19 +296,25 @@ $ordenes  = $ordenes  ?? [];
             buttons:{ copy:"Copy", csv:"CSV", excel:"Excel", pdf:"PDF", print:"Print" }
         };
 
-        $('#tablaConsolida').DataTable({
-            language: langES,
-            dom: "<'row px-3 pt-3'<'col-sm-6'B><'col-sm-6'f>>" + "t" + "<'row p-3'<'col-sm-6'i><'col-sm-6'p>>",
-            buttons: [
-                { extend: 'copy',  text: 'Copy',     className: 'btn btn-secondary' },
-                { extend: 'csv',   text: 'CSV',      className: 'btn btn-secondary' },
-                { extend: 'excel', text: 'Excel',    className: 'btn btn-secondary' },
-                { extend: 'pdf',   text: 'PDF',      className: 'btn btn-secondary' },
-                { extend: 'print', text: 'Print',    className: 'btn btn-secondary' }
-            ],
-            pageLength: 10,
-            columnDefs: [{ targets: -1, orderable: false, searchable: false }]
-        });
+        const tieneDatosConsolida = $('#tablaConsolida tbody tr').filter(function(){
+            return !$(this).find('td[colspan]').length;
+        }).length > 0;
+
+        if (tieneDatosConsolida) {
+            $('#tablaConsolida').DataTable({
+                language: langES,
+                dom: "<'row px-3 pt-3'<'col-sm-6'B><'col-sm-6'f>>" + "t" + "<'row p-3'<'col-sm-6'i><'col-sm-6'p>>",
+                buttons: [
+                    { extend: 'copy',  text: 'Copy',     className: 'btn btn-secondary' },
+                    { extend: 'csv',   text: 'CSV',      className: 'btn btn-secondary' },
+                    { extend: 'excel', text: 'Excel',    className: 'btn btn-secondary' },
+                    { extend: 'pdf',   text: 'PDF',      className: 'btn btn-secondary' },
+                    { extend: 'print', text: 'Print',    className: 'btn btn-secondary' }
+                ],
+                pageLength: 10,
+                columnDefs: [{ targets: -1, orderable: false, searchable: false }]
+            });
+        }
 
         // Ver
         document.querySelectorAll('.btn-ver').forEach(btn=>{

@@ -7,11 +7,22 @@ class OrdenProduccionModel extends Model
     protected $table      = 'orden_produccion';
     protected $primaryKey = 'id';
     protected $allowedFields = ['ordenCompraId','disenoVersionId','folio','cantidadPlan','fechaInicioPlan','fechaFinPlan','status'];
-    public function getListado()
+
+    public function getListado($maquiladoraId = null)
     {
         // SQL MySQL directo, acorde a tu esquema (snake_case)
-        $sql = "SELECT\n                    op.id              AS opId,\n                    op.folio           AS op,\n                    op.fechaInicioPlan AS ini,\n                    op.fechaFinPlan    AS fin,\n                    op.status          AS estatus,\n                    d.nombre           AS diseno,\n                    c.nombre           AS cliente\n                FROM orden_produccion op\n                LEFT JOIN diseno_version dv ON dv.id = op.disenoVersionId\n                LEFT JOIN diseno d          ON d.id  = dv.disenoId\n                LEFT JOIN orden_compra oc   ON oc.id = op.ordenCompraId\n                LEFT JOIN cliente c         ON c.id  = oc.clienteId\n                ORDER BY op.fechaInicioPlan DESC";
-        $rows = $this->db->query($sql)->getResultArray();
+        $sql = "SELECT\n                    op.id              AS opId,\n                    op.folio           AS op,\n                    op.fechaInicioPlan AS ini,\n                    op.fechaFinPlan    AS fin,\n                    op.status          AS estatus,\n                    d.nombre           AS diseno,\n                    c.nombre           AS cliente\n                FROM orden_produccion op\n                LEFT JOIN diseno_version dv ON dv.id = op.disenoVersionId\n                LEFT JOIN diseno d          ON d.id  = dv.disenoId\n                LEFT JOIN orden_compra oc   ON oc.id = op.ordenCompraId\n                LEFT JOIN cliente c         ON c.id  = oc.clienteId";
+
+        $params = [];
+        if ($maquiladoraId) {
+            // Filtrar por maquiladora en orden_produccion (y opcionalmente en orden_compra)
+            $sql .= " WHERE op.maquiladoraID = ?";
+            $params[] = (int)$maquiladoraId;
+        }
+
+        $sql .= " ORDER BY op.fechaInicioPlan DESC";
+
+        $rows = $this->db->query($sql, $params)->getResultArray();
 
         // Completa columnas que la vista espera
         foreach ($rows as &$r) {

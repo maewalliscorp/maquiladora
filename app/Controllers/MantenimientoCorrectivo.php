@@ -23,7 +23,7 @@ class MantenimientoCorrectivo extends BaseController
         return false;
     }
 
-    /** Catálogo de máquinas: selecciona solo columnas existentes */
+    /** Catálogo de máquinas: selecciona solo columnas existentes y filtra por maquiladora si aplica */
     private function catalogoMaquinas(): array
     {
         $tbl = 'maquina';
@@ -32,13 +32,19 @@ class MantenimientoCorrectivo extends BaseController
             if ($this->tableHas($tbl, $c)) $select[] = $c;
         }
 
-        return $this->db->table($tbl)
+        $builder = $this->db->table($tbl)
             ->select(implode(',', $select))
-            ->orderBy($this->tableHas($tbl,'codigo') ? 'codigo' : 'id', 'ASC')
-            ->get()->getResultArray();
+            ->orderBy($this->tableHas($tbl,'codigo') ? 'codigo' : 'id', 'ASC');
+
+        $maquiladoraId = session()->get('maquiladora_id');
+        if ($maquiladoraId && $this->tableHas($tbl, 'maquiladoraID')) {
+            $builder->where('maquiladoraID', (int)$maquiladoraId);
+        }
+
+        return $builder->get()->getResultArray();
     }
 
-    /** Catálogo de empleados: selecciona solo columnas existentes */
+    /** Catálogo de empleados: selecciona solo columnas existentes y filtra por maquiladora si aplica */
     private function catalogoEmpleados(): array
     {
         $tbl = 'empleado';
@@ -61,6 +67,11 @@ class MantenimientoCorrectivo extends BaseController
             $builder->where('activo', 1);
         }
 
+        $maquiladoraId = session()->get('maquiladora_id');
+        if ($maquiladoraId && $this->tableHas($tbl, 'maquiladoraID')) {
+            $builder->where('maquiladoraID', (int)$maquiladoraId);
+        }
+
         return $builder->get()->getResultArray();
     }
 
@@ -68,10 +79,11 @@ class MantenimientoCorrectivo extends BaseController
     public function index()
     {
         $mtto = new MttoModel();
-        $rows = $mtto->getListado();
+        $maquiladoraId = session()->get('maquiladora_id');
+        $rows = $mtto->getListado($maquiladoraId ? (int)$maquiladoraId : null);
 
         if (!is_array($rows) || !$rows) {
-            $rows = $mtto->getListadoSimple();
+            $rows = $mtto->getListadoSimple($maquiladoraId ? (int)$maquiladoraId : null);
             foreach ($rows as &$r) { $r['Horas'] = 0; }
         }
 
@@ -98,7 +110,7 @@ class MantenimientoCorrectivo extends BaseController
         }
 
         $m = new MttoModel();
-        $id = $m->insert([
+        $dataInsert = [
             'fechaApertura' => $post['fechaApertura'],
             'maquinaId'     => (int)$post['maquinaId'],
             'responsableId' => $post['responsableId'] ?: null,
@@ -106,7 +118,14 @@ class MantenimientoCorrectivo extends BaseController
             'estatus'       => trim($post['estatus']),
             'descripcion'   => trim($post['descripcion'] ?? ''),
             'fechaCierre'   => $post['fechaCierre'] ?: null,
-        ], true);
+        ];
+
+        $maquiladoraId = session()->get('maquiladora_id');
+        if ($maquiladoraId && $this->tableHas('mtto','maquiladoraID')) {
+            $dataInsert['maquiladoraID'] = (int)$maquiladoraId;
+        }
+
+        $id = $m->insert($dataInsert, true);
 
         if ($id) {
             $horas = ($post['d_horas'] !== '' && $post['d_horas'] !== null) ? (float)$post['d_horas'] : null;
@@ -219,6 +238,8 @@ class MantenimientoCorrectivo extends BaseController
             return $this->response->setJSON(['data' => []]);
         }
 
+        $maquiladoraId = session()->get('maquiladora_id');
+
         $sql = "SELECT 
                     m.id                           AS Folio,
                     m.fechaApertura                AS Apertura,
@@ -229,11 +250,21 @@ class MantenimientoCorrectivo extends BaseController
                     COALESCE(SUM(d.tiempoHoras),0) AS Horas
                 FROM mtto m
                 LEFT JOIN mtto_detectado d ON d.otMttoId = m.id
-                WHERE m.maquinaId = ?
+                LEFT JOIN maquina mx ON mx.id = m.maquinaId
+                WHERE m.maquinaId = ?";
+
+        $params = [$maquinaId];
+        if ($maquiladoraId) {
+            $sql .= " AND (m.maquiladoraID = ? OR mx.maquiladoraID = ?)";
+            $params[] = (int)$maquiladoraId;
+            $params[] = (int)$maquiladoraId;
+        }
+
+        $sql .= "
                 GROUP BY m.id, m.fechaApertura, m.tipo, m.estatus, m.descripcion, m.fechaCierre
                 ORDER BY m.fechaApertura DESC";
 
-        $rows = $this->db->query($sql, [$maquinaId])->getResultArray();
+        $rows = $this->db->query($sql, $params)->getResultArray();
 
         return $this->response->setJSON(['data' => $rows]);
     }

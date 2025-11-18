@@ -11,18 +11,19 @@ class MttoModel extends Model
     protected $returnType    = 'array';
     protected $useTimestamps = false;
 
-    // ⬅️ Añadimos: programacion_id, fecha_programada, observaciones
+    // ⬅️ Añadimos: programacion_id, fecha_programada, observaciones, maquiladoraID
     protected $allowedFields = [
         'maquinaId', 'responsableId', 'tipo', 'estatus',
         'descripcion', 'fechaApertura', 'fechaCierre',
-        'programacion_id', 'fecha_programada', 'observaciones'
+        'programacion_id', 'fecha_programada', 'observaciones',
+        'maquiladoraID'
     ];
 
     /**
      * Listado con suma de horas registradas en mtto_detectado.
      * Incluye datos de máquina y fecha_programada para agenda/calendario.
      */
-    public function getListado(): array
+    public function getListado(?int $maquiladoraId = null): array
     {
         $db = $this->db;
 
@@ -52,15 +53,23 @@ class MttoModel extends Model
             ])
             ->orderBy('m.fechaApertura', 'DESC');
 
+        if ($maquiladoraId !== null) {
+            // Filtrar por maquiladoraID si existe la columna en mtto o en maquina
+            $builder->groupStart()
+                ->where('m.maquiladoraID', (int)$maquiladoraId)
+                ->orWhere('mx.maquiladoraID', (int)$maquiladoraId)
+                ->groupEnd();
+        }
+
         return $builder->get()->getResultArray();
     }
 
     /**
      * Listado simple sin agregados, incluyendo la fecha programada.
      */
-    public function getListadoSimple(): array
+    public function getListadoSimple(?int $maquiladoraId = null): array
     {
-        return $this->db->table('mtto m')
+        $builder = $this->db->table('mtto m')
             ->select([
                 'm.id AS Folio',
                 'm.fechaApertura AS Apertura',
@@ -75,8 +84,16 @@ class MttoModel extends Model
                 'm.programacion_id AS ProgramacionId'
             ])
             ->join('maquina mx', 'mx.id = m.maquinaId', 'left')
-            ->orderBy('m.fechaApertura', 'DESC')
-            ->get()->getResultArray();
+            ->orderBy('m.fechaApertura', 'DESC');
+
+        if ($maquiladoraId !== null) {
+            $builder->groupStart()
+                ->where('m.maquiladoraID', (int)$maquiladoraId)
+                ->orWhere('mx.maquiladoraID', (int)$maquiladoraId)
+                ->groupEnd();
+        }
+
+        return $builder->get()->getResultArray();
     }
 
     /**
@@ -111,14 +128,22 @@ class MttoModel extends Model
      * Eventos para FullCalendar (rango de fechas).
      * Devuelve arreglo listo para el widget: id, title, start, color.
      */
-    public function getEventosCalendario(string $start, string $end): array
+    public function getEventosCalendario(string $start, string $end, ?int $maquiladoraId = null): array
     {
-        $rows = $this->db->table('mtto m')
-            ->select('m.id, m.fecha_programada, m.estatus, mx.codigo AS maquinaCodigo')
+        $builder = $this->db->table('mtto m')
+            ->select('m.id, m.fecha_programada, m.estatus, mx.codigo AS maquinaCodigo, m.maquiladoraID, mx.maquiladoraID AS maquinaMaq')
             ->join('maquina mx', 'mx.id = m.maquinaId', 'left')
             ->where('m.fecha_programada >=', $start)
-            ->where('m.fecha_programada <=', $end)
-            ->get()->getResultArray();
+            ->where('m.fecha_programada <=', $end);
+
+        if ($maquiladoraId !== null) {
+            $builder->groupStart()
+                ->where('m.maquiladoraID', (int)$maquiladoraId)
+                ->orWhere('mx.maquiladoraID', (int)$maquiladoraId)
+                ->groupEnd();
+        }
+
+        $rows = $builder->get()->getResultArray();
 
         return array_map(function($r){
             $color = ($r['estatus']==='hecho')

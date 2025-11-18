@@ -513,24 +513,30 @@
         };
         const hoy = new Date().toISOString().slice(0,10);
 
-        $('#tablaMaquinaria').DataTable({
-            language: langES,
-            columnDefs: [
-                { targets: -1, orderable:false, searchable:false, className:'text-center' } // Acciones
-            ],
-            dom:
-                "<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
-                "<'row'<'col-12'tr>>" +
-                "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-            buttons: [
-                { extend:'copy',  text:'Copy',  exportOptions:{ columns: ':not(:last-child)' } },
-                { extend:'csv',   text:'CSV',   filename:'maquinaria_'+hoy, exportOptions:{ columns: ':not(:last-child)' } },
-                { extend:'excel', text:'Excel', filename:'maquinaria_'+hoy, exportOptions:{ columns: ':not(:last-child)' } },
-                { extend:'pdf',   text:'PDF',   filename:'maquinaria_'+hoy, title:'Inventario de Maquinaria',
-                    orientation:'landscape', pageSize:'A4', exportOptions:{ columns: ':not(:last-child)' } },
-                { extend:'print', text:'Print', exportOptions:{ columns: ':not(:last-child)' } }
-            ]
-        });
+        const tieneDatosMaquinaria = $('#tablaMaquinaria tbody tr').filter(function(){
+            return !$(this).find('td[colspan]').length;
+        }).length > 0;
+
+        if (tieneDatosMaquinaria) {
+            $('#tablaMaquinaria').DataTable({
+                language: langES,
+                columnDefs: [
+                    { targets: -1, orderable:false, searchable:false, className:'text-center' } // Acciones
+                ],
+                dom:
+                    "<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
+                    "<'row'<'col-12'tr>>" +
+                    "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                buttons: [
+                    { extend:'copy',  text:'Copy',  exportOptions:{ columns: ':not(:last-child)' } },
+                    { extend:'csv',   text:'CSV',   filename:'maquinaria_'+hoy, exportOptions:{ columns: ':not(:last-child)' } },
+                    { extend:'excel', text:'Excel', filename:'maquinaria_'+hoy, exportOptions:{ columns: ':not(:last-child)' } },
+                    { extend:'pdf',   text:'PDF',   filename:'maquinaria_'+hoy, title:'Inventario de Maquinaria',
+                        orientation:'landscape', pageSize:'A4', exportOptions:{ columns: ':not(:last-child)' } },
+                    { extend:'print', text:'Print', exportOptions:{ columns: ':not(:last-child)' } }
+                ]
+            });
+        }
 
         // ===== Eliminar con SweetAlert2 (como tu ejemplo) =====
         document.querySelectorAll('.btn-del').forEach(btn=>{

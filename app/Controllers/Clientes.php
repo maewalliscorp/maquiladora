@@ -12,7 +12,10 @@ class Clientes extends BaseController
         $clienteTables = ['cliente','Cliente'];
         $dirTables     = ['cliente_direccion','ClienteDireccion'];
         $claTables     = ['cliente_clasificacion','ClienteClasificacion'];
-
+        
+        // Obtener ID de maquiladora desde la sesión
+        $maquiladoraId = session()->get('maquiladora_id');
+        
         foreach ($clienteTables as $ct) {
             foreach ($dirTables as $dt) {
                 foreach ($claTables as $cct) {
@@ -33,12 +36,20 @@ class Clientes extends BaseController
                                        cc.clasificacionId AS clasificacionId,
                                        cc.descripcion      AS cla_desc
                                 FROM $ct c
+                                JOIN Cliente_Maquiladora cm
+                                      ON cm.clienteFK = c.id
                                 LEFT JOIN $dt d
                                        ON d.clienteId = c.id
                                       AND (d.esPrincipal = 1 OR d.esPrincipal IS NULL)
                                 LEFT JOIN ($subCla) cc
-                                       ON cc.clienteId = c.id
-                                ORDER BY c.nombre";
+                                       ON cc.clienteId = c.id";
+
+                        // Agregar filtro por maquiladora si está disponible
+                        if ($maquiladoraId) {
+                            $sql .= " WHERE cm.maquiladoraFK = " . (int)$maquiladoraId;
+                        }
+
+                        $sql .= " ORDER BY c.nombre";
                         $rows = $db->query($sql)->getResultArray();
                         if (is_array($rows)) { throw new \Exception('ok'); }
                     } catch (\Throwable $e) {
@@ -298,6 +309,19 @@ class Clientes extends BaseController
             'fechaRegistro' => date('Y-m-d'),
         ]);
         $newId = (int)$db->insertID();
+
+        // Relacionar cliente con la maquiladora del usuario autenticado
+        $maquiladoraId = session()->get('maquiladora_id');
+        if ($maquiladoraId) {
+            try {
+                $db->table('Cliente_Maquiladora')->insert([
+                    'maquiladoraFK' => (int)$maquiladoraId,
+                    'clienteFK'     => $newId,
+                ]);
+            } catch (\Throwable $e) {
+                // si falla la relación, continuamos; la transacción se encargará si es crítico
+            }
+        }
 
         $addrTable = null;
         foreach (['cliente_direccion','ClienteDireccion'] as $t) {

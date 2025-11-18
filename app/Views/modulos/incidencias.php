@@ -263,7 +263,17 @@
 
         const hoy = new Date().toISOString().slice(0,10);
 
-        $(tableSel).DataTable({
+        const $table = $(tableSel);
+        const headerCells = $table.find('thead th').length;
+        const firstBodyRow = $table.find('tbody tr:first');
+        const firstBodyCells = firstBodyRow.length ? firstBodyRow.find('td').length : 0;
+
+        // Si no hay filas de datos reales (o solo la fila con colspan), no inicializar DataTables
+        if (firstBodyCells !== 0 && firstBodyCells !== headerCells) {
+            return;
+        }
+
+        $table.DataTable({
             language: langES,
             columnDefs: [{ targets: -1, orderable:false, searchable:false }], // Acciones
             order: [[0, 'desc']], // Fecha

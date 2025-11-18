@@ -79,6 +79,7 @@ class UsuarioController extends Controller
                 'role_names'  => $roleNames,
                 'primary_role'=> isset($roleNames[0]) ? (string)$roleNames[0] : null,
                 'cached_roles'=> $roleNames, // Cache adicional
+                'maquiladora_id' => $user['maquiladoraIdFK'] ?? null, // Guardar ID de maquiladora
             ]);
 
             return redirect()->to('/dashboard');

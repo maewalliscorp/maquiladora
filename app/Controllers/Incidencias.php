@@ -9,17 +9,27 @@ class Incidencias extends BaseController
 {
     public function index()
     {
-        // Catálogos para el modal
-        $empleados = (new EmpleadoModel())
-            ->select('id,nombre,apellido')->where('activo', 1)
-            ->orderBy('nombre','ASC')->findAll();
+        $maquiladoraId = session()->get('maquiladora_id');
 
-        $ops = (new OrdenProduccionModel())
-            ->select('id,folio')->orderBy('folio','DESC')->findAll();
+        // Catálogos para el modal, filtrados por maquiladora si aplica
+        $empBuilder = (new EmpleadoModel())
+            ->select('id,nombre,apellido')
+            ->where('activo', 1);
+        if ($maquiladoraId) {
+            $empBuilder->where('maquiladoraID', (int)$maquiladoraId);
+        }
+        $empleados = $empBuilder->orderBy('nombre','ASC')->findAll();
+
+        $opModel = new OrdenProduccionModel();
+        $opModel = $opModel->select('id,folio');
+        if ($maquiladoraId) {
+            $opModel = $opModel->where('maquiladoraID', (int)$maquiladoraId);
+        }
+        $ops = $opModel->orderBy('folio','DESC')->findAll();
 
         try {
             $db = db_connect(); // ✅ CI4
-            $rows = $db->table('incidencia i')
+            $builder = $db->table('incidencia i')
                 ->select(
                     'i.id as Ide,' .
                     'DATE_FORMAT(i.fecha, "%Y-%m-%d") as Fecha,' .
@@ -31,9 +41,18 @@ class Incidencias extends BaseController
                     'i.accion as Accion'
                 )
                 ->join('orden_produccion op', 'op.id = i.ordenProduccionFK', 'left')
-                ->join('empleado e', 'e.id = i.empleadoFK', 'left')
-                ->orderBy('i.fecha', 'DESC')
-                ->get()->getResultArray();
+                ->join('empleado e', 'e.id = i.empleadoFK', 'left');
+
+            // Filtrar incidencias por maquiladora de la incidencia, la OP o el empleado
+            if ($maquiladoraId) {
+                $builder->groupStart()
+                    ->where('i.maquiladoraID', (int)$maquiladoraId)
+                    ->orWhere('op.maquiladoraID', (int)$maquiladoraId)
+                    ->orWhere('e.maquiladoraID', (int)$maquiladoraId)
+                ->groupEnd();
+            }
+
+            $rows = $builder->orderBy('i.fecha', 'DESC')->get()->getResultArray();
         } catch (\Throwable $e) {
             $rows = [];
             session()->setFlashdata('error', 'No fue posible consultar incidencias ('.$e->getMessage().')');

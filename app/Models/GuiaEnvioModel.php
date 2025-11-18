@@ -17,6 +17,7 @@ class GuiaEnvioModel extends Model
         // Si en tu tabla existen, se guardarán; si no existen, el controlador los filtrará
         'fechaSalida',
         'estado',
+        'maquiladoraID',
     ];
     public $useTimestamps = false;
 }

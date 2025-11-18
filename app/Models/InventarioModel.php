@@ -9,26 +9,52 @@ class InventarioModel extends Model
     protected $primaryKey = 'id';
     protected $returnType = 'array';
 
+    private function tableHas(string $table, string $col): bool
+    {
+        try {
+            foreach ($this->db->getFieldData($table) as $f) {
+                if ($f->name === $col) return true;
+            }
+        } catch (\Throwable $e) {}
+        return false;
+    }
+
     /* =========================
      * CONSULTAS BASE
      * ========================= */
-    public function obtenerAlmacenesActivos(): array
+    public function obtenerAlmacenesActivos(?int $maquiladoraId = null): array
     {
-        return $this->db->table('almacen')
+        $b = $this->db->table('almacen')
             ->select('id, codigo, nombre')
-            ->where('activo', 1)
-            ->orderBy('nombre', 'ASC')
-            ->get()->getResultArray();
+            ->where('activo', 1);
+
+        if ($maquiladoraId && $this->tableHas('almacen','maquiladoraID')) {
+            $b->where('maquiladoraID', (int)$maquiladoraId);
+        }
+
+        return $b->orderBy('nombre', 'ASC')->get()->getResultArray();
     }
 
-    public function obtenerUbicacionesActivas(?int $almacenId = null): array
+    public function obtenerUbicacionesActivas(?int $almacenId = null, ?int $maquiladoraId = null): array
     {
-        $b = $this->db->table('ubicacion')->select('id, codigo, almacenId')->where('activo', 1);
-        if ($almacenId) $b->where('almacenId', $almacenId);
-        return $b->orderBy('codigo','ASC')->get()->getResultArray();
+        $b = $this->db->table('ubicacion u')
+            ->select('u.id, u.codigo, u.almacenId')
+            ->where('u.activo', 1);
+
+        if ($almacenId) {
+            $b->where('u.almacenId', $almacenId);
+        }
+
+        // Si almacen tiene maquiladoraID, filtramos también
+        if ($maquiladoraId && $this->tableHas('almacen','maquiladoraID')) {
+            $b->join('almacen a', 'a.id = u.almacenId', 'left')
+              ->where('a.maquiladoraID', (int)$maquiladoraId);
+        }
+
+        return $b->orderBy('u.codigo','ASC')->get()->getResultArray();
     }
 
-    public function obtenerInventario(?int $almacenId = null): array
+    public function obtenerInventario(?int $almacenId = null, ?int $maquiladoraId = null): array
     {
         $b = $this->db->table('stock s');
         $b->select("
@@ -64,7 +90,25 @@ class InventarioModel extends Model
             ->join('lote l',      'l.id = s.loteId', 'left')
             ->where('a.activo', 1)->where('u.activo', 1)->where('ar.activo', 1);
 
-        if ($almacenId) $b->where('a.id', $almacenId);
+        if ($almacenId) {
+            $b->where('a.id', $almacenId);
+        }
+
+        if ($maquiladoraId) {
+            $hasAlm = $this->tableHas('almacen','maquiladoraID');
+            $hasArt = $this->tableHas('articulo','maquiladoraID');
+
+            if ($hasAlm || $hasArt) {
+                $b->groupStart();
+                if ($hasAlm) {
+                    $b->where('a.maquiladoraID', (int)$maquiladoraId);
+                }
+                if ($hasArt) {
+                    $b->orWhere('ar.maquiladoraID', (int)$maquiladoraId);
+                }
+                $b->groupEnd();
+            }
+        }
 
         return $b->orderBy('a.nombre, u.codigo, ar.nombre, l.fechaCaducidad', 'ASC')->get()->getResultArray();
     }
@@ -81,7 +125,7 @@ class InventarioModel extends Model
         return $b->orderBy('mi.fecha', 'DESC')->limit($limit)->get()->getResultArray();
     }
 
-    public function obtenerLotesArticulo(int $articuloId, ?int $almacenId = null, ?int $ubicacionId = null): array
+    public function obtenerLotesArticulo(int $articuloId, ?int $almacenId = null, ?int $ubicacionId = null, ?int $maquiladoraId = null): array
     {
         $sb = $this->db->table('stock s')
             ->select('s.loteId, SUM(s.cantidad) AS cantidad, u.id AS ubicacionId, a.id AS almacenId')
@@ -92,6 +136,10 @@ class InventarioModel extends Model
 
         if ($almacenId)   $sb->where('a.id', $almacenId);
         if ($ubicacionId) $sb->where('u.id', $ubicacionId);
+
+        if ($maquiladoraId && $this->tableHas('almacen','maquiladoraID')) {
+            $sb->where('a.maquiladoraID', (int)$maquiladoraId);
+        }
 
         $subSQL = $sb->getCompiledSelect();
 

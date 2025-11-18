@@ -24,6 +24,8 @@ class Modulos extends BaseController
         $ocId = (int)($this->request->getPost('id') ?? $this->request->getVar('id') ?? $this->request->getPost('ocId') ?? 0);
         if ($ocId <= 0) { return $this->response->setStatusCode(400)->setJSON(['error'=>'ID inválido']); }
         $db = \Config\Database::connect();
+        // Maquiladora del usuario autenticado
+        $maquiladoraId = session()->get('maquiladora_id');
         try {
             $db->transStart();
 
@@ -113,8 +115,18 @@ class Modulos extends BaseController
                 $rolActual = $map['rolIdFK'] ?? null;
             } catch (\Throwable $e) { $rolActual = null; }
 
-            // Alias a 'name' para coincidir con el JS de la vista
-            $roles = $db->table('rol')->select('id, nombre as name')->orderBy('nombre','ASC')->get()->getResultArray();
+            // Alias a 'name' para coincidir con el JS de la vista, filtrando por maquiladora cuando aplique
+            $rolesBuilder = $db->table('rol')->select('id, nombre as name');
+            $maquiladoraId = session()->get('maquiladora_id');
+            if ($maquiladoraId) {
+                try {
+                    $fields = $db->getFieldNames('rol');
+                    if (in_array('maquiladoraID', $fields, true)) {
+                        $rolesBuilder->where('maquiladoraID', (int)$maquiladoraId);
+                    }
+                } catch (\Throwable $e) {}
+            }
+            $roles = $rolesBuilder->orderBy('nombre','ASC')->get()->getResultArray();
 
             // Maquiladoras
             $maqs = $db->table('maquiladora')->select('idmaquiladora as id, Nombre_Maquila as nombre')
@@ -425,6 +437,11 @@ class Modulos extends BaseController
             'nombre'      => trim((string)$this->request->getPost('nombre')),
             'descripcion' => trim((string)$this->request->getPost('descripcion')) ?: null,
         ];
+        // Asignar maquiladora del usuario autenticado, si existe en sesión
+        $maquiladoraId = session()->get('maquiladora_id');
+        if ($maquiladoraId) {
+            $dataDiseno['maquiladoraID'] = (int)$maquiladoraId;
+        }
         // clienteId opcional desde el modal
         $cid = $this->request->getPost('clienteId') ?? $this->request->getVar('clienteId');
         if ($cid !== null) {
@@ -1920,7 +1937,9 @@ class Modulos extends BaseController
     public function m1_pedidos()
     {
         $pedidoModel = new \App\Models\PedidoModel();
-        $pedidos = $pedidoModel->getListadoPedidos();
+        // Filtrar pedidos por la maquiladora del usuario autenticado
+        $maquiladoraId = session()->get('maquiladora_id');
+        $pedidos = $pedidoModel->getListadoPedidos($maquiladoraId);
 
         return view('modulos/pedidos', $this->payload([
             'title'      => 'Módulo 1 · Pedidos',
@@ -1934,8 +1953,10 @@ class Modulos extends BaseController
         // Usar el modelo centralizado para evitar diferencias de esquema
         $ordenes = [];
         try {
-            $model = new \App\Models\OrdenProduccionModel();
-            $ordenes = $model->getListado();
+            $opModel = new \App\Models\OrdenProduccionModel();
+            // Filtrar OP por maquiladora del usuario autenticado
+            $maquiladoraId = session()->get('maquiladora_id');
+            $ordenes = $opModel->getListado($maquiladoraId);
         } catch (\Throwable $e) {
             $ordenes = [];
         }
@@ -2451,17 +2472,23 @@ class Modulos extends BaseController
         }
 
         $row = [
-            'noEmpleado' => $in('noEmpleado'),
-            'nombre'     => $in('nombre'),
-            'apellido'   => $in('apellido'),
-            'email'      => $in('email'),
-            'telefono'   => $in('telefono'),
-            'domicilio'  => $in('domicilio'),
-            'puesto'     => $in('puesto'),
-            'fecha_nac'  => $in('fecha_nac','date'),
-            'curp'       => $in('curp'),
-            'activo'     => 1,
+            'noEmpleado'    => $in('noEmpleado'),
+            'nombre'        => $in('nombre'),
+            'apellido'      => $in('apellido'),
+            'email'         => $in('email'),
+            'telefono'      => $in('telefono'),
+            'domicilio'     => $in('domicilio'),
+            'puesto'        => $in('puesto'),
+            'fecha_nac'     => $in('fecha_nac','date'),
+            'curp'          => $in('curp'),
+            'activo'        => 1,
         ];
+
+        // Asignar siempre la maquiladora del usuario autenticado (si existe en sesión)
+        $maquiladoraId = session()->get('maquiladora_id');
+        if ($maquiladoraId) {
+            $row['maquiladoraID'] = (int)$maquiladoraId;
+        }
         
         // Solo actualizar la foto si se subió una nueva
         if ($fotoData !== null) {
@@ -2563,8 +2590,9 @@ class Modulos extends BaseController
     {
         // Conectar a BD y traer catálogo real
         $disenoModel = new \App\Models\DisenoModel();
-        // Mostrar todas las versiones (quitar filtro de "versión reciente")
-        $disenos = $disenoModel->getCatalogoDisenosTodasVersiones();
+        // Mostrar todas las versiones filtradas por la maquiladora del usuario
+        $maquiladoraId = session()->get('maquiladora_id');
+        $disenos = $disenoModel->getCatalogoDisenosTodasVersiones($maquiladoraId);
 
         return view('modulos/catalogodisenos', $this->payload([
             'title'      => 'Módulo 2 · Catálogo de Diseños',
@@ -2625,9 +2653,19 @@ class Modulos extends BaseController
     public function m11_roles()
     {
         $db = \Config\Database::connect();
+        $maquiladoraId = session()->get('maquiladora_id');
         $roles = [];
         try {
-            $roles = $db->table('rol')->select('id, nombre, descripcion')->orderBy('id','ASC')->get()->getResultArray();
+            $builder = $db->table('rol')->select('id, nombre, descripcion');
+            if ($maquiladoraId) {
+                try {
+                    $fields = $db->getFieldNames('rol');
+                    if (in_array('maquiladoraID', $fields, true)) {
+                        $builder->where('maquiladoraID', (int)$maquiladoraId);
+                    }
+                } catch (\Throwable $e) {}
+            }
+            $roles = $builder->orderBy('id','ASC')->get()->getResultArray();
         } catch (\Throwable $e) {
             $roles = [];
         }
@@ -2660,10 +2698,23 @@ class Modulos extends BaseController
 
     $db = \Config\Database::connect();
     try {
-        $ok = $db->table('rol')->insert([
+        $data = [
             'nombre' => $nom,
             'descripcion' => $desc,
-        ]);
+        ];
+
+        // Si la tabla rol tiene maquiladoraID, asignar la maquila actual
+        $maquiladoraId = session()->get('maquiladora_id');
+        if ($maquiladoraId) {
+            try {
+                $fields = $db->getFieldNames('rol');
+                if (in_array('maquiladoraID', $fields, true)) {
+                    $data['maquiladoraID'] = (int)$maquiladoraId;
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        $ok = $db->table('rol')->insert($data);
         if (!$ok) {
             $err = $db->error(); $msg = $err['message'] ?? 'No se pudo insertar';
             throw new \Exception($msg);
@@ -3020,9 +3071,14 @@ class Modulos extends BaseController
 public function m11_usuarios()
 {
     $usuarioModel = new \App\Models\UsuarioModel();
+    $maquiladoraId = session()->get('maquiladora_id');
 
-    // Obtener todos los usuarios (excepto eliminados lógicamente)
-    $usuarios = $usuarioModel->where('deleted_at', null)->findAll();
+    // Obtener usuarios (excepto eliminados lógicamente), filtrados por maquiladora cuando aplique
+    $builder = $usuarioModel->where('deleted_at', null);
+    if ($maquiladoraId) {
+        $builder = $builder->where('maquiladoraIdFK', (int)$maquiladoraId);
+    }
+    $usuarios = $builder->findAll();
 
     // Obtener mapa de roles por usuario
     $rolesPorUsuario = [];
@@ -3534,6 +3590,9 @@ public function m11_usuarios()
                 'moneda'    => $ocMoneda,
                 'total'     => $ocTotal,
             ];
+            if ($maquiladoraId) {
+                $rowOC['maquiladoraID'] = (int)$maquiladoraId;
+            }
             $db->table('orden_compra')->insert($rowOC);
             $ocId = (int)$db->insertID();
             if ($ocId === 0) {
@@ -3561,6 +3620,9 @@ public function m11_usuarios()
                 'fechaFinPlan'    => ($opFechaFinPlan ?: null),
                 'status'          => $opStatus ?: 'Planeada',
             ];
+            if ($maquiladoraId) {
+                $rowOP['maquiladoraID'] = (int)$maquiladoraId;
+            }
             $db->table('orden_produccion')->insert($rowOP);
             $opId = (int)$db->insertID();
             if ($opId === 0) {

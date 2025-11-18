@@ -145,25 +145,37 @@ class EmpleadoModel extends Model
 
     /**
      * Empleados activos no asignados aún a la OP indicada.
+     * Si se proporciona $maquiladoraId, solo devuelve empleados de esa maquiladora
+     * usando empleado.maquiladoraID o users.maquiladoraIdFK (si existe vínculo idusuario -> users.id).
      */
-    public function listarDisponiblesParaOP(int $opId): array
+    public function listarDisponiblesParaOP(int $opId, $maquiladoraId = null): array
     {
         if ($opId <= 0) return [];
+
         $sql = "SELECT e.id, e.noEmpleado, e.nombre, e.apellido, e.puesto
                 FROM empleado e
+                LEFT JOIN users u ON u.id = e.idusuario
                 WHERE e.activo = 1
                   AND e.puesto IN ('Empleado','Corte')
                   AND e.id NOT IN (
                       SELECT at.empleadoId FROM asignacion_tarea at WHERE at.ordenProduccionId = ?
-                  )
-                ORDER BY e.nombre, e.apellido";
-        return $this->db->query($sql, [$opId])->getResultArray();
+                  )";
+
+        $params = [$opId];
+        if ($maquiladoraId) {
+            $sql .= " AND (e.maquiladoraID = ? OR u.maquiladoraIdFK = ?)";
+            $params[] = (int)$maquiladoraId;
+            $params[] = (int)$maquiladoraId;
+        }
+
+        $sql .= " ORDER BY e.nombre, e.apellido";
+        return $this->db->query($sql, $params)->getResultArray();
     }
 
     /**
      * Búsqueda remota de empleados activos no asignados a una OP, filtrando por término.
      */
-    public function buscarDisponiblesParaOP(int $opId, string $termino, int $limit = 20): array
+    public function buscarDisponiblesParaOP(int $opId, string $termino, int $limit = 20, $maquiladoraId = null): array
     {
         if ($opId <= 0) return [];
         $termino = trim($termino);
@@ -176,13 +188,23 @@ class EmpleadoModel extends Model
         }
         $sql = "SELECT e.id, e.noEmpleado, e.nombre, e.apellido, e.puesto
                 FROM empleado e
+                LEFT JOIN users u ON u.id = e.idusuario
                 WHERE e.activo = 1
                   AND e.puesto IN ('Empleado','Corte')
                   AND e.id NOT IN (
                       SELECT at.empleadoId FROM asignacion_tarea at WHERE at.ordenProduccionId = ?
-                  )" . $whereLike . "
+                  )";
+
+        if ($maquiladoraId) {
+            $sql .= " AND (e.maquiladoraID = ? OR u.maquiladoraIdFK = ?)";
+            $params[] = (int)$maquiladoraId;
+            $params[] = (int)$maquiladoraId;
+        }
+
+        $sql .= $whereLike . "
                 ORDER BY e.nombre, e.apellido
                 LIMIT " . (int)$limit;
+
         return $this->db->query($sql, $params)->getResultArray();
     }
 }

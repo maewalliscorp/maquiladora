@@ -69,9 +69,14 @@ class Maquinaria extends BaseController
         $model = new MaquinaModel();
         $db    = \Config\Database::connect();
         $fields = $db->getFieldNames($model->getTable());
+        $maquiladoraId = session()->get('maquiladora_id');
 
         // Listado
-        $maquinas = $model->orderBy('codigo','ASC')->findAll();
+        $builder = $model->orderBy('codigo','ASC');
+        if ($maquiladoraId && in_array('maquiladoraID', $fields, true)) {
+            $builder = $builder->where('maquiladoraID', (int)$maquiladoraId);
+        }
+        $maquinas = $builder->findAll();
         $maquinas = $model->withEstado($maquinas);
 
         // Catálogos seguros
@@ -132,6 +137,8 @@ class Maquinaria extends BaseController
             $db     = \Config\Database::connect();
             $fields = $db->getFieldNames($model->getTable());
 
+            $maquiladoraId = session()->get('maquiladora_id');
+
             // Si el código ya existe, genera otro
             if ($model->where('codigo', $post['codigo'])->first()) {
                 $post['codigo'] = $this->nextCodigo();
@@ -140,6 +147,9 @@ class Maquinaria extends BaseController
             $data = [];
             foreach (['codigo','modelo','fabricante','serie','fechaCompra','ubicacion','activa'] as $k) {
                 if (in_array($k, $fields, true)) $data[$k] = $post[$k] ?? null;
+            }
+            if ($maquiladoraId && in_array('maquiladoraID', $fields, true)) {
+                $data['maquiladoraID'] = (int)$maquiladoraId;
             }
 
             $model->insert($data);

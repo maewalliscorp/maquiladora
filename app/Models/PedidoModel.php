@@ -15,8 +15,11 @@ class PedidoModel extends Model
     protected $useSoftDeletes   = false;
     protected $protectFields    = false;
 
-    /** Listado de pedidos normalizado (id, empresa, folio, fecha, estatus, moneda, total). */
-    public function getListadoPedidos(): array
+    /** Listado de pedidos normalizado (id, empresa, folio, fecha, estatus, moneda, total).
+     *  Si se proporciona $maquiladoraId, solo devuelve pedidos de esa maquiladora
+     *  usando la columna oc.maquiladoraID.
+     */
+    public function getListadoPedidos($maquiladoraId = null): array
     {
         $db = $this->db;
         // 1) Intento completo (esquema con folio/moneda/total)
@@ -29,22 +32,35 @@ class PedidoModel extends Model
                        oc.total,
                        NULL as documento_url
                 FROM orden_compra oc
-                LEFT JOIN cliente c ON c.id = oc.clienteId
-                ORDER BY oc.fecha DESC, oc.id DESC";
+                LEFT JOIN cliente c ON c.id = oc.clienteId";
+
+        // Filtro opcional por maquiladora
+        $params = [];
+        if ($maquiladoraId) {
+            $sql .= " WHERE oc.maquiladoraID = ?";
+            $params[] = (int)$maquiladoraId;
+        }
+
+        $sql .= " ORDER BY oc.fecha DESC, oc.id DESC";
         try {
-            return $db->query($sql)->getResultArray();
+            return $db->query($sql, $params)->getResultArray();
         } catch (\Throwable $e) {
             // Fallback: esquema mínimo sin folio/moneda/total, usando solo tablas en minúsculas
             try {
-                $rows = $db->query(
-                    "SELECT oc.id,
-                            c.nombre AS empresa,
-                            oc.fecha,
-                            oc.estatus
-                     FROM orden_compra oc
-                     LEFT JOIN cliente c ON c.id = oc.clienteId
-                     ORDER BY oc.fecha DESC, oc.id DESC"
-                )->getResultArray();
+                $sql2 = "SELECT oc.id,
+                                 c.nombre AS empresa,
+                                 oc.fecha,
+                                 oc.estatus
+                          FROM orden_compra oc
+                          LEFT JOIN cliente c ON c.id = oc.clienteId";
+                $params2 = [];
+                if ($maquiladoraId) {
+                    $sql2 .= " WHERE oc.maquiladoraID = ?";
+                    $params2[] = (int)$maquiladoraId;
+                }
+                $sql2 .= " ORDER BY oc.fecha DESC, oc.id DESC";
+
+                $rows = $db->query($sql2, $params2)->getResultArray();
             } catch (\Throwable $e3) {
                 return [];
             }

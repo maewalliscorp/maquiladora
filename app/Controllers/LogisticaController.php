@@ -54,9 +54,10 @@ class LogisticaController extends BaseController
         $embarque = [];
         $clientes = [];
         $ordenes  = [];
-        try { $embarque = (new EmbarqueModel())->getAbiertoActual() ?? []; } catch (\Throwable $e) {}
-        try { $clientes = (new ClienteModel())->listado() ?? []; } catch (\Throwable $e) {}
-        try { $ordenes  = (new OrdenCompraModel())->listarPendientes() ?? []; } catch (\Throwable $e) {}
+        $maquiladoraId = session()->get('maquiladora_id');
+        try { $embarque = (new EmbarqueModel())->getAbiertoActual($maquiladoraId ? (int)$maquiladoraId : null) ?? []; } catch (\Throwable $e) {}
+        try { $clientes = (new ClienteModel())->listado($maquiladoraId ? (int)$maquiladoraId : null) ?? []; } catch (\Throwable $e) {}
+        try { $ordenes  = (new OrdenCompraModel())->listarPendientes($maquiladoraId ? (int)$maquiladoraId : null) ?? []; } catch (\Throwable $e) {}
 
         return view('modulos/logistica_preparacion', compact('embarque','clientes','ordenes'));
     }
@@ -223,6 +224,7 @@ class LogisticaController extends BaseController
     public function gestion()
     {
         $db = $this->db();
+        $maquiladoraId = session()->get('maquiladora_id');
 
         if (!$this->tableExists('guia_envio')) {
             $transportistas = $this->tableExists('transportista')
@@ -256,12 +258,55 @@ class LogisticaController extends BaseController
         $builder = $db->table('guia_envio g')->select($select);
         if ($this->tableExists('transportista')) $builder->join('transportista t','t.id=g.transportistaId','left');
         if ($this->tableExists('embarque'))      $builder->join('embarque e','e.id=g.embarqueId','left');
+
+        // Filtro por maquiladora: primero por guia_envio.maquiladoraID, si no existe, por embarque.maquiladoraID
+        if ($maquiladoraId) {
+            try {
+                $colsGuia = $this->hasCols('guia_envio', ['maquiladoraID']);
+                $colsEmb  = $this->tableExists('embarque') ? $this->hasCols('embarque',['maquiladoraID']) : ['maquiladoraID'=>false];
+
+                if ($colsGuia['maquiladoraID'] || $colsEmb['maquiladoraID']) {
+                    $builder->groupStart();
+                    if ($colsGuia['maquiladoraID']) {
+                        $builder->where('g.maquiladoraID', (int)$maquiladoraId);
+                    }
+                    if ($colsEmb['maquiladoraID']) {
+                        // Incluye también envíos cuyo embarque pertenezca a la maquila
+                        $builder->orWhere('e.maquiladoraID', (int)$maquiladoraId);
+                    }
+                    $builder->groupEnd();
+                }
+            } catch (\Throwable $e) {
+                // si algo falla, dejamos sin filtro extra
+            }
+        }
+
         $envios = $builder->orderBy('g.id','DESC')->get()->getResultArray();
 
-        $transportistas = $this->tableExists('transportista')
-            ? (new TransportistaModel())->orderBy('nombre','ASC')->findAll() : [];
-        $embarques = $this->tableExists('embarque')
-            ? $db->table('embarque')->select('id, folio')->orderBy('id','DESC')->get()->getResultArray() : [];
+        $transportistas = [];
+        if ($this->tableExists('transportista')) {
+            $tBuilder = (new TransportistaModel())->orderBy('nombre','ASC');
+            // Si la tabla transportista tiene maquiladoraID, filtramos también
+            try {
+                $colsT = $this->hasCols('transportista',['maquiladoraID']);
+                if ($maquiladoraId && $colsT['maquiladoraID']) {
+                    $tBuilder = $tBuilder->where('maquiladoraID', (int)$maquiladoraId);
+                }
+            } catch (\Throwable $e) {}
+            $transportistas = $tBuilder->findAll();
+        }
+
+        $embarques = [];
+        if ($this->tableExists('embarque')) {
+            $eBuilder = $db->table('embarque')->select('id, folio');
+            try {
+                $colsE = $this->hasCols('embarque',['maquiladoraID']);
+                if ($maquiladoraId && $colsE['maquiladoraID']) {
+                    $eBuilder->where('maquiladoraID', (int)$maquiladoraId);
+                }
+            } catch (\Throwable $e) {}
+            $embarques = $eBuilder->orderBy('id','DESC')->get()->getResultArray();
+        }
 
         return view('modulos/logistica_gestion', compact('envios','transportistas','embarques'));
     }
@@ -282,6 +327,17 @@ class LogisticaController extends BaseController
             'fechaSalida'     => $this->request->getPost('fechaSalida'),
             'estado'          => $this->request->getPost('estado'),
         ];
+
+        // Asignar maquiladora al envío si la columna existe
+        $maquiladoraId = session()->get('maquiladora_id');
+        if ($maquiladoraId) {
+            try {
+                $colsG = $this->hasCols($m->table ?? 'guia_envio', ['maquiladoraID']);
+                if ($colsG['maquiladoraID']) {
+                    $input['maquiladoraID'] = (int)$maquiladoraId;
+                }
+            } catch (\Throwable $e) {}
+        }
 
         $data = $this->filterToRealColumns($m->table ?? 'guia_envio', $input);
 
@@ -373,11 +429,20 @@ class LogisticaController extends BaseController
     public function documentos()
     {
         $db = $this->db();
+        $maquiladoraId = session()->get('maquiladora_id');
 
         // Combo de embarques
-        $embarques = $this->tableExists('embarque')
-            ? $db->table('embarque')->select('id, folio')->orderBy('id','DESC')->get()->getResultArray()
-            : [];
+        $embarques = [];
+        if ($this->tableExists('embarque')) {
+            $eBuilder = $db->table('embarque')->select('id, folio');
+            try {
+                $colsE = $this->hasCols('embarque',['maquiladoraID']);
+                if ($maquiladoraId && $colsE['maquiladoraID']) {
+                    $eBuilder->where('maquiladoraID', (int)$maquiladoraId);
+                }
+            } catch (\Throwable $e) {}
+            $embarques = $eBuilder->orderBy('id','DESC')->get()->getResultArray();
+        }
 
         if (!$this->tableExists('doc_embarque')) {
             session()->setFlashdata('warn', 'La tabla "doc_embarque" no existe (vista vacía).');
@@ -406,6 +471,26 @@ class LogisticaController extends BaseController
 
         $builder = $db->table('doc_embarque d')->select($select);
         if ($this->tableExists('embarque')) $builder->join('embarque e','e.id=d.embarqueId','left');
+
+        // Filtro por maquiladora: por doc_embarque.maquiladoraID y/o embarque.maquiladoraID
+        if ($maquiladoraId) {
+            try {
+                $colsD = $this->hasCols('doc_embarque', ['maquiladoraID']);
+                $colsE = $this->tableExists('embarque') ? $this->hasCols('embarque',['maquiladoraID']) : ['maquiladoraID'=>false];
+
+                if ($colsD['maquiladoraID'] || $colsE['maquiladoraID']) {
+                    $builder->groupStart();
+                    if ($colsD['maquiladoraID']) {
+                        $builder->where('d.maquiladoraID', (int)$maquiladoraId);
+                    }
+                    if ($colsE['maquiladoraID']) {
+                        $builder->orWhere('e.maquiladoraID', (int)$maquiladoraId);
+                    }
+                    $builder->groupEnd();
+                }
+            } catch (\Throwable $e) {}
+        }
+
         $docs = $builder->orderBy('d.id','DESC')->get()->getResultArray();
 
         return view('modulos/logistica_documentos', [
@@ -436,6 +521,15 @@ class LogisticaController extends BaseController
             'urlPdf'      => trim((string)$this->request->getPost('urlPdf')),
             'archivoPdf'  => trim((string)$this->request->getPost('archivoPdf')),
         ];
+        $maquiladoraId = session()->get('maquiladora_id');
+        if ($maquiladoraId) {
+            try {
+                $hasMaq = $this->hasCols('doc_embarque',['maquiladoraID']);
+                if ($hasMaq['maquiladoraID']) {
+                    $input['maquiladoraID'] = (int)$maquiladoraId;
+                }
+            } catch (\Throwable $e) {}
+        }
         $data = array_intersect_key($input, $real);
         if (isset($data['tipo']) && $data['tipo'] === '') unset($data['tipo']);
 

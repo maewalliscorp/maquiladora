@@ -34,9 +34,10 @@ class Calidad extends BaseController
     {
         $mR   = new ReprocesoModel();
         $todo = (bool) $this->request->getGet('todo');
+        $maquiladoraId = session()->get('maquiladora_id');
 
         if ($todo) {
-            $rep = $mR->select(
+            $repBuilder = $mR->select(
                 'reproceso.id,
                  reproceso.accion AS tarea,
                  reproceso.cantidad AS pendientes,
@@ -44,13 +45,20 @@ class Calidad extends BaseController
                  inspeccion.ordenProduccionId AS op'
             )
                 ->join('inspeccion','inspeccion.id = reproceso.inspeccionId')
+                ->join('orden_produccion op','op.id = inspeccion.ordenProduccionId','left')
                 ->orderBy('reproceso.fecha','DESC')
-                ->groupBy('reproceso.id')->distinct()->findAll();
+                ->groupBy('reproceso.id')->distinct();
+
+            if ($maquiladoraId) {
+                $repBuilder->where('op.maquiladoraID', (int)$maquiladoraId);
+            }
+
+            $rep = $repBuilder->findAll();
 
             $desp = [];
         } else {
             // Desechos
-            $desp = $mR->select(
+            $despBuilder = $mR->select(
                 'reproceso.id,
                  reproceso.cantidad,
                  reproceso.fecha,
@@ -59,6 +67,7 @@ class Calidad extends BaseController
                  inspeccion.observaciones'
             )
                 ->join('inspeccion','inspeccion.id = reproceso.inspeccionId')
+                ->join('orden_produccion op','op.id = inspeccion.ordenProduccionId','left')
                 ->groupStart()
                 ->where('LOWER(TRIM(inspeccion.resultado))', 'rechazo')
                 ->orWhere('LOWER(TRIM(inspeccion.resultado))', 'desecho')
@@ -69,7 +78,13 @@ class Calidad extends BaseController
                 ->orWhere('LOWER(TRIM(inspeccion.resultado))', 'merma')
                 ->groupEnd()
                 ->orderBy('reproceso.fecha','DESC')
-                ->groupBy('reproceso.id')->distinct()->findAll();
+                ->groupBy('reproceso.id')->distinct();
+
+            if ($maquiladoraId) {
+                $despBuilder->where('op.maquiladoraID', (int)$maquiladoraId);
+            }
+
+            $desp = $despBuilder->findAll();
 
             $despIDs = array_map('intval', array_column($desp, 'id'));
 
@@ -85,15 +100,20 @@ class Calidad extends BaseController
                  inspeccion.ordenProduccionId AS op'
             )
                 ->join('inspeccion','inspeccion.id = reproceso.inspeccionId')
+                ->join('orden_produccion op','op.id = inspeccion.ordenProduccionId','left')
                 ->where($notIn, null, false)
                 ->orderBy('reproceso.fecha','ASC')
                 ->groupBy('reproceso.id')->distinct();
+
+            if ($maquiladoraId) {
+                $repBuilder->where('op.maquiladoraID', (int)$maquiladoraId);
+            }
 
             if (!empty($despIDs)) $repBuilder->whereNotIn('reproceso.id', $despIDs);
             $rep = $repBuilder->findAll();
 
             if (empty($desp) && empty($rep)) {
-                $rep = $mR->select(
+                $repBuilder2 = $mR->select(
                     'reproceso.id,
                      reproceso.accion AS tarea,
                      reproceso.cantidad AS pendientes,
@@ -101,8 +121,15 @@ class Calidad extends BaseController
                      inspeccion.ordenProduccionId AS op'
                 )
                     ->join('inspeccion','inspeccion.id = reproceso.inspeccionId')
+                    ->join('orden_produccion op','op.id = inspeccion.ordenProduccionId','left')
                     ->orderBy('reproceso.fecha','DESC')
-                    ->groupBy('reproceso.id')->distinct()->findAll();
+                    ->groupBy('reproceso.id')->distinct();
+
+                if ($maquiladoraId) {
+                    $repBuilder2->where('op.maquiladoraID', (int)$maquiladoraId);
+                }
+
+                $rep = $repBuilder2->findAll();
             }
         }
 

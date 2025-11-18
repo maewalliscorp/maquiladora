@@ -308,37 +308,49 @@
         };
         const hoy = new Date().toISOString().slice(0,10);
 
-        $('#tablaDesechos').DataTable({
-            language: langES,
-            columnDefs: [{ orderable:false, searchable:false, targets:[4] }],
-            dom:"<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
-                "<'row'<'col-12'tr>>" +
-                "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-            buttons: [
-                { extend:'copy',  text:'Copy',  exportOptions:{ columns: ':not(:last-child)' } },
-                { extend:'csv',   text:'CSV',   filename:'calidad_desechos_'+hoy, exportOptions:{ columns: ':not(:last-child)' } },
-                { extend:'excel', text:'Excel', filename:'calidad_desechos_'+hoy, exportOptions:{ columns: ':not(:last-child)' } },
-                { extend:'pdf',   text:'PDF',   filename:'calidad_desechos_'+hoy, title:'Registro de desecho',
-                    orientation:'landscape', pageSize:'A4', exportOptions:{ columns: ':not(:last-child)' } },
-                { extend:'print', text:'Print', exportOptions:{ columns: ':not(:last-child)' } }
-            ]
-        });
+        const tieneDatosDesechos = $('#tablaDesechos tbody tr').filter(function(){
+            return !$(this).find('td[colspan]').length;
+        }).length > 0;
 
-        $('#tablaReprocesos').DataTable({
-            language: langES,
-            columnDefs: [{ orderable:false, searchable:false, targets:[4] }],
-            dom:"<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
-                "<'row'<'col-12'tr>>" +
-                "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-            buttons: [
-                { extend:'copy',  text:'Copy',  exportOptions:{ columns:[0,1,2,3] } },
-                { extend:'csv',   text:'CSV',   filename:'calidad_reprocesos_'+hoy, exportOptions:{ columns:[0,1,2,3] } },
-                { extend:'excel', text:'Excel', filename:'calidad_reprocesos_'+hoy, exportOptions:{ columns:[0,1,2,3] } },
-                { extend:'pdf',   text:'PDF',   filename:'calidad_reprocesos_'+hoy, title:'Unidades en reproceso',
-                    orientation:'landscape', pageSize:'A4', exportOptions:{ columns:[0,1,2,3] } },
-                { extend:'print', text:'Print', exportOptions:{ columns:[0,1,2,3] } }
-            ]
-        });
+        if (tieneDatosDesechos) {
+            $('#tablaDesechos').DataTable({
+                language: langES,
+                columnDefs: [{ orderable:false, searchable:false, targets:[4] }],
+                dom:"<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
+                    "<'row'<'col-12'tr>>" +
+                    "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                buttons: [
+                    { extend:'copy',  text:'Copy',  exportOptions:{ columns: ':not(:last-child)' } },
+                    { extend:'csv',   text:'CSV',   filename:'calidad_desechos_'+hoy, exportOptions:{ columns: ':not(:last-child)' } },
+                    { extend:'excel', text:'Excel', filename:'calidad_desechos_'+hoy, exportOptions:{ columns: ':not(:last-child)' } },
+                    { extend:'pdf',   text:'PDF',   filename:'calidad_desechos_'+hoy, title:'Registro de desecho',
+                        orientation:'landscape', pageSize:'A4', exportOptions:{ columns: ':not(:last-child)' } },
+                    { extend:'print', text:'Print', exportOptions:{ columns: ':not(:last-child)' } }
+                ]
+            });
+        }
+
+        const tieneDatosReprocesos = $('#tablaReprocesos tbody tr').filter(function(){
+            return !$(this).find('td[colspan]').length;
+        }).length > 0;
+
+        if (tieneDatosReprocesos) {
+            $('#tablaReprocesos').DataTable({
+                language: langES,
+                columnDefs: [{ orderable:false, searchable:false, targets:[4] }],
+                dom:"<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
+                    "<'row'<'col-12'tr>>" +
+                    "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                buttons: [
+                    { extend:'copy',  text:'Copy',  exportOptions:{ columns:[0,1,2,3] } },
+                    { extend:'csv',   text:'CSV',   filename:'calidad_reprocesos_'+hoy, exportOptions:{ columns:[0,1,2,3] } },
+                    { extend:'excel', text:'Excel', filename:'calidad_reprocesos_'+hoy, exportOptions:{ columns:[0,1,2,3] } },
+                    { extend:'pdf',   text:'PDF',   filename:'calidad_reprocesos_'+hoy, title:'Unidades en reproceso',
+                        orientation:'landscape', pageSize:'A4', exportOptions:{ columns:[0,1,2,3] } },
+                    { extend:'print', text:'Print', exportOptions:{ columns:[0,1,2,3] } }
+                ]
+            });
+        }
 
         // Ver: Desecho
         $(document).on('click', '.ver-desecho', async function(){

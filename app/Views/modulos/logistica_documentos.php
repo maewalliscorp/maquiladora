@@ -381,25 +381,31 @@ document.addEventListener('DOMContentLoaded', ()=>{
     buttons:{ copy:"Copy", csv:"CSV", excel:"Excel", pdf:"PDF", print:"Print" }
   };
 
-  // ✅ Inicialización tolerante a ausencia de Buttons
-  const dtOpts = {
-    language: langES,
-    dom: "<'row px-3 pt-3'<'col-sm-6'B><'col-sm-6'f>>t<'row p-3'<'col-sm-6'i><'col-sm-6'p>>",
-    pageLength: 10,
-    columnDefs: [{ targets: -1, orderable:false, searchable:false }]
-  };
-  if ($.fn.dataTable && $.fn.dataTable.Buttons) {
-    dtOpts.buttons = [
-      { extend:'copy',  text:'Copy',  className:'btn btn-secondary' },
-      { extend:'csv',   text:'CSV',   className:'btn btn-secondary' },
-      { extend:'excel', text:'Excel', className:'btn btn-secondary' },
-      { extend:'pdf',   text:'PDF',   className:'btn btn-secondary' },
-      { extend:'print', text:'Print', className:'btn btn-secondary' }
-    ];
-  } else {
-    dtOpts.dom = "<'row px-3 pt-3'<'col-sm-6'f>>t<'row p-3'<'col-sm-6'i><'col-sm-6'p>>";
+  // ✅ Inicialización tolerante a ausencia de Buttons + tablas vacías
+  const tieneDatosDocs = $('#tablaDocs tbody tr').filter(function(){
+    return !$(this).find('td[colspan]').length;
+  }).length > 0;
+
+  if (tieneDatosDocs) {
+    const dtOpts = {
+      language: langES,
+      dom: "<'row px-3 pt-3'<'col-sm-6'B><'col-sm-6'f>>t<'row p-3'<'col-sm-6'i><'col-sm-6'p>>",
+      pageLength: 10,
+      columnDefs: [{ targets: -1, orderable:false, searchable:false }]
+    };
+    if ($.fn.dataTable && $.fn.dataTable.Buttons) {
+      dtOpts.buttons = [
+        { extend:'copy',  text:'Copy',  className:'btn btn-secondary' },
+        { extend:'csv',   text:'CSV',   className:'btn btn-secondary' },
+        { extend:'excel', text:'Excel', className:'btn btn-secondary' },
+        { extend:'pdf',   text:'PDF',   className:'btn btn-secondary' },
+        { extend:'print', text:'Print', className:'btn btn-secondary' }
+      ];
+    } else {
+      dtOpts.dom = "<'row px-3 pt-3'<'col-sm-6'f>>t<'row p-3'<'col-sm-6'i><'col-sm-6'p>>";
+    }
+    $('#tablaDocs').DataTable(dtOpts);
   }
-  $('#tablaDocs').DataTable(dtOpts);
 
   // ====== Ver ======
   document.querySelectorAll('.btn-ver').forEach(btn=>{

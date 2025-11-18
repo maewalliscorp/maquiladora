@@ -8,8 +8,11 @@ class Disenos extends BaseController
     public function json_catalogo()
     {
         try {
+            // Obtener ID de maquiladora desde la sesión
+            $maquiladoraId = session()->get('maquiladora_id');
+            
             $disenoModel = new \App\Models\DisenoModel();
-            $catalogo = $disenoModel->getCatalogoDisenos();
+            $catalogo = $disenoModel->getCatalogoDisenos($maquiladoraId);
             $out = array_map(function($r){
                 return [
                     'id'          => $r['id'] ?? null,

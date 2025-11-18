@@ -16,9 +16,10 @@ class AlmacenController extends BaseController
     /* ===== VISTA ===== */
     public function inventario()
     {
+        $maquiladoraId = session()->get('maquiladora_id');
         $data = [
             'title'     => 'Inventario de Almacenes',
-            'almacenes' => $this->inv->obtenerAlmacenesActivos(),
+            'almacenes' => $this->inv->obtenerAlmacenesActivos($maquiladoraId ? (int)$maquiladoraId : null),
         ];
         return view('modulos/almacen_inventario', $data);
     }
@@ -26,20 +27,35 @@ class AlmacenController extends BaseController
     /* ===== CATÁLOGOS ===== */
     public function apiAlmacenes()
     {
-        return $this->response->setJSON(['data'=>$this->inv->obtenerAlmacenesActivos()]);
+        $maquiladoraId = session()->get('maquiladora_id');
+        return $this->response->setJSON([
+            'data'=>$this->inv->obtenerAlmacenesActivos($maquiladoraId ? (int)$maquiladoraId : null)
+        ]);
     }
 
     public function apiUbicaciones()
     {
         $almacenId = (int) ($this->request->getGet('almacenId') ?? 0);
-        return $this->response->setJSON(['data'=>$this->inv->obtenerUbicacionesActivas($almacenId)]);
+        $maquiladoraId = session()->get('maquiladora_id');
+        return $this->response->setJSON([
+            'data'=>$this->inv->obtenerUbicacionesActivas(
+                $almacenId ?: null,
+                $maquiladoraId ? (int)$maquiladoraId : null
+            )
+        ]);
     }
 
     /* ===== INVENTARIO ===== */
     public function apiInventario()
     {
         $almacenId = $this->request->getGet('almacenId');
-        return $this->response->setJSON(['data'=>$this->inv->obtenerInventario($almacenId ? (int)$almacenId : null)]);
+        $maquiladoraId = session()->get('maquiladora_id');
+        return $this->response->setJSON([
+            'data'=>$this->inv->obtenerInventario(
+                $almacenId ? (int)$almacenId : null,
+                $maquiladoraId ? (int)$maquiladoraId : null
+            )
+        ]);
     }
 
     public function apiLotes()
@@ -49,10 +65,12 @@ class AlmacenController extends BaseController
         $ubicacionId = $this->request->getGet('ubicacionId');
         if (!$articuloId) return $this->response->setJSON(['data'=>[]]);
 
+        $maquiladoraId = session()->get('maquiladora_id');
         $rows = $this->inv->obtenerLotesArticulo(
             $articuloId,
             $almacenId   !== null && $almacenId   !== '' ? (int)$almacenId : null,
-            $ubicacionId !== null && $ubicacionId !== '' ? (int)$ubicacionId : null
+            $ubicacionId !== null && $ubicacionId !== '' ? (int)$ubicacionId : null,
+            $maquiladoraId ? (int)$maquiladoraId : null
         );
         return $this->response->setJSON(['data'=>$rows]);
     }
