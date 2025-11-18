@@ -36,6 +36,7 @@ $routes->get('/logout',          'UsuarioController::logout');
 $routes->get('api/maquiladoras', 'UsuarioController::getMaquiladoras');
 // Agrega esta línea con las demás rutas
 $routes->get('maquiladora', 'Maquiladora::index', ['as' => 'maquiladora']);
+
 // Módulo 11 - Usuarios (acciones AJAX)
 $routes->post('modulo11/eliminar_usuario',       'Modulos::m11_eliminar_usuario');
 $routes->get ('modulo11/obtener_usuario/(:num)', 'Modulos::m11_obtener_usuario/$1');
@@ -178,17 +179,17 @@ $routes->group('modulo2', [], function ($routes) {
     $routes->post('catalogos/sexo/crear', 'Modulos::m2_catalogo_sexo_crear',  ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('catalogos/sexo/actualizar/(:num)', 'Modulos::m2_catalogo_sexo_actualizar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('catalogos/sexo/eliminar/(:num)', 'Modulos::m2_catalogo_sexo_eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
-    
+
     $routes->get ('catalogos/tallas',    'Modulos::m2_catalogo_tallas',      ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('catalogos/tallas/crear', 'Modulos::m2_catalogo_tallas_crear',  ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('catalogos/tallas/actualizar/(:num)', 'Modulos::m2_catalogo_tallas_actualizar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('catalogos/tallas/eliminar/(:num)', 'Modulos::m2_catalogo_tallas_eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
-    
+
     $routes->get ('catalogos/tipo-corte','Modulos::m2_catalogo_tipo_corte',  ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('catalogos/tipo-corte/crear', 'Modulos::m2_catalogo_tipo_corte_crear',  ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('catalogos/tipo-corte/actualizar/(:num)', 'Modulos::m2_catalogo_tipo_corte_actualizar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('catalogos/tipo-corte/eliminar/(:num)', 'Modulos::m2_catalogo_tipo_corte_eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
-    
+
     $routes->get ('catalogos/tipo-ropa', 'Modulos::m2_catalogo_tipo_ropa',   ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('catalogos/tipo-ropa/crear', 'Modulos::m2_catalogo_tipo_ropa_crear',  ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('catalogos/tipo-ropa/actualizar/(:num)', 'Modulos::m2_catalogo_tipo_ropa_actualizar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
@@ -219,12 +220,17 @@ $routes->post('notificaciones1/borrar/(:num)', 'Notificaciones1::borrar/$1', ['f
 $routes->get('modulo3/notificaciones', 'Notificaciones1::index', ['filter' => 'auth']);
 
 // Programación/Calendario/Alertas (mantenimiento preventivo)
-$routes->get ('mtto/calendario',                  'MttoProgramacion::calendario',   ['filter' => 'auth']);
-$routes->get ('mtto/programacion',                'MttoProgramacion::index',        ['filter' => 'auth']); // compat
-$routes->get ('mtto/api/revisiones',              'MttoProgramacion::apiRevisiones',['filter' => 'auth']);
+$routes->get ('mtto/calendario',           'MttoProgramacion::calendario', ['filter' => 'auth']);
+$routes->get ('mtto/programacion',         'MttoProgramacion::lista',      ['filter' => 'auth']); // vista tipo lista
+$routes->post('mtto/programacion/guardar', 'MttoProgramacion::guardar',    ['filter' => 'auth']);
+
+// Feed de eventos para FullCalendar
+$routes->get ('mtto/api/eventos',          'MttoProgramacion::apiEventos', ['filter' => 'auth']);
+// Alias opcional (compatibilidad con nombre anterior)
+$routes->get ('mtto/api/revisiones',       'MttoProgramacion::apiEventos', ['filter' => 'auth']);
 
 // “Cron” HTTP para generar instancias y notificaciones (proteger con token si lo deseas)
-$routes->get ('mtto/alertas/run',                 'MttoAlertas::run');
+$routes->get ('mtto/alertas/run',          'MttoAlertas::run');
 
 /* --------------------------------------------------------------------
  * Módulo 3 (Dashboard, WIP, Inspección, Mantenimiento, Logística, MRP alias)

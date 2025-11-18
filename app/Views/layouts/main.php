@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <meta name="theme-color" content="#ffffff">
     <?php if (function_exists('csrf_token')): ?>
-    <meta name="csrf-token" content="<?= csrf_hash() ?>">
+        <meta name="csrf-token" content="<?= csrf_hash() ?>">
     <?php endif; ?>
 
     <title><?= esc($title ?? 'Maquiladora') ?></title>
@@ -39,7 +39,7 @@ $secGestion = can('menu.catalogo_disenos') || can('menu.pedidos') || can('menu.o
 $secMuestrasInspeccion = can('menu.muestras') || can('menu.inspeccion');
 $secIncidencias = can('menu.incidencias') || can('menu.wip');
 $secPlanificacion = can('menu.planificacion_materiales') || can('menu.desperdicios');
-$secMantenimiento = can('menu.inv_maquinas') || can('menu.mant_correctivo'); // usaremos este para mostrar Programado
+$secMantenimiento = can('menu.inv_maquinas') || can('menu.mant_correctivo');
 $secLogistica = can('menu.logistica_preparacion') || can('menu.logistica_gestion') || can('menu.logistica_documentos') || can('menu.inventario_almacen');
 $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
 ?>
@@ -53,48 +53,48 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
 
         <!-- Usuario y notificaciones (móvil) -->
         <?php if(session()->get('logged_in') || session()->get('user_id')): ?>
-        <div class="d-flex align-items-center d-lg-none">
-            <a class="nav-link d-flex align-items-center text-dark text-decoration-none hover-color ms-lg-2"
-               href="#" id="userMenuMobile" role="button" data-bs-toggle="dropdown" aria-expanded="false"
-               aria-label="Usuario">
-                <i class="fa-solid fa-user-circle me-2 fs-5" aria-hidden="true"></i>
-                <?= esc(session()->get('user_name') ?? session()->get('username') ?? 'Usuario') ?>
-            </a>
+            <div class="d-flex align-items-center d-lg-none">
+                <a class="nav-link d-flex align-items-center text-dark text-decoration-none hover-color ms-lg-2"
+                   href="#" id="userMenuMobile" role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                   aria-label="Usuario">
+                    <i class="fa-solid fa-user-circle me-2 fs-5" aria-hidden="true"></i>
+                    <?= esc(session()->get('user_name') ?? session()->get('username') ?? 'Usuario') ?>
+                </a>
 
-            <!-- ENLACE ACTUALIZADO: Notificaciones -> notificaciones1 -->
-            <a class="nav-link position-relative text-dark hover-color ms-lg-2"
-               href="<?= esc(base_url('notificaciones1')) ?>" aria-label="Notificaciones">
-                <i class="bi bi-bell fs-5" aria-hidden="true"></i>
-                <?php if ($notifCount > 0): ?>
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                <!-- ENLACE ACTUALIZADO: Notificaciones -> notificaciones1 -->
+                <a class="nav-link position-relative text-dark hover-color ms-lg-2"
+                   href="<?= esc(base_url('notificaciones1')) ?>" aria-label="Notificaciones">
+                    <i class="bi bi-bell fs-5" aria-hidden="true"></i>
+                    <?php if ($notifCount > 0): ?>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                         <?= esc($notifCount) ?>
                         <span class="visually-hidden">notificaciones</span>
                     </span>
-                <?php endif; ?>
-            </a>
+                    <?php endif; ?>
+                </a>
 
-            <ul class="dropdown-menu shadow border-0 animate__animated animate__fadeIn"
-                aria-labelledby="userMenuMobile">
-                <li>
-                    <a class="dropdown-item d-flex align-items-center"
-                       href="<?= esc(base_url('modulo1/perfilempleado')) ?>">
-                        <i class="fa-solid fa-id-badge me-2 text-primary" aria-hidden="true"></i> Perfil
-                    </a>
-                </li>
-                <li>
-                    <a class="dropdown-item d-flex align-items-center text-danger"
-                       href="<?= esc(base_url('logout')) ?>">
-                        <i class="fa-solid fa-right-from-bracket me-2" aria-hidden="true"></i> Cerrar sesión
-                    </a>
-                </li>
-            </ul>
+                <ul class="dropdown-menu shadow border-0 animate__animated animate__fadeIn"
+                    aria-labelledby="userMenuMobile">
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center"
+                           href="<?= esc(base_url('modulo1/perfilempleado')) ?>">
+                            <i class="fa-solid fa-id-badge me-2 text-primary" aria-hidden="true"></i> Perfil
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center text-danger"
+                           href="<?= esc(base_url('logout')) ?>">
+                            <i class="fa-solid fa-right-from-bracket me-2" aria-hidden="true"></i> Cerrar sesión
+                        </a>
+                    </li>
+                </ul>
 
-            <!-- Botón toggler -->
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topnav"
-                    aria-controls="topnav" aria-expanded="false" aria-label="Abrir menú">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-        </div>
+                <!-- Botón toggler -->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topnav"
+                        aria-controls="topnav" aria-expanded="false" aria-label="Abrir menú">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </div>
         <?php endif; ?>
 
         <div class="collapse navbar-collapse" id="topnav">
@@ -116,10 +116,10 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
 
                 <?php if (can('menu.catalogo_disenos')): ?>
                     <li class="nav-item">
-    <a class="nav-link" href="<?= site_url('maquiladora') ?>">
-        <i class="bi bi-building me-1"></i> Mi Maquiladora
-    </a>
-</li>
+                        <a class="nav-link" href="<?= site_url('maquiladora') ?>">
+                            <i class="bi bi-building me-1"></i> Mi Maquiladora
+                        </a>
+                    </li>
                     <li class="nav-item"><a class="nav-link text-dark"
                                             href="<?= esc(base_url('modulo2/catalogodisenos')) ?>"><i
                                     class="bi bi-brush me-2"></i>Catálogo de Diseños</a></li>
@@ -176,10 +176,7 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                                             href="<?= esc(base_url('modulo3/mantenimiento_inventario')) ?>"><i
                                 class="bi bi-tools me-2"></i>Inventario Maq.</a></li><?php endif; ?>
                 <?php if ($secMantenimiento): ?>
-                    <!-- NUEVOS: Programación y Calendario -->
-                    <li class="nav-item"><a class="nav-link text-dark"
-                                            href="<?= esc(base_url('mtto/programacion')) ?>"><i
-                                    class="bi bi-calendar-check me-2"></i>Prog. Mtto</a></li>
+                    <!-- SOLO Calendario Mtto (Prog. Mtto eliminado) -->
                     <li class="nav-item"><a class="nav-link text-dark"
                                             href="<?= esc(base_url('mtto/calendario')) ?>"><i
                                     class="bi bi-calendar3 me-2"></i>Calendario Mtto</a></li>
@@ -224,140 +221,138 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
 
             <!-- Menú escritorio -->
             <?php if(session()->get('logged_in') || session()->get('user_id')): ?>
-            <ul class="navbar-nav ms-auto d-none d-lg-flex align-items-lg-center">
-                <!-- Usuario -->
-                <li class="nav-item dropdown ms-lg-2">
-                    <a class="nav-link d-flex align-items-center text-dark text-decoration-none position-relative hover-color"
-                       href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false"
-                       title="Menú de usuario">
-                        <i class="fa-solid fa-user-circle me-2 fs-5" aria-hidden="true"></i>
-                        <span class="d-none d-lg-inline fw-medium"><?= esc(session()->get('user_name') ?? session()->get('username') ?? 'Usuario') ?></span>
-                    </a>
+                <ul class="navbar-nav ms-auto d-none d-lg-flex align-items-lg-center">
+                    <!-- Usuario -->
+                    <li class="nav-item dropdown ms-lg-2">
+                        <a class="nav-link d-flex align-items-center text-dark text-decoration-none position-relative hover-color"
+                           href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                           title="Menú de usuario">
+                            <i class="fa-solid fa-user-circle me-2 fs-5" aria-hidden="true"></i>
+                            <span class="d-none d-lg-inline fw-medium"><?= esc(session()->get('user_name') ?? session()->get('username') ?? 'Usuario') ?></span>
+                        </a>
 
-                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 animate__animated animate__fadeIn"
-                        aria-labelledby="userMenu">
-                        <li><a class="dropdown-item d-flex align-items-center"
-                               href="<?= esc(base_url('modulo1/perfilempleado')) ?>"><i
-                                        class="fa-solid fa-id-badge me-2 text-primary"></i> Perfil</a></li>
-                        <li><a class="dropdown-item d-flex align-items-center text-danger"
-                               href="<?= esc(base_url('logout')) ?>"><i class="fa-solid fa-right-from-bracket me-2"></i>
-                                Cerrar sesión</a></li>
-                    </ul>
-                </li>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 animate__animated animate__fadeIn"
+                            aria-labelledby="userMenu">
+                            <li><a class="dropdown-item d-flex align-items-center"
+                                   href="<?= esc(base_url('modulo1/perfilempleado')) ?>"><i
+                                            class="fa-solid fa-id-badge me-2 text-primary"></i> Perfil</a></li>
+                            <li><a class="dropdown-item d-flex align-items-center text-danger"
+                                   href="<?= esc(base_url('logout')) ?>"><i class="fa-solid fa-right-from-bracket me-2"></i>
+                                    Cerrar sesión</a></li>
+                        </ul>
+                    </li>
 
-                <!-- Notificaciones (ACTUALIZADO) -->
-                <li class="nav-item ms-lg-2">
-                    <a class="nav-link text-dark position-relative d-inline-block hover-color"
-                       href="<?= esc(base_url('notificaciones1')) ?>" title="Notificaciones"
-                       data-bs-toggle="tooltip" data-bs-placement="bottom" aria-label="Notificaciones">
-                        <i class="bi bi-bell fs-5" aria-hidden="true"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                    <!-- Notificaciones (ACTUALIZADO) -->
+                    <li class="nav-item ms-lg-2">
+                        <a class="nav-link text-dark position-relative d-inline-block hover-color"
+                           href="<?= esc(base_url('notificaciones1')) ?>" title="Notificaciones"
+                           data-bs-toggle="tooltip" data-bs-placement="bottom" aria-label="Notificaciones">
+                            <i class="bi bi-bell fs-5" aria-hidden="true"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                             <?= esc($notifCount) ?>
                             <span class="visually-hidden">notificaciones</span>
                         </span>
-                    </a>
-                </li>
+                        </a>
+                    </li>
 
-                <!-- Accesos rápidos -->
-                <li class="nav-item dropdown ms-lg-2">
-                    <a class="nav-link text-dark d-flex align-items-center hover-color" href="#" id="quickMenu"
-                       role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Accesos rápidos">
-                        <i class="fa fa-bars fs-5" aria-hidden="true"></i>
-                    </a>
-                    <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="quickMenu"
-                         style="min-width: 280px;">
-                        <?php if (can('menu.ordenes_clientes')): ?><a class="dropdown-item"
-                                                                      href="<?= esc(base_url('clientes')) ?>"><i
-                                        class="bi bi-people me-2"></i>Clientes</a><?php endif; ?>
-                        <?php if (can('menu.catalogo_disenos')): ?><a class="dropdown-item"
-                                                                      href="<?= esc(base_url('modulo2/catalogodisenos')) ?>">
-                                <i class="bi bi-brush me-2"></i>Catálogo de Diseños</a><?php endif; ?>
-                        <?php if (can('menu.pedidos')): ?><a class="dropdown-item"
-                                                             href="<?= esc(base_url('modulo1/pedidos')) ?>"><i
-                                        class="bi bi-bag me-2"></i>Pedidos</a><?php endif; ?>
-                        <?php if (can('menu.ordenes')): ?><a class="dropdown-item"
-                                                             href="<?= esc(base_url('modulo1/ordenes')) ?>"><i
-                                        class="bi bi-card-checklist me-2"></i>Órdenes en proceso</a><?php endif; ?>
-                        <?php if (can('menu.produccion')): ?><a class="dropdown-item"
-                                                                href="<?= esc(base_url('modulo1/produccion')) ?>"><i
-                                        class="bi bi-gear-wide-connected me-2"></i>Producción</a><?php endif; ?>
-                        <?php if ($secGestion && $secMuestrasInspeccion): ?><div class="dropdown-divider"></div><?php endif; ?>
+                    <!-- Accesos rápidos -->
+                    <li class="nav-item dropdown ms-lg-2">
+                        <a class="nav-link text-dark d-flex align-items-center hover-color" href="#" id="quickMenu"
+                           role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Accesos rápidos">
+                            <i class="fa fa-bars fs-5" aria-hidden="true"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="quickMenu"
+                             style="min-width: 280px;">
+                            <?php if (can('menu.ordenes_clientes')): ?><a class="dropdown-item"
+                                                                          href="<?= esc(base_url('clientes')) ?>"><i
+                                            class="bi bi-people me-2"></i>Clientes</a><?php endif; ?>
+                            <?php if (can('menu.catalogo_disenos')): ?><a class="dropdown-item"
+                                                                          href="<?= esc(base_url('modulo2/catalogodisenos')) ?>">
+                                    <i class="bi bi-brush me-2"></i>Catálogo de Diseños</a><?php endif; ?>
+                            <?php if (can('menu.pedidos')): ?><a class="dropdown-item"
+                                                                 href="<?= esc(base_url('modulo1/pedidos')) ?>"><i
+                                            class="bi bi-bag me-2"></i>Pedidos</a><?php endif; ?>
+                            <?php if (can('menu.ordenes')): ?><a class="dropdown-item"
+                                                                 href="<?= esc(base_url('modulo1/ordenes')) ?>"><i
+                                            class="bi bi-card-checklist me-2"></i>Órdenes en proceso</a><?php endif; ?>
+                            <?php if (can('menu.produccion')): ?><a class="dropdown-item"
+                                                                    href="<?= esc(base_url('modulo1/produccion')) ?>"><i
+                                            class="bi bi-gear-wide-connected me-2"></i>Producción</a><?php endif; ?>
+                            <?php if ($secGestion && $secMuestrasInspeccion): ?><div class="dropdown-divider"></div><?php endif; ?>
 
-                        <?php if (can('menu.muestras')): ?><a class="dropdown-item"
-                                                              href="<?= esc(base_url('muestras')) ?>"><i
-                                        class="bi bi-palette2 me-2"></i>Muestras</a><?php endif; ?>
-                        <?php if (can('menu.inspeccion')): ?><a class="dropdown-item"
-                                                                href="<?= esc(base_url('modulo3/inspeccion')) ?>"><i
-                                        class="bi bi-search me-2"></i>Inspección</a><?php endif; ?>
+                            <?php if (can('menu.muestras')): ?><a class="dropdown-item"
+                                                                  href="<?= esc(base_url('muestras')) ?>"><i
+                                            class="bi bi-palette2 me-2"></i>Muestras</a><?php endif; ?>
+                            <?php if (can('menu.inspeccion')): ?><a class="dropdown-item"
+                                                                    href="<?= esc(base_url('modulo3/inspeccion')) ?>"><i
+                                            class="bi bi-search me-2"></i>Inspección</a><?php endif; ?>
 
-                        <?php if ($secMuestrasInspeccion && $secIncidencias): ?><div class="dropdown-divider"></div><?php endif; ?>
+                            <?php if ($secMuestrasInspeccion && $secIncidencias): ?><div class="dropdown-divider"></div><?php endif; ?>
 
-                        <?php if (can('menu.incidencias')): ?>
-                            <?php $roleName = current_role_name(); $roleNorm = $roleName ? mb_strtolower(trim($roleName)) : ''; ?>
-                            <?php if ($roleNorm === 'empleado'): ?>
-                                <a class="dropdown-item js-open-incidencia-modal" href="#"><i class="bi bi-exclamation-triangle me-2"></i>Incidencias</a>
-                            <?php else: ?>
-                                <a class="dropdown-item" href="<?= esc(base_url('modulo3/incidencias')) ?>"><i class="bi bi-exclamation-triangle me-2"></i>Incidencias</a>
+                            <?php if (can('menu.incidencias')): ?>
+                                <?php $roleName = current_role_name(); $roleNorm = $roleName ? mb_strtolower(trim($roleName)) : ''; ?>
+                                <?php if ($roleNorm === 'empleado'): ?>
+                                    <a class="dropdown-item js-open-incidencia-modal" href="#"><i class="bi bi-exclamation-triangle me-2"></i>Incidencias</a>
+                                <?php else: ?>
+                                    <a class="dropdown-item" href="<?= esc(base_url('modulo3/incidencias')) ?>"><i class="bi bi-exclamation-triangle me-2"></i>Incidencias</a>
+                                <?php endif; ?>
                             <?php endif; ?>
-                        <?php endif; ?>
 
-                        <?php if ($secIncidencias && $secPlanificacion): ?><div class="dropdown-divider"></div><?php endif; ?>
+                            <?php if ($secIncidencias && $secPlanificacion): ?><div class="dropdown-divider"></div><?php endif; ?>
 
-                        <?php if (can('menu.planificacion_materiales')): ?><a class="dropdown-item"
-                                                                              href="<?= esc(base_url('modulo3/mrp')) ?>">
-                                <i class="bi bi-diagram-2 me-2"></i>Planificación materiales</a><?php endif; ?>
-                        <?php if (can('menu.desperdicios')): ?><a class="dropdown-item"
-                                                                  href="<?= esc(base_url('modulo3/desperdicios')) ?>"><i
-                                        class="bi bi-recycle me-2"></i>Desperdicios</a><?php endif; ?>
+                            <?php if (can('menu.planificacion_materiales')): ?><a class="dropdown-item"
+                                                                                  href="<?= esc(base_url('modulo3/mrp')) ?>">
+                                    <i class="bi bi-diagram-2 me-2"></i>Planificación materiales</a><?php endif; ?>
+                            <?php if (can('menu.desperdicios')): ?><a class="dropdown-item"
+                                                                      href="<?= esc(base_url('modulo3/desperdicios')) ?>"><i
+                                            class="bi bi-recycle me-2"></i>Desperdicios</a><?php endif; ?>
 
-                        <?php if ($secPlanificacion && $secMantenimiento): ?><div class="dropdown-divider"></div><?php endif; ?>
+                            <?php if ($secPlanificacion && $secMantenimiento): ?><div class="dropdown-divider"></div><?php endif; ?>
 
-                        <?php if (can('menu.inv_maquinas')): ?><a class="dropdown-item"
-                                                                  href="<?= esc(base_url('modulo3/mantenimiento_inventario')) ?>">
-                                <i class="bi bi-tools me-2"></i>Inventario Maq.</a><?php endif; ?>
+                            <?php if (can('menu.inv_maquinas')): ?><a class="dropdown-item"
+                                                                      href="<?= esc(base_url('modulo3/mantenimiento_inventario')) ?>">
+                                    <i class="bi bi-tools me-2"></i>Inventario Maq.</a><?php endif; ?>
 
-                        <?php if ($secMantenimiento): ?>
-                            <!-- NUEVOS ACCESOS RÁPIDOS -->
-                            <a class="dropdown-item" href="<?= esc(base_url('mtto/programacion')) ?>">
-                                <i class="bi bi-calendar-check me-2"></i>Prog. Mtto</a>
-                            <a class="dropdown-item" href="<?= esc(base_url('mtto/calendario')) ?>">
-                                <i class="bi bi-calendar3 me-2"></i>Calendario Mtto</a>
-                        <?php endif; ?>
+                            <?php if ($secMantenimiento): ?>
+                                <!-- SOLO Calendario Mtto (Prog. Mtto eliminado) -->
+                                <a class="dropdown-item" href="<?= esc(base_url('mtto/calendario')) ?>">
+                                    <i class="bi bi-calendar3 me-2"></i>Calendario Mtto</a>
+                            <?php endif; ?>
 
-                        <?php if (can('menu.mant_correctivo')): ?><a class="dropdown-item"
-                                                                     href="<?= esc(base_url('modulo3/mantenimiento_correctivo')) ?>">
-                                <i class="bi bi-wrench-adjustable-circle me-2"></i>Mant. Correctivo</a><?php endif; ?>
+                            <?php if (can('menu.mant_correctivo')): ?><a class="dropdown-item"
+                                                                         href="<?= esc(base_url('modulo3/mantenimiento_correctivo')) ?>">
+                                    <i class="bi bi-wrench-adjustable-circle me-2"></i>Mant. Correctivo</a><?php endif; ?>
 
-                        <?php if ($secMantenimiento && $secLogistica): ?><div class="dropdown-divider"></div><?php endif; ?>
+                            <?php if ($secMantenimiento && $secLogistica): ?><div class="dropdown-divider"></div><?php endif; ?>
 
-                        <?php if (can('menu.logistica_preparacion')): ?><a class="dropdown-item"
-                                                                           href="<?= esc(base_url('modulo3/logistica_preparacion')) ?>">
-                                <i class="bi bi-box-seam me-2"></i>Prep. Envíos</a><?php endif; ?>
-                        <?php if (can('menu.logistica_gestion')): ?><a class="dropdown-item"
-                                                                       href="<?= esc(base_url('modulo3/logistica_gestion')) ?>">
-                                <i class="bi bi-truck me-2"></i>Gestión Envíos</a><?php endif; ?>
-                        <?php if (can('menu.logistica_documentos')): ?><a class="dropdown-item"
-                                                                          href="<?= esc(base_url('modulo3/logistica_documentos')) ?>">
-                                <i class="bi bi-file-earmark-text me-2"></i>Docs. Embarque</a><?php endif; ?>
-                        <?php if (can('menu.inventario_almacen')): ?><a class="dropdown-item"
-                                                                        href="<?= esc(base_url('almacen/inventario')) ?>">
-                                <i class="bi bi-boxes me-2"></i>Inventario Almacén</a><?php endif; ?>
+                            <?php if (can('menu.logistica_preparacion')): ?><a class="dropdown-item"
+                                                                               href="<?= esc(base_url('modulo3/logistica_preparacion')) ?>">
+                                    <i class="bi bi-box-seam me-2"></i>Prep. Envíos</a><?php endif; ?>
+                            <?php if (can('menu.logistica_gestion')): ?><a class="dropdown-item"
+                                                                           href="<?= esc(base_url('modulo3/logistica_gestion')) ?>">
+                                    <i class="bi bi-truck me-2"></i>Gestión Envíos</a><?php endif; ?>
+                            <?php if (can('menu.logistica_documentos')): ?><a class="dropdown-item"
+                                                                              href="<?= esc(base_url('modulo3/logistica_documentos')) ?>">
+                                    <i class="bi bi-file-earmark-text me-2"></i>Docs. Embarque</a><?php endif; ?>
+                            <?php if (can('menu.inventario_almacen')): ?><a class="dropdown-item"
+                                                                            href="<?= esc(base_url('almacen/inventario')) ?>">
+                                    <i class="bi bi-boxes me-2"></i>Inventario Almacén</a><?php endif; ?>
 
-                        <?php if ($secLogistica && $secAdmin): ?><div class="dropdown-divider"></div><?php endif; ?>
+                            <?php if ($secLogistica && $secAdmin): ?><div class="dropdown-divider"></div><?php endif; ?>
 
-                        <?php if (can('menu.reportes')): ?><a class="dropdown-item"
-                                                              href="<?= esc(base_url('modulo3/reportes')) ?>"><i
-                                        class="bi bi-bar-chart-line me-2"></i>Reportes</a><?php endif; ?>
-                        <?php if (can('menu.roles')): ?><a class="dropdown-item"
-                                                           href="<?= esc(base_url('modulo11/roles')) ?>"><i
-                                        class="bi bi-person-gear me-2"></i>Roles</a><?php endif; ?>
-                        <?php if (can('menu.usuarios')): ?><a class="dropdown-item"
-                                                              href="<?= esc(base_url('modulo11/usuarios')) ?>"><i
-                                        class="bi bi-shield-lock me-2"></i>Gestión Usuarios</a><?php endif; ?>
-                    </div>
-                </li>
-            </ul>
-        <?php endif; ?>
+                            <?php if (can('menu.reportes')): ?><a class="dropdown-item"
+                                                                  href="<?= esc(base_url('modulo3/reportes')) ?>"><i
+                                            class="bi bi-bar-chart-line me-2"></i>Reportes</a><?php endif; ?>
+                            <?php if (can('menu.roles')): ?><a class="dropdown-item"
+                                                               href="<?= esc(base_url('modulo11/roles')) ?>"><i
+                                            class="bi bi-person-gear me-2"></i>Roles</a><?php endif; ?>
+                            <?php if (can('menu.usuarios')): ?><a class="dropdown-item"
+                                                                  href="<?= esc(base_url('modulo11/usuarios')) ?>"><i
+                                            class="bi bi-shield-lock me-2"></i>Gestión Usuarios</a><?php endif; ?>
+                        </div>
+                    </li>
+                </ul>
+            <?php endif; ?>
         </div>
     </div>
 </nav>
