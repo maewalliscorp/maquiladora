@@ -34,7 +34,8 @@ $routes->get('/logout',          'UsuarioController::logout');
 
 // API sueltos
 $routes->get('api/maquiladoras', 'UsuarioController::getMaquiladoras');
-
+// Agrega esta línea con las demás rutas
+$routes->get('maquiladora', 'Maquiladora::index', ['as' => 'maquiladora']);
 // Módulo 11 - Usuarios (acciones AJAX)
 $routes->post('modulo11/eliminar_usuario',       'Modulos::m11_eliminar_usuario');
 $routes->get ('modulo11/obtener_usuario/(:num)', 'Modulos::m11_obtener_usuario/$1');

@@ -115,6 +115,11 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                 </li>
 
                 <?php if (can('menu.catalogo_disenos')): ?>
+                    <li class="nav-item">
+    <a class="nav-link" href="<?= site_url('maquiladora') ?>">
+        <i class="bi bi-building me-1"></i> Mi Maquiladora
+    </a>
+</li>
                     <li class="nav-item"><a class="nav-link text-dark"
                                             href="<?= esc(base_url('modulo2/catalogodisenos')) ?>"><i
                                     class="bi bi-brush me-2"></i>Catálogo de Diseños</a></li>

@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pedido <?= esc($pedido['folio'] ?? 'N/A') ?></title>
+    <title>Orden de Compra <?= esc($pedido['folio'] ?? 'N/A') ?></title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+        @page {
+            margin: 1.5cm 1.5cm;
         }
         body {
             font-family: 'DejaVu Sans', Arial, sans-serif;
@@ -20,24 +23,55 @@
         .container {
             max-width: 210mm;
             margin: 0 auto;
-            padding: 20mm 15mm;
+        }
+        .letterhead {
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .letterhead h1 {
+            color: #000;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+        .letterhead .maquiladora-info {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 10px;
+            line-height: 1.4;
+        }
+        .letterhead .document-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 15px 0 10px;
+            text-transform: uppercase;
+        }
+        .letterhead .document-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            margin-bottom: 15px;
         }
         .header {
-            border-bottom: 2px solid #000;
-            padding-bottom: 12px;
-            margin-bottom: 25px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
         }
         .header h1 {
             color: #000;
-            font-size: 28px;
+            font-size: 18px;
             font-weight: 700;
-            margin-bottom: 8px;
-            letter-spacing: 1px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
         }
         .header .folio {
-            font-size: 12px;
+            font-size: 11px;
             color: #000;
-            font-weight: 400;
+            font-weight: 600;
         }
         .info-section {
             margin-bottom: 25px;
@@ -147,10 +181,38 @@
 </head>
 <body>
     <div class="container">
-        <!-- Encabezado -->
+        <!-- Membrete de la maquiladora -->
+        <div class="letterhead">
+            <?php if (!empty($maquiladora)): ?>
+                <h1><?= esc($maquiladora['nombre'] ?? 'SIN NOMBRE') ?></h1>
+                <div class="maquiladora-info">
+                    <?php if (!empty($maquiladora['domicilio'])): ?>
+                        <?= esc($maquiladora['domicilio']) ?><br>
+                    <?php endif; ?>
+                    <?php if (!empty($maquiladora['telefono'])): ?>
+                        Tel: <?= esc($maquiladora['telefono']) ?>
+                    <?php endif; ?>
+                    <?php if (!empty($maquiladora['correo'])): ?>
+                        | Email: <?= esc($maquiladora['correo']) ?>
+                    <?php endif; ?>
+                    <?php if (!empty($maquiladora['dueno'])): ?>
+                        <br>Representante: <?= esc($maquiladora['dueno']) ?>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+            
+            <div class="document-title">ORDEN DE COMPRA</div>
+            
+            <div class="document-info">
+                <div><strong>Folio:</strong> <?= esc($pedido['folio'] ?? 'N/A') ?></div>
+                <div><strong>Fecha:</strong> <?= date('d/m/Y') ?></div>
+            </div>
+        </div>
+        
+        <!-- Contenido principal -->
         <div class="header">
-            <h1>ORDEN DE COMPRA</h1>
-            <div class="folio">Folio: <?= esc($pedido['folio'] ?? 'N/A') ?></div>
+            <h1>DETALLE DE LA ORDEN</h1>
+            <div class="folio">Folio: <?= esc($pedido['folio'] ?? 'N/A') ?> | Fecha: <?= date('d/m/Y') ?></div>
         </div>
 
         <!-- Información del Pedido -->

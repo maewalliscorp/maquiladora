@@ -1251,6 +1251,64 @@ class Modulos extends BaseController
      */
     public function m1_pedido_pdf($id = null)
     {
+        // Obtener información de la maquiladora del usuario logueado
+        $maquiladora = [];
+        // Obtener el ID de la maquiladora de la sesión (puede estar como 'maquiladora_id' o 'maquiladoraIdFK')
+        $maquiladoraId = session()->get('maquiladora_id') ?? session()->get('maquiladoraIdFK');
+        
+        log_message('debug', 'ID de maquiladora obtenido de la sesión: ' . $maquiladoraId);
+        
+        if ($maquiladoraId) {
+            $db = \Config\Database::connect();
+            
+            // Primero intentamos con la tabla en minúsculas
+            $maquiladora = $db->table('maquiladora')
+                ->select([
+                    'idmaquiladora',
+                    'Nombre_Maquila AS nombre',
+                    'Dueno AS dueno',
+                    'Telefono AS telefono',
+                    'Correo AS correo',
+                    'Domicilio AS domicilio'
+                ])
+                ->where('idmaquiladora', $maquiladoraId)
+                ->get()
+                ->getRowArray();
+                
+            log_message('debug', 'Primer intento - Datos de la maquiladora: ' . print_r($maquiladora, true));
+            
+            // Si no se encontró, intentar con mayúsculas
+            if (empty($maquiladora)) {
+                $maquiladora = $db->table('Maquiladora')
+                    ->select([
+                        'idmaquiladora',
+                        'Nombre_Maquila AS nombre',
+                        'Dueno AS dueno',
+                        'Telefono AS telefono',
+                        'Correo AS correo',
+                        'Domicilio AS domicilio'
+                    ])
+                    ->where('idmaquiladora', $maquiladoraId)
+                    ->get()
+                    ->getRowArray();
+                
+                log_message('debug', 'Segundo intento - Datos de la maquiladora: ' . print_r($maquiladora, true));
+            }
+            
+            // Si aún no hay datos, crear un array con valores por defecto
+            if (empty($maquiladora)) {
+                $maquiladora = [
+                    'idmaquiladora' => $maquiladoraId,
+                    'nombre' => 'Maquiladora no encontrada',
+                    'dueno' => 'No especificado',
+                    'telefono' => 'No especificado',
+                    'correo' => 'No especificado',
+                    'domicilio' => 'No especificado'
+                ];
+                log_message('error', 'No se pudo encontrar la maquiladora con ID: ' . $maquiladoraId);
+            }
+        }
+
         $id = (int)($id ?? 0);
         if ($id <= 0) {
             return $this->response->setStatusCode(400)->setJSON(['error' => 'ID inválido']);
@@ -1332,6 +1390,7 @@ class Modulos extends BaseController
 
             // Preparar datos para la vista del PDF
             $data = [
+                'maquiladora' => $maquiladora,
                 'pedido' => [
                     'id' => (int)($detalle['id'] ?? $id),
                     'folio' => $detalle['folio'] ?? '',
@@ -1760,12 +1819,62 @@ class Modulos extends BaseController
     }
 
     public function reportes()
-    {
-        return view('modulos/reportes', $this->payload([
-            'title'      => 'Reportes',
-            'notifCount' => 0,
-        ]));
+{
+    $maquiladora = [];
+    $maquiladoraId = session()->get('maquiladora_id');
+    
+    // Depuración
+    log_message('debug', 'ID de maquiladora en sesión: ' . print_r($maquiladoraId, true));
+    
+    if ($maquiladoraId) {
+        try {
+            $db = \Config\Database::connect();
+            
+            // Verificar si la tabla existe
+            $tables = $db->listTables();
+            log_message('debug', 'Tablas en la base de datos: ' . print_r($tables, true));
+            
+            // Obtener los campos de la tabla maquiladora
+            $fields = $db->getFieldData('maquiladora');
+            log_message('debug', 'Campos de la tabla maquiladora: ' . print_r(array_column($fields, 'name'), true));
+            
+            // Intentar con minúsculas primero
+            $maquiladora = $db->table('maquiladora')
+                ->select('*')
+                ->where('idmaquiladora', $maquiladoraId)
+                ->get()
+                ->getRowArray();
+                
+            log_message('debug', 'Consulta 1 (minúsculas): ' . $db->getLastQuery());
+            
+            // Si no se encontró, intentar con mayúsculas
+            if (empty($maquiladora)) {
+                $maquiladora = $db->table('Maquiladora')
+                    ->select('*')
+                    ->where('idmaquiladora', $maquiladoraId)
+                    ->get()
+                    ->getRowArray();
+                    
+                log_message('debug', 'Consulta 2 (mayúsculas): ' . $db->getLastQuery());
+            }
+            
+            log_message('debug', 'Datos de maquiladora: ' . print_r($maquiladora, true));
+            
+        } catch (\Exception $e) {
+            log_message('error', 'Error al obtener datos de la maquiladora: ' . $e->getMessage());
+        }
     }
+
+    return view('modulos/reportes', $this->payload([
+        'title'      => 'Reportes',
+        'maquiladora' => $maquiladora,
+        'notifCount' => 0,
+        'debug_info' => [
+            'maquiladora_id' => $maquiladoraId,
+            'maquiladora_data' => $maquiladora
+        ]
+    ]));
+}
 
     public function notificaciones()
     {
@@ -2385,8 +2494,12 @@ class Modulos extends BaseController
                         e.email, e.telefono, e.domicilio,
                         e.fecha_nac, e.curp, e.foto,
                         TIMESTAMPDIFF(YEAR, e.fecha_nac, CURDATE()) AS edad,
-                        u.username, u.correo, u.active AS usuario_activo
-                     FROM empleado e INNER JOIN users u ON e.idusuario = u.id
+                        u.username, u.correo, u.active AS usuario_activo,
+                        u.maquiladoraIdFK AS maquiladoraID,
+                        m.Nombre_Maquila AS nombre_maquiladora
+                     FROM empleado e 
+                     INNER JOIN users u ON e.idusuario = u.id
+                     LEFT JOIN maquiladora m ON u.maquiladoraIdFK = m.idmaquiladora
                      WHERE u.id = ? LIMIT 1', [$uid]
                 )->getRowArray();
             } catch (\Throwable $e1) { $row = null; }
@@ -2399,8 +2512,12 @@ class Modulos extends BaseController
                             e.email, e.telefono, e.domicilio,
                             e.fecha_nac, e.curp, e.foto,
                             TIMESTAMPDIFF(YEAR, e.fecha_nac, CURDATE()) AS edad,
-                            u.username, u.correo, u.active AS usuario_activo
-                         FROM Empleado e INNER JOIN Users u ON e.idusuario = u.id
+                            u.username, u.correo, u.active AS usuario_activo,
+                            u.maquiladoraIdFK AS maquiladoraID,
+                            m.Nombre_Maquila AS nombre_maquiladora
+                         FROM Empleado e 
+                         INNER JOIN Users u ON e.idusuario = u.id
+                         LEFT JOIN Maquiladora m ON u.maquiladoraIdFK = m.idmaquiladora
                          WHERE u.id = ? LIMIT 1', [$uid]
                     )->getRowArray();
                 } catch (\Throwable $e2) { $row = null; }

@@ -62,7 +62,7 @@ $logged_in = session()->get('logged_in');
 
                 <div class="info-section">
                     <h6>Información Laboral</h6>
-                    <p><strong>Empresa:</strong> <?= esc(session()->get('Nombre_Maquila') ?? 'No asignada') ?></p>
+                    <p><strong>Empresa:</strong> <?= esc($empleado['nombre_maquiladora'] ?? 'No asignada') ?></p>
                     <p><strong>Puesto:</strong> <?= esc($empleado['puesto'] ?? '') ?></p>
                     <p><strong>No. Empleado:</strong> <?= esc($empleado['noEmpleado'] ?? '') ?></p>
                     <p><strong>Estatus Usuario:</strong> <?= isset($empleado['usuario_activo']) ? (((int)$empleado['usuario_activo'] === 1) ? 'Activo' : 'Inactivo') : '-' ?></p>
