@@ -233,7 +233,7 @@ $routes->get ('mtto/api/revisiones',       'MttoProgramacion::apiEventos', ['fil
 $routes->get ('mtto/alertas/run',          'MttoAlertas::run');
 
 /* --------------------------------------------------------------------
- * Módulo 3 (Dashboard, WIP, Inspección, Mantenimiento, Logística, MRP alias)
+ * Módulo 3 (Dashboard, WIP, Inspección, Mantenimiento, Logística)
  * ------------------------------------------------------------------*/
 $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
 
@@ -311,18 +311,51 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     /* =========================
      * LOGÍSTICA · PREPARACIÓN / PACKING
      * ========================= */
-    $routes->get('logistica_preparacion', 'LogisticaController::preparacion', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
-    $routes->get('preparacion',           'LogisticaController::preparacion');
+    // Vista principal (usa app/Views/modulo3/logistica_preparacion.php)
+    $routes->get(
+        'logistica_preparacion',
+        'EmbarquesController::packing',
+        ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+    );
+    // Alias corto /modulo3/preparacion
+    $routes->get(
+        'preparacion',
+        'EmbarquesController::packing'
+    );
+    // Alias opcional
+    $routes->get(
+        'embarques/packing',
+        'EmbarquesController::packing'
+    );
 
-    // Embarques
-    $routes->post('embarques/crear',                'LogisticaController::crearEmbarque', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
-    $routes->post('embarques/(:num)/agregar-orden', 'LogisticaController::agregarOrden/$1');
-    $routes->get ('embarques/(:num)/packing-list',  'LogisticaController::packingList/$1');
-    $routes->get ('embarques/(:num)/etiquetas',     'LogisticaController::etiquetas/$1');
+    // Embarques (acciones desde la vista logistica_preparacion)
+    $routes->post(
+        'embarques/crear',
+        'EmbarquesController::crear',
+        ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+    );
+    $routes->post(
+        'embarques/(:num)/agregar-orden',
+        'EmbarquesController::agregarOrden/$1'
+    );
+    $routes->get(
+        'embarques/(:num)/packing-list',
+        'EmbarquesController::packingList/$1'
+    );
+    $routes->get(
+        'embarques/(:num)/etiquetas',
+        'EmbarquesController::etiquetas/$1'
+    );
 
-    // Acciones por pedido (OC)
-    $routes->get ('ordenes/(:num)/json',   'LogisticaController::ordenJson/$1');
-    $routes->post('ordenes/(:num)/editar', 'LogisticaController::ordenEditar/$1');
+    // Acciones por pedido (OC) llamadas vía JS desde logistica_preparacion
+    $routes->get(
+        'ordenes/(:num)/json',
+        'OrdenesController::json/$1'
+    );
+    $routes->post(
+        'ordenes/(:num)/editar',
+        'OrdenesController::editar/$1'
+    );
 
     /* =========================
      * LOGÍSTICA · GESTIÓN (Tracking)

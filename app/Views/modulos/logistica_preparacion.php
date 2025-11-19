@@ -1,3 +1,7 @@
+<?php
+// app/Views/modulo3/logistica_preparacion.php
+?>
+
 <?= $this->extend('layouts/main') ?>
 
 <?php
@@ -54,6 +58,57 @@ $ordenes  = $ordenes  ?? [];
     </div>
 <?php endif; ?>
 
+<!-- ===== RESUMEN EMBARQUE ACTUAL ===== -->
+<?php if (! empty($embarque['id'])): ?>
+    <div class="card mb-4 border-success">
+        <div class="card-header bg-success text-white">
+            <strong>Embarque abierto #<?= (int)$embarque['id'] ?></strong>
+        </div>
+        <div class="card-body py-2">
+            <div class="row">
+                <div class="col-md-3">
+                    <small class="text-muted d-block">Folio</small>
+                    <span><?= esc($embarque['folio'] ?? '-') ?></span>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted d-block">Destino</small>
+                    <span>
+                        <?php
+                        $nombreCliente = '';
+                        if (!empty($embarque['clienteId']) && !empty($clientes)) {
+                            foreach ($clientes as $cli) {
+                                if ((int)$cli['id'] === (int)$embarque['clienteId']) {
+                                    $nombreCliente = $cli['nombre'];
+                                    break;
+                                }
+                            }
+                        }
+                        echo esc($nombreCliente ?: 'Sin cliente asignado');
+                        ?>
+                    </span>
+                </div>
+                <div class="col-md-2">
+                    <small class="text-muted d-block">Cajas</small>
+                    <span><?= esc($embarque['cajas'] ?? 0) ?></span>
+                </div>
+                <div class="col-md-2">
+                    <small class="text-muted d-block">Peso total (kg)</small>
+                    <span><?= esc($embarque['pesoTotal'] ?? 0) ?></span>
+                </div>
+                <div class="col-md-2">
+                    <small class="text-muted d-block">Volumen (m³)</small>
+                    <span><?= esc($embarque['volumen'] ?? 0) ?></span>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php else: ?>
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle me-2"></i>
+        No hay embarque abierto. Usa el botón <strong>Agregar</strong> para crear uno y poder asignar pedidos.
+    </div>
+<?php endif; ?>
+
 <!-- ===== MODAL: Crear/usar embarque ===== -->
 <div class="modal fade" id="embarqueModal" tabindex="-1" aria-labelledby="embarqueModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -76,7 +131,7 @@ $ordenes  = $ordenes  ?? [];
                             <option value="">— Selecciona —</option>
                             <?php foreach ($clientes as $cli): ?>
                                 <option value="<?= (int)$cli['id'] ?>"
-                                        <?= isset($embarque['clienteId']) && (int)$embarque['clienteId']===(int)$cli['id'] ? 'selected' : '' ?>>
+                                        <?= isset($embarque['clienteId']) && (int)$embarque['clienteId'] === (int)$cli['id'] ? 'selected' : '' ?>>
                                     <?= esc($cli['nombre']) ?>
                                 </option>
                             <?php endforeach; ?>
@@ -84,15 +139,18 @@ $ordenes  = $ordenes  ?? [];
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Cajas</label>
-                        <input type="number" class="form-control" placeholder="5">
+                        <input type="number" name="cajas" class="form-control" placeholder="5"
+                               value="<?= esc($embarque['cajas'] ?? '') ?>">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Peso total (kg)</label>
-                        <input type="number" step="0.01" class="form-control" placeholder="48">
+                        <input type="number" name="pesoTotal" step="0.01" class="form-control" placeholder="48"
+                               value="<?= esc($embarque['pesoTotal'] ?? '') ?>">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Volumen (m³)</label>
-                        <input type="number" step="0.01" class="form-control" placeholder="0.9">
+                        <input type="number" name="volumen" step="0.01" class="form-control" placeholder="0.9"
+                               value="<?= esc($embarque['volumen'] ?? '') ?>">
                     </div>
                 </form>
             </div>
@@ -135,7 +193,7 @@ $ordenes  = $ordenes  ?? [];
     </div>
 </div>
 
-<!-- ===== MODAL: Editar (ahora con Destino/OP/Cajas/Peso) ===== -->
+<!-- ===== MODAL: Editar ===== -->
 <div class="modal fade" id="editarModal" tabindex="-1" aria-labelledby="editarModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -333,7 +391,7 @@ $ordenes  = $ordenes  ?? [];
             });
         });
 
-        // Editar (rellena todos los campos incluidos los nuevos)
+        // Editar
         document.querySelectorAll('.btn-editar').forEach(btn=>{
             btn.addEventListener('click', async ()=>{
                 const id = btn.dataset.id;
@@ -347,7 +405,6 @@ $ordenes  = $ordenes  ?? [];
                 document.getElementById('e-moneda').value  = d.moneda ?? 'MXN';
                 document.getElementById('e-total').value   = d.total ?? '';
 
-                // Nuevos
                 document.getElementById('e-clienteId').value = d.clienteId ?? '';
                 document.getElementById('e-op').value        = d.op ?? '';
                 document.getElementById('e-cajas').value     = d.cajas ?? '';

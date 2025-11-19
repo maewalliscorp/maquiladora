@@ -6,15 +6,16 @@ use CodeIgniter\Model;
 
 class EmbarqueItemModel extends Model
 {
-    protected $table         = 'embarque_item';
-    protected $primaryKey    = 'id';
-    protected $returnType    = 'array';
-    protected $allowedFields = ['embarqueId','ordenCompraId','productoId','cantidad','unidadMedida'];
+    protected $table      = 'embarque_item';
+    protected $primaryKey = 'id';
+    protected $returnType = 'array';
 
-    public function existeVinculo(int $embarqueId, int $ordenId): bool
-    {
-        return (bool) $this->where('embarqueId', $embarqueId)
-            ->where('ordenCompraId', $ordenId)
-            ->first();
-    }
+    // Solo las columnas seguras que sabemos que existen
+    protected $allowedFields = [
+        'maquiladoraID',
+        'embarqueId',
+        'ordenCompraId',
+        // Si en tu tabla tienes más columnas (ordenCompraItemId, productoId, etc.)
+        // y quieres manejarlas, las agregas aquí luego.
+    ];
 }

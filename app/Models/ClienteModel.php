@@ -9,12 +9,21 @@ class ClienteModel extends Model
     protected $table         = 'cliente';
     protected $primaryKey    = 'id';
     protected $returnType    = 'array';
-    protected $allowedFields = ['nombre', 'email', 'telefono', 'rfc', 'tipo_persona', 'fechaRegistro']; // agrega los que uses
+    protected $allowedFields = [
+        'nombre',
+        'email',
+        'telefono',
+        'rfc',
+        'tipo_persona',
+        'fechaRegistro',
+    ];
 
     public function listado(?int $maquiladoraId = null): array
     {
         if ($maquiladoraId === null) {
-            return $this->select('id, nombre')->orderBy('nombre','ASC')->findAll();
+            return $this->select('id, nombre')
+                ->orderBy('nombre', 'ASC')
+                ->findAll();
         }
 
         $db = \Config\Database::connect();
@@ -22,8 +31,9 @@ class ClienteModel extends Model
         return $db->table('cliente c')
             ->select('c.id, c.nombre')
             ->join('Cliente_Maquiladora cm', 'cm.clienteFK = c.id', 'inner')
-            ->where('cm.maquiladoraFK', (int)$maquiladoraId)
-            ->orderBy('c.nombre','ASC')
-            ->get()->getResultArray();
+            ->where('cm.maquiladoraFK', (int) $maquiladoraId)
+            ->orderBy('c.nombre', 'ASC')
+            ->get()
+            ->getResultArray();
     }
 }

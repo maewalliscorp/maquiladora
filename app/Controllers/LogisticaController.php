@@ -24,25 +24,39 @@ class LogisticaController extends BaseController
     private function tableExists(string $table): bool
     {
         try {
-            return (bool) $this->db()->query('SHOW TABLES LIKE ' . $this->db()->escape($table))->getRowArray();
-        } catch (\Throwable $e) { return false; }
+            return (bool) $this->db()
+                ->query('SHOW TABLES LIKE ' . $this->db()->escape($table))
+                ->getRowArray();
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
-    /** @return array<string,bool> */
+    /**
+     * @return array<string,bool>
+     */
     private function hasCols(string $table, array $need): array
     {
-        try { $cols = array_flip($this->db()->getFieldNames($table)); }
-        catch (\Throwable $e) { $cols = []; }
+        try {
+            $cols = array_flip($this->db()->getFieldNames($table));
+        } catch (\Throwable $e) {
+            $cols = [];
+        }
         $out = [];
-        foreach ($need as $c) $out[$c] = isset($cols[$c]);
+        foreach ($need as $c) {
+            $out[$c] = isset($cols[$c]);
+        }
         return $out;
     }
 
     /** Filtra $data a solo columnas existentes ($table). */
     private function filterToRealColumns(string $table, array $data): array
     {
-        try { $cols = array_flip($this->db()->getFieldNames($table)); }
-        catch (\Throwable $e) { $cols = []; }
+        try {
+            $cols = array_flip($this->db()->getFieldNames($table));
+        } catch (\Throwable $e) {
+            $cols = [];
+        }
         return array_intersect_key($data, $cols);
     }
 
@@ -51,35 +65,73 @@ class LogisticaController extends BaseController
      * =======================================================*/
     public function preparacion()
     {
-        $embarque = [];
-        $clientes = [];
-        $ordenes  = [];
-        $maquiladoraId = session()->get('maquiladora_id');
-        try { $embarque = (new EmbarqueModel())->getAbiertoActual($maquiladoraId ? (int)$maquiladoraId : null) ?? []; } catch (\Throwable $e) {}
-        try { $clientes = (new ClienteModel())->listado($maquiladoraId ? (int)$maquiladoraId : null) ?? []; } catch (\Throwable $e) {}
-        try { $ordenes  = (new OrdenCompraModel())->listarPendientes($maquiladoraId ? (int)$maquiladoraId : null) ?? []; } catch (\Throwable $e) {}
+        $session       = session();
+        $maquiladoraId = $session->get('maquiladora_id')
+            ?? $session->get('maquiladoraID')
+            ?? null;
 
-        return view('modulos/logistica_preparacion', compact('embarque','clientes','ordenes'));
+        $maqId = $maquiladoraId ? (int) $maquiladoraId : null;
+
+        // Embarque abierto actual (último con estatus "abierto")
+        try {
+            $embarque = (new EmbarqueModel())
+                ->getAbiertoActual($maqId) ?? [];
+        } catch (\Throwable $e) {
+            $embarque = [];
+        }
+
+        // Catálogo de clientes (por maquiladora si aplica)
+        try {
+            $clientes = (new ClienteModel())
+                ->listado($maqId) ?? [];
+        } catch (\Throwable $e) {
+            $clientes = [];
+        }
+
+        // Pedidos para consolidar en packing:
+        //  - Órdenes sin embarque_item
+        //  - + Órdenes ligadas al embarque abierto actual
+        try {
+            $ordenModel = new OrdenCompraModel();
+            $ordenes    = $ordenModel->listarParaPacking(
+                $maqId,
+                $embarque['id'] ?? null
+            );
+        } catch (\Throwable $e) {
+            $ordenes = [];
+        }
+
+        return view('modulos/logistica_preparacion', [
+            'embarque' => $embarque,
+            'clientes' => $clientes,
+            'ordenes'  => $ordenes,
+        ]);
     }
 
     public function crearEmbarque()
     {
-        $folio     = trim((string) $this->request->getPost('folio'));
-        $clienteId = (int) $this->request->getPost('clienteId');
+        $folio       = trim((string) $this->request->getPost('folio'));
+        $clienteId   = (int) $this->request->getPost('clienteId');
+        $session     = session();
+        $maquilaSess = $session->get('maquiladora_id') ?? $session->get('maquiladoraID') ?? null;
 
         if (!$this->tableExists('embarque')) {
             return redirect()->back()->with('error', 'La tabla "embarque" no existe.');
         }
 
-        $need = $this->hasCols('embarque', ['folio','clienteId']);
+        $need = $this->hasCols('embarque', ['folio', 'clienteId']);
         if (($need['folio'] && $folio === '') || ($need['clienteId'] && $clienteId <= 0)) {
             return redirect()->back()->with('error', 'Folio y Cliente son obligatorios.');
         }
 
         $m = new EmbarqueModel();
 
-        if ($need['folio'] && $this->hasCols('embarque',['estatus'])['estatus']) {
-            $exist = $m->where('folio', $folio)->where('estatus', 'abierto')->first();
+        // Si ya hay un embarque abierto con ese folio, lo reutilizamos
+        $colsEmb = $this->hasCols('embarque', ['folio', 'estatus']);
+        if ($colsEmb['folio'] && $colsEmb['estatus']) {
+            $exist = $m->where('folio', $folio)
+                ->where('estatus', 'abierto')
+                ->first();
             if ($exist) {
                 return redirect()->back()->with('ok', 'Usando embarque abierto #' . ($exist['id'] ?? ''));
             }
@@ -91,13 +143,27 @@ class LogisticaController extends BaseController
             'fecha'     => date('Y-m-d'),
             'estatus'   => 'abierto',
         ];
+
+        // Maquiladora si la columna existe
+        if ($maquilaSess) {
+            $colsMaq = $this->hasCols('embarque', ['maquiladoraID', 'maquiladoraId']);
+            if ($colsMaq['maquiladoraID'] ?? false) {
+                $payload['maquiladoraID'] = (int) $maquilaSess;
+            } elseif ($colsMaq['maquiladoraId'] ?? false) {
+                $payload['maquiladoraId'] = (int) $maquilaSess;
+            }
+        }
+
         $data = $this->filterToRealColumns('embarque', $payload);
         if (empty($data)) {
             return redirect()->back()->with('error', 'No hay columnas válidas para guardar en "embarque".');
         }
 
-        try { $id = $m->insert($data, true); }
-        catch (\Throwable $e) { return redirect()->back()->with('error', 'No se pudo crear el embarque: '.$e->getMessage()); }
+        try {
+            $id = $m->insert($data, true);
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'No se pudo crear el embarque: ' . $e->getMessage());
+        }
 
         return redirect()->back()->with('ok', 'Embarque creado #' . $id);
     }
@@ -118,13 +184,15 @@ class LogisticaController extends BaseController
         $mEmb  = new EmbarqueModel();
         $mItem = new EmbarqueItemModel();
 
-        $emb = $mEmb->find($embarqueId);
-        $hasEstatus = $this->hasCols('embarque',['estatus'])['estatus'];
+        $emb       = $mEmb->find($embarqueId);
+        $hasEstatus = $this->hasCols('embarque', ['estatus'])['estatus'] ?? false;
+
         if (!$emb || ($hasEstatus && ($emb['estatus'] ?? '') !== 'abierto')) {
             return redirect()->back()->with('error', 'El embarque no existe o no está abierto.');
         }
 
-        $dupCheck = $this->hasCols('embarque_item',['embarqueId','ordenCompraId']);
+        // Evitar duplicados (embarqueId + ordenCompraId)
+        $dupCheck = $this->hasCols('embarque_item', ['embarqueId', 'ordenCompraId']);
         if ($dupCheck['embarqueId'] && $dupCheck['ordenCompraId']) {
             if ($mItem->where('embarqueId', $embarqueId)->where('ordenCompraId', $ordenId)->first()) {
                 return redirect()->back()->with('ok', 'El pedido ya estaba agregado a este envío.');
@@ -142,8 +210,11 @@ class LogisticaController extends BaseController
             return redirect()->back()->with('error', 'No hay columnas válidas para guardar en "embarque_item".');
         }
 
-        try { $mItem->insert($data); }
-        catch (\Throwable $e) { return redirect()->back()->with('error','No se pudo agregar: '.$e->getMessage()); }
+        try {
+            $mItem->insert($data);
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'No se pudo agregar: ' . $e->getMessage());
+        }
 
         return redirect()->back()->with('ok', 'Pedido agregado al envío.');
     }
@@ -152,30 +223,76 @@ class LogisticaController extends BaseController
 
     public function ordenJson($id)
     {
-        $id   = (int) $id;
-        $row  = null; $cli = null;
+        $id = (int) $id;
 
-        try { $row = (new OrdenCompraModel())->find($id); } catch (\Throwable $e) {}
-        if (!$row) return $this->response->setStatusCode(404)->setJSON(['error' => 'No encontrado']);
+        if (!$this->tableExists('orden_compra')) {
+            return $this->response
+                ->setStatusCode(404)
+                ->setJSON(['error' => 'Tabla orden_compra no existe']);
+        }
 
-        try {
-            if (!empty($row['clienteId'])) {
-                $cli = (new ClienteModel())->find((int)$row['clienteId']);
-            }
-        } catch (\Throwable $e) {}
+        $db      = $this->db();
+        $hasPeso = $this->hasCols('orden_compra', ['peso'])['peso'] ?? false;
+
+        $select = "
+            oc.id,
+            oc.folio,
+            oc.fecha,
+            oc.estatus,
+            oc.moneda,
+            oc.total,
+            oc.clienteId,
+            c.nombre AS cliente,
+            op.folio AS op,
+            COALESCE(SUM(oci.cantidad), 0) AS cajas
+        ";
+        $select .= $hasPeso ? ", oc.peso" : ", NULL AS peso";
+
+        $builder = $db->table('orden_compra oc')
+            ->select($select)
+            ->join('cliente c', 'c.id = oc.clienteId', 'left')
+            ->join('orden_produccion op', 'op.ordenCompraId = oc.id', 'left')
+            ->join('orden_compra_item oci', 'oci.ordenId = oc.id', 'left')
+            ->where('oc.id', $id);
+
+        $groupBy = '
+            oc.id,
+            oc.folio,
+            oc.fecha,
+            oc.estatus,
+            oc.moneda,
+            oc.total,
+            oc.clienteId,
+            c.nombre,
+            op.folio
+        ';
+        if ($hasPeso) {
+            $groupBy .= ', oc.peso';
+        }
+
+        $row = $builder
+            ->groupBy($groupBy)
+            ->get()
+            ->getRowArray();
+
+        if (!$row) {
+            return $this->response
+                ->setStatusCode(404)
+                ->setJSON(['error' => 'No encontrado']);
+        }
 
         return $this->response->setJSON([
-            'id'        => $row['id']         ?? null,
-            'folio'     => $row['folio']      ?? null,
-            'fecha'     => $row['fecha']      ?? null,
-            'estatus'   => $row['estatus']    ?? null,
-            'moneda'    => $row['moneda']     ?? null,
-            'total'     => $row['total']      ?? null,
-            'clienteId' => $row['clienteId']  ?? null,
-            'cliente'   => $cli['nombre']     ?? null,
-            'op'        => $row['op']         ?? null,
-            'cajas'     => $row['cajas']      ?? null,
-            'peso'      => $row['peso']       ?? null,
+            'id'        => $row['id']        ?? null,
+            'folio'     => $row['folio']     ?? null,
+            'fecha'     => $row['fecha']     ?? null,
+            'estatus'   => $row['estatus']   ?? null,
+            'moneda'    => $row['moneda']    ?? null,
+            'total'     => $row['total']     ?? null,
+            'clienteId' => $row['clienteId'] ?? null,
+            'cliente'   => $row['cliente']   ?? null,
+            'op'        => $row['op']        ?? null,
+            'cajas'     => $row['cajas']     ?? null,
+            'peso'      => $row['peso']      ?? null,
         ]);
     }
 
@@ -184,10 +301,15 @@ class LogisticaController extends BaseController
         $id  = (int) $id;
         $mOc = new OrdenCompraModel();
 
-        try { $exists = (bool) $mOc->find($id); }
-        catch (\Throwable $e) { $exists = false; }
+        try {
+            $exists = (bool) $mOc->find($id);
+        } catch (\Throwable $e) {
+            $exists = false;
+        }
 
-        if (!$exists) return redirect()->back()->with('error', 'Orden no encontrada');
+        if (!$exists) {
+            return redirect()->back()->with('error', 'Orden no encontrada');
+        }
 
         $payload = array_filter([
             'folio'     => $this->request->getPost('folio'),
@@ -199,38 +321,61 @@ class LogisticaController extends BaseController
             'op'        => $this->request->getPost('op'),
             'cajas'     => $this->request->getPost('cajas'),
             'peso'      => $this->request->getPost('peso'),
-        ], fn($v) => $v !== null && trim((string)$v) !== '');
+        ], fn($v) => $v !== null && trim((string) $v) !== '');
 
-        $table = property_exists($mOc, 'table') && !empty($mOc->table) ? $mOc->table : 'orden_compra';
-        $data  = $this->filterToRealColumns($table, $payload);
-        if (empty($data)) return redirect()->back()->with('error', 'Ningún campo editable coincide con la tabla.');
+        $table = property_exists($mOc, 'table') && !empty($mOc->table)
+            ? $mOc->table
+            : 'orden_compra';
 
-        try { $mOc->update($id, $data); }
-        catch (\Throwable $e) { return redirect()->back()->with('error','No se pudo actualizar: '.$e->getMessage()); }
+        $data = $this->filterToRealColumns($table, $payload);
+        if (empty($data)) {
+            return redirect()->back()->with('error', 'Ningún campo editable coincide con la tabla.');
+        }
+
+        try {
+            $mOc->update($id, $data);
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'No se pudo actualizar: ' . $e->getMessage());
+        }
 
         $ignored = array_diff(array_keys($payload), array_keys($data));
-        $msg = 'Pedido actualizado';
-        if (!empty($ignored)) $msg .= ' (se ignoraron: ' . implode(', ', $ignored) . ')';
+        $msg     = 'Pedido actualizado';
+        if (!empty($ignored)) {
+            $msg .= ' (se ignoraron: ' . implode(', ', $ignored) . ')';
+        }
+
         return redirect()->back()->with('ok', $msg);
     }
 
     /* ====== Placeholders documentos de packing ====== */
-    public function packingList($id) { return redirect()->back()->with('ok', 'Packing List generado (demo)'); }
-    public function etiquetas($id)   { return redirect()->back()->with('ok', 'Etiquetas generadas (demo)'); }
+    public function packingList($id)
+    {
+        return redirect()->back()->with('ok', 'Packing List generado (demo)');
+    }
+
+    public function etiquetas($id)
+    {
+        return redirect()->back()->with('ok', 'Etiquetas generadas (demo)');
+    }
 
     /* =========================================================
      *  TRACKING · GESTIÓN DE ENVÍOS
      * =======================================================*/
     public function gestion()
     {
-        $db = $this->db();
-        $maquiladoraId = session()->get('maquiladora_id');
+        $db           = $this->db();
+        $session      = session();
+        $maquiladoraId = $session->get('maquiladora_id')
+            ?? $session->get('maquiladoraID')
+            ?? null;
 
         if (!$this->tableExists('guia_envio')) {
             $transportistas = $this->tableExists('transportista')
-                ? (new TransportistaModel())->orderBy('nombre','ASC')->findAll() : [];
+                ? (new TransportistaModel())->orderBy('nombre', 'ASC')->findAll()
+                : [];
             $embarques = $this->tableExists('embarque')
-                ? $db->table('embarque')->select('id, folio')->orderBy('id','DESC')->get()->getResultArray() : [];
+                ? $db->table('embarque')->select('id, folio')->orderBy('id', 'DESC')->get()->getResultArray()
+                : [];
 
             session()->setFlashdata('warn', 'La tabla "guia_envio" no existe (vista en modo lectura vacía).');
             return view('modulos/logistica_gestion', [
@@ -240,9 +385,11 @@ class LogisticaController extends BaseController
             ]);
         }
 
-        $has  = $this->hasCols('guia_envio', ['fechaSalida','estado','numeroGuia','urlSeguimiento','embarqueId','transportistaId']);
-        $tHas = $this->tableExists('transportista') ? $this->hasCols('transportista',['nombre']) : ['nombre'=>false];
-        $eHas = $this->tableExists('embarque') ? $this->hasCols('embarque',['folio','fecha','estatus']) : ['folio'=>false,'fecha'=>false,'estatus'=>false];
+        $has  = $this->hasCols('guia_envio', ['fechaSalida', 'estado', 'numeroGuia', 'urlSeguimiento', 'embarqueId', 'transportistaId']);
+        $tHas = $this->tableExists('transportista') ? $this->hasCols('transportista', ['nombre']) : ['nombre' => false];
+        $eHas = $this->tableExists('embarque')
+            ? $this->hasCols('embarque', ['folio', 'fecha', 'estatus', 'maquiladoraID', 'maquiladoraId'])
+            : ['folio' => false, 'fecha' => false, 'estatus' => false, 'maquiladoraID' => false, 'maquiladoraId' => false];
 
         $select  = 'g.id';
         $select .= $has['numeroGuia']     ? ', g.numeroGuia'      : ', NULL AS numeroGuia';
@@ -256,65 +403,87 @@ class LogisticaController extends BaseController
         $select .= $eHas['estatus']       ? ', e.estatus AS estatusEmbarque' : ', NULL AS estatusEmbarque';
 
         $builder = $db->table('guia_envio g')->select($select);
-        if ($this->tableExists('transportista')) $builder->join('transportista t','t.id=g.transportistaId','left');
-        if ($this->tableExists('embarque'))      $builder->join('embarque e','e.id=g.embarqueId','left');
+        if ($this->tableExists('transportista')) {
+            $builder->join('transportista t', 't.id = g.transportistaId', 'left');
+        }
+        if ($this->tableExists('embarque')) {
+            $builder->join('embarque e', 'e.id = g.embarqueId', 'left');
+        }
 
-        // Filtro por maquiladora: primero por guia_envio.maquiladoraID, si no existe, por embarque.maquiladoraID
+        // Filtro por maquiladora: guia_envio.maquiladoraID/maquiladoraId y/o embarque.maquiladoraID/maquiladoraId
         if ($maquiladoraId) {
             try {
-                $colsGuia = $this->hasCols('guia_envio', ['maquiladoraID']);
-                $colsEmb  = $this->tableExists('embarque') ? $this->hasCols('embarque',['maquiladoraID']) : ['maquiladoraID'=>false];
+                $colsGuia = $this->hasCols('guia_envio', ['maquiladoraID', 'maquiladoraId']);
+                $colsEmb  = $this->tableExists('embarque')
+                    ? $this->hasCols('embarque', ['maquiladoraID', 'maquiladoraId'])
+                    : ['maquiladoraID' => false, 'maquiladoraId' => false];
 
-                if ($colsGuia['maquiladoraID'] || $colsEmb['maquiladoraID']) {
+                if (($colsGuia['maquiladoraID'] ?? false) || ($colsGuia['maquiladoraId'] ?? false) ||
+                    ($colsEmb['maquiladoraID'] ?? false)  || ($colsEmb['maquiladoraId'] ?? false)) {
+
                     $builder->groupStart();
-                    if ($colsGuia['maquiladoraID']) {
-                        $builder->where('g.maquiladoraID', (int)$maquiladoraId);
+                    if ($colsGuia['maquiladoraID'] ?? false) {
+                        $builder->where('g.maquiladoraID', (int) $maquiladoraId);
                     }
-                    if ($colsEmb['maquiladoraID']) {
-                        // Incluye también envíos cuyo embarque pertenezca a la maquila
-                        $builder->orWhere('e.maquiladoraID', (int)$maquiladoraId);
+                    if ($colsGuia['maquiladoraId'] ?? false) {
+                        $builder->orWhere('g.maquiladoraId', (int) $maquiladoraId);
+                    }
+                    if ($colsEmb['maquiladoraID'] ?? false) {
+                        $builder->orWhere('e.maquiladoraID', (int) $maquiladoraId);
+                    }
+                    if ($colsEmb['maquiladoraId'] ?? false) {
+                        $builder->orWhere('e.maquiladoraId', (int) $maquiladoraId);
                     }
                     $builder->groupEnd();
                 }
             } catch (\Throwable $e) {
-                // si algo falla, dejamos sin filtro extra
+                // sin filtro extra si falla
             }
         }
 
-        $envios = $builder->orderBy('g.id','DESC')->get()->getResultArray();
+        $envios = $builder->orderBy('g.id', 'DESC')->get()->getResultArray();
 
+        // Transportistas
         $transportistas = [];
         if ($this->tableExists('transportista')) {
-            $tBuilder = (new TransportistaModel())->orderBy('nombre','ASC');
-            // Si la tabla transportista tiene maquiladoraID, filtramos también
+            $tBuilder = (new TransportistaModel())->orderBy('nombre', 'ASC');
+
             try {
-                $colsT = $this->hasCols('transportista',['maquiladoraID']);
-                if ($maquiladoraId && $colsT['maquiladoraID']) {
-                    $tBuilder = $tBuilder->where('maquiladoraID', (int)$maquiladoraId);
+                $colsT = $this->hasCols('transportista', ['maquiladoraID', 'maquiladoraId']);
+                if ($maquiladoraId && ($colsT['maquiladoraID'] ?? false)) {
+                    $tBuilder->where('maquiladoraID', (int) $maquiladoraId);
+                } elseif ($maquiladoraId && ($colsT['maquiladoraId'] ?? false)) {
+                    $tBuilder->where('maquiladoraId', (int) $maquiladoraId);
                 }
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
+
             $transportistas = $tBuilder->findAll();
         }
 
+        // Embarques para combo
         $embarques = [];
         if ($this->tableExists('embarque')) {
             $eBuilder = $db->table('embarque')->select('id, folio');
             try {
-                $colsE = $this->hasCols('embarque',['maquiladoraID']);
-                if ($maquiladoraId && $colsE['maquiladoraID']) {
-                    $eBuilder->where('maquiladoraID', (int)$maquiladoraId);
+                $colsE = $this->hasCols('embarque', ['maquiladoraID', 'maquiladoraId']);
+                if ($maquiladoraId && ($colsE['maquiladoraID'] ?? false)) {
+                    $eBuilder->where('maquiladoraID', (int) $maquiladoraId);
+                } elseif ($maquiladoraId && ($colsE['maquiladoraId'] ?? false)) {
+                    $eBuilder->where('maquiladoraId', (int) $maquiladoraId);
                 }
-            } catch (\Throwable $e) {}
-            $embarques = $eBuilder->orderBy('id','DESC')->get()->getResultArray();
+            } catch (\Throwable $e) {
+            }
+            $embarques = $eBuilder->orderBy('id', 'DESC')->get()->getResultArray();
         }
 
-        return view('modulos/logistica_gestion', compact('envios','transportistas','embarques'));
+        return view('modulos/logistica_gestion', compact('envios', 'transportistas', 'embarques'));
     }
 
     public function crearEnvio()
     {
         if (!$this->tableExists('guia_envio')) {
-            return redirect()->back()->with('error','La tabla "guia_envio" no existe.');
+            return redirect()->back()->with('error', 'La tabla "guia_envio" no existe.');
         }
 
         $m = new GuiaEnvioModel();
@@ -322,78 +491,93 @@ class LogisticaController extends BaseController
         $input = [
             'embarqueId'      => (int) $this->request->getPost('embarqueId'),
             'transportistaId' => (int) $this->request->getPost('transportistaId'),
-            'numeroGuia'      => trim((string)$this->request->getPost('numeroGuia')),
-            'urlSeguimiento'  => trim((string)$this->request->getPost('urlSeguimiento')),
+            'numeroGuia'      => trim((string) $this->request->getPost('numeroGuia')),
+            'urlSeguimiento'  => trim((string) $this->request->getPost('urlSeguimiento')),
             'fechaSalida'     => $this->request->getPost('fechaSalida'),
             'estado'          => $this->request->getPost('estado'),
         ];
 
         // Asignar maquiladora al envío si la columna existe
-        $maquiladoraId = session()->get('maquiladora_id');
+        $session      = session();
+        $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID') ?? null;
         if ($maquiladoraId) {
             try {
-                $colsG = $this->hasCols($m->table ?? 'guia_envio', ['maquiladoraID']);
-                if ($colsG['maquiladoraID']) {
-                    $input['maquiladoraID'] = (int)$maquiladoraId;
+                $colsG = $this->hasCols($m->table ?? 'guia_envio', ['maquiladoraID', 'maquiladoraId']);
+                if ($colsG['maquiladoraID'] ?? false) {
+                    $input['maquiladoraID'] = (int) $maquiladoraId;
+                } elseif ($colsG['maquiladoraId'] ?? false) {
+                    $input['maquiladoraId'] = (int) $maquiladoraId;
                 }
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
         }
 
         $data = $this->filterToRealColumns($m->table ?? 'guia_envio', $input);
 
-        $need = $this->hasCols($m->table ?? 'guia_envio', ['transportistaId','numeroGuia']);
+        $need = $this->hasCols($m->table ?? 'guia_envio', ['transportistaId', 'numeroGuia']);
         if (($need['transportistaId'] && empty($data['transportistaId'])) ||
             ($need['numeroGuia'] && empty($data['numeroGuia']))) {
-            return redirect()->back()->with('error','Transportista y número de guía son obligatorios.');
+            return redirect()->back()->with('error', 'Transportista y número de guía son obligatorios.');
         }
 
-        if (empty($data)) return redirect()->back()->with('error','No hay columnas válidas para guardar.');
+        if (empty($data)) {
+            return redirect()->back()->with('error', 'No hay columnas válidas para guardar.');
+        }
 
-        try { $m->insert($data); }
-        catch (\Throwable $e) { return redirect()->back()->with('error','No se pudo guardar: '.$e->getMessage()); }
+        try {
+            $m->insert($data);
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'No se pudo guardar: ' . $e->getMessage());
+        }
 
-        return redirect()->back()->with('ok','Envío registrado.');
+        return redirect()->back()->with('ok', 'Envío registrado.');
     }
 
     public function envioJson($id)
     {
         if (!$this->tableExists('guia_envio')) {
-            return $this->response->setStatusCode(404)->setJSON(['error'=>'Tabla guia_envio no existe']);
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'Tabla guia_envio no existe']);
         }
 
         $db = $this->db();
-        $hG = $this->hasCols('guia_envio', ['embarqueId','transportistaId','numeroGuia','urlSeguimiento','fechaSalida','estado']);
-        $tN = $this->tableExists('transportista') ? $this->hasCols('transportista',['nombre'])['nombre'] : false;
-        $eF = $this->tableExists('embarque') ? $this->hasCols('embarque',['folio'])['folio'] : false;
+        $hG = $this->hasCols('guia_envio', ['embarqueId', 'transportistaId', 'numeroGuia', 'urlSeguimiento', 'fechaSalida', 'estado']);
+        $tN = $this->tableExists('transportista') ? $this->hasCols('transportista', ['nombre'])['nombre'] : false;
+        $eF = $this->tableExists('embarque') ? $this->hasCols('embarque', ['folio'])['folio'] : false;
 
         $select  = 'g.id';
-        $select .= $hG['embarqueId']     ? ', g.embarqueId'     : ', NULL AS embarqueId';
-        $select .= $hG['transportistaId']? ', g.transportistaId': ', NULL AS transportistaId';
-        $select .= $hG['numeroGuia']     ? ', g.numeroGuia'     : ', NULL AS numeroGuia';
-        $select .= $hG['urlSeguimiento'] ? ', g.urlSeguimiento' : ', NULL AS urlSeguimiento';
-        $select .= $hG['fechaSalida']    ? ', g.fechaSalida'    : ', NULL AS fechaSalida';
-        $select .= $hG['estado']         ? ', g.estado'         : ', NULL AS estado';
+        $select .= $hG['embarqueId']      ? ', g.embarqueId'      : ', NULL AS embarqueId';
+        $select .= $hG['transportistaId'] ? ', g.transportistaId' : ', NULL AS transportistaId';
+        $select .= $hG['numeroGuia']      ? ', g.numeroGuia'      : ', NULL AS numeroGuia';
+        $select .= $hG['urlSeguimiento']  ? ', g.urlSeguimiento'  : ', NULL AS urlSeguimiento';
+        $select .= $hG['fechaSalida']     ? ', g.fechaSalida'     : ', NULL AS fechaSalida';
+        $select .= $hG['estado']          ? ', g.estado'          : ', NULL AS estado';
         $select .= $tN ? ', t.nombre AS transportista' : ', NULL AS transportista';
         $select .= $eF ? ', e.folio AS embarqueFolio'  : ', NULL AS embarqueFolio';
 
         $b = $db->table('guia_envio g')->select($select);
-        if ($tN) $b->join('transportista t','t.id=g.transportistaId','left');
-        if ($eF) $b->join('embarque e','e.id=g.embarqueId','left');
-        $row = $b->where('g.id',(int)$id)->get()->getRowArray();
+        if ($tN) {
+            $b->join('transportista t', 't.id = g.transportistaId', 'left');
+        }
+        if ($eF) {
+            $b->join('embarque e', 'e.id = g.embarqueId', 'left');
+        }
+        $row = $b->where('g.id', (int) $id)->get()->getRowArray();
 
-        if (!$row) return $this->response->setStatusCode(404)->setJSON(['error'=>'No encontrado']);
+        if (!$row) {
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'No encontrado']);
+        }
         return $this->response->setJSON($row);
     }
 
     public function editarEnvio($id)
     {
         if (!$this->tableExists('guia_envio')) {
-            return redirect()->back()->with('error','La tabla "guia_envio" no existe.');
+            return redirect()->back()->with('error', 'La tabla "guia_envio" no existe.');
         }
 
-        $m  = new GuiaEnvioModel();
-        if (!$m->find((int)$id)) {
-            return redirect()->back()->with('error','Envío no encontrado.');
+        $m = new GuiaEnvioModel();
+        if (!$m->find((int) $id)) {
+            return redirect()->back()->with('error', 'Envío no encontrado.');
         }
 
         $input = [
@@ -405,22 +589,30 @@ class LogisticaController extends BaseController
             'estado'          => $this->request->getPost('estado'),
         ];
         $data = $this->filterToRealColumns($m->table ?? 'guia_envio', $input);
-        if (empty($data)) return redirect()->back()->with('error','Nada que actualizar (columnas inexistentes).');
+        if (empty($data)) {
+            return redirect()->back()->with('error', 'Nada que actualizar (columnas inexistentes).');
+        }
 
-        try { $m->update((int)$id, $data); }
-        catch (\Throwable $e) { return redirect()->back()->with('error','No se pudo actualizar: '.$e->getMessage()); }
+        try {
+            $m->update((int) $id, $data);
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'No se pudo actualizar: ' . $e->getMessage());
+        }
 
-        return redirect()->back()->with('ok','Envío actualizado.');
+        return redirect()->back()->with('ok', 'Envío actualizado.');
     }
 
     public function eliminarEnvio($id)
     {
         if (!$this->tableExists('guia_envio')) {
-            return redirect()->back()->with('error','La tabla "guia_envio" no existe.');
+            return redirect()->back()->with('error', 'La tabla "guia_envio" no existe.');
         }
-        try { (new GuiaEnvioModel())->delete((int)$id); }
-        catch (\Throwable $e) { return redirect()->back()->with('error','No se pudo eliminar: '.$e->getMessage()); }
-        return redirect()->back()->with('ok','Envío eliminado.');
+        try {
+            (new GuiaEnvioModel())->delete((int) $id);
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'No se pudo eliminar: ' . $e->getMessage());
+        }
+        return redirect()->back()->with('ok', 'Envío eliminado.');
     }
 
     /* =========================================================
@@ -428,20 +620,26 @@ class LogisticaController extends BaseController
      * =======================================================*/
     public function documentos()
     {
-        $db = $this->db();
-        $maquiladoraId = session()->get('maquiladora_id');
+        $db           = $this->db();
+        $session      = session();
+        $maquiladoraId = $session->get('maquiladora_id')
+            ?? $session->get('maquiladoraID')
+            ?? null;
 
         // Combo de embarques
         $embarques = [];
         if ($this->tableExists('embarque')) {
             $eBuilder = $db->table('embarque')->select('id, folio');
             try {
-                $colsE = $this->hasCols('embarque',['maquiladoraID']);
-                if ($maquiladoraId && $colsE['maquiladoraID']) {
-                    $eBuilder->where('maquiladoraID', (int)$maquiladoraId);
+                $colsE = $this->hasCols('embarque', ['maquiladoraID', 'maquiladoraId']);
+                if ($maquiladoraId && ($colsE['maquiladoraID'] ?? false)) {
+                    $eBuilder->where('maquiladoraID', (int) $maquiladoraId);
+                } elseif ($maquiladoraId && ($colsE['maquiladoraId'] ?? false)) {
+                    $eBuilder->where('maquiladoraId', (int) $maquiladoraId);
                 }
-            } catch (\Throwable $e) {}
-            $embarques = $eBuilder->orderBy('id','DESC')->get()->getResultArray();
+            } catch (\Throwable $e) {
+            }
+            $embarques = $eBuilder->orderBy('id', 'DESC')->get()->getResultArray();
         }
 
         if (!$this->tableExists('doc_embarque')) {
@@ -453,45 +651,61 @@ class LogisticaController extends BaseController
         }
 
         // Descubrimos columnas reales en doc_embarque
-        try { $cols = array_flip($db->getFieldNames('doc_embarque')); }
-        catch (\Throwable $e) { $cols = []; }
+        try {
+            $cols = array_flip($db->getFieldNames('doc_embarque'));
+        } catch (\Throwable $e) {
+            $cols = [];
+        }
         $has = fn($c) => isset($cols[$c]);
 
         // SELECT robusto
         $select  = 'd.id';
-        $select .= $has('embarqueId') ? ', d.embarqueId'  : ', NULL AS embarqueId';
-        $select .= $has('tipo')       ? ', d.tipo'        : ', NULL AS tipo';
-        $select .= $has('numero')     ? ', d.numero'      : ', NULL AS numero';
-        $select .= $has('fecha')      ? ', d.fecha'       : ', NULL AS fecha';
-        $select .= $has('estado')     ? ', d.estado'      : ', NULL AS estado';
-        $select .= $has('archivoRuta')? ', d.archivoRuta' : ', NULL AS archivoRuta';
-        $select .= $has('urlPdf')     ? ', d.urlPdf'      : ', NULL AS urlPdf';
-        $select .= $has('archivoPdf') ? ', d.archivoPdf'  : ', NULL AS archivoPdf';
+        $select .= $has('embarqueId')  ? ', d.embarqueId'  : ', NULL AS embarqueId';
+        $select .= $has('tipo')        ? ', d.tipo'        : ', NULL AS tipo';
+        $select .= $has('numero')      ? ', d.numero'      : ', NULL AS numero';
+        $select .= $has('fecha')       ? ', d.fecha'       : ', NULL AS fecha';
+        $select .= $has('estado')      ? ', d.estado'      : ', NULL AS estado';
+        $select .= $has('archivoRuta') ? ', d.archivoRuta' : ', NULL AS archivoRuta';
+        $select .= $has('urlPdf')      ? ', d.urlPdf'      : ', NULL AS urlPdf';
+        $select .= $has('archivoPdf')  ? ', d.archivoPdf'  : ', NULL AS archivoPdf';
         $select .= $this->tableExists('embarque') ? ', e.folio AS embarqueFolio' : ', NULL AS embarqueFolio';
 
         $builder = $db->table('doc_embarque d')->select($select);
-        if ($this->tableExists('embarque')) $builder->join('embarque e','e.id=d.embarqueId','left');
+        if ($this->tableExists('embarque')) {
+            $builder->join('embarque e', 'e.id = d.embarqueId', 'left');
+        }
 
-        // Filtro por maquiladora: por doc_embarque.maquiladoraID y/o embarque.maquiladoraID
+        // Filtro por maquiladora: doc_embarque.maquiladoraID/maquiladoraId y/o embarque.maquiladoraID/maquiladoraId
         if ($maquiladoraId) {
             try {
-                $colsD = $this->hasCols('doc_embarque', ['maquiladoraID']);
-                $colsE = $this->tableExists('embarque') ? $this->hasCols('embarque',['maquiladoraID']) : ['maquiladoraID'=>false];
+                $colsD = $this->hasCols('doc_embarque', ['maquiladoraID', 'maquiladoraId']);
+                $colsE = $this->tableExists('embarque')
+                    ? $this->hasCols('embarque', ['maquiladoraID', 'maquiladoraId'])
+                    : ['maquiladoraID' => false, 'maquiladoraId' => false];
 
-                if ($colsD['maquiladoraID'] || $colsE['maquiladoraID']) {
+                if (($colsD['maquiladoraID'] ?? false) || ($colsD['maquiladoraId'] ?? false) ||
+                    ($colsE['maquiladoraID'] ?? false)  || ($colsE['maquiladoraId'] ?? false)) {
+
                     $builder->groupStart();
-                    if ($colsD['maquiladoraID']) {
-                        $builder->where('d.maquiladoraID', (int)$maquiladoraId);
+                    if ($colsD['maquiladoraID'] ?? false) {
+                        $builder->where('d.maquiladoraID', (int) $maquiladoraId);
                     }
-                    if ($colsE['maquiladoraID']) {
-                        $builder->orWhere('e.maquiladoraID', (int)$maquiladoraId);
+                    if ($colsD['maquiladoraId'] ?? false) {
+                        $builder->orWhere('d.maquiladoraId', (int) $maquiladoraId);
+                    }
+                    if ($colsE['maquiladoraID'] ?? false) {
+                        $builder->orWhere('e.maquiladoraID', (int) $maquiladoraId);
+                    }
+                    if ($colsE['maquiladoraId'] ?? false) {
+                        $builder->orWhere('e.maquiladoraId', (int) $maquiladoraId);
                     }
                     $builder->groupEnd();
                 }
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
         }
 
-        $docs = $builder->orderBy('d.id','DESC')->get()->getResultArray();
+        $docs = $builder->orderBy('d.id', 'DESC')->get()->getResultArray();
 
         return view('modulos/logistica_documentos', [
             'docs'      => $docs,
@@ -508,58 +722,77 @@ class LogisticaController extends BaseController
         $m  = new DocumentoEnvioModel(); // $table='doc_embarque' en el modelo
         $db = $this->db();
 
-        try { $real = array_flip($db->getFieldNames($m->table ?? 'doc_embarque')); }
-        catch (\Throwable $e) { $real = []; }
+        try {
+            $real = array_flip($db->getFieldNames($m->table ?? 'doc_embarque'));
+        } catch (\Throwable $e) {
+            $real = [];
+        }
 
         $input = [
-            'embarqueId'  => (int)$this->request->getPost('embarqueId'),
-            'tipo'        => trim((string)$this->request->getPost('tipo')),
-            'numero'      => trim((string)$this->request->getPost('numero')),
+            'embarqueId'  => (int) $this->request->getPost('embarqueId'),
+            'tipo'        => trim((string) $this->request->getPost('tipo')),
+            'numero'      => trim((string) $this->request->getPost('numero')),
             'fecha'       => $this->request->getPost('fecha'),
             'estado'      => $this->request->getPost('estado'),
-            'archivoRuta' => trim((string)$this->request->getPost('archivoRuta')),
-            'urlPdf'      => trim((string)$this->request->getPost('urlPdf')),
-            'archivoPdf'  => trim((string)$this->request->getPost('archivoPdf')),
+            'archivoRuta' => trim((string) $this->request->getPost('archivoRuta')),
+            'urlPdf'      => trim((string) $this->request->getPost('urlPdf')),
+            'archivoPdf'  => trim((string) $this->request->getPost('archivoPdf')),
         ];
-        $maquiladoraId = session()->get('maquiladora_id');
+
+        $session      = session();
+        $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID') ?? null;
         if ($maquiladoraId) {
             try {
-                $hasMaq = $this->hasCols('doc_embarque',['maquiladoraID']);
-                if ($hasMaq['maquiladoraID']) {
-                    $input['maquiladoraID'] = (int)$maquiladoraId;
+                $hasMaq = $this->hasCols('doc_embarque', ['maquiladoraID', 'maquiladoraId']);
+                if ($hasMaq['maquiladoraID'] ?? false) {
+                    $input['maquiladoraID'] = (int) $maquiladoraId;
+                } elseif ($hasMaq['maquiladoraId'] ?? false) {
+                    $input['maquiladoraId'] = (int) $maquiladoraId;
                 }
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
         }
+
         $data = array_intersect_key($input, $real);
-        if (isset($data['tipo']) && $data['tipo'] === '') unset($data['tipo']);
+        if (isset($data['tipo']) && $data['tipo'] === '') {
+            unset($data['tipo']);
+        }
 
         if (isset($real['numero']) && empty($data['numero'])) {
-            $pref = isset($data['tipo']) ? strtoupper(substr($data['tipo'],0,2)) : 'DO';
-            $data['numero'] = $pref.'-'.date('Y').'-'.str_pad((string)rand(1,9999),4,'0',STR_PAD_LEFT);
+            $pref          = isset($data['tipo']) ? strtoupper(substr($data['tipo'], 0, 2)) : 'DO';
+            $data['numero'] = $pref . '-' . date('Y') . '-' . str_pad((string) rand(1, 9999), 4, '0', STR_PAD_LEFT);
         }
         if (isset($real['fecha']) && empty($data['fecha'])) {
             $data['fecha'] = date('Y-m-d');
         }
 
-        if (empty($data)) return redirect()->back()->with('error','No hay columnas válidas para guardar.');
+        if (empty($data)) {
+            return redirect()->back()->with('error', 'No hay columnas válidas para guardar.');
+        }
 
-        try { $m->insert($data); }
-        catch (\Throwable $e) { return redirect()->back()->with('error','No se pudo crear: '.$e->getMessage()); }
+        try {
+            $m->insert($data);
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'No se pudo crear: ' . $e->getMessage());
+        }
 
-        return redirect()->back()->with('ok','Documento creado.');
+        return redirect()->back()->with('ok', 'Documento creado.');
     }
 
     public function docJson($id)
     {
         if (!$this->tableExists('doc_embarque')) {
-            return $this->response->setStatusCode(404)->setJSON(['error'=>'Tabla doc_embarque no existe']);
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'Tabla doc_embarque no existe']);
         }
 
         $db = $this->db();
 
-        try { $cols = array_flip($db->getFieldNames('doc_embarque')); }
-        catch (\Throwable $e) { $cols = []; }
-        $has = fn($c)=>isset($cols[$c]);
+        try {
+            $cols = array_flip($db->getFieldNames('doc_embarque'));
+        } catch (\Throwable $e) {
+            $cols = [];
+        }
+        $has = fn($c) => isset($cols[$c]);
 
         $select  = 'd.id';
         $select .= $has('embarqueId')  ? ', d.embarqueId'  : ', NULL AS embarqueId';
@@ -573,10 +806,14 @@ class LogisticaController extends BaseController
         $select .= $this->tableExists('embarque') ? ', e.folio AS embarqueFolio' : ', NULL AS embarqueFolio';
 
         $b = $db->table('doc_embarque d')->select($select);
-        if ($this->tableExists('embarque')) $b->join('embarque e','e.id=d.embarqueId','left');
-        $row = $b->where('d.id',(int)$id)->get()->getRowArray();
+        if ($this->tableExists('embarque')) {
+            $b->join('embarque e', 'e.id = d.embarqueId', 'left');
+        }
+        $row = $b->where('d.id', (int) $id)->get()->getRowArray();
 
-        if (!$row) return $this->response->setStatusCode(404)->setJSON(['error'=>'No encontrado']);
+        if (!$row) {
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'No encontrado']);
+        }
         return $this->response->setJSON($row);
     }
 
@@ -587,13 +824,16 @@ class LogisticaController extends BaseController
         }
 
         $m = new DocumentoEnvioModel(); // $table = 'doc_embarque'
-        if (!$m->find((int)$id)) {
-            return redirect()->back()->with('error','Documento no encontrado.');
+        if (!$m->find((int) $id)) {
+            return redirect()->back()->with('error', 'Documento no encontrado.');
         }
 
         $db = $this->db();
-        try { $real = array_flip($db->getFieldNames($m->table ?? 'doc_embarque')); }
-        catch (\Throwable $e) { $real = []; }
+        try {
+            $real = array_flip($db->getFieldNames($m->table ?? 'doc_embarque'));
+        } catch (\Throwable $e) {
+            $real = [];
+        }
 
         $input = [
             'embarqueId'  => $this->request->getPost('embarqueId'),
@@ -605,14 +845,19 @@ class LogisticaController extends BaseController
             'urlPdf'      => $this->request->getPost('urlPdf'),
             'archivoPdf'  => $this->request->getPost('archivoPdf'),
         ];
-        $data = array_filter(array_intersect_key($input, $real), fn($v)=>$v!==null);
+        $data = array_filter(array_intersect_key($input, $real), fn($v) => $v !== null);
 
-        if (empty($data)) return redirect()->back()->with('error','Nada que actualizar.');
+        if (empty($data)) {
+            return redirect()->back()->with('error', 'Nada que actualizar.');
+        }
 
-        try { $m->update((int)$id, $data); }
-        catch (\Throwable $e) { return redirect()->back()->with('error','No se pudo actualizar: '.$e->getMessage()); }
+        try {
+            $m->update((int) $id, $data);
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'No se pudo actualizar: ' . $e->getMessage());
+        }
 
-        return redirect()->back()->with('ok','Documento actualizado.');
+        return redirect()->back()->with('ok', 'Documento actualizado.');
     }
 
     public function eliminarDocumento($id)
@@ -620,32 +865,48 @@ class LogisticaController extends BaseController
         if (!$this->tableExists('doc_embarque')) {
             return redirect()->back()->with('error', 'La tabla "doc_embarque" no existe.');
         }
-        try { (new DocumentoEnvioModel())->delete((int)$id); }
-        catch (\Throwable $e) { return redirect()->back()->with('error','No se pudo eliminar: '.$e->getMessage()); }
-        return redirect()->back()->with('ok','Documento eliminado.');
+        try {
+            (new DocumentoEnvioModel())->delete((int) $id);
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'No se pudo eliminar: ' . $e->getMessage());
+        }
+        return redirect()->back()->with('ok', 'Documento eliminado.');
     }
 
     public function descargarPdf($id)
     {
         $row = null;
-        try { $row = (new DocumentoEnvioModel())->find((int)$id); } catch (\Throwable $e) {}
-        if (!$row) return redirect()->back()->with('error','Documento no encontrado.');
+        try {
+            $row = (new DocumentoEnvioModel())->find((int) $id);
+        } catch (\Throwable $e) {
+        }
+        if (!$row) {
+            return redirect()->back()->with('error', 'Documento no encontrado.');
+        }
 
         $ruta = $row['archivoRuta'] ?? null;
         $url  = $row['urlPdf']      ?? null;
         $loc  = $row['archivoPdf']  ?? null;
 
-        if ($url) return redirect()->to($url);
-        if ($ruta && preg_match('~^https?://~i', $ruta)) return redirect()->to($ruta);
+        if ($url) {
+            return redirect()->to($url);
+        }
+        if ($ruta && preg_match('~^https?://~i', $ruta)) {
+            return redirect()->to($ruta);
+        }
 
         $candidatos = [];
-        if ($ruta) $candidatos[] = $ruta;
-        if ($loc)  $candidatos[] = $loc;
+        if ($ruta) {
+            $candidatos[] = $ruta;
+        }
+        if ($loc) {
+            $candidatos[] = $loc;
+        }
 
         foreach ($candidatos as $rel) {
             $paths = [
-                WRITEPATH.'uploads/'.ltrim($rel,'/'),
-                FCPATH.ltrim($rel,'/'),
+                WRITEPATH . 'uploads/' . ltrim($rel, '/'),
+                FCPATH . ltrim($rel, '/'),
             ];
             foreach ($paths as $p) {
                 if (is_file($p)) {
@@ -654,7 +915,7 @@ class LogisticaController extends BaseController
             }
         }
 
-        return redirect()->back()->with('error','No hay PDF/archivo disponible para este documento.');
+        return redirect()->back()->with('error', 'No hay PDF/archivo disponible para este documento.');
     }
 
     /* =========================================================
@@ -693,7 +954,7 @@ class LogisticaController extends BaseController
         $items    = $itemsDefault;
 
         if ($this->request->getMethod() === 'post') {
-            $get = fn($k, $def='') => trim((string)$this->request->getPost($k) ?? $def);
+            $get = fn($k, $def='') => trim((string) $this->request->getPost($k) ?? $def);
 
             $embarque = [
                 'folio'                 => $get('folio', $embarqueDefault['folio']),
@@ -723,30 +984,36 @@ class LogisticaController extends BaseController
             $valor = $this->request->getPost('items_valor') ?? $this->request->getPost('valorUnit')   ?? [];
 
             $items = [];
-            $n = max(count($sku), count($desc), count($cant), count($um), count($peso), count($valor));
+            $n     = max(count($sku), count($desc), count($cant), count($um), count($peso), count($valor));
             for ($i = 0; $i < $n; $i++) {
-                $s = trim((string)($sku[$i]   ?? ''));
-                $d = trim((string)($desc[$i]  ?? ''));
-                if ($s === '' && $d === '') continue;
+                $s = trim((string) ($sku[$i]   ?? ''));
+                $d = trim((string) ($desc[$i]  ?? ''));
+                if ($s === '' && $d === '') {
+                    continue;
+                }
 
                 $items[] = [
                     'sku'         => $s,
                     'descripcion' => $d,
-                    'cantidad'    => (float)($cant[$i]  ?? 0),
-                    'um'          => trim((string)($um[$i] ?? 'pz')),
-                    'peso'        => (float)($peso[$i]  ?? 0),
-                    'valor'       => (float)($valor[$i] ?? 0),
+                    'cantidad'    => (float) ($cant[$i]  ?? 0),
+                    'um'          => trim((string) ($um[$i] ?? 'pz')),
+                    'peso'        => (float) ($peso[$i]  ?? 0),
+                    'valor'       => (float) ($valor[$i] ?? 0),
                 ];
             }
 
-            if (empty($items)) $items = $itemsDefault;
+            if (empty($items)) {
+                $items = $itemsDefault;
+            }
         }
 
         // Prefill rápido opcional vía ?folio=...
         $folioQS = $this->request->getGet('folio');
-        if ($folioQS) $embarque['folio'] = $folioQS;
+        if ($folioQS) {
+            $embarque['folio'] = $folioQS;
+        }
 
-        return view('modulos/embarque_documento_manual', compact('embarque','items'));
+        return view('modulos/embarque_documento_manual', compact('embarque', 'items'));
     }
 
     /**
@@ -764,11 +1031,16 @@ class LogisticaController extends BaseController
         $payload = $this->request->getPost('__payload');
         if ($payload) {
             try {
-                $obj = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
-                $keys = ['folio','fecha','origen','destino','remitente','rfcRemitente','domicilioRemitente',
-                    'destinatario','rfcDestinatario','domicilioDestinatario','tipoTransporte',
-                    'transportista','operador','placas','referencia','notas'];
-                foreach ($keys as $k) $embarque[$k] = trim((string)($obj[$k] ?? ($embarque[$k] ?? '')));
+                $obj  = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
+                $keys = [
+                    'folio', 'fecha', 'origen', 'destino', 'remitente',
+                    'rfcRemitente', 'domicilioRemitente', 'destinatario',
+                    'rfcDestinatario', 'domicilioDestinatario', 'tipoTransporte',
+                    'transportista', 'operador', 'placas', 'referencia', 'notas',
+                ];
+                foreach ($keys as $k) {
+                    $embarque[$k] = trim((string) ($obj[$k] ?? ($embarque[$k] ?? '')));
+                }
 
                 $sku   = $obj['items_sku']   ?? $obj['sku']         ?? [];
                 $desc  = $obj['items_desc']  ?? $obj['descripcion'] ?? [];
@@ -778,20 +1050,23 @@ class LogisticaController extends BaseController
                 $valor = $obj['items_valor'] ?? $obj['valorUnit']   ?? [];
 
                 $n = max(count($sku), count($desc), count($cant), count($um), count($peso), count($valor));
-                for ($i=0; $i<$n; $i++) {
-                    $s = trim((string)($sku[$i]   ?? ''));
-                    $d = trim((string)($desc[$i]  ?? ''));
-                    if ($s === '' && $d === '') continue;
+                for ($i = 0; $i < $n; $i++) {
+                    $s = trim((string) ($sku[$i]   ?? ''));
+                    $d = trim((string) ($desc[$i]  ?? ''));
+                    if ($s === '' && $d === '') {
+                        continue;
+                    }
                     $items[] = [
                         'sku'         => $s,
                         'descripcion' => $d,
-                        'cantidad'    => (float)($cant[$i]  ?? 0),
-                        'um'          => trim((string)($um[$i] ?? 'pz')),
-                        'peso'        => (float)($peso[$i]  ?? 0),
-                        'valor'       => (float)($valor[$i] ?? 0),
+                        'cantidad'    => (float) ($cant[$i]  ?? 0),
+                        'um'          => trim((string) ($um[$i] ?? 'pz')),
+                        'peso'        => (float) ($peso[$i]  ?? 0),
+                        'valor'       => (float) ($valor[$i] ?? 0),
                     ];
                 }
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
         }
 
         if (empty($items)) {
@@ -801,7 +1076,7 @@ class LogisticaController extends BaseController
             ];
         }
 
-        return view('modulos/embarque_documento_print', compact('embarque','items'));
+        return view('modulos/embarque_documento_print', compact('embarque', 'items'));
     }
 
     /* =========================================================
@@ -812,7 +1087,7 @@ class LogisticaController extends BaseController
     public function facturarUI($embarqueId)
     {
         return view('modulos/facturar_envio', [
-            'embarqueId'    => (int)$embarqueId,
+            'embarqueId'    => (int) $embarqueId,
             'embarqueFolio' => null,
         ]);
     }
@@ -820,7 +1095,7 @@ class LogisticaController extends BaseController
     /** UUID v4 para demo */
     private function uuidv4(): string
     {
-        $data = random_bytes(16);
+        $data    = random_bytes(16);
         $data[6] = chr((ord($data[6]) & 0x0f) | 0x40);
         $data[8] = chr((ord($data[8]) & 0x3f) | 0x80);
         return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
@@ -831,52 +1106,57 @@ class LogisticaController extends BaseController
     {
         $enteros = floor($m);
         $cent    = round(($m - $enteros) * 100);
-        return number_format($enteros, 0, '.', ',') . ' PESOS ' . str_pad((string)$cent, 2, '0', STR_PAD_LEFT) . '/100 M.N.';
+        return number_format($enteros, 0, '.', ',') . ' PESOS ' . str_pad((string) $cent, 2, '0', STR_PAD_LEFT) . '/100 M.N.';
     }
 
     /** Redondeo corto */
-    private function r2($n){ return round((float)$n, 2); }
+    private function r2($n)
+    {
+        return round((float) $n, 2);
+    }
 
     /** Endpoint que timbra: mock (gratis) o Facturapi si lo configuras */
     public function facturar($embarqueId)
     {
         try {
-            $provider = strtolower((string)(getenv('facturacion.provider') ?: 'mock'));
-            $data = $this->request->getJSON(true) ?? $this->request->getPost();
+            $provider = strtolower((string) (getenv('facturacion.provider') ?: 'mock'));
+            $data     = $this->request->getJSON(true) ?? $this->request->getPost();
 
-            $rfc   = trim($data['rfc'] ?? '');
-            $name  = trim($data['nombre'] ?? '');
+            $rfc  = trim($data['rfc'] ?? '');
+            $name = trim($data['nombre'] ?? '');
             if (!$rfc) {
-                return $this->response->setStatusCode(422)->setJSON(['ok'=>false,'msg'=>'RFC del receptor es requerido']);
+                return $this->response
+                    ->setStatusCode(422)
+                    ->setJSON(['ok' => false, 'msg' => 'RFC del receptor es requerido']);
             }
 
-            $uso   = $data['usoCFDI']               ?? 'G03';
-            $reg   = $data['regimenFiscalReceptor'] ?? '601';
-            $zip   = $data['domicilioFiscalReceptor'] ?? '00000';
-            $fp    = $data['formaPago']             ?? '03';
-            $mp    = $data['metodoPago']            ?? 'PUE';
-            $mon   = $data['moneda']                ?? 'MXN';
-            $in    = $data['conceptos']             ?? [];
+            $uso  = $data['usoCFDI']               ?? 'G03';
+            $reg  = $data['regimenFiscalReceptor'] ?? '601';
+            $zip  = $data['domicilioFiscalReceptor'] ?? '00000';
+            $fp   = $data['formaPago']             ?? '03';
+            $mp   = $data['metodoPago']            ?? 'PUE';
+            $mon  = $data['moneda']                ?? 'MXN';
+            $in   = $data['conceptos']             ?? [];
 
             // Normaliza conceptos (para el HTML factura_cfdi_demo)
             $conceptos = [];
             if ($in && is_array($in)) {
                 foreach ($in as $c) {
-                    $cantidad = (float)($c['cantidad'] ?? 1);
-                    $vu       = (float)($c['precioUnitario'] ?? 0);
+                    $cantidad = (float) ($c['cantidad'] ?? 1);
+                    $vu       = (float) ($c['precioUnitario'] ?? 0);
                     $importe  = $cantidad * $vu;
                     $iva      = $this->r2($importe * 0.16);
                     $conceptos[] = [
-                        'prodserv'     => $c['claveProdServ'] ?? '01010101',
-                        'claveUnidad'  => $c['claveUnidad']   ?? 'E48',
-                        'cantidad'     => $cantidad,
-                        'unidad'       => '', // opcional
-                        'descripcion'  => $c['descripcion']    ?? 'Concepto',
-                        'valorUnitario'=> $vu,
-                        'descuento'    => 0,
-                        'importe'      => $importe,
-                        'iva'          => $iva,
-                        'ieps'         => 0,
+                        'prodserv'      => $c['claveProdServ'] ?? '01010101',
+                        'claveUnidad'   => $c['claveUnidad']   ?? 'E48',
+                        'cantidad'      => $cantidad,
+                        'unidad'        => '',
+                        'descripcion'   => $c['descripcion']    ?? 'Concepto',
+                        'valorUnitario' => $vu,
+                        'descuento'     => 0,
+                        'importe'       => $importe,
+                        'iva'           => $iva,
+                        'ieps'          => 0,
                     ];
                 }
             } else {
@@ -885,22 +1165,22 @@ class LogisticaController extends BaseController
                 $importe  = $cantidad * $vu;
                 $iva      = $this->r2($importe * 0.16);
                 $conceptos[] = [
-                    'prodserv'     => '01010101',
-                    'claveUnidad'  => 'E48',
-                    'cantidad'     => $cantidad,
-                    'unidad'       => '',
-                    'descripcion'  => 'Servicio de envío - Embarque #'.$embarqueId,
-                    'valorUnitario'=> $vu,
-                    'descuento'    => 0,
-                    'importe'      => $importe,
-                    'iva'          => $iva,
-                    'ieps'         => 0,
+                    'prodserv'      => '01010101',
+                    'claveUnidad'   => 'E48',
+                    'cantidad'      => $cantidad,
+                    'unidad'        => '',
+                    'descripcion'   => 'Servicio de envío - Embarque #' . $embarqueId,
+                    'valorUnitario' => $vu,
+                    'descuento'     => 0,
+                    'importe'       => $importe,
+                    'iva'           => $iva,
+                    'ieps'          => 0,
                 ];
             }
 
             // Totales
-            $subtotal   = $this->r2(array_reduce($conceptos, fn($a,$c)=>$a + (float)$c['importe'], 0));
-            $trasladado = $this->r2(array_reduce($conceptos, fn($a,$c)=>$a + (float)$c['iva'], 0));
+            $subtotal   = $this->r2(array_reduce($conceptos, fn($a, $c) => $a + (float) $c['importe'], 0));
+            $trasladado = $this->r2(array_reduce($conceptos, fn($a, $c) => $a + (float) $c['iva'], 0));
             $retenidos  = 0.0;
             $descuento  = 0.0;
             $total      = $this->r2($subtotal - $descuento + $trasladado - $retenidos);
@@ -914,18 +1194,18 @@ class LogisticaController extends BaseController
             if ($provider === 'mock') {
                 // Arma payload para la vista factura_cfdi_demo
                 $emisor = [
-                    'logo'          => '', // si tienes logo en /public, pon la URL
-                    'nombre'        => 'Textiles XYZ S.A. de C.V.',
-                    'rfc'           => 'TXY123456789',
-                    'regimen'       => '601',
+                    'logo'           => '',
+                    'nombre'         => 'Textiles XYZ S.A. de C.V.',
+                    'rfc'            => 'TXY123456789',
+                    'regimen'        => '601',
                     'lugarExpedicion'=> $zip,
-                    'noCertCSD'     => '00001000000403258748',
+                    'noCertCSD'      => '00001000000403258748',
                 ];
                 $receptor = [
                     'nombre'   => $name ?: $rfc,
                     'rfc'      => $rfc,
                     'usoCfdi'  => $uso,
-                    'domicilio'=> 'CP '.$zip,
+                    'domicilio'=> 'CP ' . $zip,
                 ];
                 $factura = [
                     'tipo'        => 'I',
@@ -939,32 +1219,30 @@ class LogisticaController extends BaseController
                     'condiciones' => 'Contado',
                 ];
                 $totales = [
-                    'subtotal'  => $subtotal,
-                    'descuento' => $descuento,
+                    'subtotal'   => $subtotal,
+                    'descuento'  => $descuento,
                     'trasladados'=> $trasladado,
-                    'retenidos' => $retenidos,
-                    'total'     => $total,
-                    'letra'     => $this->montoALetraMXN($total),
+                    'retenidos'  => $retenidos,
+                    'total'      => $total,
+                    'letra'      => $this->montoALetraMXN($total),
                 ];
                 $timbre = [
                     'uuid'          => $uuid,
                     'fechaTimbrado' => $fecha,
                     'noCertCSD'     => $emisor['noCertCSD'],
-                    'selloCfdi'     => substr(hash('sha256', 'cfdi-'.$uuid), 0, 80).'…',
-                    'selloSat'      => substr(hash('sha256', 'sat-'.$uuid), 0, 80).'…',
+                    'selloCfdi'     => substr(hash('sha256', 'cfdi-' . $uuid), 0, 80) . '…',
+                    'selloSat'      => substr(hash('sha256', 'sat-' . $uuid), 0, 80) . '…',
                     'qr'            => null,
                 ];
 
-                // Guarda en sesión (dos llaves por comodidad)
                 $key1 = 'factura_demo';
-                $key2 = 'factura_demo_'.$embarqueId;
-                $pack = compact('emisor','receptor','factura','conceptos','totales','timbre');
+                $key2 = 'factura_demo_' . $embarqueId;
+                $pack = compact('emisor', 'receptor', 'factura', 'conceptos', 'totales', 'timbre');
                 session()->set($key1, $pack);
                 session()->set($key2, $pack);
 
-                // URLs internas para preview/PDF
-                $previewUrl = site_url('logistica/factura/'.$embarqueId);
-                $pdfUrl     = site_url('logistica/factura/'.$embarqueId.'/pdf');
+                $previewUrl = site_url('logistica/factura/' . $embarqueId);
+                $pdfUrl     = site_url('logistica/factura/' . $embarqueId . '/pdf');
 
                 return $this->response->setJSON([
                     'ok'          => true,
@@ -976,7 +1254,6 @@ class LogisticaController extends BaseController
                     'provider'    => 'mock',
                     'preview_url' => $previewUrl,
                     'pdf_url'     => $pdfUrl,
-                    // Si quieres seguir mostrando un XML de demo, puedes poner un enlace:
                     'xml_url'     => 'https://www.w3schools.com/xml/note.xml',
                 ]);
             }
@@ -985,7 +1262,7 @@ class LogisticaController extends BaseController
             $apiKey = getenv('facturacion.facturapi_key') ?: '';
             if (!$apiKey) {
                 return $this->response->setStatusCode(500)
-                    ->setJSON(['ok'=>false,'msg'=>'Falta facturacion.facturapi_key en .env (o usa facturacion.provider=mock)']);
+                    ->setJSON(['ok' => false, 'msg' => 'Falta facturacion.facturapi_key en .env (o usa facturacion.provider=mock)']);
             }
 
             $items = [];
@@ -994,11 +1271,11 @@ class LogisticaController extends BaseController
                     'product' => [
                         'description' => $c['descripcion'],
                         'product_key' => $c['prodserv'],
-                        'price'       => (float)$c['valorUnitario'],
+                        'price'       => (float) $c['valorUnitario'],
                         'unit_key'    => $c['claveUnidad'],
                         'name'        => $c['descripcion'],
                     ],
-                    'quantity' => (float)$c['cantidad'],
+                    'quantity' => (float) $c['cantidad'],
                 ];
             }
 
@@ -1015,7 +1292,7 @@ class LogisticaController extends BaseController
                 'payment_method' => $mp,
                 'currency'       => $mon,
                 'items'          => $items,
-                'external_id'    => 'embarque-'.$embarqueId,
+                'external_id'    => 'embarque-' . $embarqueId,
             ];
 
             $ch = curl_init('https://www.facturapi.io/v2/invoices');
@@ -1024,7 +1301,7 @@ class LogisticaController extends BaseController
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HTTPHEADER     => [
                     'Content-Type: application/json',
-                    'Authorization: Bearer '.$apiKey,
+                    'Authorization: Bearer ' . $apiKey,
                 ],
                 CURLOPT_POSTFIELDS     => json_encode($payload),
                 CURLOPT_TIMEOUT        => 45,
@@ -1035,29 +1312,29 @@ class LogisticaController extends BaseController
             curl_close($ch);
 
             if ($err) {
-                return $this->response->setStatusCode(502)->setJSON(['ok'=>false,'msg'=>$err]);
+                return $this->response->setStatusCode(502)->setJSON(['ok' => false, 'msg' => $err]);
             }
 
             $d = json_decode($out, true) ?: [];
-            if (!in_array($code, [200,201])) {
+            if (!in_array($code, [200, 201], true)) {
                 $msg = $d['message'] ?? 'No se pudo timbrar';
-                return $this->response->setStatusCode(400)->setJSON(['ok'=>false,'msg'=>$msg,'raw'=>$d]);
+                return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'msg' => $msg, 'raw' => $d]);
             }
 
             return $this->response->setJSON([
-                'ok'      => true,
-                'uuid'    => $d['uuid'] ?? null,
-                'serie'   => $d['series'] ?? ($d['series_name'] ?? null),
-                'folio'   => $d['number'] ?? null,
-                'total'   => $d['total'] ?? null,
-                'pdf_url' => $d['files']['pdf'] ?? null,
-                'xml_url' => $d['files']['xml'] ?? null,
-                'fecha'   => $d['date'] ?? null,
-                'provider'=> 'facturapi',
+                'ok'       => true,
+                'uuid'     => $d['uuid'] ?? null,
+                'serie'    => $d['series'] ?? ($d['series_name'] ?? null),
+                'folio'    => $d['number'] ?? null,
+                'total'    => $d['total'] ?? null,
+                'pdf_url'  => $d['files']['pdf'] ?? null,
+                'xml_url'  => $d['files']['xml'] ?? null,
+                'fecha'    => $d['date'] ?? null,
+                'provider' => 'facturapi',
             ]);
 
         } catch (\Throwable $e) {
-            return $this->response->setStatusCode(500)->setJSON(['ok'=>false,'msg'=>$e->getMessage()]);
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'msg' => $e->getMessage()]);
         }
     }
 }
