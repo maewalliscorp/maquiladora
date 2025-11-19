@@ -13,6 +13,9 @@ class MaquiladoraModel extends Model
         'Dueno',
         'Telefono',
         'Correo',
-        'Domicilio'
+        'Domicilio',
+        'tipo',
+        'status',
+        'logo'
     ];
 }

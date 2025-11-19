@@ -46,6 +46,19 @@ if (!function_exists('current_role_name')) {
 
 if (!function_exists('can_menu')) {
     function can_menu(string $perm): bool {
+        // Bypass para roles privilegiados (siempre tienen acceso)
+        $roleName = current_role_name();
+        $roleNorm = $roleName ? mb_strtolower(trim($roleName)) : '';
+        
+        if (in_array($roleNorm, ['administrador', 'jefe', 'superadmin'])) {
+            return true;
+        }
+
+        // Bypass específico para menu.maquiladora
+        if ($perm === 'menu.maquiladora' && $roleNorm === 'rh') {
+            return true;
+        }
+
         // Optimización: usar cache de permisos en sesión
         $cachedPermissions = session()->get('cached_permissions');
         if ($cachedPermissions !== null) {

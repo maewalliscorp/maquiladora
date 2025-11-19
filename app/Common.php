@@ -47,6 +47,7 @@ if (!function_exists('can')) {
             'menu.reportes'              => ['rh'],
             'menu.roles'                 => ['rh'],
             'menu.usuarios'              => ['rh'],
+            'menu.maquiladora'           => ['rh', 'administrador', 'jefe'],
         ];
         if (isset($map[$perm])) {
             $allowed = $map[$perm];

@@ -273,6 +273,12 @@
                                     Gestión Usuarios
                                 </label>
                             </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.maquiladora" id="perm_maquiladora">
+                                <label class="form-check-label" for="perm_maquiladora">
+                                    Mi Maquiladora
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>

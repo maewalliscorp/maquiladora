@@ -114,12 +114,14 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                     </a>
                 </li>
 
-                <?php if (can('menu.catalogo_disenos')): ?>
+                <?php if (can('menu.maquiladora')): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="<?= site_url('maquiladora') ?>">
                             <i class="bi bi-building me-1"></i> Mi Maquiladora
                         </a>
                     </li>
+                <?php endif; ?>
+                <?php if (can('menu.catalogo_disenos')): ?>
                     <li class="nav-item"><a class="nav-link text-dark"
                                             href="<?= esc(base_url('modulo2/catalogodisenos')) ?>"><i
                                     class="bi bi-brush me-2"></i>Catálogo de Diseños</a></li>
@@ -263,6 +265,12 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                         </a>
                         <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="quickMenu"
                              style="min-width: 280px;">
+                            <?php if (can('menu.maquiladora')): ?>
+                                <a class="dropdown-item" href="<?= esc(base_url('maquiladora')) ?>">
+                                    <i class="bi bi-building me-1"></i> Mi Maquiladora
+                                </a>
+                                <div class="dropdown-divider"></div>
+                            <?php endif; ?>
                             <?php if (can('menu.ordenes_clientes')): ?><a class="dropdown-item"
                                                                           href="<?= esc(base_url('clientes')) ?>"><i
                                             class="bi bi-people me-2"></i>Clientes</a><?php endif; ?>
@@ -349,6 +357,7 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
                             <?php if (can('menu.usuarios')): ?><a class="dropdown-item"
                                                                   href="<?= esc(base_url('modulo11/usuarios')) ?>"><i
                                             class="bi bi-shield-lock me-2"></i>Gestión Usuarios</a><?php endif; ?>
+
                         </div>
                     </li>
                 </ul>
@@ -366,6 +375,8 @@ $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
 </footer>
 
 <!-- Scripts: cargados al final para mejor performance -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js" defer></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js" defer></script>
