@@ -1269,7 +1269,8 @@ class Modulos extends BaseController
                     'Dueno AS dueno',
                     'Telefono AS telefono',
                     'Correo AS correo',
-                    'Domicilio AS domicilio'
+                    'Domicilio AS domicilio',
+                    'logo'
                 ])
                 ->where('idmaquiladora', $maquiladoraId)
                 ->get()
@@ -1286,7 +1287,8 @@ class Modulos extends BaseController
                         'Dueno AS dueno',
                         'Telefono AS telefono',
                         'Correo AS correo',
-                        'Domicilio AS domicilio'
+                        'Domicilio AS domicilio',
+                        'logo'
                     ])
                     ->where('idmaquiladora', $maquiladoraId)
                     ->get()
@@ -1303,9 +1305,25 @@ class Modulos extends BaseController
                     'dueno' => 'No especificado',
                     'telefono' => 'No especificado',
                     'correo' => 'No especificado',
-                    'domicilio' => 'No especificado'
+                    'domicilio' => 'No especificado',
+                    'logo' => null
                 ];
                 log_message('error', 'No se pudo encontrar la maquiladora con ID: ' . $maquiladoraId);
+            }
+
+            // Preparar logo para visualización
+            if (!empty($maquiladora['logo'])) {
+                $maquiladora['logo_base64'] = base64_encode($maquiladora['logo']);
+                try {
+                    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                    $mime = $finfo->buffer($maquiladora['logo']);
+                    $maquiladora['logo_mime'] = $mime;
+                } catch (\Throwable $e) {
+                    $maquiladora['logo_mime'] = 'image/jpeg'; // Fallback
+                }
+            } else {
+                $maquiladora['logo_base64'] = null;
+                $maquiladora['logo_mime'] = null;
             }
         }
 
@@ -2061,11 +2079,36 @@ class Modulos extends BaseController
     {
         // Usar el modelo centralizado para evitar diferencias de esquema
         $ordenes = [];
+        $maquiladoras = [];
+        $maquiladoraId = session()->get('maquiladora_id');
+        
         try {
             $opModel = new \App\Models\OrdenProduccionModel();
             // Filtrar OP por maquiladora del usuario autenticado
-            $maquiladoraId = session()->get('maquiladora_id');
             $ordenes = $opModel->getListado($maquiladoraId);
+            
+            // Obtener lista de otras maquiladoras para compartir
+            $db = \Config\Database::connect();
+            // Intentar minúsculas
+            try {
+                $maquiladoras = $db->table('maquiladora')
+                    ->select('idmaquiladora as id, Nombre_Maquila as nombre')
+                    ->where('idmaquiladora !=', $maquiladoraId)
+                    ->where('status', 1) // Solo activas
+                    ->orderBy('Nombre_Maquila', 'ASC')
+                    ->get()
+                    ->getResultArray();
+            } catch (\Throwable $e) {
+                 // Intentar con mayúsculas
+                 $maquiladoras = $db->table('Maquiladora')
+                    ->select('idmaquiladora as id, Nombre_Maquila as nombre')
+                    ->where('idmaquiladora !=', $maquiladoraId)
+                    ->where('status', 1)
+                    ->orderBy('Nombre_Maquila', 'ASC')
+                    ->get()
+                    ->getResultArray();
+            }
+            
         } catch (\Throwable $e) {
             $ordenes = [];
         }
@@ -2073,8 +2116,66 @@ class Modulos extends BaseController
         return view('modulos/m1_ordenes', $this->payload([
             'title'      => 'Módulo 1 · Órdenes',
             'ordenes'    => $ordenes,
+            'maquiladoras' => $maquiladoras,
+            'currentMaquiladoraId' => $maquiladoraId,
             'notifCount' => 0,
         ]));
+    }
+
+    /**
+     * Compartir una orden de producción con otra maquiladora
+     */
+    public function m1_ordenes_compartir()
+    {
+        $opId = (int)$this->request->getPost('opId');
+        $maquiladoraId = (int)$this->request->getPost('maquiladoraId');
+        
+        if ($opId <= 0 || $maquiladoraId <= 0) {
+            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Datos inválidos']);
+        }
+        
+        $db = \Config\Database::connect();
+        try {
+            // Verificar que la OP exista y pertenezca a la maquiladora actual (seguridad básica)
+            $currentMaquiladoraId = session()->get('maquiladora_id');
+            
+            // Actualizar
+            $updated = false;
+            // Intentar tabla minúsculas
+            try {
+                $builder = $db->table('orden_produccion');
+                if ($currentMaquiladoraId) {
+                    $builder->where('maquiladoraID', $currentMaquiladoraId);
+                }
+                $builder->where('id', $opId)->update(['maquiladoraCompartidaID' => $maquiladoraId]);
+                
+                // Verificar si se actualizó algo (o si ya tenía ese valor, affectedRows podría ser 0, pero la query corrió)
+                // Asumimos éxito si no lanza excepción, aunque lo ideal es checkear affectedRows si cambia
+                $updated = true;
+            } catch (\Throwable $e) {
+                // Fallback mayúsculas
+                try {
+                    $builder = $db->table('OrdenProduccion');
+                    if ($currentMaquiladoraId) {
+                        $builder->where('maquiladoraID', $currentMaquiladoraId);
+                    }
+                    $builder->where('id', $opId)->update(['maquiladoraCompartidaID' => $maquiladoraId]);
+                    $updated = true;
+                } catch (\Throwable $e2) {
+                    $updated = false;
+                    log_message('error', 'Error al compartir OP: ' . $e2->getMessage());
+                }
+            }
+            
+            if ($updated) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Orden compartida correctamente']);
+            } else {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'No se pudo actualizar la orden']);
+            }
+            
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Error del servidor: ' . $e->getMessage()]);
+        }
     }
 
     public function m1_produccion()

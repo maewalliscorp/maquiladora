@@ -117,6 +117,7 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->get('detalles/(:num)', 'Modulos::m1_detalles/$1',['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
     $routes->get('perfilempleado',  'Modulos::m1_perfilempleado');
     $routes->get('ordenes',         'Modulos::m1_ordenes',    ['filter' => 'auth:Administrador,Jefe,Inspector,Empleado,Corte,RH']);
+    $routes->post('ordenes/compartir', 'Modulos::m1_ordenes_compartir', ['filter' => 'auth:Administrador,Jefe,Inspector,Empleado,Corte,RH']);
     $routes->post('empleado/guardar', 'Modulos::m1_empleado_guardar', ['filter' => 'auth']);
     // APIs / Producción
     $routes->get('pedido/(:num)/json',   'Modulos::m1_pedido_json/$1');

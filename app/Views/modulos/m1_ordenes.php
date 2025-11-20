@@ -48,7 +48,14 @@
             <?php if (!empty($ordenes)): ?>
                 <?php foreach ($ordenes as $orden): ?>
                     <tr>
-                        <td><?= esc($orden['op']) ?></td>
+                        <td>
+                            <?= esc($orden['op']) ?>
+                            <?php if (isset($orden['maquiladoraID']) && isset($currentMaquiladoraId) && $orden['maquiladoraID'] != $currentMaquiladoraId): ?>
+                                <span class="badge bg-info text-dark" title="Orden compartida de otra maquiladora"><i class="bi bi-box-arrow-in-down"></i> Externa</span>
+                            <?php elseif (!empty($orden['maquiladoraCompartidaID'])): ?>
+                                <span class="badge bg-warning text-dark" title="Transferida a otra maquiladora"><i class="bi bi-share"></i> Compartida</span>
+                            <?php endif; ?>
+                        </td>
                         <td><?= esc($orden['cliente']) ?></td>
                         <td><?= esc($orden['diseno'] ?? '') ?></td>
                         <td><?= esc($orden['ini']) ?></td>
@@ -83,6 +90,9 @@
                                         <i class="bi bi-play-circle"></i> Empezar
                                     </a>
                                 <?php endif; ?>
+                                <button type="button" class="btn btn-sm btn-outline-warning btn-transferir-op" data-id="<?= esc($orden['opId'] ?? '') ?>" data-folio="<?= esc($orden['op'] ?? '') ?>" data-bs-toggle="modal" data-bs-target="#opTransferirModal">
+                                    <i class="bi bi-share"></i> Transferir
+                                </button>
                                 <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-op" data-id="<?= esc($orden['opId'] ?? '') ?>" data-folio="<?= esc($orden['op'] ?? '') ?>">
                                     <i class="bi bi-trash"></i> Eliminar
                                 </button>
@@ -200,6 +210,41 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Transferir OP -->
+    <div class="modal fade" id="opTransferirModal" tabindex="-1" aria-labelledby="opTransferirLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content text-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="opTransferirLabel">Transferir Orden <span id="trans-op-folio"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Seleccione la maquiladora con la que desea compartir esta orden de producción:</p>
+                    <form id="formTransferirOp">
+                        <input type="hidden" id="trans-op-id" name="opId">
+                        <div class="mb-3">
+                            <label for="trans-maquiladora" class="form-label">Maquiladora Destino</label>
+                            <select class="form-select" id="trans-maquiladora" name="maquiladoraId" required>
+                                <option value="">Seleccione una opción...</option>
+                                <?php if (!empty($maquiladoras)): ?>
+                                    <?php foreach ($maquiladoras as $m): ?>
+                                        <option value="<?= esc($m['id']) ?>"><?= esc($m['nombre']) ?></option>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <option value="" disabled>No hay otras maquiladoras disponibles</option>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btn-confirmar-transferencia">Transferir</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <?= $this->endSection() ?>
 
     <?= $this->section('scripts') ?>
@@ -294,6 +339,46 @@
                     }).always(function(){
                         $btn.prop('disabled', false);
                     });
+                });
+            });
+
+            // Transferir OP
+            $(document).on('click', '.btn-transferir-op', function(){
+                const id = $(this).data('id');
+                const folio = $(this).data('folio');
+                $('#trans-op-id').val(id);
+                $('#trans-op-folio').text(folio);
+                $('#trans-maquiladora').val('');
+            });
+
+            $('#btn-confirmar-transferencia').on('click', function(){
+                const opId = $('#trans-op-id').val();
+                const maquiladoraId = $('#trans-maquiladora').val();
+                
+                if (!opId || !maquiladoraId) {
+                    Swal.fire('Error', 'Por favor seleccione una maquiladora', 'error');
+                    return;
+                }
+                
+                const $btn = $(this);
+                $btn.prop('disabled', true);
+                
+                $.ajax({
+                    url: '<?= base_url('modulo1/ordenes/compartir') ?>',
+                    method: 'POST',
+                    data: { opId, maquiladoraId },
+                    dataType: 'json'
+                }).done(function(resp){
+                    if(resp.success){
+                        Swal.fire('Éxito', resp.message, 'success');
+                        $('#opTransferirModal').modal('hide');
+                    } else {
+                        Swal.fire('Error', resp.message, 'error');
+                    }
+                }).fail(function(){
+                    Swal.fire('Error', 'Ocurrió un error al procesar la solicitud', 'error');
+                }).always(function(){
+                    $btn.prop('disabled', false);
                 });
             });
 
