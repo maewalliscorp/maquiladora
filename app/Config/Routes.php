@@ -34,11 +34,14 @@ $routes->get('/logout',          'UsuarioController::logout');
 
 // API sueltos
 $routes->get('api/maquiladoras', 'UsuarioController::getMaquiladoras');
-// Agrega esta línea con las demás rutas
-$routes->get('maquiladora', 'Maquiladora::index', ['as' => 'maquiladora']);
+
+// Maquiladora principal
+$routes->get('maquiladora',         'Maquiladora::index', ['as' => 'maquiladora']);
 $routes->post('maquiladora/update', 'Maquiladora::update');
 
-// Módulo 11 - Usuarios (acciones AJAX)
+/* --------------------------------------------------------------------
+ * Módulo 11 - Usuarios (acciones AJAX)
+ * ------------------------------------------------------------------*/
 $routes->post('modulo11/eliminar_usuario',       'Modulos::m11_eliminar_usuario');
 $routes->get ('modulo11/obtener_usuario/(:num)', 'Modulos::m11_obtener_usuario/$1');
 $routes->post('modulo11/actualizar_usuario',     'Modulos::m11_actualizar_usuario');
@@ -61,6 +64,52 @@ $routes->get   ('api/articulos/buscar',                   'AlmacenController::ap
 $routes->get   ('api/articulos/detalle',                  'AlmacenController::apiArticuloDetalle');
 $routes->get   ('api/inventario/resumen-articulo/(:num)', 'AlmacenController::apiResumenArticulo/$1');
 
+/* =========================
+ * PROVEEDORES
+ * ========================= */
+// Vista principal de proveedores
+$routes->get(
+    'proveedores',
+    'ProveedorController::index',
+    ['filter' => 'auth:Administrador,Jefe,Almacenista']
+);
+// Crear / actualizar proveedor
+$routes->post(
+    'proveedores/store',
+    'ProveedorController::store',
+    ['filter' => 'auth:Administrador,Jefe,Almacenista']
+);
+// Eliminar proveedor
+$routes->post(
+    'proveedores/eliminar/(:num)',
+    'ProveedorController::eliminar/$1',
+    ['filter' => 'auth:Administrador,Jefe,Almacenista']
+);
+// Crear orden de pedido a proveedor (POST del modal)
+$routes->post(
+    'proveedores/orden',
+    'ProveedorController::crearOrden',
+    ['filter' => 'auth:Administrador,Jefe,Almacenista']
+);
+// Historial de órdenes de un proveedor (AJAX que devuelve JSON)
+$routes->get(
+    'proveedores/historial/(:num)',
+    'ProveedorController::historial/$1',
+    ['filter' => 'auth:Administrador,Jefe,Almacenista']
+);
+// Ver la orden en HTML (opcional, si usas verOrden)
+$routes->get(
+    'proveedores/orden/(:num)',
+    'ProveedorController::verOrden/$1',
+    ['filter' => 'auth:Administrador,Jefe,Almacenista']
+);
+// Descargar / ver PDF de una orden de proveedor
+$routes->get(
+    'proveedores/orden/pdf/(:num)',
+    'ProveedorController::ordenPdf/$1',
+    ['filter' => 'auth:Administrador,Jefe,Almacenista']
+);
+
 /* --------------------------------------------------------------------
  * Home / Auth landing
  * ------------------------------------------------------------------*/
@@ -71,7 +120,7 @@ $routes->get('/dashboard', 'Dashboard::index', ['filter' => 'auth']);
  * API (Dashboard y Clientes sin duplicados)
  * ------------------------------------------------------------------*/
 $routes->group('api', static function ($routes) {
-    $routes->get('dashboard',                 'Api::dashboard'); // ?range=30
+    $routes->get('dashboard', 'Api::dashboard'); // ?range=30
 
     // Clientes (con CORS para POST si lo necesitas)
     $routes->match(['post','options'],'clientes/crear',           'Clientes::crear');
@@ -212,7 +261,7 @@ $routes->group('mantenimiento', static function($r){
 });
 
 /* --------------------------------------------------------------------
- * *** NUEVO ***  Notificaciones + Mantenimiento Programado
+ * Notificaciones + Mantenimiento Programado
  * ------------------------------------------------------------------*/
 // Notificaciones (vista nueva)
 $routes->get ('notificaciones1',               'Notificaciones1::index', ['filter' => 'auth']);
@@ -313,24 +362,18 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     /* =========================
      * LOGÍSTICA · PREPARACIÓN / PACKING
      * ========================= */
-    // Vista principal (usa app/Views/modulo3/logistica_preparacion.php)
+    // Vista principal
     $routes->get(
         'logistica_preparacion',
         'EmbarquesController::packing',
         ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
     );
-    // Alias corto /modulo3/preparacion
-    $routes->get(
-        'preparacion',
-        'EmbarquesController::packing'
-    );
+    // Alias corto
+    $routes->get('preparacion', 'EmbarquesController::packing');
     // Alias opcional
-    $routes->get(
-        'embarques/packing',
-        'EmbarquesController::packing'
-    );
+    $routes->get('embarques/packing', 'EmbarquesController::packing');
 
-    // Embarques (acciones desde la vista logistica_preparacion)
+    // Embarques (acciones)
     $routes->post(
         'embarques/crear',
         'EmbarquesController::crear',
@@ -349,7 +392,7 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
         'EmbarquesController::etiquetas/$1'
     );
 
-    // Acciones por pedido (OC) llamadas vía JS desde logistica_preparacion
+    // Acciones por pedido (OC)
     $routes->get(
         'ordenes/(:num)/json',
         'OrdenesController::json/$1'
@@ -376,7 +419,7 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
      * ========================= */
     $routes->get ('documentos',                 'LogisticaController::documentos', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
     $routes->get ('logistica_documentos',       'LogisticaController::documentos', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
-    // CRUD documentos (doc_embarque)
+    // CRUD documentos
     $routes->post('documentos/crear',           'LogisticaController::crearDocumento');
     $routes->get ('documentos/(:num)/json',     'LogisticaController::docJson/$1');
     $routes->post('documentos/(:num)/editar',   'LogisticaController::editarDocumento/$1');
@@ -391,7 +434,7 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->get ('embarque/manual/print',  'LogisticaController::documentoManualPrint');
     $routes->post('embarque/manual/print',  'LogisticaController::documentoManualPrint');
 
-    // ===== Proxy Storage (fallback de listado desde el front) =====
+    // Proxy Storage
     $routes->post('storage/list', 'StorageProxy::list');
 
     // Órdenes de clientes
@@ -532,10 +575,10 @@ $routes->get('logistica/factura/(:num)',        'FacturaDemoController::preview/
 $routes->get('logistica/factura/(:num)/pdf',    'FacturaDemoController::pdf/$1',     ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
 
 /* --------------------------------------------------------------------
- * (Opcional) Endpoints POST si quieres mandar payload directo (no sesión)
+ * (Opcional) Endpoints POST para facturación
  * ------------------------------------------------------------------*/
 $routes->group('facturacion', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad'], static function($r){
-    // Espacio para futuras rutas POST (payload directo)
+    // Espacio para futuras rutas POST
     // $r->post('demo/html', 'FacturaDemoController::html');
     // $r->post('demo/pdf',  'FacturaDemoController::pdfPost');
 });
