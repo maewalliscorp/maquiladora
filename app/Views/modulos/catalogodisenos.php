@@ -118,17 +118,23 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="row g-3 mb-2">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Vista previa CAD</label>
-                        <div id="nuevoCadPreview" class="border rounded p-2 bg-light" style="min-height:160px"></div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Vista previa Patrón</label>
-                        <div id="nuevoPatronPreview" class="border rounded p-2 bg-light" style="min-height:160px"></div>
-                    </div>
-                </div>
                 <form id="formNuevoDiseno">
+                    <div class="row g-3 mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Vista previa Foto</label>
+                            <div id="nuevoFotoPreview" class="border rounded p-2 bg-light mb-2" style="min-height:160px; display: flex; align-items: center; justify-content: center;">
+                                <span class="text-muted">Sin foto seleccionada</span>
+                            </div>
+                            <input type="file" name="foto" id="inputFoto" class="form-control" accept="image/*" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Vista previa Patrón</label>
+                            <div id="nuevoPatronPreview" class="border rounded p-2 bg-light mb-2" style="min-height:160px; display: flex; align-items: center; justify-content: center;">
+                                <span class="text-muted">Sin patrón seleccionado</span>
+                            </div>
+                            <input type="file" name="patron" id="inputPatron" class="form-control" accept="image/*,.pdf" />
+                        </div>
+                    </div>
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label class="form-label">Código</label>
@@ -195,18 +201,7 @@
                                 <option value="">Cargando…</option>
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Archivo CAD (subir cualquier formato)</label>
-                            <input type="file" name="archivoCadFile" class="form-control" />
-                            <small class="text-muted">Opcional: si no subes archivo, puedes poner URL manual.</small>
-                            <input type="text" name="archivoCadUrl" class="form-control mt-1" placeholder="/archivos/cad/archivo.dxf" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Archivo Patrón (subir cualquier formato)</label>
-                            <input type="file" name="archivoPatronFile" class="form-control" />
-                            <small class="text-muted">Opcional: si no subes archivo, puedes poner URL manual.</small>
-                            <input type="text" name="archivoPatronUrl" class="form-control mt-1" placeholder="/archivos/patron/archivo.pdf" />
-                        </div>
+
                         <div class="col-md-3 d-flex align-items-end">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" value="1" id="aprobadoCheck" name="aprobado">
@@ -266,12 +261,18 @@
             <div class="modal-body">
                 <div class="row g-3 mb-2">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Vista previa CAD</label>
-                        <div id="eCadPreview" class="border rounded p-2 bg-light" style="min-height:160px"></div>
+                        <label class="form-label fw-semibold">Vista previa Foto</label>
+                        <div id="eFotoPreview" class="border rounded p-2 bg-light mb-2" style="min-height:160px; display: flex; align-items: center; justify-content: center;">
+                            <span class="text-muted">Sin foto</span>
+                        </div>
+                        <input type="file" name="foto" id="eInputFoto" class="form-control" accept="image/*" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Vista previa Patrón</label>
-                        <div id="ePatronPreview" class="border rounded p-2 bg-light" style="min-height:160px"></div>
+                        <div id="ePatronPreview" class="border rounded p-2 bg-light mb-2" style="min-height:160px; display: flex; align-items: center; justify-content: center;">
+                            <span class="text-muted">Sin patrón</span>
+                        </div>
+                        <input type="file" name="patron" id="eInputPatron" class="form-control" accept="image/*,.pdf" />
                     </div>
                 </div>
                 <form id="formEditarDiseno">
@@ -329,18 +330,7 @@
                             <label class="form-label">Precio por unidad</label>
                             <input type="number" name="precio_unidad" id="e-precio_unidad" class="form-control" min="0" step="0.01" placeholder="0.00" inputmode="decimal" />
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Archivo CAD (subir cualquier formato)</label>
-                            <input type="file" name="archivoCadFile" class="form-control" />
-                            <small class="text-muted">Opcional. Vacío conserva el actual.</small>
-                            <input type="text" name="archivoCadUrl" id="e-archivoCadUrl" class="form-control mt-1" placeholder="/archivos/cad/archivo.dxf" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Archivo Patrón (subir cualquier formato)</label>
-                            <input type="file" name="archivoPatronFile" class="form-control" />
-                            <small class="text-muted">Opcional. Vacío conserva el actual.</small>
-                            <input type="text" name="archivoPatronUrl" id="e-archivoPatronUrl" class="form-control mt-1" placeholder="/archivos/patron/archivo.pdf" />
-                        </div>
+
                         <div class="col-md-3 d-flex align-items-end">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" value="1" id="e-aprobadoCheck" name="aprobado">
@@ -409,77 +399,80 @@
 
 <!-- Modal Bootstrap: Detalles del diseño -->
 <div class="modal fade" id="disenoModal" tabindex="-1" aria-labelledby="disenoModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content text-dark">
-            <div class="modal-header">
-                <h5 class="modal-title text-dark" id="disenoModalLabel">Detalles del diseño</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title text-white" id="disenoModalLabel"><i class="bi bi-eye"></i> Detalles del diseño</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-dark">
-                <div class="text-center mb-3 text-dark" id="m-imagen-wrap" style="display:none;">
-                    <img id="m-imagen" src="" alt="Imagen del diseño" class="img-fluid rounded border text-dark" />
+                <!-- Sección de imágenes visuales -->
+                <div class="row g-3 mb-4" id="m-imagenes-section">
+                    <div class="col-md-6">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="bi bi-image"></i> Fotografía del diseño</h6>
+                            </div>
+                            <div class="card-body d-flex align-items-center justify-content-center" style="min-height: 300px; background: #f8f9fa;">
+                                <div id="m-foto-preview" class="w-100 h-100 d-flex align-items-center justify-content-center">
+                                    <span class="text-muted"><i class="bi bi-image" style="font-size: 3rem;"></i><br>Sin fotografía</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="bi bi-file-earmark-pdf"></i> Patrón / Documento</h6>
+                            </div>
+                            <div class="card-body d-flex align-items-center justify-content-center" style="min-height: 300px; background: #f8f9fa;">
+                                <div id="m-patron-preview" class="w-100 h-100 d-flex align-items-center justify-content-center">
+                                    <span class="text-muted"><i class="bi bi-file-earmark" style="font-size: 3rem;"></i><br>Sin patrón</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <dl class="row mb-0 text-dark">
-                    <dt class="col-sm-3 fw-semibold text-dark">ID</dt>
-                    <dd class="col-sm-9 text-dark" id="m-id">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Código</dt>
-                    <dd class="col-sm-9 text-dark" id="m-codigo">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Nombre</dt>
-                    <dd class="col-sm-9 text-dark" id="m-nombre">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Descripción</dt>
-                    <dd class="col-sm-9 text-dark" id="m-descripcion">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Versión</dt>
-                    <dd class="col-sm-9 text-dark" id="m-version">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Fecha versión</dt>
-                    <dd class="col-sm-9 text-dark" id="m-fecha">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Notas</dt>
-                    <dd class="col-sm-9 text-dark" id="m-notas">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Precio unidad</dt>
-                    <dd class="col-sm-9 text-dark" id="m-precio">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Materiales</dt>
-                    <dd class="col-sm-9 text-dark" id="m-materiales">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Vista previa CAD</dt>
-                    <dd class="col-sm-9 text-dark" id="m-cad">
-                        <div id="m-cad-view" style="display:none;">
-                            <img id="m-cad-img" src="" alt="CAD" class="img-fluid rounded border mb-2" style="max-height:300px; display:none;" />
-                            <object id="m-cad-pdf" data="" type="application/pdf" width="100%" height="320" style="display:none;">
-                                <div class="text-muted">No se pudo mostrar el PDF.</div>
-                            </object>
-                            <div id="m-cad-fallback" class="text-muted" style="display:none;"></div>
-                        </div>
-                        <div id="m-cad-empty">-</div>
-                    </dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Vista previa Patrón</dt>
-                    <dd class="col-sm-9 text-dark" id="m-patron">
-                        <div id="m-patron-view" style="display:none;">
-                            <img id="m-patron-img" src="" alt="Patrón" class="img-fluid rounded border mb-2" style="max-height:300px; display:none;" />
-                            <object id="m-patron-pdf" data="" type="application/pdf" width="100%" height="320" style="display:none;">
-                                <div class="text-muted">No se pudo mostrar el PDF.</div>
-                            </object>
-                            <div id="m-patron-fallback" class="text-muted" style="display:none;"></div>
-                        </div>
-                        <div id="m-patron-empty">-</div>
-                    </dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Aprobado</dt>
-                    <dd class="col-sm-9 text-dark" id="m-aprobado">-</dd>
-                </dl>
 
-                <!-- Carrusel de vistas previas -->
-                <div id="m-carousel" class="carousel slide mt-3" data-bs-ride="carousel" style="display:none;">
-                    <div class="carousel-indicators" id="m-carousel-indicators"></div>
-                    <div class="carousel-inner" id="m-carousel-inner"></div>
-                    <button class="carousel-control-prev" type="button" data-bs-target="#m-carousel" data-bs-slide="prev">
-                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                        <span class="visually-hidden">Anterior</span>
-                    </button>
-                    <button class="carousel-control-next" type="button" data-bs-target="#m-carousel" data-bs-slide="next">
-                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                        <span class="visually-hidden">Siguiente</span>
-                    </button>
+                <!-- Información del diseño -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-info-circle"></i> Información del diseño</h6>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0 text-dark">
+                            <dt class="col-sm-3 fw-semibold text-dark">ID</dt>
+                            <dd class="col-sm-3 text-dark" id="m-id">-</dd>
+                            <dt class="col-sm-3 fw-semibold text-dark">Código</dt>
+                            <dd class="col-sm-3 text-dark" id="m-codigo">-</dd>
+                            
+                            <dt class="col-sm-3 fw-semibold text-dark">Nombre</dt>
+                            <dd class="col-sm-9 text-dark" id="m-nombre">-</dd>
+                            
+                            <dt class="col-sm-3 fw-semibold text-dark">Descripción</dt>
+                            <dd class="col-sm-9 text-dark" id="m-descripcion">-</dd>
+                            
+                            <dt class="col-sm-3 fw-semibold text-dark">Versión</dt>
+                            <dd class="col-sm-3 text-dark" id="m-version">-</dd>
+                            <dt class="col-sm-3 fw-semibold text-dark">Fecha versión</dt>
+                            <dd class="col-sm-3 text-dark" id="m-fecha">-</dd>
+                            
+                            <dt class="col-sm-3 fw-semibold text-dark">Notas</dt>
+                            <dd class="col-sm-9 text-dark" id="m-notas">-</dd>
+                            
+                            <dt class="col-sm-3 fw-semibold text-dark">Precio unidad</dt>
+                            <dd class="col-sm-3 text-dark" id="m-precio">-</dd>
+                            <dt class="col-sm-3 fw-semibold text-dark">Aprobado</dt>
+                            <dd class="col-sm-3 text-dark" id="m-aprobado">-</dd>
+                            
+                            <dt class="col-sm-3 fw-semibold text-dark">Materiales</dt>
+                            <dd class="col-sm-9 text-dark" id="m-materiales">-</dd>
+                        </dl>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle"></i> Cerrar</button>
             </div>
         </div>
     </div>
@@ -734,8 +727,8 @@
         if (!url) { el.innerHTML = '<div class="text-muted">Sin archivo</div>'; return; }
         const u = String(url);
         const lower = u.toLowerCase();
-        const isImg = /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/.test(lower);
-        const isPdf = /\.pdf(\?.*)?$/.test(lower);
+        const isImg = /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/.test(lower) || /^blob:/.test(lower) || /^data:image\//.test(lower);
+        const isPdf = /\.pdf(\?.*)?$/.test(lower) || /^data:application\/pdf/.test(lower);
         const isDxf = /\.dxf(\?.*)?$/.test(lower);
         if (isImg) {
             el.innerHTML = '<img src="'+u+'" class="img-fluid rounded border" alt="preview">';
@@ -906,13 +899,57 @@
                 const apr = data.aprobado;
                 $('#e-aprobadoCheck').prop('checked', apr === 1 || apr === true || apr === '1');
                 preCli = (data.clienteId !== undefined && data.clienteId !== null && data.clienteId !== '') ? String(data.clienteId) : null;
+                
+                
                 // Previews iniciales en modal Editar
-                renderFilePreview('eCadPreview', data.archivoCadUrl || '');
-                renderFilePreview('ePatronPreview', data.archivoPatronUrl || '');
+                console.log('Datos recibidos:', data);
+                console.log('Foto:', data.foto ? 'Sí tiene foto' : 'No tiene foto');
+                console.log('Patron:', data.patron ? 'Sí tiene patron' : 'No tiene patron');
+                
+                try {
+                    let fotoUrl = '';
+                    if (data.foto) {
+                        // Detectar tipo de imagen simple
+                        let mime = 'image/jpeg';
+                        if (String(data.foto).startsWith('iVBOR')) mime = 'image/png';
+                        fotoUrl = 'data:' + mime + ';base64,' + data.foto;
+                        console.log('FotoUrl generada:', fotoUrl.substring(0, 50) + '...');
+                    }
+                    renderFilePreview('eFotoPreview', fotoUrl);
+
+                    let patronUrl = '';
+                    if (data.patron) {
+                        if (String(data.patron).startsWith('JVBERi')) {
+                            patronUrl = 'data:application/pdf;base64,' + data.patron;
+                        } else {
+                            // Asumir imagen
+                            let mime = 'image/jpeg';
+                            if (String(data.patron).startsWith('iVBOR')) mime = 'image/png';
+                            patronUrl = 'data:' + mime + ';base64,' + data.patron;
+                        }
+                        console.log('PatronUrl generada:', patronUrl.substring(0, 50) + '...');
+                    }
+                    // Render especial para PDF en iframe si es necesario, o usar renderFilePreview
+                    if (patronUrl.startsWith('data:application/pdf')) {
+                        const el = document.getElementById('ePatronPreview');
+                        if (el) el.innerHTML = '<iframe src="'+patronUrl+'" width="100%" height="400px" style="border:none;"></iframe>';
+                    } else {
+                        renderFilePreview('ePatronPreview', patronUrl);
+                    }
+                } catch(e) { console.error('Error rendering previews', e); }
+
                 // Setear FKs cuando carguen los catálogos
+                console.log('idTallasFK:', data.idTallasFK);
                 $.when(q1, q2, q3, q4).always(function(){
-                    if (data.idSexoFK !== undefined && data.idSexoFK !== null) $('#e-selSexo').val(String(data.idSexoFK));
-                    if (data.IdTallasFK !== undefined && data.IdTallasFK !== null) $('#e-selTalla').val(String(data.IdTallasFK));
+                    if (data.idSexoFK !== undefined && data.idSexoFK !== null) {
+                        console.log('Seteando sexo:', data.idSexoFK);
+                        $('#e-selSexo').val(String(data.idSexoFK));
+                    }
+                    if (data.idTallasFK !== undefined && data.idTallasFK !== null) {
+                        console.log('Seteando talla:', data.idTallasFK);
+                        $('#e-selTalla').val(String(data.idTallasFK));
+                        console.log('Valor del select talla después:', $('#e-selTalla').val());
+                    }
                     if (data.idTipoCorteFK !== undefined && data.idTipoCorteFK !== null) $('#e-selTipoCorte').val(String(data.idTipoCorteFK));
                     if (data.idTipoRopaFK !== undefined && data.idTipoRopaFK !== null) $('#e-selTipoRopa').val(String(data.idTipoRopaFK));
                     cargarClientesEditar(preCli);
@@ -945,40 +982,61 @@
                             }
                         }
                     });
-                    const q = ($('#e-buscarArticulo').val()||'').toString().toLowerCase().trim();
-                    e_pintarDisponibles(q);
                 }
+                
+                // Siempre actualizar la lista de disponibles después de cargar los datos
+                const q = ($('#e-buscarArticulo').val()||'').toString().toLowerCase().trim();
+                e_pintarDisponibles(q);
             })
             .fail(function(xhr){
                 $('#editarDisenoAlert').removeClass('d-none').text('No fue posible cargar los datos');
             });
     });
     // Actualizar previews en cambios de campos (Editar)
-    $(document).on('input change', '#e-archivoCadUrl', function(){ renderFilePreview('eCadPreview', this.value || ''); });
-    $(document).on('input change', '#e-archivoPatronUrl', function(){ renderFilePreview('ePatronPreview', this.value || ''); });
-    $(document).on('change', '#editarDisenoModal input[name="archivoCadFile"]', function(){
+    $(document).on('change', '#editarDisenoModal input[name="foto"]', function(){
         const f = this.files && this.files[0];
-        renderFilePreview('eCadPreview', f ? URL.createObjectURL(f) : '');
+        renderFilePreview('eFotoPreview', f ? URL.createObjectURL(f) : '');
     });
-    $(document).on('change', '#editarDisenoModal input[name="archivoPatronFile"]', function(){
+    $(document).on('change', '#editarDisenoModal input[name="patron"]', function(){
         const f = this.files && this.files[0];
-        renderFilePreview('ePatronPreview', f ? URL.createObjectURL(f) : '');
+        if (!f) {
+            renderFilePreview('ePatronPreview', '');
+            return;
+        }
+        const url = URL.createObjectURL(f);
+        if (f.type === 'application/pdf') {
+            const el = document.getElementById('ePatronPreview');
+            el.innerHTML = '<iframe src="'+url+'" width="100%" height="400px" style="border:none;"></iframe>';
+        } else {
+            renderFilePreview('ePatronPreview', url);
+        }
     });
 
     // Nuevo: limpiar y actualizar previews
     $('#nuevoDisenoModal').on('show.bs.modal', function(){
-        renderFilePreview('nuevoCadPreview', '');
+        renderFilePreview('nuevoFotoPreview', '');
         renderFilePreview('nuevoPatronPreview', '');
+        $('#inputFoto').val('');
+        $('#inputPatron').val('');
     });
-    $(document).on('input change', '#nuevoDisenoModal input[name="archivoCadUrl"]', function(){ renderFilePreview('nuevoCadPreview', this.value || ''); });
-    $(document).on('input change', '#nuevoDisenoModal input[name="archivoPatronUrl"]', function(){ renderFilePreview('nuevoPatronPreview', this.value || ''); });
-    $(document).on('change', '#nuevoDisenoModal input[name="archivoCadFile"]', function(){
+    
+    $(document).on('change', '#nuevoDisenoModal input[name="foto"]', function(){
         const f = this.files && this.files[0];
-        renderFilePreview('nuevoCadPreview', f ? URL.createObjectURL(f) : '');
+        renderFilePreview('nuevoFotoPreview', f ? URL.createObjectURL(f) : '');
     });
-    $(document).on('change', '#nuevoDisenoModal input[name="archivoPatronFile"]', function(){
+    $(document).on('change', '#nuevoDisenoModal input[name="patron"]', function(){
         const f = this.files && this.files[0];
-        renderFilePreview('nuevoPatronPreview', f ? URL.createObjectURL(f) : '');
+        if (!f) {
+            renderFilePreview('nuevoPatronPreview', '');
+            return;
+        }
+        const url = URL.createObjectURL(f);
+        if (f.type === 'application/pdf') {
+            const el = document.getElementById('nuevoPatronPreview');
+            el.innerHTML = '<iframe src="'+url+'" width="100%" height="400px" style="border:none;"></iframe>';
+        } else {
+            renderFilePreview('nuevoPatronPreview', url);
+        }
     });
     $(document).on('input', '#e-buscarArticulo', function(){
         const q = ($(this).val()||'').toString().toLowerCase().trim();
@@ -1008,10 +1066,16 @@
         const id = $('#e-id').val();
         const $alert = $('#editarDisenoAlert');
         $alert.addClass('d-none').text('');
+        
+        // Habilitar todos los selects antes de crear el FormData para que sus valores se incluyan
+        try { $('#e-selCliente').prop('disabled', false); } catch(e) {}
+        try { $('#e-selSexo').prop('disabled', false); } catch(e) {}
+        try { $('#e-selTalla').prop('disabled', false); } catch(e) {}
+        try { $('#e-selTipoCorte').prop('disabled', false); } catch(e) {}
+        try { $('#e-selTipoRopa').prop('disabled', false); } catch(e) {}
+        
         const formEl = document.getElementById('formEditarDiseno');
         const fd = new FormData(formEl);
-        // Asegurar clienteId en el payload (el select pudo haber estado disabled al inicio)
-        try { $('#e-selCliente').prop('disabled', false); } catch(e) {}
         fd.set('clienteId', ($('#e-selCliente').val() || ''));
         const materials = [];
         $('#e-tblMaterialesBody tr').each(function(){
@@ -1356,12 +1420,14 @@
         // Modal Detalles (AJAX)
         $(document).on('click', '.btn-ver-modal', function () {
             const id = $(this).data('id');
-            $('#m-id,#m-codigo,#m-nombre,#m-version,#m-fecha,#m-notas,#m-aprobado').text('-');
+            // Limpiar campos
+            $('#m-id,#m-codigo,#m-nombre,#m-version,#m-fecha,#m-notas,#m-aprobado,#m-precio').text('-');
             $('#m-descripcion').text('Cargando...');
             $('#m-materiales').text('-');
-            const $ci = $('#m-carousel-inner'); const $ind = $('#m-carousel-indicators');
-            $ci.empty(); $ind.empty(); $('#m-carousel').hide();
-            $('#m-imagen').attr('src', ''); $('#m-imagen-wrap').hide(); $('#m-editar').attr('href', '#');
+            
+            // Limpiar previews
+            $('#m-foto-preview').html('<span class="text-muted"><i class="bi bi-image" style="font-size: 3rem;"></i><br>Sin fotografía</span>');
+            $('#m-patron-preview').html('<span class="text-muted"><i class="bi bi-file-earmark" style="font-size: 3rem;"></i><br>Sin patrón</span>');
 
             $.getJSON('<?= base_url('modulo2/diseno') ?>/' + id + '/json')
                 .done(function (data) {
@@ -1373,61 +1439,60 @@
                     $('#m-fecha').text(data.fecha ? (new Date(data.fecha)).toISOString().slice(0,10) : '-');
                     $('#m-notas').text(data.notas || '-');
                     $('#m-precio').text((data.precio_unidad !== undefined && data.precio_unidad !== null && data.precio_unidad !== '') ? data.precio_unidad : '-');
-                    $('#m-materiales').text((data.materiales || []).join(', '));
-
-                    const isImage = (u) => /\.(png|jpg|jpeg|gif|bmp|webp|svg)$/i.test(u || '');
-                    const isPdf   = (u) => /\.(pdf)$/i.test(u || '');
-                    const isDxf   = (u) => /\.(dxf)$/i.test(u || '');
-                    let slides = [];
-
-                    if (data.imagenUrl && isImage(data.imagenUrl)) {
-                        slides.push({title: 'Imagen',
-                            html: '<div class="text-center"><img src="'+data.imagenUrl+'" class="img-fluid rounded border" style="max-height:420px;" alt="Imagen"/></div>'});
-                    }
-                    if (data.archivoCadUrl) {
-                        if (isImage(data.archivoCadUrl)) {
-                            slides.push({title:'CAD (imagen)', html:'<div class="text-center"><img src="'+data.archivoCadUrl+'" class="img-fluid rounded border" style="max-height:420px;" alt="CAD"/></div>'});
-                        } else if (isPdf(data.archivoCadUrl)) {
-                            slides.push({title:'CAD (PDF)', html:'<object data="'+data.archivoCadUrl+'" type="application/pdf" width="100%" height="450"><div class="text-muted p-3">No se pudo mostrar el PDF CAD.</div></object>'});
-                        } else if (isDxf(data.archivoCadUrl)) {
-                            const dxfId = 'dxf-cad-'+Date.now();
-                            slides.push({title:'CAD (DXF)', html:'<div id="'+dxfId+'" style="height:450px; background:#f8f9fa;" class="rounded border d-flex align-items-center justify-content-center">Cargando DXF…</div>', afterMount: function(){ renderDXF(dxfId, data.archivoCadUrl); }});
-                        } else {
-                            slides.push({title:'CAD', html:'<div class="p-3 text-muted">Archivo CAD: '+ data.archivoCadUrl +'</div>'});
-                        }
-                    }
-                    if (data.archivoPatronUrl) {
-                        if (isImage(data.archivoPatronUrl)) {
-                            slides.push({title:'Patrón (imagen)', html:'<div class="text-center"><img src="'+data.archivoPatronUrl+'" class="img-fluid rounded border" style="max-height:420px;" alt="Patrón"/></div>'});
-                        } else if (isPdf(data.archivoPatronUrl)) {
-                            slides.push({title:'Patrón (PDF)', html:'<object data="'+data.archivoPatronUrl+'" type="application/pdf" width="100%" height="450"><div class="text-muted p-3">No se pudo mostrar el PDF Patrón.</div></object>'});
-                        } else if (isDxf(data.archivoPatronUrl)) {
-                            const dxfId2 = 'dxf-patron-'+Date.now();
-                            slides.push({title:'Patrón (DXF)', html:'<div id="'+dxfId2+'" style="height:450px; background:#f8f9fa;" class="rounded border d-flex align-items-center justify-content-center">Cargando DXF…</div>', afterMount: function(){ renderDXF(dxfId2, data.archivoPatronUrl); }});
-                        } else {
-                            slides.push({title:'Patrón', html:'<div class="p-3 text-muted">Archivo Patrón: '+ data.archivoPatronUrl +'</div>'});
-                        }
+                    
+                    // Mostrar materiales
+                    if (data.materiales && Array.isArray(data.materiales) && data.materiales.length > 0) {
+                        const matHtml = '<ul class="mb-0">' + data.materiales.map(m => {
+                            if (typeof m === 'string') return '<li>' + m + '</li>';
+                            return '<li>' + (m.nombre || 'Material') + 
+                                   (m.cantidad ? ' x ' + m.cantidad : '') + 
+                                   (m.merma ? ' • merma ' + m.merma + '%' : '') + '</li>';
+                        }).join('') + '</ul>';
+                        $('#m-materiales').html(matHtml);
+                    } else {
+                        $('#m-materiales').text('Sin materiales');
                     }
 
-                    if (slides.length > 0) {
-                        slides.forEach((s, idx) => {
-                            const active = idx === 0 ? ' active' : '';
-                            $ci.append('<div class="carousel-item'+active+'">'+ s.html +'</div>');
-                            $ind.append('<button type="button" data-bs-target="#m-carousel" data-bs-slide-to="'+idx+'" '+(idx===0?'class="active" aria-current="true"':'')+' aria-label="'+(s.title||('Slide '+(idx+1)))+'"></button>');
-                        });
-                        $('#m-carousel').show();
-                        setTimeout(() => { slides.forEach(s => { if (typeof s.afterMount === 'function') s.afterMount(); }); }, 50);
-                    }
+                    // Mostrar aprobado
                     const apr = data.aprobado;
                     $('#m-aprobado').text(apr === 1 || apr === true || apr === '1' ? 'Sí' : (apr === 0 || apr === false || apr === '0' ? 'No' : '-'));
-                    $('#m-editar').attr('href', '<?= base_url('modulo2/editardiseno/') ?>' + id);
 
-                    if (data.imagenUrl) { $('#m-imagen').attr('src', data.imagenUrl); $('#m-imagen-wrap').show(); }
+                    // Mostrar foto (base64 o URL)
+                    if (data.foto) {
+                        const fotoSrc = data.foto.startsWith('data:') ? data.foto : 'data:image/jpeg;base64,' + data.foto;
+                        $('#m-foto-preview').html('<img src="' + fotoSrc + '" class="img-fluid rounded" style="max-height: 280px;" alt="Fotografía del diseño">');
+                    } else if (data.imagenes && data.imagenes.length > 0) {
+                        $('#m-foto-preview').html('<img src="' + data.imagenes[0] + '" class="img-fluid rounded" style="max-height: 280px;" alt="Fotografía del diseño">');
+                    } else if (data.imagenUrl) {
+                        $('#m-foto-preview').html('<img src="' + data.imagenUrl + '" class="img-fluid rounded" style="max-height: 280px;" alt="Fotografía del diseño">');
+                    }
+
+                    // Mostrar patrón (base64 o URL)
+                    if (data.patron) {
+                        const patronSrc = data.patron.startsWith('data:') ? data.patron : 'data:application/pdf;base64,' + data.patron;
+                        // Intentar detectar si es imagen o PDF
+                        if (patronSrc.includes('image/')) {
+                            $('#m-patron-preview').html('<img src="' + patronSrc + '" class="img-fluid rounded" style="max-height: 280px;" alt="Patrón">');
+                        } else {
+                            $('#m-patron-preview').html('<iframe src="' + patronSrc + '" width="100%" height="280px" style="border: none;" class="rounded"></iframe>');
+                        }
+                    } else if (data.archivoPatronUrl) {
+                        const isPdf = /\.(pdf)$/i.test(data.archivoPatronUrl);
+                        const isImage = /\.(png|jpg|jpeg|gif|bmp|webp|svg)$/i.test(data.archivoPatronUrl);
+                        if (isImage) {
+                            $('#m-patron-preview').html('<img src="' + data.archivoPatronUrl + '" class="img-fluid rounded" style="max-height: 280px;" alt="Patrón">');
+                        } else if (isPdf) {
+                            $('#m-patron-preview').html('<iframe src="' + data.archivoPatronUrl + '" width="100%" height="280px" style="border: none;" class="rounded"></iframe>');
+                        } else {
+                            $('#m-patron-preview').html('<div class="text-muted"><i class="bi bi-file-earmark"></i><br>Archivo: ' + data.archivoPatronUrl + '</div>');
+                        }
+                    }
                 })
                 .fail(function () {
                     $('#m-descripcion').text('No fue posible cargar los datos');
                 });
         });
+
 
         // Configuración de catálogos
         const catalogosConfig = {

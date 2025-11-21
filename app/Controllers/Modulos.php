@@ -312,30 +312,31 @@ class Modulos extends BaseController
             $pu = (float)$this->request->getPost('precio_unidad');
             if ($pu >= 0) { $dataDiseno['precio_unidad'] = $pu; }
         }
-        foreach (['version','fecha','notas','archivoCadUrl','archivoPatronUrl'] as $k) {
+        // Campos de catálogo (sexo, talla, tipo corte, tipo ropa)
+        foreach (['idSexoFK', 'idTallasFK', 'idTipoCorteFK', 'idTipoRopaFK'] as $k) {
+            $val = $this->request->getPost($k);
+            if ($val !== null) {
+                $dataDiseno[$k] = ($val === '' || $val === '0') ? null : (int)$val;
+            }
+        }
+        foreach (['version','fecha','notas'] as $k) {
             $v = $mapGet($k); if ($v !== '') { $dataVersion[$k] = $v; }
         }
         if ($this->request->getPost('aprobado') !== null) {
             $dataVersion['aprobado'] = (int)(bool)$this->request->getPost('aprobado');
         }
 
-        // Manejo de archivos subidos (opcional)
+        // Manejo de archivos (BLOBs)
         try {
-            $cadFile = $this->request->getFile('archivoCadFile');
-            if ($cadFile && $cadFile->isValid() && !$cadFile->hasMoved()) {
-                $dir = FCPATH . 'uploads/cad/'; if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
-                $new = $cadFile->getRandomName();
-                $cadFile->move($dir, $new);
-                $dataVersion['archivoCadUrl'] = 'uploads/cad/' . $new;
+            $fotoFile = $this->request->getFile('foto');
+            if ($fotoFile && $fotoFile->isValid()) {
+                $dataVersion['foto'] = file_get_contents($fotoFile->getTempName());
             }
         } catch (\Throwable $e) { /* ignore */ }
         try {
-            $patFile = $this->request->getFile('archivoPatronFile');
-            if ($patFile && $patFile->isValid() && !$patFile->hasMoved()) {
-                $dir2 = FCPATH . 'uploads/patron/'; if (!is_dir($dir2)) { @mkdir($dir2, 0755, true); }
-                $new2 = $patFile->getRandomName();
-                $patFile->move($dir2, $new2);
-                $dataVersion['archivoPatronUrl'] = 'uploads/patron/' . $new2;
+            $patronFile = $this->request->getFile('patron');
+            if ($patronFile && $patronFile->isValid()) {
+                $dataVersion['patron'] = file_get_contents($patronFile->getTempName());
             }
         } catch (\Throwable $e) { /* ignore */ }
 
@@ -464,31 +465,21 @@ class Modulos extends BaseController
             'version'         => trim((string)$this->request->getPost('version')),
             'fecha'           => $this->request->getPost('fecha') ?: date('Y-m-d'),
             'notas'           => trim((string)$this->request->getPost('notas')) ?: null,
-            'archivoCadUrl'   => trim((string)$this->request->getPost('archivoCadUrl')) ?: null,
-            'archivoPatronUrl'=> trim((string)$this->request->getPost('archivoPatronUrl')) ?: null,
             'aprobado'        => $this->request->getPost('aprobado') === null ? null : (int)(bool)$this->request->getPost('aprobado'),
         ];
 
-        // Manejo de archivos subidos (cualquier formato)
+        // Manejo de archivos (BLOBs)
         try {
-            $cadFile = $this->request->getFile('archivoCadFile');
-            if ($cadFile && $cadFile->isValid() && !$cadFile->hasMoved()) {
-                $dir = FCPATH . 'uploads/cad/'; // carpeta pública
-                if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
-                $new = $cadFile->getRandomName();
-                $cadFile->move($dir, $new);
-                $dataVersion['archivoCadUrl'] = 'uploads/cad/' . $new; // URL relativa pública
+            $fotoFile = $this->request->getFile('foto');
+            if ($fotoFile && $fotoFile->isValid()) {
+                $dataVersion['foto'] = file_get_contents($fotoFile->getTempName());
             }
-        } catch (\Throwable $e) { /* ignorar carga CAD */ }
+        } catch (\Throwable $e) { /* ignorar carga foto */ }
 
         try {
-            $patFile = $this->request->getFile('archivoPatronFile');
-            if ($patFile && $patFile->isValid() && !$patFile->hasMoved()) {
-                $dir2 = FCPATH . 'uploads/patron/';
-                if (!is_dir($dir2)) { @mkdir($dir2, 0755, true); }
-                $new2 = $patFile->getRandomName();
-                $patFile->move($dir2, $new2);
-                $dataVersion['archivoPatronUrl'] = 'uploads/patron/' . $new2;
+            $patronFile = $this->request->getFile('patron');
+            if ($patronFile && $patronFile->isValid()) {
+                $dataVersion['patron'] = file_get_contents($patronFile->getTempName());
             }
         } catch (\Throwable $e) { /* ignorar carga patrón */ }
 
@@ -1776,9 +1767,12 @@ class Modulos extends BaseController
             'aprobado' => $detalle['aprobado'] ?? null,
             'precio_unidad' => $detalle['precio_unidad'] ?? null,
             'idSexoFK' => $detalle['idSexoFK'] ?? null,
-            'IdTallasFK' => $detalle['IdTallasFK'] ?? null,
+            'idTallasFK' => $detalle['idTallasFK'] ?? null,  // Fixed typo: was IdTallasFK
             'idTipoCorteFK' => $detalle['idTipoCorteFK'] ?? null,
             'idTipoRopaFK' => $detalle['idTipoRopaFK'] ?? null,
+            // Foto y patrón en base64
+            'foto' => $detalle['foto'] ?? null,
+            'patron' => $detalle['patron'] ?? null,
             // Nuevos: listas de archivos/imágenes (compatibles hacia atrás)
             'archivosCad' => $detalle['archivosCad'] ?? [],
             'archivosPatron' => $detalle['archivosPatron'] ?? [],
@@ -2822,8 +2816,91 @@ class Modulos extends BaseController
     public function m2_agregardiseno()
     {
         if ($this->request->getMethod() === 'post') {
-            // Procesar formulario
-            return redirect()->to('/modulo2/catalogodisenos')->with('success', 'Diseño agregado correctamente');
+            $db = \Config\Database::connect();
+            
+            // Datos del diseño
+            $dataDiseno = [
+                'nombre'      => trim((string)$this->request->getPost('nombre')),
+                'descripcion' => trim((string)$this->request->getPost('descripcion')),
+            ];
+            $maquiladoraId = session()->get('maquiladora_id');
+            if ($maquiladoraId) {
+                $dataDiseno['maquiladoraID'] = (int)$maquiladoraId;
+            }
+
+            // Datos de la versión
+            $materialesTxt = trim((string)$this->request->getPost('materiales'));
+            $cortesTxt     = trim((string)$this->request->getPost('cortes'));
+            $notas = "Materiales:\n$materialesTxt\n\nCortes:\n$cortesTxt";
+
+            $dataVersion = [
+                'version' => '1.0',
+                'fecha'   => date('Y-m-d'),
+                'notas'   => $notas,
+                'aprobado'=> 0
+            ];
+
+            // Archivos (BLOBs)
+            try {
+                $fotoFile = $this->request->getFile('foto');
+                if ($fotoFile && $fotoFile->isValid()) {
+                    $dataVersion['foto'] = file_get_contents($fotoFile->getTempName());
+                }
+            } catch (\Throwable $e) {}
+
+            try {
+                $patronFile = $this->request->getFile('patron');
+                if ($patronFile && $patronFile->isValid()) {
+                    $dataVersion['patron'] = file_get_contents($patronFile->getTempName());
+                }
+            } catch (\Throwable $e) {}
+
+            $db->transStart();
+            try {
+                // Insertar Diseño
+                $db->table('diseno')->insert($dataDiseno);
+                $idDiseno = $db->insertID();
+                
+                // Insertar Versión
+                $dataVersion['disenoId'] = $idDiseno;
+                $db->table('diseno_version')->insert($dataVersion);
+                $idVersion = $db->insertID();
+
+                // Crear Prototipo y Muestra (automático)
+                $userName = (string)(session()->get('user_name') ?? '');
+                $rowProt = [
+                    'disenoVersionId' => $idVersion,
+                    'fechainicio'     => null,
+                    'estado'          => null
+                ];
+                $db->table('prototipo')->insert($rowProt);
+                $prototipoId = $db->insertID();
+
+                $rowMuestra = [
+                    'prototipoId'    => $prototipoId,
+                    'solicitadaPor'  => $userName ?: null,
+                    'fechaSolicitud' => date('Y-m-d'),
+                    'estado'         => 'Pendiente'
+                ];
+                $db->table('muestra')->insert($rowMuestra);
+                $muestraId = $db->insertID();
+
+                $db->table('aprobacion_muestra')->insert([
+                    'muestraId' => $muestraId,
+                    'decision'  => 'Pendiente'
+                ]);
+
+                $db->transComplete();
+                
+                if ($db->transStatus() === false) {
+                    throw new \Exception('Error al guardar en base de datos.');
+                }
+
+                return redirect()->to('/modulo2/catalogodisenos')->with('success', 'Diseño agregado correctamente');
+            } catch (\Throwable $e) {
+                $db->transRollback();
+                return redirect()->back()->withInput()->with('error', 'Error: ' . $e->getMessage());
+            }
         }
 
         return view('modulos/agregardiseno', $this->payload([

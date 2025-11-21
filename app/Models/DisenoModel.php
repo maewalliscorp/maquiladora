@@ -241,215 +241,112 @@
          * @param int $id ID del diseño
          * @return array|null Estructura del diseño o null si no existe
          */
-        public function getDisenoDetalle(int $id): ?array
-        {
-            $db = $this->db;
-    
-            $sub = "SELECT dv1.disenoId, dv1.id
-                    FROM diseno_version dv1
-                    LEFT JOIN diseno_version dv2
-                      ON dv1.disenoId = dv2.disenoId
-                     AND (
-                          (dv1.fecha < dv2.fecha)
-                       OR (dv1.fecha = dv2.fecha AND dv1.id < dv2.id)
-                     )
-                    WHERE dv2.id IS NULL";
-    
-            $sql = "SELECT d.id,
-                           d.codigo,
-                           d.nombre,
-                           d.descripcion,
-                           d.precio_unidad,
-                           d.clienteId,
-                           d.idSexoFK,
-                           d.IdTallasFK,
-                           d.idTipoCorteFK,
-                           d.idTipoRopaFK,
-                           dv.version,
-                           dv.fecha,
-                           dv.notas,
-                           dv.archivoCadUrl,
-                           dv.archivoPatronUrl,
-                           dv.aprobado,
-                           GROUP_CONCAT(CONCAT(COALESCE(lm.articuloId,'Art'),' x ',COALESCE(lm.cantidadPorUnidad,0)) SEPARATOR '||') AS materiales_concat
-                    FROM diseno d
-                    LEFT JOIN ($sub) dvsel ON dvsel.disenoId = d.id
-                    LEFT JOIN diseno_version dv ON dv.id = dvsel.id
-                    LEFT JOIN lista_materiales lm ON lm.disenoVersionId = dv.id
-                    WHERE d.id = ?
-                    GROUP BY d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, d.clienteId, d.idSexoFK, d.IdTallasFK, d.idTipoCorteFK, d.idTipoRopaFK, dv.version, dv.fecha, dv.notas, dv.archivoCadUrl, dv.archivoPatronUrl, dv.aprobado";
-    
-            try {
-                $row = $db->query($sql, [$id])->getRowArray();
-            } catch (\Throwable $e) {
-                $sub2 = "SELECT dv1.disenoId, dv1.id FROM disenoversion dv1 LEFT JOIN disenoversion dv2 ON dv1.disenoId = dv2.disenoId AND ((dv1.fecha < dv2.fecha) OR (dv1.fecha = dv2.fecha AND dv1.id < dv2.id)) WHERE dv2.id IS NULL";
-                $sql2 = "SELECT d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, d.clienteId, d.idSexoFK, d.IdTallasFK, d.idTipoCorteFK, d.idTipoRopaFK, dv.version, dv.fecha, dv.notas, dv.archivoCadUrl, dv.archivoPatronUrl, dv.aprobado,
-                                 GROUP_CONCAT(CONCAT(COALESCE(lm.articuloId,'Art'),' x ',COALESCE(lm.cantidadPorUnidad,0)) SEPARATOR '||') AS materiales_concat
-                          FROM diseno d
-                          LEFT JOIN ($sub2) dvsel ON dvsel.disenoId = d.id
-                          LEFT JOIN disenoversion dv ON dv.id = dvsel.id
-                          LEFT JOIN listamateriales lm ON lm.disenoVersionId = dv.id
-                          WHERE d.id = ?
-                          GROUP BY d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, d.clienteId, d.idSexoFK, d.IdTallasFK, d.idTipoCorteFK, d.idTipoRopaFK, dv.version, dv.fecha, dv.notas, dv.archivoCadUrl, dv.archivoPatronUrl, dv.aprobado";
+    public function getDisenoDetalle(int $id): ?array
+    {
+        $db = $this->db;
+
+        // Consulta completa con JOIN para obtener diseño y su versión
+        $sql = "SELECT d.id,
+                       d.codigo,
+                       d.nombre,
+                       d.descripcion,
+                       d.precio_unidad,
+                       d.clienteId,
+                       d.idSexoFK,
+                       d.idTallasFK,
+                       d.idTipoCorteFK,
+                       d.idTipoRopaFK,
+                       dv.id AS versionId,
+                       dv.version,
+                       dv.fecha,
+                       dv.notas,
+                       dv.foto,
+                       dv.patron,
+                       dv.aprobado
+                FROM diseno d
+                LEFT JOIN diseno_version dv ON dv.disenoId = d.id
+                WHERE d.id = ?";
+        
+        $row = $db->query($sql, [$id])->getRowArray();
+        
+        if (!$row) return null;
+
+        // Obtener materiales usando el ID de la versión
+        $row['materiales'] = [];
+        $row['materialesDet'] = [];
+        $dvId = $row['versionId'] ?? null;
+
+        if ($dvId) {
+            // Intentar obtener materiales con nombres de artículos
+            $lmTables = ['lista_materiales', 'listamateriales', 'ListaMateriales'];
+            $rowsLM = [];
+
+            foreach ($lmTables as $t) {
                 try {
-                    $row = $db->query($sql2, [$id])->getRowArray();
-                } catch (\Throwable $e2) {
-                    return null;
+                    $sqlLM = "SELECT lm.articuloId, lm.cantidadPorUnidad, lm.mermaPct, a.nombre AS artNombre, a.unidadMedida
+                              FROM $t lm
+                              LEFT JOIN articulo a ON a.id = lm.articuloId
+                              WHERE lm.disenoVersionId = ?";
+                    $rowsLM = $db->query($sqlLM, [$dvId])->getResultArray();
+                    if ($rowsLM) break;
+                } catch (\Throwable $e) {
+                    try {
+                        $rowsLM = $db->query("SELECT articuloId, cantidadPorUnidad, mermaPct FROM $t WHERE disenoVersionId = ?", [$dvId])->getResultArray();
+                        if ($rowsLM) break;
+                    } catch (\Throwable $e2) {}
                 }
             }
-    
-            if (!$row) return null;
-    
-            // Expandir materiales: intento 1 (concatenado básico)
-            $row['materiales'] = [];
-            if (!empty($row['materiales_concat'])) {
-                foreach (explode('||', $row['materiales_concat']) as $m) {
-                    if ($m !== '') {
-                        // Parsear "ArtId x Cant" a objeto
-                        $parts = preg_split('/\s+x\s+/i', (string)$m);
-                        $nombre = trim((string)($parts[0] ?? ''));
-                        $cant = trim((string)($parts[1] ?? ''));
-                        $obj = [
-                            'nombre' => $nombre ?: 'Material',
-                            'cantidad' => $cant !== '' ? $cant : null,
-                            'merma' => null,
-                        ];
-                        $row['materiales'][] = $obj;
-                    }
+
+            if ($rowsLM) {
+                foreach ($rowsLM as $r) {
+                    $nombre = $r['artNombre'] ?? ('Art ' . $r['articuloId']);
+                    $det = [
+                        'articuloId'        => (int)$r['articuloId'],
+                        'nombre'            => $nombre,
+                        'cantidadPorUnidad' => $r['cantidadPorUnidad'],
+                        'mermaPct'          => $r['mermaPct'],
+                        'unidadMedida'      => $r['unidadMedida'] ?? null
+                    ];
+                    $row['materialesDet'][] = $det;
+                    
+                    $row['materiales'][] = [
+                        'nombre'   => $nombre,
+                        'cantidad' => $r['cantidadPorUnidad'],
+                        'merma'    => $r['mermaPct']
+                    ];
                 }
             }
-            unset($row['materiales_concat']);
-
-            // Expandir materiales: intento 2 (consulta detallada con JOIN si es posible)
-            try {
-                // Detectar tabla de LM y columnas
-                $lmTables = ['lista_materiales','listamateriales','ListaMateriales'];
-                $dvId = null;
-                // Necesitamos el id de la última versión utilizada en el SELECT anterior
-                // Si no está explícito, intentamos recuperarlo mediante subconsulta del mismo patrón
-                $dvId = $db->query(
-                    "SELECT dv.id FROM diseno_version dv
-                     WHERE dv.disenoId = ?
-                     ORDER BY dv.fecha DESC, dv.id DESC
-                     LIMIT 1",
-                    [$row['id']]
-                )->getRow('id');
-
-                if (!$dvId) {
-                    // Fallback a variantes de tabla
-                    $dvId = $db->query(
-                        "SELECT dv.id FROM disenoversion dv
-                         WHERE dv.disenoId = ?
-                         ORDER BY dv.fecha DESC, dv.id DESC
-                         LIMIT 1",
-                        [$row['id']]
-                    )->getRow('id');
-                }
-
-                if ($dvId) {
-                    $detallados = [];
-                    foreach ($lmTables as $t) {
-                        try {
-                            // Intento unir con tabla de artículos para obtener nombre si existe
-                            $joinSqls = [
-                                // articulo (snake)
-                                "SELECT lm.articuloId, lm.cantidadPorUnidad, lm.mermaPct, a.nombre AS artNombre
-                                   FROM $t lm
-                                   LEFT JOIN articulo a ON a.id = lm.articuloId
-                                  WHERE lm.disenoVersionId = ?",
-                                // Articulo (Camel)
-                                "SELECT lm.articuloId, lm.cantidadPorUnidad, lm.mermaPct, a.nombre AS artNombre
-                                   FROM $t lm
-                                   LEFT JOIN Articulo a ON a.id = lm.articuloId
-                                  WHERE lm.disenoVersionId = ?",
-                                // producto como alternativa
-                                "SELECT lm.articuloId, lm.cantidadPorUnidad, lm.mermaPct, p.nombre AS artNombre
-                                   FROM $t lm
-                                   LEFT JOIN producto p ON p.id = lm.articuloId
-                                  WHERE lm.disenoVersionId = ?",
-                            ];
-                            $rowsLM = [];
-                            foreach ($joinSqls as $js) {
-                                try {
-                                    $rowsLM = $db->query($js, [$dvId])->getResultArray();
-                                    if ($rowsLM) break;
-                                } catch (\Throwable $e) { /* intentar siguiente */ }
-                            }
-                            if (!$rowsLM) {
-                                // Sin JOIN posible, leer crudo
-                                $rowsLM = $db->query("SELECT articuloId, cantidadPorUnidad, mermaPct FROM $t WHERE disenoVersionId = ?", [$dvId])->getResultArray();
-                            }
-                            if ($rowsLM) {
-                                foreach ($rowsLM as $rLM) {
-                                    $nombre = $rLM['artNombre'] ?? null;
-                                    if (!$nombre && isset($rLM['articuloId'])) {
-                                        $nombre = 'Art ' . $rLM['articuloId'];
-                                    }
-                                    $detallados[] = [
-                                        'articuloId'        => isset($rLM['articuloId']) ? (int)$rLM['articuloId'] : null,
-                                        'nombre'            => $nombre ?: 'Material',
-                                        'cantidadPorUnidad' => $rLM['cantidadPorUnidad'] ?? null,
-                                        'mermaPct'          => $rLM['mermaPct'] ?? null,
-                                    ];
-                                }
-                                break; // ya lo logramos con esta tabla
-                            }
-                        } catch (\Throwable $e) { /* probar siguiente nombre de tabla */ }
-                    }
-
-                    if ($detallados) {
-                        // Mantener 'materiales' legible y además devolver materialesDet con IDs
-                        $row['materiales'] = array_map(function($r){
-                            return [
-                                'nombre'   => $r['nombre'],
-                                'cantidad' => $r['cantidadPorUnidad'],
-                                'merma'    => $r['mermaPct'],
-                            ];
-                        }, $detallados);
-                        $row['materialesDet'] = $detallados;
-                    }
-                }
-            } catch (\Throwable $e) {
-                // Ignorar errores; al menos dejamos la lista básica si existe
-            }
-    
-            // Normalizar archivos múltiples (si existen variantes separadas por coma/pipe)
-            $split = function ($val) {
-                if (!$val) return [];
-                if (is_array($val)) return $val;
-                // admitir separadores ",", "|", ";"
-                $parts = preg_split('/[|,;]+/u', (string)$val);
-                $out = [];
-                foreach ($parts as $p) { $p = trim($p); if ($p !== '') $out[] = $p; }
-                return array_values(array_unique($out));
-            };
-    
-            // Archivos CAD (array)
-            $row['archivosCad'] = [];
-            if (!empty($row['archivoCadUrl'])) {
-                $row['archivosCad'] = $split($row['archivoCadUrl']);
-            } elseif (!empty($row['archivoCadUrls'])) {
-                $row['archivosCad'] = $split($row['archivoCadUrls']);
-            }
-    
-            // Archivos Patrón (array)
-            $row['archivosPatron'] = [];
-            if (!empty($row['archivoPatronUrl'])) {
-                $row['archivosPatron'] = $split($row['archivoPatronUrl']);
-            } elseif (!empty($row['archivoPatronUrls'])) {
-                $row['archivosPatron'] = $split($row['archivoPatronUrls']);
-            }
-    
-            // Imágenes (array) si tuvieras columnas imagenUrl/imagenUrls
-            $row['imagenes'] = [];
-            if (!empty($row['imagenUrl'])) {
-                $row['imagenes'] = $split($row['imagenUrl']);
-            } elseif (!empty($row['imagenUrls'])) {
-                $row['imagenes'] = $split($row['imagenUrls']);
-            }
-    
-            return $row;
         }
+
+        // Convertir BLOBs a Base64 para JSON
+        try {
+            if (!empty($row['foto'])) {
+                if (is_resource($row['foto'])) {
+                    $row['foto'] = stream_get_contents($row['foto']);
+                }
+                $row['foto'] = base64_encode($row['foto']);
+            }
+        } catch (\Throwable $e) { $row['foto'] = null; }
+
+        try {
+            if (!empty($row['patron'])) {
+                if (is_resource($row['patron'])) {
+                    $row['patron'] = stream_get_contents($row['patron']);
+                }
+                $row['patron'] = base64_encode($row['patron']);
+            }
+        } catch (\Throwable $e) { $row['patron'] = null; }
+
+        // Compatibilidad
+        $row['archivosCad'] = [];
+        $row['archivosPatron'] = [];
+        $row['imagenes'] = [];
+        if (!empty($row['foto'])) {
+            $row['imagenes'][] = 'data:image/jpeg;base64,' . $row['foto'];
+        }
+
+        return $row;
+    }
     }
     
     
