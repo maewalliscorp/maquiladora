@@ -20,39 +20,36 @@ class Database extends Config
     public string $defaultGroup = 'default';
 
     /**
-     * Default database connection: Supabase PostgreSQL
+     * The default database connection.
      *
      * @var array<string, mixed>
      */
     public array $default = [
-        'DSN'        => '',
-        'hostname'   => 'aws-1-us-east-2.pooler.supabase.com',  // host del pooler
-        'username'   => 'postgres.tirhdjlhorpovtcejgul',        // usuario de Supabase
-        'password'   => 'Ale040617',                            // contraseña de la DB
-        'database'   => 'postgres',
-        'schema'     => 'public',
-        'DBDriver'   => 'Postgre',
-        'DBPrefix'   => '',
-        'pConnect'   => false,
-        'DBDebug'    => (ENVIRONMENT !== 'production'),
-        'charset'    => 'utf8',
-        'DBCollat'   => 'en_US.UTF-8',
-        'swapPre'    => '',
-        'encrypt'    => false,
-        'compress'   => false,
-        'strictOn'   => false,
-        'failover'   => [],
-        'port'       => 6543,                                   // puerto del pooler
-        'dateFormat' => [
+        'DSN'          => '',
+        'hostname'     => 'hopper.proxy.rlwy.net',
+        'username'     => 'root',
+        'password'     => 'xzngqhYhZCmOBuJShGgoNwJpdVSPbnzP',
+        'database'     => 'railway',
+        'DBDriver'     => 'MySQLi',
+        'DBPrefix'     => '',
+        'pConnect'     => false,
+        'DBDebug'      => true,
+        'charset'      => 'utf8mb4',
+        'DBCollat'     => 'utf8mb4_general_ci',
+        'swapPre'      => '',
+        'encrypt'      => false,
+        'compress'     => false,
+        'strictOn'     => false,
+        'failover'     => [],
+        'port'         => 55848,
+        'numberNative' => false,
+        'foundRows'    => false,
+        'dateFormat'   => [
             'date'     => 'Y-m-d',
             'datetime' => 'Y-m-d H:i:s',
             'time'     => 'H:i:s',
         ],
     ];
-
-    // -------------------------------------------------------------------------
-    //  EJEMPLOS (comentados) DE OTRAS CONEXIONES
-    // -------------------------------------------------------------------------
 
     //    /**
     //     * Sample database connection for SQLite3.
@@ -77,11 +74,11 @@ class Database extends Config
     //    ];
 
     //    /**
-    //     * Sample database connection for Postgre local.
+    //     * Sample database connection for Postgre.
     //     *
     //     * @var array<string, mixed>
     //     */
-    //    public array $defaultPostgreLocal = [
+    //    public array $default = [
     //        'DSN'        => '',
     //        'hostname'   => 'localhost',
     //        'username'   => 'root',
@@ -108,7 +105,7 @@ class Database extends Config
     //     *
     //     * @var array<string, mixed>
     //     */
-    //    public array $defaultSqlsrv = [
+    //    public array $default = [
     //        'DSN'        => '',
     //        'hostname'   => 'localhost',
     //        'username'   => 'root',
@@ -134,9 +131,15 @@ class Database extends Config
     //    /**
     //     * Sample database connection for OCI8.
     //     *
+    //     * You may need the following environment variables:
+    //     *   NLS_LANG                = 'AMERICAN_AMERICA.UTF8'
+    //     *   NLS_DATE_FORMAT         = 'YYYY-MM-DD HH24:MI:SS'
+    //     *   NLS_TIMESTAMP_FORMAT    = 'YYYY-MM-DD HH24:MI:SS'
+    //     *   NLS_TIMESTAMP_TZ_FORMAT = 'YYYY-MM-DD HH24:MI:SS'
+    //     *
     //     * @var array<string, mixed>
     //     */
-    //    public array $defaultOCI8 = [
+    //    public array $default = [
     //        'DSN'        => 'localhost:1521/XEPDB1',
     //        'username'   => 'root',
     //        'password'   => 'root',
