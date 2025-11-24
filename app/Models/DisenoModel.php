@@ -70,19 +70,33 @@
                     LEFT JOIN lista_materiales lm ON lm.disenoVersionId = dv.id
                     LEFT JOIN articulo a ON a.id = lm.articuloId";
             
-            // Agregar filtro por maquiladora si está disponible y existe el campo
+            
+            // Agregar filtro por maquiladora si está disponible
+            $whereClause = '';
             if ($maquiladoraId) {
-                // Intentar filtrar si la tabla diseno tiene maquiladoraIdFK
-                $sql .= " WHERE (d.maquiladoraIdFK = " . (int)$maquiladoraId . " OR d.maquiladoraIdFK IS NULL)";
-                
-                // También filtrar por órdenes de producción si no tiene el campo directo
-                $sql .= " AND d.id IN (
-                    SELECT DISTINCT op.disenoVersionId 
-                    FROM orden_produccion op 
-                    JOIN pedido p ON p.id = op.ordenCompraId 
-                    WHERE p.maquiladoraIdFK = " . (int)$maquiladoraId . "
-                )";
+                // Verificar qué campo existe en la tabla diseno
+                try {
+                    $fields = $db->getFieldNames('diseno');
+                    $fieldToUse = null;
+                    
+                    if (in_array('maquiladoraID', $fields)) {
+                        $fieldToUse = 'maquiladoraID';
+                    } elseif (in_array('maquiladoraIdFK', $fields)) {
+                        $fieldToUse = 'maquiladoraIdFK';
+                    } elseif (in_array('maquiladora_id', $fields)) {
+                        $fieldToUse = 'maquiladora_id';
+                    }
+                    
+                    if ($fieldToUse) {
+                        // Filtrar SOLO por diseños de esta maquiladora (sin incluir NULL/compartidos)
+                        $whereClause = " WHERE d.{$fieldToUse} = " . (int)$maquiladoraId;
+                    }
+                } catch (\Throwable $e) {
+                    // Si hay error al verificar campos, no filtrar
+                }
             }
+            
+            $sql .= $whereClause;
             
             $sql .= " GROUP BY d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, dv.version, dv.fecha, dv.aprobado
                     ORDER BY d.id";
@@ -337,12 +351,19 @@
             }
         } catch (\Throwable $e) { $row['patron'] = null; }
 
-        // Compatibilidad
+        // Compatibilidad: crear array de imágenes con foto y patrón
         $row['archivosCad'] = [];
         $row['archivosPatron'] = [];
         $row['imagenes'] = [];
+        
         if (!empty($row['foto'])) {
             $row['imagenes'][] = 'data:image/jpeg;base64,' . $row['foto'];
+        }
+        
+        if (!empty($row['patron'])) {
+            // Intentar detectar el tipo de archivo del patrón
+            // Puede ser PDF, imagen, o DXF
+            $row['imagenes'][] = 'data:application/pdf;base64,' . $row['patron'];
         }
 
         return $row;

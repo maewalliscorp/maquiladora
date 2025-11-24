@@ -3823,6 +3823,9 @@ public function m11_usuarios()
             return $this->response->setStatusCode(405)->setJSON(['ok'=>false,'message'=>'Método no permitido']);
         }
 
+        // Obtener maquiladoraId desde la sesión
+        $maquiladoraId = session()->get('maquiladora_id');
+
         $clienteId         = (int)($this->request->getPost('oc_clienteId'));
         $ocEstatus         = (string)($this->request->getPost('oc_estatus') ?? 'Pendiente');
         $ocFolio           = trim((string)$this->request->getPost('oc_folio'));

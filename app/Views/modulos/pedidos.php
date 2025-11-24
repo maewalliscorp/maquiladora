@@ -943,7 +943,7 @@
 
             if (!id) { return; }
             $('#pa-dis-loading').show();
-            const url = '<?= base_url('modulo2/diseno') ?>/' + id + '/json?t=' + Date.now();
+            const url = '<?= base_url('modulo1/disenos') ?>/' + id + '/json?t=' + Date.now();
             $.getJSON(url)
                 .done(function(data){
                     // Campos básicos
@@ -1153,7 +1153,7 @@
             if ($('#pa-dis-version-id').length) { $('#pa-dis-version-id').val(''); }
 
             $spinDis.show();
-            $.getJSON('<?= base_url('modulo2/disenos/json') ?>' + '?t=' + Date.now())
+            $.getJSON('<?= base_url('modulo1/disenos/json') ?>' + '?t=' + Date.now())
                 .done(function(arr){
                     const list = Array.isArray(arr) ? arr : [];
                     list.forEach(function(it, idx){
