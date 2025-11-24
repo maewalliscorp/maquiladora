@@ -80,16 +80,6 @@
                                     <i class="bi bi-cart-plus"></i>
                                 </button>
 
-                                <!-- Ver PDF de la última orden (si existe) -->
-                                <?php if (!empty($p['ultima_oc'])): ?>
-                                    <a href="<?= site_url('proveedores/orden/' . (int)$p['ultima_oc'] . '/pdf') ?>"
-                                       class="btn btn-sm btn-outline-secondary"
-                                       title="Ver PDF de la última orden"
-                                       target="_blank" rel="noopener">
-                                        <i class="bi bi-file-earmark-pdf"></i>
-                                    </a>
-                                <?php endif; ?>
-
                                 <!-- Editar proveedor -->
                                 <button type="button"
                                         class="btn btn-sm btn-outline-primary js-editar-proveedor"
@@ -290,8 +280,10 @@
         }
 
         // URLs base
-        const baseHistorialUrl = "<?= site_url('proveedores/historial') ?>";
-        const baseOrdenPdfUrl  = "<?= site_url('proveedores/orden') ?>";
+        const baseHistorialUrl      = "<?= site_url('proveedores/historial') ?>";
+        const baseOrdenVerUrl       = "<?= site_url('proveedores/orden') ?>";
+        const baseOrdenCompletarUrl = "<?= site_url('proveedores/orden/completar') ?>";
+        const baseOrdenEliminarUrl  = "<?= site_url('proveedores/orden/eliminar') ?>";
 
         const modalProveedorEl  = document.getElementById('modalProveedor');
         const modalProveedor    = modalProveedorEl ? new bootstrap.Modal(modalProveedorEl) : null;
@@ -422,6 +414,8 @@
                             return;
                         }
 
+                        lblHistorialVacio.style.display = 'none';
+
                         data.forEach(oc => {
                             const tr        = document.createElement('tr');
                             const tdFecha   = document.createElement('td');
@@ -436,28 +430,84 @@
                             tdDesc.textContent  = oc.descripcion || '';
                             tdAcciones.classList.add('text-center');
 
-                            // Ver PDF
-                            const btnPdf = document.createElement('a');
-                            btnPdf.href   = baseOrdenPdfUrl + '/' + oc.id_proveedorOC + '/pdf';
-                            btnPdf.target = '_blank';
-                            btnPdf.rel    = 'noopener';
-                            btnPdf.className = 'btn btn-sm btn-outline-secondary me-1';
-                            btnPdf.title  = 'Ver PDF';
-                            btnPdf.innerHTML = '<i class="bi bi-file-earmark-pdf"></i>';
+                            // Ver orden (HTML simple)
+                            const btnVer = document.createElement('a');
+                            btnVer.href   = baseOrdenVerUrl + '/' + oc.id_proveedorOC;
+                            btnVer.target = '_blank';
+                            btnVer.rel    = 'noopener';
+                            btnVer.className = 'btn btn-sm btn-outline-primary me-1';
+                            btnVer.title  = 'Ver orden';
+                            btnVer.innerHTML = '<i class="bi bi-eye"></i>';
 
-                            // Reutilizar orden
-                            const btnReusar = document.createElement('button');
-                            btnReusar.type      = 'button';
-                            btnReusar.className = 'btn btn-sm btn-outline-success';
-                            btnReusar.title     = 'Reutilizar esta orden';
-                            btnReusar.setAttribute('data-id-proveedor', id);
-                            btnReusar.setAttribute('data-nombre', nombre);
-                            btnReusar.setAttribute('data-prioridad', oc.prioridad || 'Normal');
-                            btnReusar.setAttribute('data-descripcion', oc.descripcion || '');
-                            btnReusar.innerHTML = '<i class="bi bi-arrow-repeat"></i>';
+                            // Marcar como cumplida
+                            const btnCompletar = document.createElement('button');
+                            btnCompletar.type      = 'button';
+                            btnCompletar.className = 'btn btn-sm btn-outline-success me-1';
+                            btnCompletar.title     = 'Marcar como cumplida';
+                            btnCompletar.innerHTML = '<i class="bi bi-check-circle"></i>';
 
-                            tdAcciones.appendChild(btnPdf);
-                            tdAcciones.appendChild(btnReusar);
+                            // Eliminar orden
+                            const btnEliminar = document.createElement('button');
+                            btnEliminar.type      = 'button';
+                            btnEliminar.className = 'btn btn-sm btn-outline-danger';
+                            btnEliminar.title     = 'Eliminar orden';
+                            btnEliminar.innerHTML = '<i class="bi bi-trash"></i>';
+
+                            // Eventos de completar
+                            btnCompletar.addEventListener('click', () => {
+                                const url = baseOrdenCompletarUrl + '/' + oc.id_proveedorOC;
+
+                                if (!window.Swal) {
+                                    if (confirm('¿Marcar esta orden como cumplida?')) {
+                                        window.location.href = url;
+                                    }
+                                    return;
+                                }
+
+                                Swal.fire({
+                                    title: "¿Marcar como cumplida?",
+                                    text: "La orden pasará al estatus 'Cumplida'.",
+                                    icon: "question",
+                                    showCancelButton: true,
+                                    confirmButtonColor: "#198754",
+                                    cancelButtonColor: "#6c757d",
+                                    confirmButtonText: "Sí, marcar"
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        window.location.href = url;
+                                    }
+                                });
+                            });
+
+                            // Eventos de eliminar
+                            btnEliminar.addEventListener('click', () => {
+                                const url = baseOrdenEliminarUrl + '/' + oc.id_proveedorOC;
+
+                                if (!window.Swal) {
+                                    if (confirm('¿Eliminar definitivamente esta orden?')) {
+                                        window.location.href = url;
+                                    }
+                                    return;
+                                }
+
+                                Swal.fire({
+                                    title: "¿Eliminar orden?",
+                                    text: "Esta acción no se puede deshacer.",
+                                    icon: "warning",
+                                    showCancelButton: true,
+                                    confirmButtonColor: "#dc3545",
+                                    cancelButtonColor: "#6c757d",
+                                    confirmButtonText: "Sí, eliminar"
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        window.location.href = url;
+                                    }
+                                });
+                            });
+
+                            tdAcciones.appendChild(btnVer);
+                            tdAcciones.appendChild(btnCompletar);
+                            tdAcciones.appendChild(btnEliminar);
 
                             tr.appendChild(tdFecha);
                             tr.appendChild(tdPrio);
@@ -466,16 +516,6 @@
                             tr.appendChild(tdAcciones);
 
                             tablaHistorialTbody.appendChild(tr);
-
-                            btnReusar.addEventListener('click', () => {
-                                const idProv   = btnReusar.getAttribute('data-id-proveedor');
-                                const nomProv  = btnReusar.getAttribute('data-nombre') || '';
-                                const prioridad = btnReusar.getAttribute('data-prioridad') || 'Normal';
-                                const desc      = btnReusar.getAttribute('data-descripcion') || '';
-
-                                modalHistorial.hide();
-                                abrirModalOrden(idProv, nomProv, prioridad, desc);
-                            });
                         });
                     })
                     .catch(err => {

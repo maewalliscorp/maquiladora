@@ -5,8 +5,6 @@ namespace App\Controllers;
 use App\Controllers\BaseController;
 use App\Models\ProveedorModel;
 use Config\Database;
-use Dompdf\Dompdf;
-use Dompdf\Options;
 
 class ProveedorController extends BaseController
 {
@@ -50,7 +48,7 @@ class ProveedorController extends BaseController
                 }
             }
 
-            // Última OC por proveedor (para botón PDF)
+            // Última OC por proveedor (no se muestra ahora, pero lo dejamos disponible)
             $ocRows = $db->table('proveedor_oc')
                 ->select('id_proveedor, MAX(id_proveedorOC) AS ultima_oc')
                 ->whereIn('id_proveedor', $idsProveedor)
@@ -125,7 +123,7 @@ class ProveedorController extends BaseController
     }
 
     /* =========================
-     * ELIMINAR
+     * ELIMINAR PROVEEDOR
      * ========================= */
     public function eliminar($id = null)
     {
@@ -153,13 +151,13 @@ class ProveedorController extends BaseController
     }
 
     /* =========================
-     * CREAR ORDEN + PDF
+     * CREAR ORDEN (desde modal)
      * ========================= */
     public function crearOrden()
     {
         $idProveedor = (int)$this->request->getPost('proveedor_id');
         $fecha       = $this->request->getPost('fecha') ?: date('Y-m-d');
-        $prioridad   = trim((string)$this->request->getPost('prioridad'));
+        $prioridad   = trim((string)$this->request->getPost('prioridad')) ?: 'Normal';
         $descripcion = trim((string)$this->request->getPost('descripcion'));
 
         if ($idProveedor <= 0) {
@@ -178,8 +176,6 @@ class ProveedorController extends BaseController
         $db = Database::connect();
 
         try {
-            $db->transStart();
-
             $dataOc = [
                 'id_proveedor' => $idProveedor,
                 'fecha'        => $fecha,
@@ -189,52 +185,11 @@ class ProveedorController extends BaseController
             ];
 
             $db->table('proveedor_oc')->insert($dataOc);
-            $idOc = (int)$db->insertID();
-
-            // ---- Generar PDF (protegido) ----
-            $pdfPath = null;
-
-            if (class_exists(\Dompdf\Dompdf::class) && class_exists(\Dompdf\Options::class)) {
-                try {
-                    $pdfPath = $this->generarPdfOrdenProveedor($idOc);
-                } catch (\Throwable $ePdf) {
-                    log_message('error', '[OC PDF] Error al generar PDF de la orden {id}: {msg}', [
-                        'id'  => $idOc,
-                        'msg' => $ePdf->getMessage(),
-                    ]);
-                }
-            } else {
-                log_message('error', '[OC PDF] Dompdf no está disponible. Se omite generación de PDF.');
-            }
-
-            if ($pdfPath) {
-                $db->table('proveedor_oc')
-                    ->where('id_proveedorOC', $idOc)
-                    ->update(['pdf_path' => $pdfPath]);
-            }
-
-            $db->transComplete();
-
-            if ($db->transStatus() === false) {
-                throw new \RuntimeException('No se pudo guardar la orden (transacción fallida).');
-            }
-
-            $msg = 'Orden de pedido registrada correctamente.';
-            if ($pdfPath) {
-                $msg .= ' PDF generado correctamente.';
-            } else {
-                $msg .= ' (El PDF no pudo generarse, revisa los logs).';
-            }
 
             return redirect()
                 ->to(site_url('proveedores'))
-                ->with('success', $msg);
-
+                ->with('success', 'Orden de pedido registrada correctamente.');
         } catch (\Throwable $e) {
-            if ($db->transStatus() !== false) {
-                $db->transRollback();
-            }
-
             return redirect()
                 ->back()
                 ->withInput()
@@ -266,7 +221,7 @@ class ProveedorController extends BaseController
     }
 
     /* =========================
-     * VER ORDEN (HTML simple)
+     * VER ORDEN EN HTML (opcional)
      * ========================= */
     public function verOrden($idOc = null)
     {
@@ -281,7 +236,12 @@ class ProveedorController extends BaseController
         $db = Database::connect();
 
         $row = $db->table('proveedor_oc AS oc')
-            ->select('oc.*, p.nombre AS proveedor_nombre, p.codigo AS proveedor_codigo, p.email AS proveedor_email, p.telefono AS proveedor_telefono, p.direccion AS proveedor_direccion')
+            ->select('oc.*, 
+                      p.nombre   AS proveedor_nombre, 
+                      p.codigo   AS proveedor_codigo, 
+                      p.email    AS proveedor_email, 
+                      p.telefono AS proveedor_telefono, 
+                      p.direccion AS proveedor_direccion')
             ->join('proveedor AS p', 'p.id_proveedor = oc.id_proveedor', 'inner')
             ->where('oc.id_proveedorOC', $idOc)
             ->get()
@@ -300,129 +260,78 @@ class ProveedorController extends BaseController
     }
 
     /* =========================
-     * DESCARGAR PDF
+     * MARCAR ORDEN COMO CUMPLIDA
      * ========================= */
-    public function ordenPdf($idOc = null)
+    public function completarOrden($idOc = null)
     {
         $idOc = (int)$idOc;
 
         if ($idOc <= 0) {
             return redirect()
-                ->to(site_url('proveedores'))
+                ->back()
                 ->with('error', 'Orden no válida.');
         }
 
         $db = Database::connect();
 
-        $row = $db->table('proveedor_oc AS oc')
-            ->select('oc.*, p.nombre AS proveedor_nombre, p.codigo AS proveedor_codigo, p.email AS proveedor_email, p.telefono AS proveedor_telefono, p.direccion AS proveedor_direccion')
-            ->join('proveedor AS p', 'p.id_proveedor = oc.id_proveedor', 'inner')
-            ->where('oc.id_proveedorOC', $idOc)
-            ->get()
-            ->getRowArray();
-
-        if (!$row) {
-            return redirect()
-                ->to(site_url('proveedores'))
-                ->with('error', 'Orden no encontrada.');
-        }
-
-        // Si ya hay PDF guardado y existe, lo devolvemos
-        if (!empty($row['pdf_path'])) {
-            $filePath = WRITEPATH . $row['pdf_path'];
-            if (is_file($filePath)) {
-                return $this->response->download($filePath, null);
-            }
-        }
-
-        // Si no hay PDF o se perdió, lo generamos de nuevo (protegido)
-        $pdfRelPath = null;
-        if (class_exists(\Dompdf\Dompdf::class) && class_exists(\Dompdf\Options::class)) {
-            try {
-                $pdfRelPath = $this->generarPdfOrdenProveedor($idOc);
-            } catch (\Throwable $ePdf) {
-                log_message('error', '[OC PDF] Error al regenerar PDF de la orden {id}: {msg}', [
-                    'id'  => $idOc,
-                    'msg' => $ePdf->getMessage(),
-                ]);
-            }
-        } else {
-            log_message('error', '[OC PDF] Dompdf no está disponible al intentar regenerar PDF.');
-        }
-
-        if ($pdfRelPath) {
+        try {
             $db->table('proveedor_oc')
                 ->where('id_proveedorOC', $idOc)
-                ->update(['pdf_path' => $pdfRelPath]);
+                ->update([
+                    'estatus' => 'Cumplida',
+                ]);
 
-            $filePath = WRITEPATH . $pdfRelPath;
-            if (is_file($filePath)) {
-                return $this->response->download($filePath, null);
-            }
+            return redirect()
+                ->back()
+                ->with('success', 'Orden marcada como cumplida.');
+        } catch (\Throwable $e) {
+            return redirect()
+                ->back()
+                ->with('error', 'No se pudo marcar la orden como cumplida: ' . $e->getMessage());
         }
-
-        return redirect()
-            ->to(site_url('proveedores'))
-            ->with('error', 'No se pudo generar el PDF de la orden.');
     }
 
     /* =========================
-     * GENERAR PDF (Dompdf)
+     * ELIMINAR ORDEN
      * ========================= */
-    protected function generarPdfOrdenProveedor(int $idOc): ?string
+    public function eliminarOrden($idOc = null)
     {
+        $idOc = (int)$idOc;
+
+        if ($idOc <= 0) {
+            return redirect()
+                ->back()
+                ->with('error', 'Orden no válida.');
+        }
+
+        $db = Database::connect();
+
         try {
-            // Si no está Dompdf instalado, salimos sin reventar
-            if (!class_exists(\Dompdf\Dompdf::class) || !class_exists(\Dompdf\Options::class)) {
-                log_message('error', '[OC PDF] Dompdf no está instalado / cargado.');
-                return null;
+            $db->transStart();
+
+            // 1) Borrar primero los items ligados a la orden (para respetar la FK)
+            $db->table('proveedor_item')
+                ->where('id_proveedorOC', $idOc)
+                ->delete();
+
+            // 2) Borrar la propia orden
+            $db->table('proveedor_oc')
+                ->where('id_proveedorOC', $idOc)
+                ->delete();
+
+            $db->transComplete();
+
+            if ($db->transStatus() === false) {
+                throw new \RuntimeException('Transacción fallida al eliminar la orden.');
             }
 
-            $db = Database::connect();
-
-            $row = $db->table('proveedor_oc AS oc')
-                ->select('oc.*, p.nombre AS proveedor_nombre, p.codigo AS proveedor_codigo, p.email AS proveedor_email, p.telefono AS proveedor_telefono, p.direccion AS proveedor_direccion')
-                ->join('proveedor AS p', 'p.id_proveedor = oc.id_proveedor', 'inner')
-                ->where('oc.id_proveedorOC', $idOc)
-                ->get()
-                ->getRowArray();
-
-            if (!$row) {
-                return null;
-            }
-
-            $data = [
-                'orden' => $row,
-            ];
-
-            $html = view('modulos/orden_proveedor', $data);
-
-            $options = new Options();
-            $options->set('isRemoteEnabled', true);
-            $dompdf = new Dompdf($options);
-
-            $dompdf->loadHtml($html, 'UTF-8');
-            $dompdf->setPaper('A4', 'portrait');
-            $dompdf->render();
-
-            $output = $dompdf->output();
-
-            $dir = WRITEPATH . 'ordenes_proveedor';
-            if (!is_dir($dir)) {
-                mkdir($dir, 0775, true);
-            }
-
-            $fileName = 'orden_proveedor_' . $idOc . '.pdf';
-            $fullPath = $dir . DIRECTORY_SEPARATOR . $fileName;
-
-            file_put_contents($fullPath, $output);
-
-            return 'ordenes_proveedor/' . $fileName;
+            return redirect()
+                ->back()
+                ->with('success', 'Orden eliminada correctamente.');
         } catch (\Throwable $e) {
-            log_message('error', '[OC PDF] Excepción al generar PDF: {msg}', [
-                'msg' => $e->getMessage(),
-            ]);
-            return null;
+            return redirect()
+                ->back()
+                ->with('error', 'No se pudo eliminar la orden: ' . $e->getMessage());
         }
     }
 }

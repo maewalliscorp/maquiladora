@@ -40,7 +40,7 @@ $routes->get('maquiladora',         'Maquiladora::index', ['as' => 'maquiladora'
 $routes->post('maquiladora/update', 'Maquiladora::update');
 
 /* --------------------------------------------------------------------
- * Módulo 11 - Usuarios (acciones AJAX)
+ * Módulo 11 - Usuarios (acciones AJAX sueltas)
  * ------------------------------------------------------------------*/
 $routes->post('modulo11/eliminar_usuario',       'Modulos::m11_eliminar_usuario');
 $routes->get ('modulo11/obtener_usuario/(:num)', 'Modulos::m11_obtener_usuario/$1');
@@ -97,16 +97,24 @@ $routes->get(
     'ProveedorController::historial/$1',
     ['filter' => 'auth:Administrador,Jefe,Almacenista']
 );
-// Ver la orden en HTML (opcional, si usas verOrden)
+// Ver la orden en HTML
 $routes->get(
     'proveedores/orden/(:num)',
     'ProveedorController::verOrden/$1',
     ['filter' => 'auth:Administrador,Jefe,Almacenista']
 );
-// Descargar / ver PDF de una orden de proveedor
-$routes->get(
-    'proveedores/orden/pdf/(:num)',
-    'ProveedorController::ordenPdf/$1',
+// Marcar orden como cumplida (acepta GET/POST)
+$routes->match(
+    ['get','post'],
+    'proveedores/orden/completar/(:num)',
+    'ProveedorController::completarOrden/$1',
+    ['filter' => 'auth:Administrador,Jefe,Almacenista']
+);
+// Eliminar orden de proveedor (acepta GET/POST)
+$routes->match(
+    ['get','post'],
+    'proveedores/orden/eliminar/(:num)',
+    'ProveedorController::eliminarOrden/$1',
     ['filter' => 'auth:Administrador,Jefe,Almacenista']
 );
 
@@ -306,7 +314,7 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->get ('wip/debug',             'Wip::debug',          ['filter' => 'auth:Administrador,Jefe,Inspector,Empleado,Corte']);
     $routes->post('wip/actualizar/(:num)', 'Wip::actualizar/$1',  ['filter' => 'auth:Administrador,Jefe,Inspector,Empleado,Corte']);
 
-    // Inspección / Incidencias
+    // Incidencias
     $routes->get ('incidencias',                 'Incidencias::index',     ['filter' => 'auth:Administrador,Jefe,Empleado,Corte,Almacenista,Calidad']);
     $routes->post('incidencias/crear',           'Incidencias::store',     ['filter' => 'auth:Administrador,Jefe,Empleado,Corte,Almacenista,Calidad']);
     $routes->get ('incidencias/eliminar/(:num)', 'Incidencias::delete/$1', ['filter' => 'auth:Administrador,Jefe,Empleado,Corte,Almacenista,Calidad']);
@@ -425,7 +433,7 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
 });
 
 /* --------------------------------------------------------------------
- * Calidad (Desperdicios & Reprocesos)
+ * Calidad (Desperdicios & Reprocesos) - grupo raíz
  * ------------------------------------------------------------------*/
 $routes->group('calidad', [], function ($routes) {
     $routes->get('desperdicios', 'Calidad::desperdicios', ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
@@ -452,7 +460,7 @@ $routes->group('mrp', [], function ($r) {
 });
 
 /* --------------------------------------------------------------------
- * Módulo 11 · Usuarios
+ * Módulo 11 · Usuarios (UI)
  * ------------------------------------------------------------------*/
 $routes->group('modulo11', ['filter' => 'auth:Administrador,Jefe,RH'], function ($routes) {
     $routes->get('roles',                   'Modulos::m11_roles');
