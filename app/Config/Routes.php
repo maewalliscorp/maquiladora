@@ -225,21 +225,19 @@ $routes->group('modulo2', [], function ($routes) {
     $routes->get('/',                   'Modulos::m2_index', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->get('perfildisenador',     'Modulos::m2_perfildisenador', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->get('catalogodisenos',     'Modulos::m2_catalogodisenos', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
-    
+
     // Diseños - CRUD y JSON
     $routes->get ('diseno/(:num)/json',     'Modulos::m2_diseno_json/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('disenos/crear',          'Modulos::m2_crear_diseno', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('disenos/actualizar/(:num)', 'Modulos::m2_actualizar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->get ('disenos/json',           'Modulos::m2_disenos_json', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
-    // TODO: Implementar método para eliminar diseños
-    // $routes->post('disenos/eliminar/(:num)','Modulos::m2_disenos_eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
-    
+
     // Catálogos - Sexo
     $routes->get ('catalogos/sexo',                     'Modulos::m2_catalogo_sexo', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('catalogos/sexo/crear',               'Modulos::m2_catalogo_sexo_crear', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('catalogos/sexo/actualizar/(:num)',   'Modulos::m2_catalogo_sexo_actualizar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('catalogos/sexo/eliminar/(:num)',     'Modulos::m2_catalogo_sexo_eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
-    
+
     // Catálogos - Tallas
     $routes->get ('catalogos/tallas',                   'Modulos::m2_catalogo_tallas', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('catalogos/tallas/crear',             'Modulos::m2_catalogo_tallas_crear', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
@@ -257,12 +255,9 @@ $routes->group('modulo2', [], function ($routes) {
     $routes->post('catalogos/tipo-ropa/crear',              'Modulos::m2_catalogo_tipo_ropa_crear',  ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('catalogos/tipo-ropa/actualizar/(:num)',  'Modulos::m2_catalogo_tipo_ropa_actualizar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
     $routes->post('catalogos/tipo-ropa/eliminar/(:num)',    'Modulos::m2_catalogo_tipo_ropa_eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
-    
+
     // Artículos (para materiales)
     $routes->get('articulos/json', 'Modulos::m2_articulos_json', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
-    
-    // TODO: Implementar método m2_clientes_json en el controlador
-    // $routes->get('clientes/json', 'Modulos::m2_clientes_json', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
 });
 
 /* --------------------------------------------------------------------
@@ -606,6 +601,30 @@ $routes->post(
 $routes->post(
     'logistica/embarque/aduanas/eliminar',
     'EmbarqueAduana::eliminar',
+    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+);
+
+/* --------------------------------------------------------------------
+ * Logística · Etiquetas de embarque (NUEVO)
+ * ------------------------------------------------------------------*/
+$routes->get(
+    'logistica/embarque/(:num)/etiqueta',
+    'EtiquetaEmbarqueController::show/$1',
+    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+);
+$routes->post(
+    'logistica/embarque/(:num)/etiqueta/guardar',
+    'EtiquetaEmbarqueController::guardar/$1',
+    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+);
+$routes->get(
+    'logistica/etiqueta/(:num)/pdf',
+    'EtiquetaEmbarqueController::pdf/$1',
+    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+);
+$routes->get(
+    'logistica/etiqueta/(:num)/eliminar',
+    'EtiquetaEmbarqueController::eliminar/$1',
     ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
 );
 

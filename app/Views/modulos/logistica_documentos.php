@@ -69,6 +69,7 @@ $B_ADU      = env('SUPABASE_BUCKET_ADUANAS')      ?? 'Aduanas';
                 <h5 class="modal-title" id="generarModalLabel">Generación de documentos</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
+            <!-- el form se queda, pero ya no se usa para Etiqueta -->
             <form id="formQuick" method="post" action="<?= site_url('modulo3/documentos/crear') ?>">
                 <?= csrf_field() ?>
                 <div class="modal-body">
@@ -83,14 +84,29 @@ $B_ADU      = env('SUPABASE_BUCKET_ADUANAS')      ?? 'Aduanas';
                     </div>
                     <div class="d-flex flex-wrap gap-2">
                         <!-- Navega a UI de facturación -->
-                        <button id="btnIrFacturar" class="btn btn-outline-primary" type="button">Factura de envío</button>
-                        <a href="<?= site_url('modulo3/embarque/manual') ?>" class="btn btn-outline-primary">Documento de embarque</a>
-                        <button name="tipo" value="Etiqueta" class="btn btn-outline-primary" type="submit">Etiqueta</button>
+                        <button id="btnIrFacturar" class="btn btn-outline-primary" type="button">
+                            Factura de envío
+                        </button>
+
+                        <!-- Documento de embarque (ya lo tenías así) -->
+                        <a href="<?= site_url('modulo3/embarque/manual') ?>" class="btn btn-outline-primary">
+                            Documento de embarque
+                        </a>
+
+                        <!-- NUEVO: Etiqueta navega a la vista independiente -->
+                        <button id="btnIrEtiqueta" class="btn btn-outline-primary" type="button">
+                            Etiqueta
+                        </button>
+
                         <!-- Aduanas: ir a la vista de Aduanas del embarque -->
-                        <button id="btnIrAduanas" class="btn btn-outline-primary" type="button">Aduanas</button>
+                        <button id="btnIrAduanas" class="btn btn-outline-primary" type="button">
+                            Aduanas
+                        </button>
                     </div>
                 </div>
-                <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
             </form>
         </div></div>
 </div>
@@ -381,7 +397,7 @@ $B_ADU      = env('SUPABASE_BUCKET_ADUANAS')      ?? 'Aduanas';
         const base = "<?= site_url('modulo3/documentos') ?>";
 
         /* ============================
-         *  NAVEGACIÓN FACTURA / ADUANAS
+         *  NAVEGACIÓN FACTURA / ETIQUETA / ADUANAS
          * ============================ */
         function getEmbarqueIdSeleccionado() {
             const sel = document.querySelector('#generarModal select[name="embarqueId"]');
@@ -393,6 +409,13 @@ $B_ADU      = env('SUPABASE_BUCKET_ADUANAS')      ?? 'Aduanas';
             const id = getEmbarqueIdSeleccionado();
             if (!id) { alert('Selecciona un embarque'); return; }
             window.location.href = "<?= site_url('logistica/embarque') ?>/" + id + "/facturar/ui";
+        });
+
+        // Etiqueta (nueva vista independiente)
+        document.getElementById('btnIrEtiqueta')?.addEventListener('click', ()=>{
+            const id = getEmbarqueIdSeleccionado();
+            if (!id) { alert('Selecciona un embarque'); return; }
+            window.location.href = "<?= site_url('logistica/embarque') ?>/" + id + "/etiqueta";
         });
 
         // Aduanas
