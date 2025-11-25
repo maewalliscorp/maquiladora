@@ -154,6 +154,8 @@ $folio      = $embarque['folio'] ?? ('#' . ($embarqueId ?? ''));
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
     $(function () {
@@ -190,38 +192,99 @@ $folio      = $embarque['folio'] ?? ('#' . ($embarqueId ?? ''));
 
             $.post(guardarUrl, $(this).serialize())
                 .done(function (resp) {
+                    // Se espera que el controlador devuelva JSON: {status: 'ok', message: '...'}
                     if (resp.status === 'ok') {
-                        location.reload();
+                        modalObj.hide();
+
+                        Swal.fire({
+                            title: "Guardado",
+                            text: resp.message || "La aduana se guardó correctamente.",
+                            icon: "success",
+                            confirmButtonColor: "#3085d6",
+                            confirmButtonText: "Aceptar"
+                        }).then(() => {
+                            location.reload();
+                        });
                     } else {
-                        alert('Error al guardar la Aduana');
+                        Swal.fire({
+                            title: "Error",
+                            text: resp.message || "Error al guardar la aduana.",
+                            icon: "error",
+                            confirmButtonColor: "#3085d6"
+                        });
                         console.error(resp);
                     }
                 })
                 .fail(function (xhr) {
-                    alert('Error al guardar la Aduana');
+                    let msg = "Error al guardar la aduana.";
+                    try {
+                        const json = JSON.parse(xhr.responseText);
+                        if (json.message) msg = json.message;
+                    } catch (e) {}
+
+                    Swal.fire({
+                        title: "Error",
+                        text: msg,
+                        icon: "error",
+                        confirmButtonColor: "#3085d6"
+                    });
                     console.error(xhr.responseText);
                 });
         });
 
         // Eliminar
         $('#tablaAduanas').on('click', '.btnEliminar', function () {
-            if (!confirm('¿Eliminar esta Aduana?')) return;
-
             const id = $(this).closest('tr').data('id');
 
-            $.post(eliminarUrl, {id: id})
-                .done(function (resp) {
-                    if (resp.status === 'ok') {
-                        location.reload();
-                    } else {
-                        alert('No se pudo eliminar la Aduana');
-                        console.error(resp);
-                    }
-                })
-                .fail(function (xhr) {
-                    alert('No se pudo eliminar la Aduana');
-                    console.error(xhr.responseText);
-                });
+            Swal.fire({
+                title: "¿Estás seguro?",
+                text: "Esta acción no se puede deshacer.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "Sí, eliminar",
+                cancelButtonText: "Cancelar"
+            }).then((result) => {
+                if (!result.isConfirmed) return;
+
+                $.post(eliminarUrl, {id: id})
+                    .done(function (resp) {
+                        if (resp.status === 'ok') {
+                            Swal.fire({
+                                title: "Eliminada",
+                                text: resp.message || "La aduana ha sido eliminada.",
+                                icon: "success",
+                                confirmButtonColor: "#3085d6"
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                title: "No se pudo eliminar",
+                                text: resp.message || "Ocurrió un problema al eliminar la aduana.",
+                                icon: "error",
+                                confirmButtonColor: "#3085d6"
+                            });
+                            console.error(resp);
+                        }
+                    })
+                    .fail(function (xhr) {
+                        let msg = "No se pudo eliminar la aduana.";
+                        try {
+                            const json = JSON.parse(xhr.responseText);
+                            if (json.message) msg = json.message;
+                        } catch (e) {}
+
+                        Swal.fire({
+                            title: "Error",
+                            text: msg,
+                            icon: "error",
+                            confirmButtonColor: "#3085d6"
+                        });
+                        console.error(xhr.responseText);
+                    });
+            });
         });
     });
 </script>
