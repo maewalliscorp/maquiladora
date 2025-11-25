@@ -259,24 +259,24 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="row g-3 mb-2">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Vista previa Foto</label>
-                        <div id="eFotoPreview" class="border rounded p-2 bg-light mb-2" style="min-height:160px; display: flex; align-items: center; justify-content: center;">
-                            <span class="text-muted">Sin foto</span>
-                        </div>
-                        <input type="file" name="foto" id="eInputFoto" class="form-control" accept="image/*" />
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Vista previa Patrón</label>
-                        <div id="ePatronPreview" class="border rounded p-2 bg-light mb-2" style="min-height:160px; display: flex; align-items: center; justify-content: center;">
-                            <span class="text-muted">Sin patrón</span>
-                        </div>
-                        <input type="file" name="patron" id="eInputPatron" class="form-control" accept="image/*,.pdf" />
-                    </div>
-                </div>
                 <form id="formEditarDiseno">
                     <input type="hidden" name="id" id="e-id" />
+                    <div class="row g-3 mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Vista previa Foto</label>
+                            <div id="eFotoPreview" class="border rounded p-2 bg-light mb-2" style="min-height:160px; display: flex; align-items: center; justify-content: center;">
+                                <span class="text-muted">Sin foto</span>
+                            </div>
+                            <input type="file" name="foto" id="eInputFoto" class="form-control" accept="image/*" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Vista previa Patrón</label>
+                            <div id="ePatronPreview" class="border rounded p-2 bg-light mb-2" style="min-height:160px; display: flex; align-items: center; justify-content: center;">
+                                <span class="text-muted">Sin patrón</span>
+                            </div>
+                            <input type="file" name="patron" id="eInputPatron" class="form-control" accept="image/*,.pdf" />
+                        </div>
+                    </div>
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label class="form-label">Código</label>
@@ -1098,7 +1098,7 @@
         }).then((result) => {
             if (!result.isConfirmed) return;
             $.ajax({
-                url: '<?= base_url('modulo2/actualizar') ?>/'+id,
+                url: '<?= base_url('modulo2/disenos/actualizar') ?>/' + id,
                 method: 'POST',
                 data: fd,
                 contentType: false,

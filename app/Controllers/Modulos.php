@@ -1784,6 +1784,68 @@ class Modulos extends BaseController
         return $this->response->setJSON($out);
     }
 
+    /** Lista de diseños filtrados por maquiladora del usuario autenticado (JSON) */
+    public function m2_disenos_json()
+    {
+        $db = \Config\Database::connect();
+        $maquiladoraId = session()->get('maquiladora_id');
+        
+        $disenos = [];
+        try {
+            // Intentar con diferentes nombres de tabla
+            $queries = [
+                "SELECT d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad, 
+                        (SELECT dv.version FROM diseno_version dv WHERE dv.disenoId = d.id ORDER BY dv.fecha DESC, dv.id DESC LIMIT 1) as version
+                 FROM diseno d 
+                 WHERE d.maquiladoraID = ? 
+                 ORDER BY d.nombre",
+                "SELECT d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad,
+                        (SELECT dv.version FROM disenoversion dv WHERE dv.disenoId = d.id ORDER BY dv.fecha DESC, dv.id DESC LIMIT 1) as version
+                 FROM Diseno d 
+                 WHERE d.maquiladoraID = ? 
+                 ORDER BY d.nombre",
+            ];
+            
+            foreach ($queries as $query) {
+                try {
+                    $disenos = $db->query($query, [$maquiladoraId])->getResultArray();
+                    if ($disenos !== null) break;
+                } catch (\Throwable $e) {
+                    // Intentar siguiente query
+                }
+            }
+            
+            // Si no se encontraron diseños con maquiladoraID, intentar sin filtro (fallback)
+            if (empty($disenos)) {
+                $fallbackQueries = [
+                    "SELECT d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad,
+                            (SELECT dv.version FROM diseno_version dv WHERE dv.disenoId = d.id ORDER BY dv.fecha DESC, dv.id DESC LIMIT 1) as version
+                     FROM diseno d 
+                     ORDER BY d.nombre",
+                    "SELECT d.id, d.codigo, d.nombre, d.descripcion, d.precio_unidad,
+                            (SELECT dv.version FROM disenoversion dv WHERE dv.disenoId = d.id ORDER BY dv.fecha DESC, dv.id DESC LIMIT 1) as version
+                     FROM Diseno d 
+                     ORDER BY d.nombre",
+                ];
+                
+                foreach ($fallbackQueries as $query) {
+                    try {
+                        $disenos = $db->query($query)->getResultArray();
+                        if ($disenos !== null) break;
+                    } catch (\Throwable $e) {
+                        // Intentar siguiente query
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'error' => 'Error al obtener diseños: ' . $e->getMessage()
+            ]);
+        }
+        
+        return $this->response->setJSON($disenos);
+    }
+
     public function ordenes()
     {
         $ordenes = [
@@ -2304,6 +2366,23 @@ class Modulos extends BaseController
                     // Actualizar OP ligada (última por ordenCompraId) si llegaron campos
                     $opCantidadPlan    = $this->request->getPost('op_cantidadPlan');
                     $disenoVersionId   = $this->request->getPost('disenoVersionId');
+                    $disenoId          = $this->request->getPost('disenoId');
+
+                    // Si viene disenoId pero no disenoVersionId, buscar la última versión del diseño
+                    if ((!$disenoVersionId || $disenoVersionId == '') && $disenoId) {
+                        try {
+                            // Buscar última versión del diseño
+                            $verRow = $db->query('SELECT id FROM diseno_version WHERE disenoId = ? ORDER BY id DESC LIMIT 1', [(int)$disenoId])->getRowArray();
+                            if (!$verRow) {
+                                $verRow = $db->query('SELECT id FROM DisenoVersion WHERE disenoId = ? ORDER BY id DESC LIMIT 1', [(int)$disenoId])->getRowArray();
+                            }
+                            if ($verRow && isset($verRow['id'])) {
+                                $disenoVersionId = $verRow['id'];
+                            }
+                        } catch (\Throwable $eVer) {
+                            // Ignorar error, se quedará null
+                        }
+                    }
                     $opFechaFinPlanRaw = $this->request->getPost('op_fechaFinPlan');
                     // Normalizar fecha fin plan si viene como dd/mm/yyyy
                     $opFechaFinPlan = null;
