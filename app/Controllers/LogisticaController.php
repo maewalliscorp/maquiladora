@@ -919,6 +919,63 @@ class LogisticaController extends BaseController
     }
 
     /* =========================================================
+     *  VISTA DE ADUANAS POR EMBARQUE
+     * =======================================================*/
+    public function aduanas($embarqueId)
+    {
+        $embarqueId = (int) $embarqueId;
+        $db         = $this->db();
+
+        // Validar que exista tabla embarque
+        if (!$this->tableExists('embarque')) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound(
+                'La tabla embarque no existe'
+            );
+        }
+
+        // Datos básicos del embarque
+        $embarque = $db->table('embarque')
+            ->where('id', $embarqueId)
+            ->get()
+            ->getRowArray();
+
+        if (!$embarque) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound(
+                'Embarque ' . $embarqueId . ' no encontrado'
+            );
+        }
+
+        // Cliente ligado (si existe la columna clienteId)
+        $cliente = null;
+        if (isset($embarque['clienteId']) && $this->tableExists('cliente')) {
+            $cliente = $db->table('cliente')
+                ->where('id', (int) $embarque['clienteId'])
+                ->get()
+                ->getRowArray();
+        }
+
+        // Ítems del embarque (opcional, si existen tablas)
+        $items = [];
+        if ($this->tableExists('embarque_item') && $this->tableExists('orden_compra')) {
+            $itemsBuilder = $db->table('embarque_item ei')
+                ->select('ei.*, oc.folio AS ordenFolio')
+                ->join('orden_compra oc', 'oc.id = ei.ordenCompraId', 'left')
+                ->where('ei.embarqueId', $embarqueId);
+
+            $items = $itemsBuilder->get()->getResultArray();
+        }
+
+        $title = 'Aduanas · ' . ($embarque['folio'] ?? ('EMB-' . $embarqueId));
+
+        return view('modulos/embarque_aduanas', [
+            'title'    => $title,
+            'embarque' => $embarque,
+            'cliente'  => $cliente,
+            'items'    => $items,
+        ]);
+    }
+
+    /* =========================================================
      *  DOCUMENTO MANUAL (sin BD)
      * =======================================================*/
     public function documentoManual()

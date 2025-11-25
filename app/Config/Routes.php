@@ -21,7 +21,7 @@ $routes->setDefaultController('UsuarioController');
 $routes->setDefaultMethod('login');
 $routes->setTranslateURIDashes(false);
 $routes->set404Override();
-$routes->setAutoRoute(false); // todo debe declararse explícitamente
+$routes->setAutoRoute(false); // todo debe declararse explíclicitamente
 
 /* --------------------------------------------------------------------
  * Auth
@@ -545,7 +545,7 @@ $routes->group('api/storage', static function($r){
 });
 
 /* --------------------------------------------------------------------
- * Logística · Facturación (UI + acción de timbrado/mock)
+ * Logística · Facturación
  * ------------------------------------------------------------------*/
 $routes->get (
     'logistica/embarque/(:num)/facturar/ui',
@@ -555,6 +555,30 @@ $routes->get (
 $routes->post(
     'logistica/embarque/(:num)/facturar',
     'LogisticaController::facturar/$1',
+    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+);
+
+/* --------------------------------------------------------------------
+ * Logística · Aduanas (NUEVO)
+ * ------------------------------------------------------------------*/
+$routes->get(
+    'logistica/embarque/(:num)/aduanas',
+    'EmbarqueAduana::index/$1',
+    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+);
+$routes->get(
+    'logistica/embarque/(:num)/aduanas/listar',
+    'EmbarqueAduana::listar/$1',
+    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+);
+$routes->post(
+    'logistica/embarque/aduanas/guardar',
+    'EmbarqueAduana::guardar',
+    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+);
+$routes->post(
+    'logistica/embarque/aduanas/eliminar',
+    'EmbarqueAduana::eliminar',
     ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
 );
 
