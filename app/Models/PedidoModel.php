@@ -15,20 +15,24 @@ class PedidoModel extends Model
     protected $useSoftDeletes   = false;
     protected $protectFields    = false;
 
-    /** Listado de pedidos normalizado (id, empresa, folio, fecha, estatus, moneda, total).
+    /** Listado de pedidos normalizado (id, empresa, folio, fecha, estatus, fechaFinPlan, total).
      *  Si se proporciona $maquiladoraId, solo devuelve pedidos de esa maquiladora
      *  usando la columna oc.maquiladoraID.
      */
     public function getListadoPedidos($maquiladoraId = null): array
     {
         $db = $this->db;
-        // 1) Intento completo (esquema con folio/moneda/total)
+        // 1) Intento completo (esquema con folio/fechaFinPlan/total)
         $sql = "SELECT oc.id,
                        c.nombre AS empresa,
                        oc.folio,
                        oc.fecha,
                        oc.estatus,
-                       oc.moneda,
+                       (SELECT op.fechaFinPlan 
+                        FROM orden_produccion op 
+                        WHERE op.ordenCompraId = oc.id 
+                        ORDER BY op.id DESC 
+                        LIMIT 1) AS fechaFinPlan,
                        oc.total,
                        NULL as documento_url
                 FROM orden_compra oc
@@ -45,35 +49,53 @@ class PedidoModel extends Model
         try {
             return $db->query($sql, $params)->getResultArray();
         } catch (\Throwable $e) {
-            // Fallback: esquema mínimo sin folio/moneda/total, usando solo tablas en minúsculas
+            // Fallback: intentar con nombres de tabla en mayúsculas
             try {
                 $sql2 = "SELECT oc.id,
-                                 c.nombre AS empresa,
-                                 oc.fecha,
-                                 oc.estatus
-                          FROM orden_compra oc
-                          LEFT JOIN cliente c ON c.id = oc.clienteId";
+                                c.nombre AS empresa,
+                                oc.folio,
+                                oc.fecha,
+                                oc.estatus,
+                                (SELECT op.fechaFinPlan 
+                                 FROM OrdenProduccion op 
+                                 WHERE op.ordenCompraId = oc.id 
+                                 ORDER BY op.id DESC 
+                                 LIMIT 1) AS fechaFinPlan,
+                                oc.total,
+                                NULL as documento_url
+                         FROM OrdenCompra oc
+                         LEFT JOIN Cliente c ON c.id = oc.clienteId";
                 $params2 = [];
                 if ($maquiladoraId) {
                     $sql2 .= " WHERE oc.maquiladoraID = ?";
                     $params2[] = (int)$maquiladoraId;
                 }
                 $sql2 .= " ORDER BY oc.fecha DESC, oc.id DESC";
-
-                $rows = $db->query($sql2, $params2)->getResultArray();
-            } catch (\Throwable $e3) {
-                return [];
+                return $db->query($sql2, $params2)->getResultArray();
+            } catch (\Throwable $e2) {
+                // Fallback final: sin fechaFinPlan
+                try {
+                    $sql3 = "SELECT oc.id,
+                                     c.nombre AS empresa,
+                                     oc.folio,
+                                     oc.fecha,
+                                     oc.estatus,
+                                     NULL as fechaFinPlan,
+                                     oc.total,
+                                     NULL as documento_url
+                              FROM orden_compra oc
+                              LEFT JOIN cliente c ON c.id = oc.clienteId";
+                    $params3 = [];
+                    if ($maquiladoraId) {
+                        $sql3 .= " WHERE oc.maquiladoraID = ?";
+                        $params3[] = (int)$maquiladoraId;
+                    }
+                    $sql3 .= " ORDER BY oc.fecha DESC, oc.id DESC";
+                    return $db->query($sql3, $params3)->getResultArray();
+                } catch (\Throwable $e3) {
+                    return [];
+                }
             }
-
-            // Normalizar columnas faltantes
-            foreach ($rows as &$r) {
-                $r['folio'] = $r['folio'] ?? '';
-                $r['moneda'] = $r['moneda'] ?? '';
-                $r['total'] = isset($r['total']) ? $r['total'] : 0;
-                $r['documento_url'] = $r['documento_url'] ?? null;
-            }
-            unset($r);
-            return $rows;
         }
     }
 

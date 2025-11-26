@@ -77,10 +77,10 @@
                         <td>
                             <div class="d-flex gap-2 justify-content-center">
                                 <button type="button" class="btn btn-sm btn-outline-info btn-ver-op" data-folio="<?= esc($orden['op'] ?? '') ?>" data-bs-toggle="modal" data-bs-target="#opDetalleModal">
-                                    <i class="bi bi-eye"></i> Ver
+                                    <i class="bi bi-eye"></i>
                                 </button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary btn-agregar-op" data-id="<?= esc($orden['opId'] ?? '') ?>" data-folio="<?= esc($orden['op'] ?? '') ?>" data-bs-toggle="modal" data-bs-target="#opAsignacionesModal">
-                                    <i class="bi bi-person-plus"></i> Agregar
+                                    <i class="bi bi-person-plus"></i>
                                 </button>
                                 <?php
                                 $__isEnCorte = (isset($estatusActual) && strcasecmp(trim($estatusActual), 'En corte') === 0);
@@ -90,11 +90,16 @@
                                         <i class="bi bi-play-circle"></i> Empezar
                                     </a>
                                 <?php endif; ?>
-                                <button type="button" class="btn btn-sm btn-outline-warning btn-transferir-op" data-id="<?= esc($orden['opId'] ?? '') ?>" data-folio="<?= esc($orden['op'] ?? '') ?>" data-bs-toggle="modal" data-bs-target="#opTransferirModal">
-                                    <i class="bi bi-share"></i> Transferir
+                                <button type="button" class="btn btn-sm btn-outline-warning btn-transferir-op" 
+                                        data-id="<?= esc($orden['opId'] ?? '') ?>" 
+                                        data-folio="<?= esc($orden['op'] ?? '') ?>"
+                                        data-maquiladora-compartida="<?= esc($orden['maquiladoraCompartidaID'] ?? '') ?>" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#opTransferirModal">
+                                    <i class="bi bi-share"></i> 
                                 </button>
                                 <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-op" data-id="<?= esc($orden['opId'] ?? '') ?>" data-folio="<?= esc($orden['op'] ?? '') ?>">
-                                    <i class="bi bi-trash"></i> Eliminar
+                                    <i class="bi bi-trash"></i>
                                 </button>
                             </div>
                         </td>
@@ -109,46 +114,132 @@
 
     <!-- Modal Detalle OP -->
     <div class="modal fade" id="opDetalleModal" tabindex="-1" aria-labelledby="opDetalleLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content text-dark">
                 <div class="modal-header">
                     <h5 class="modal-title text-dark" id="opDetalleLabel">Detalle de Orden de Producción</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <dl class="row mb-2">
-                        <dt class="col-sm-3">ID</dt><dd class="col-sm-9" id="op-id">-</dd>
-                        <dt class="col-sm-3">Folio</dt><dd class="col-sm-9" id="op-folio">-</dd>
-                        <dt class="col-sm-3">Estatus</dt><dd class="col-sm-9" id="op-status">-</dd>
-                        <dt class="col-sm-3">Cantidad plan</dt><dd class="col-sm-9" id="op-cant">-</dd>
-                        <dt class="col-sm-3">Inicio plan</dt><dd class="col-sm-9" id="op-ini">-</dd>
-                        <dt class="col-sm-3">Fin plan</dt><dd class="col-sm-9" id="op-fin">-</dd>
-                    </dl>
-                    <h6 class="mt-3">Diseño</h6>
-                    <dl class="row mb-2">
-                        <dt class="col-sm-3">Nombre</dt><dd class="col-sm-9" id="op-dis-nombre">-</dd>
-                        <dt class="col-sm-3">Versión</dt><dd class="col-sm-9" id="op-dis-version">-</dd>
-                        <dt class="col-sm-3">Fecha versión</dt><dd class="col-sm-9" id="op-dis-fecha">-</dd>
-                        <dt class="col-sm-3">Aprobado</dt><dd class="col-sm-9" id="op-dis-aprobado">-</dd>
-                        <dt class="col-sm-3">Notas</dt><dd class="col-sm-9" id="op-dis-notas">-</dd>
-                        <dt class="col-sm-3">Archivos</dt>
-                        <dd class="col-sm-9">
-                            <div id="op-dis-archivos">
-                                <div id="opDisCarousel" class="carousel slide" data-bs-ride="false" style="display:none;">
-                                    <div class="carousel-inner"></div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#opDisCarousel" data-bs-slide="prev">
-                                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                        <span class="visually-hidden">Anterior</span>
-                                    </button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#opDisCarousel" data-bs-slide="next">
-                                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                        <span class="visually-hidden">Siguiente</span>
-                                    </button>
+                    <!-- Información de la Orden -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="bi bi-file-text me-2"></i>Información de la Orden</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <strong>Folio OP:</strong>
+                                    <p class="mb-2" id="op-folio">-</p>
                                 </div>
-                                <span id="op-dis-archivos-na" class="text-muted">—</span>
+                                <div class="col-md-3">
+                                    <strong>Estatus:</strong>
+                                    <p class="mb-2"><span class="badge bg-secondary" id="op-status">-</span></p>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Inicio Plan:</strong>
+                                    <p class="mb-2" id="op-ini">-</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Fin Plan:</strong>
+                                    <p class="mb-2" id="op-fin">-</p>
+                                </div>
                             </div>
-                        </dd>
-                    </dl>
+                        </div>
+                    </div>
+
+                    <!-- Información del Cliente y Pedido -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="bi bi-person me-2"></i>Cliente y Pedido</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Cliente:</strong>
+                                    <p class="mb-2" id="op-cliente">-</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Cantidad Planeada:</strong>
+                                    <p class="mb-2 fw-bold" id="op-cant">-</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Total Pedido:</strong>
+                                    <p class="mb-2 text-success fw-bold" id="op-total">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información del Diseño -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="bi bi-palette me-2"></i>Diseño</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Código:</strong>
+                                    <p class="mb-2" id="op-dis-codigo">-</p>
+                                </div>
+                                <div class="col-md-8">
+                                    <strong>Nombre:</strong>
+                                    <p class="mb-2" id="op-dis-nombre">-</p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <strong>Descripción:</strong>
+                                    <p class="mb-2" id="op-dis-descripcion">-</p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <strong>Versión:</strong>
+                                    <p class="mb-2" id="op-dis-version">-</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Fecha Versión:</strong>
+                                    <p class="mb-2" id="op-dis-fecha">-</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Aprobado:</strong>
+                                    <p class="mb-2" id="op-dis-aprobado">-</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Precio Unitario:</strong>
+                                    <p class="mb-2 text-primary fw-bold" id="op-dis-precio">-</p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <strong>Notas:</strong>
+                                    <p class="mb-0" id="op-dis-notas">-</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Archivos del Diseño -->
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <strong>Archivos:</strong>
+                                    <div id="op-dis-archivos">
+                                        <div id="opDisCarousel" class="carousel slide" data-bs-ride="false" style="display:none;">
+                                            <div class="carousel-inner"></div>
+                                            <button class="carousel-control-prev" type="button" data-bs-target="#opDisCarousel" data-bs-slide="prev">
+                                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                                <span class="visually-hidden">Anterior</span>
+                                            </button>
+                                            <button class="carousel-control-next" type="button" data-bs-target="#opDisCarousel" data-bs-slide="next">
+                                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                                <span class="visually-hidden">Siguiente</span>
+                                            </button>
+                                        </div>
+                                        <span id="op-dis-archivos-na" class="text-muted">—</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -346,9 +437,17 @@
             $(document).on('click', '.btn-transferir-op', function(){
                 const id = $(this).data('id');
                 const folio = $(this).data('folio');
+                const maquiladoraCompartida = $(this).data('maquiladora-compartida') || '';
+                
                 $('#trans-op-id').val(id);
                 $('#trans-op-folio').text(folio);
-                $('#trans-maquiladora').val('');
+                
+                // Si ya tiene una maquiladora compartida, preseleccionarla
+                if (maquiladoraCompartida) {
+                    $('#trans-maquiladora').val(maquiladoraCompartida);
+                } else {
+                    $('#trans-maquiladora').val('');
+                }
             });
 
             $('#btn-confirmar-transferencia').on('click', function(){
@@ -645,30 +744,46 @@
                 const $btn = $(this);
                 $btn.prop('disabled', true);
                 const setText = (sel, val) => $modal.find(sel).text(val);
-                setText('#op-id','Cargando...'); setText('#op-folio','Cargando...'); setText('#op-status','Cargando...');
+                
+                // Inicializar campos
+                setText('#op-folio','Cargando...'); setText('#op-status','Cargando...');
                 setText('#op-cant','Cargando...'); setText('#op-ini','Cargando...'); setText('#op-fin','Cargando...');
-                setText('#op-dis-nombre','Cargando...'); setText('#op-dis-version','Cargando...'); setText('#op-dis-fecha','Cargando...');
-                setText('#op-dis-aprobado','Cargando...'); setText('#op-dis-notas','');
+                setText('#op-cliente','Cargando...'); setText('#op-total','Cargando...');
+                setText('#op-dis-codigo','Cargando...'); setText('#op-dis-nombre','Cargando...'); 
+                setText('#op-dis-descripcion','Cargando...'); setText('#op-dis-version','Cargando...'); 
+                setText('#op-dis-fecha','Cargando...'); setText('#op-dis-aprobado','Cargando...'); 
+                setText('#op-dis-precio','Cargando...'); setText('#op-dis-notas','');
 
                 const $car = $('#opDisCarousel'), $inner = $car.find('.carousel-inner');
                 $inner.empty(); $car.hide(); $('#op-dis-archivos-na').show();
 
                 $.getJSON('<?= base_url('modulo1/ordenes/folio') ?>/' + encodeURIComponent(folio) + '/json?t=' + Date.now())
                     .done(function(data){
-                        setText('#op-id', data.id ?? '-');
                         setText('#op-folio', data.folio || '-');
                         setText('#op-status', data.status || '-');
                         setText('#op-cant', (data.cantidadPlan ?? '') || '-');
                         setText('#op-ini', data.fechaInicioPlan || '-');
                         setText('#op-fin', data.fechaFinPlan || '-');
+                        
+                        // Cliente y Total
+                        setText('#op-cliente', data.cliente || '-');
+                        const total = data.total ?? data.pedido?.total ?? null;
+                        setText('#op-total', total ? '$' + parseFloat(total).toFixed(2) : '-');
+                        
                         if (data.diseno){
+                            setText('#op-dis-codigo', data.diseno.codigo || '-');
                             setText('#op-dis-nombre', data.diseno.nombre || '-');
+                            setText('#op-dis-descripcion', data.diseno.descripcion || '-');
                             setText('#op-dis-version', data.diseno.version || '-');
                             setText('#op-dis-fecha', data.diseno.fecha || '-');
                             const aprobado = (data.diseno.aprobado===1 || data.diseno.aprobado==='1') ? 'Sí'
                                 : (data.diseno.aprobado===0 || data.diseno.aprobado==='0' ? 'No' : '-');
                             setText('#op-dis-aprobado', aprobado);
                             setText('#op-dis-notas', data.diseno.notas || '-');
+                            
+                            // Precio unitario
+                            const precio = data.diseno.precio_unidad ?? data.diseno.precioUnidad ?? null;
+                            setText('#op-dis-precio', precio ? '$' + parseFloat(precio).toFixed(2) : '-');
 
                             const files = [];
                             if (data.diseno.archivoCadUrl) files.push({url: data.diseno.archivoCadUrl, label:'CAD'});
@@ -679,16 +794,22 @@
                             if (files.length){
                                 const buildSlideContent = (url, label) => {
                                     const u = String(url || '');
+                                    
+                                    // Detectar si es base64 imagen
+                                    const isBase64Img = u.startsWith('data:image/');
+                                    
                                     const extMatch = u.match(/\.([a-z0-9]+)(?:\?|#|$)/i);
                                     const ext = extMatch ? extMatch[1].toLowerCase() : '';
-                                    const isImg   = /^(png|jpg|jpeg|gif|webp|bmp|svg)$/.test(ext);
+                                    const isImg   = isBase64Img || /^(png|jpg|jpeg|gif|webp|bmp|svg)$/.test(ext);
                                     const isPdf   = ext === 'pdf';
                                     const isVideo = /^(mp4|webm|ogv|ogg)$/.test(ext);
                                     const isAudio = /^(mp3|wav|ogg)$/.test(ext);
                                     const isOffice= /^(doc|docx|xls|xlsx|ppt|pptx)$/.test(ext);
                                     const isText  = /^(txt|csv|json|xml|md|log)$/.test(ext);
                                     const isCad   = /^(dwg|dxf|stp|step|igs|iges)$/.test(ext);
-                                    const safeUrl = encodeURI(u);
+                                    
+                                    // Si es base64, no usamos encodeURI porque ya es seguro y encodeURI rompería la data
+                                    const safeUrl = isBase64Img ? u : encodeURI(u);
 
                                     if (isImg)   return `<img src="${safeUrl}" class="d-block w-100" alt="${label}" style="max-height:460px; object-fit:contain; background:#f8f9fa;">`;
                                     if (isPdf)   return `<iframe src="${safeUrl}" class="d-block w-100" style="height:460px; border:0;" title="${label}"></iframe>`;
@@ -713,11 +834,14 @@
                         }
                     })
                     .fail(function(xhr){
-                        setText('#op-id', '-'); setText('#op-folio', '-');
+                        setText('#op-folio', '-');
                         setText('#op-status', 'Error HTTP ' + (xhr?.status || '?'));
                         setText('#op-cant', '-'); setText('#op-ini', '-'); setText('#op-fin', '-');
-                        setText('#op-dis-nombre', '-'); setText('#op-dis-version', '-'); setText('#op-dis-fecha', '-');
-                        setText('#op-dis-aprobado', '-'); setText('#op-dis-notas', 'No se pudo cargar el detalle de la orden.');
+                        setText('#op-cliente', '-'); setText('#op-total', '-');
+                        setText('#op-dis-codigo', '-'); setText('#op-dis-nombre', '-'); 
+                        setText('#op-dis-descripcion', '-'); setText('#op-dis-version', '-'); 
+                        setText('#op-dis-fecha', '-'); setText('#op-dis-aprobado', '-'); 
+                        setText('#op-dis-precio', '-'); setText('#op-dis-notas', 'No se pudo cargar el detalle de la orden.');
                         console.error('OP detalle error', xhr?.status, xhr?.responseText);
                     })
                     .always(function(){

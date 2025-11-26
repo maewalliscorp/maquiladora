@@ -274,91 +274,138 @@
 
 <!-- Modal Bootstrap: Detalles del pedido -->
 <div class="modal fade" id="pedidoModal" tabindex="-1" aria-labelledby="pedidoModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content text-dark">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title text-dark" id="pedidoModalLabel">Detalle del pedido</h5>
+                <h5 class="modal-title" id="pedidoModalLabel">
+                    <i class="bi bi-file-text me-2"></i>Detalle del Pedido
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-dark">
-                <!-- Datos generales del pedido -->
-                <dl class="row mb-3 text-dark">
-                    <dt class="col-sm-3 fw-semibold text-dark">ID</dt>
-                    <dd class="col-sm-9 text-dark" id="p-id">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Empresa</dt>
-                    <dd class="col-sm-9 text-dark" id="p-empresa">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Folio</dt>
-                    <dd class="col-sm-9 text-dark" id="p-folio">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Fecha</dt>
-                    <dd class="col-sm-9 text-dark" id="p-fecha">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Estatus</dt>
-                    <dd class="col-sm-9 text-dark" id="p-estatus">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Moneda</dt>
-                    <dd class="col-sm-9 text-dark" id="p-moneda">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Total</dt>
-                    <dd class="col-sm-9 text-dark" id="p-total">-</dd>
-                </dl>
+            <div class="modal-body">
+                <!-- Información General -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Información General</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <strong>Folio:</strong>
+                                <p class="mb-2" id="p-folio">-</p>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Fecha:</strong>
+                                <p class="mb-2" id="p-fecha">-</p>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Estatus:</strong>
+                                <p class="mb-2"><span class="badge bg-secondary" id="p-estatus">-</span></p>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Total:</strong>
+                                <p class="mb-2 text-success fw-bold" id="p-total">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                <!-- Cliente -->
-                <h6 class="mb-2">Cliente</h6>
-                <dl class="row mb-3 text-dark">
-                    <dt class="col-sm-3 fw-semibold text-dark">Nombre</dt>
-                    <dd class="col-sm-9 text-dark" id="p-cli-nombre">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Email</dt>
-                    <dd class="col-sm-9 text-dark" id="p-cli-email">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Telefono</dt>
-                    <dd class="col-sm-9 text-dark" id="p-cli-telefono">-</dd>
-                </dl>
+                <!-- Información del Cliente -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-person me-2"></i>Cliente</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Nombre/Empresa:</strong>
+                                <p class="mb-2" id="p-cli-nombre">-</p>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Email:</strong>
+                                <p class="mb-2" id="p-cli-email">-</p>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Teléfono:</strong>
+                                <p class="mb-2" id="p-cli-telefono">-</p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <strong>Dirección:</strong>
+                                <p class="mb-0" id="p-dir-resumen">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                <!-- Domicilio -->
-                <h6 class="mb-2">Domicilio</h6>
-                <dl class="row mb-3 text-dark">
-                    <dt class="col-sm-3 fw-semibold text-dark">Calle</dt>
-                    <dd class="col-sm-9 text-dark" id="p-dir-calle">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Num. Ext</dt>
-                    <dd class="col-sm-9 text-dark" id="p-dir-numext">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Num. Int</dt>
-                    <dd class="col-sm-9 text-dark" id="p-dir-numint">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Ciudad</dt>
-                    <dd class="col-sm-9 text-dark" id="p-dir-ciudad">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Estado</dt>
-                    <dd class="col-sm-9 text-dark" id="p-dir-estado">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">CP</dt>
-                    <dd class="col-sm-9 text-dark" id="p-dir-cp">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">País</dt>
-                    <dd class="col-sm-9 text-dark" id="p-dir-pais">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Resumen</dt>
-                    <dd class="col-sm-9 text-dark" id="p-dir-resumen">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Clasificación</dt>
-                    <dd class="col-sm-9 text-dark" id="p-cli-clasificacion">-</dd>
-                </dl>
-
-                <!-- Diseño relacionado -->
-                <h6 class="mt-4 mb-2">Diseño relacionado</h6>
-                <dl class="row mb-3 text-dark">
-                    <dt class="col-sm-3 fw-semibold text-dark">Código</dt>
-                    <dd class="col-sm-9 text-dark" id="p-dis-codigo">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Nombre</dt>
-                    <dd class="col-sm-9 text-dark" id="p-dis-nombre">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Descripción</dt>
-                    <dd class="col-sm-9 text-dark" id="p-dis-descripcion">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Versión</dt>
-                    <dd class="col-sm-9 text-dark" id="p-dis-version">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Fecha versión</dt>
-                    <dd class="col-sm-9 text-dark" id="p-dis-version-fecha">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Aprobado</dt>
-                    <dd class="col-sm-9 text-dark" id="p-dis-version-aprobado">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Precio unidad</dt>
-                    <dd class="col-sm-9 text-dark" id="p-dis-precio">-</dd>
-                    <dt class="col-sm-3 fw-semibold text-dark">Cantidad plan</dt>
-                    <dd class="col-sm-9 text-dark" id="p-op-cantidadPlan">-</dd>
-                </dl>
+                <!-- Información del Diseño y Producción -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-palette me-2"></i>Diseño y Producción</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong>Código Diseño:</strong>
+                                <p class="mb-2" id="p-dis-codigo">-</p>
+                            </div>
+                            <div class="col-md-8">
+                                <strong>Nombre:</strong>
+                                <p class="mb-2" id="p-dis-nombre">-</p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <strong>Descripción:</strong>
+                                <p class="mb-2" id="p-dis-descripcion">-</p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <strong>Versión:</strong>
+                                <p class="mb-2" id="p-dis-version">-</p>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Precio Unitario:</strong>
+                                <p class="mb-2 text-primary fw-bold" id="p-dis-precio">-</p>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Cantidad Planeada:</strong>
+                                <p class="mb-2 fw-bold" id="p-op-cantidadPlan">-</p>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Fecha Entrega:</strong>
+                                <p class="mb-2" id="p-op-fechaFinPlan">-</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Imágenes del Diseño -->
+                        <div class="row mt-3" id="p-dis-imagenes-container" style="display: none;">
+                            <div class="col-12">
+                                <hr>
+                                <h6 class="mb-3"><i class="bi bi-images me-2"></i>Archivos del Diseño</h6>
+                            </div>
+                            <div class="col-md-6 text-center" id="p-dis-foto-container" style="display: none;">
+                                <strong>Foto del Diseño:</strong>
+                                <div class="mt-2">
+                                    <img id="p-dis-foto" src="" alt="Foto del diseño" class="img-fluid rounded border" style="max-height: 300px;">
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-center" id="p-dis-patron-container" style="display: none;">
+                                <strong>Patrón:</strong>
+                                <div class="mt-2">
+                                    <img id="p-dis-patron" src="" alt="Patrón del diseño" class="img-fluid rounded border" style="max-height: 300px;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
-                <a id="p-doc" href="#" class="btn btn-outline-secondary" target="_blank" style="display:none;">
-                    <i class="bi bi-file-earmark-text"></i> Documento
-                </a>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cerrar
+                </button>
             </div>
         </div>
     </div>
@@ -380,13 +427,25 @@
                     
                     <!-- Información General (Solo lectura) -->
                     <div class="row g-3 mb-4">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label fw-bold">Folio</label>
                             <input type="text" class="form-control-plaintext" id="pe-folio" readonly>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-8">
                             <label class="form-label fw-bold">Cliente</label>
                             <input type="text" class="form-control-plaintext" id="pe-cliente" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Email</label>
+                            <input type="text" class="form-control-plaintext" id="pe-cli-email" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Teléfono</label>
+                            <input type="text" class="form-control-plaintext" id="pe-cli-telefono" readonly>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Dirección</label>
+                            <input type="text" class="form-control-plaintext" id="pe-cli-direccion" readonly>
                         </div>
                     </div>
 
@@ -402,6 +461,31 @@
                             <div class="form-text">Selecciona el diseño para este pedido.</div>
                         </div>
 
+                        <!-- Detalles del Diseño Seleccionado -->
+                        <div id="pe-detalles-diseno" class="col-12" style="display:none;">
+                            <div class="card bg-light border-0">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-4 text-center">
+                                            <img id="pe-preview-img" src="" alt="Diseño" class="img-fluid rounded shadow-sm" style="max-height: 120px; object-fit: cover;">
+                                            <div id="pe-preview-noimg" class="text-muted small fst-italic mt-1">Sin imagen</div>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <h6 class="fw-bold mb-1" id="pe-preview-nombre"></h6>
+                                            <p class="mb-1 small text-muted">Versión: <span id="pe-preview-version"></span> <span id="pe-preview-fecha"></span></p>
+                                            
+                                            <div class="mt-2">
+                                                <span class="badge bg-secondary mb-1">Patrón:</span>
+                                                <span id="pe-preview-patron-link">
+                                                    <span class="text-muted small">No disponible</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="col-md-6">
                             <label for="pe-cantidad" class="form-label">Cantidad Planeada</label>
                             <input type="number" class="form-control" id="pe-cantidad" name="op_cantidadPlan" min="1" required>
@@ -410,6 +494,23 @@
                         <div class="col-md-6">
                             <label for="pe-fecha-fin" class="form-label">Fecha Fin Planeada</label>
                             <input type="date" class="form-control" id="pe-fecha-fin" name="op_fechaFinPlan" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Precio Unitario</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="text" class="form-control" id="pe-precio-unitario" readonly value="0.00">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Total Estimado</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="text" class="form-control fw-bold" id="pe-total-estimado" readonly value="0.00">
+                            </div>
+                            <div class="form-text">Calculado basado en el precio del diseño y la cantidad.</div>
                         </div>
                     </div>
                 </div>
@@ -461,11 +562,11 @@
             <thead>
             <tr>
                 <th>No.</th>
-                <th>Empresa</th>
                 <th>Folio</th>
+                <th>Empresa</th>
                 <th>Fecha</th>
                 <th>Estatus</th>
-                <th>Moneda</th>
+                <th>Fecha Entrega</th>
                 <th>Total</th>
                 <th>Acciones</th>
             </tr>
@@ -475,11 +576,11 @@
                 <?php foreach ($pedidos as $p): ?>
                     <tr>
                         <td><?= esc($p['id']) ?></td>
-                        <td><?= esc($p['empresa'] ?? '-') ?></td>
                         <td><?= esc($p['folio'] ?? '-') ?></td>
+                        <td><?= esc($p['empresa'] ?? '-') ?></td>
                         <td><?= isset($p['fecha']) ? esc(date('Y-m-d', strtotime($p['fecha']))) : '-' ?></td>
                         <td><?= esc($p['estatus'] ?? '-') ?></td>
-                        <td><?= esc($p['moneda'] ?? '-') ?></td>
+                        <td><?= isset($p['fechaFinPlan']) ? esc(date('Y-m-d', strtotime($p['fechaFinPlan']))) : '-' ?></td>
                         <td><?= isset($p['total']) ? number_format((float)$p['total'], 2) : '0.00' ?></td>
                         <td>
                             <button type="button" class="btn btn-sm btn-outline-info btn-ver-pedido"
@@ -750,19 +851,20 @@
                                         const fechaV = data?.fecha || payload.oc_fecha || '';
                                         const fechaFmt = fechaV ? (new Date(fechaV).toISOString().slice(0,10)) : '-';
                                         const estatus = data?.estatus || payload.oc_estatus || 'Pendiente';
-                                        const moneda = data?.moneda || payload.oc_moneda || '-';
+                                        const fechaFinPlanV = data?.op_fechaFinPlan || payload.op_fechaFinPlan || '';
+                                        const fechaFinPlanFmt = fechaFinPlanV ? (new Date(fechaFinPlanV).toISOString().slice(0,10)) : '-';
                                         const total = (data?.total ?? payload.oc_total ?? 0);
                                         const totalFmt = (parseFloat(total)||0).toFixed(2);
                                         const acciones = `
                                             <button type="button" class="btn btn-sm btn-outline-info btn-ver-pedido" data-id="${id}" data-bs-toggle="modal" data-bs-target="#pedidoModal">
-                                                <i class=\"bi bi-eye\"></i>
+                                                <i class="bi bi-eye"></i>
                                             </button>
-                                            <a class=\"btn btn-sm btn-outline-primary\" href=\"<?= base_url('modulo1/editar') ?>/${id}\" role=\"button\" onclick=\"return false;\">
-                                                <i class=\"bi bi-pencil\"></i>
+                                            <a class="btn btn-sm btn-outline-primary" href="<?= base_url('modulo1/editar') ?>/${id}" role="button" onclick="return false;">
+                                                <i class="bi bi-pencil"></i>
                                             </a>
-                                            <span class=\"text-muted\">—</span>`;
+                                            <span class="text-muted">—</span>`;
                                         try {
-                                            dtPedidos.row.add([id, empresa, folio, fechaFmt, estatus, moneda, totalFmt, acciones]).draw(false);
+                                            dtPedidos.row.add([id, folio, empresa, fechaFmt, estatus, fechaFinPlanFmt, totalFmt, acciones]).draw(false);
                                             finalizeSuccess.rowAdded = true;
                                         } catch(e) {
                                             finalizeSuccess.rowAdded = false;
@@ -1165,20 +1267,69 @@
 
                     // Mostrar enlace de archivo de diseño si está disponible (CAD/PDF/DXF)
                     const cadUrl = dis?.archivoCadUrl || ver?.archivoCadUrl || null;
-                    const patUrl = dis?.archivoPatronUrl || ver?.archivoPatronUrl || null;
-                    const firstFile = cadUrl || patUrl || null;
-                    if (firstFile) {
-                        $('#p-doc').attr('href', firstFile).show();
+                    const patUrl = dis?.archivoPatronUrl || ver?.archivoPatronUrl || dis?.patron || ver?.patron || null;
+                    const fotoUrl = dis?.fotoUrl || ver?.fotoUrl || dis?.foto || ver?.foto || null;
+                    
+                    console.log('Diseño:', dis);
+                    console.log('Versión:', ver);
+                    console.log('Foto (raw):', fotoUrl);
+                    console.log('Patrón (raw):', patUrl);
+                    
+                    // Mostrar imágenes del diseño si están disponibles
+                    let hasImages = false;
+                    
+                    // Foto del diseño - puede ser base64 o URL
+                    if (fotoUrl) {
+                        let fotoSrc = fotoUrl;
+                        // Si es base64 sin prefijo, agregarlo
+                        if (typeof fotoUrl === 'string' && !fotoUrl.startsWith('http') && !fotoUrl.startsWith('data:')) {
+                            fotoSrc = 'data:image/jpeg;base64,' + fotoUrl;
+                        }
+                        $('#p-dis-foto').attr('src', fotoSrc);
+                        $('#p-dis-foto-container').show();
+                        hasImages = true;
+                    } else {
+                        $('#p-dis-foto-container').hide();
+                    }
+                    
+                    // Patrón - puede ser base64 o URL
+                    if (patUrl) {
+                        let patSrc = patUrl;
+                        // Si es base64 sin prefijo, agregarlo
+                        if (typeof patUrl === 'string' && !patUrl.startsWith('http') && !patUrl.startsWith('data:')) {
+                            patSrc = 'data:image/jpeg;base64,' + patUrl;
+                        }
+                        $('#p-dis-patron').attr('src', patSrc);
+                        $('#p-dis-patron-container').show();
+                        hasImages = true;
+                    } else {
+                        $('#p-dis-patron-container').hide();
+                    }
+                    
+                    // Mostrar/ocultar contenedor de imágenes
+                    if (hasImages) {
+                        $('#p-dis-imagenes-container').show();
+                    } else {
+                        $('#p-dis-imagenes-container').hide();
                     }
 
                     // Precio unidad y cantidad plan (si existen elementos en la vista de detalles)
                     if ($('#p-dis-precio').length) {
                         const precio = dis?.precio_unidad ?? null;
-                        $('#p-dis-precio').text(precio != null ? String(precio) : '-');
+                        $('#p-dis-precio').text(precio != null ? '$' + parseFloat(precio).toFixed(2) : '-');
                     }
                     if ($('#p-op-cantidadPlan').length) {
                         const cant = data.op_cantidadPlan ?? data.op_cantidad_plan ?? null;
                         $('#p-op-cantidadPlan').text(cant != null ? String(cant) : '-');
+                    }
+                    if ($('#p-op-fechaFinPlan').length) {
+                        const fechaFin = data.op_fechaFinPlan ?? data.op_fecha_fin_plan ?? null;
+                        if (fechaFin) {
+                            const d = new Date(fechaFin);
+                            $('#p-op-fechaFinPlan').text(isNaN(d) ? String(fechaFin).slice(0,10) : d.toISOString().slice(0,10));
+                        } else {
+                            $('#p-op-fechaFinPlan').text('-');
+                        }
                     }
                 })
                 .fail(function () {
@@ -1399,6 +1550,89 @@
         // NUEVA LÓGICA DE EDICIÓN DE PEDIDO
         // ==========================================
 
+        // Función para recalcular total
+        function recalcularTotalEditar() {
+            const $sel = $('#pe-diseno option:selected');
+            const precio = parseFloat($sel.data('precio')) || 0;
+            const cantidad = parseInt($('#pe-cantidad').val()) || 0;
+            const total = precio * cantidad;
+            
+            $('#pe-precio-unitario').val(precio.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+            $('#pe-total-estimado').val(total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        }
+
+        // Listener para cambio de diseño en Editar (Cargar detalles visuales y recalcular)
+        $('#pe-diseno').on('change', function() {
+            recalcularTotalEditar();
+            
+            const id = $(this).val();
+            const $container = $('#pe-detalles-diseno');
+            
+            if (!id) {
+                $container.slideUp();
+                return;
+            }
+
+
+            // Mostrar loading o estado intermedio
+            $('#pe-preview-nombre').text('Cargando...');
+            $container.slideDown();
+
+            $.getJSON('<?= base_url('modulo1/disenos') ?>/' + id + '/json?t=' + Date.now())
+                .done(function(data) {
+                    // Nombre
+                    $('#pe-preview-nombre').text(data.nombre || 'Diseño sin nombre');
+                    
+                    // Versión y Fecha
+                    let verObj = null;
+                    if (data.version && typeof data.version === 'object') verObj = data.version;
+                    else if (Array.isArray(data.versiones) && data.versiones.length) verObj = data.versiones[data.versiones.length-1];
+                    else if (data.diseno_version && typeof data.diseno_version === 'object') verObj = data.diseno_version;
+                    
+                    const ver = verObj ? (verObj.version || verObj.ver || '') : (data.version || '');
+                    const fecha = verObj ? (verObj.fecha || '') : (data.fecha || '');
+                    
+                    $('#pe-preview-version').text(ver ? 'v'+ver : '');
+                    $('#pe-preview-fecha').text(fecha ? '('+fecha.substring(0,10)+')' : '');
+
+                    // Imagen
+                    let imgUrl = '';
+                    if (data.imagen_url) imgUrl = data.imagen_url;
+                    else if (verObj && verObj.imagen_url) imgUrl = verObj.imagen_url;
+                    else if (Array.isArray(data.imagenes) && data.imagenes.length) {
+                        const first = data.imagenes[0];
+                        imgUrl = typeof first === 'string' ? first : (first.url || first.src || '');
+                    }
+                    
+                    if (imgUrl) {
+                        $('#pe-preview-img').attr('src', imgUrl).show();
+                        $('#pe-preview-noimg').hide();
+                    } else {
+                        $('#pe-preview-img').hide();
+                        $('#pe-preview-noimg').show();
+                    }
+
+                    // Patrón
+                    const patUrl = verObj?.archivoPatronUrl || data.archivoPatronUrl || '';
+                    const $patContainer = $('#pe-preview-patron-link');
+                    if (patUrl) {
+                        const ext = patUrl.split('.').pop().toLowerCase();
+                        let html = '';
+                        if (['jpg','jpeg','png','gif','webp'].includes(ext)) {
+                            html = `<a href="${patUrl}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-image"></i> Ver Imagen</a>`;
+                        } else {
+                            html = `<a href="${patUrl}" target="_blank" class="btn btn-sm btn-outline-dark"><i class="bi bi-file-earmark-arrow-down"></i> Descargar (${ext})</a>`;
+                        }
+                        $patContainer.html(html);
+                    } else {
+                        $patContainer.html('<span class="text-muted small">No disponible</span>');
+                    }
+                })
+                .fail(function() {
+                    $('#pe-preview-nombre').text('Error al cargar detalles');
+                });
+        });
+
         // 1. Abrir modal y cargar datos
         $(document).on('click', '.btn-editar-pedido', function (e) {
             e.preventDefault();
@@ -1417,13 +1651,36 @@
                 
                 const pedido = pedidoResp[0]; // $.when devuelve array [data, status, xhr]
                 const disenos = disenosResp[0] || [];
-                const op = pedido.op || {};
-                const oc = pedido.oc || {};
+                
+                // Adaptar estructura plana del backend a objetos op/oc
+                const op = {
+                    cantidadPlan: pedido.op_cantidadPlan,
+                    fechaFinPlan: pedido.op_fechaFinPlan,
+                    disenoVersionId: pedido.op_disenoVersionId
+                };
+                const oc = {
+                    folio: pedido.folio
+                };
 
                 // Rellenar campos estáticos
                 $('#pe-id').val(id);
                 $('#pe-folio').val(oc.folio || '-');
-                $('#pe-cliente').val(pedido.cliente ? pedido.cliente.nombre : '-');
+                
+                const cli = pedido.cliente || {};
+                $('#pe-cliente').val(cli.nombre || '-');
+                $('#pe-cli-email').val(cli.email || '-');
+                $('#pe-cli-telefono').val(cli.telefono || '-');
+                
+                const dir = cli.direccion_detalle || {};
+                const dirTxt = [
+                    dir.calle, 
+                    dir.numExt ? ('#'+dir.numExt) : null, 
+                    dir.numInt ? ('Int '+dir.numInt) : null,
+                    dir.ciudad, 
+                    dir.estado,
+                    dir.cp ? ('CP '+dir.cp) : null
+                ].filter(Boolean).join(', ');
+                $('#pe-cli-direccion').val(dirTxt || '-');
 
                 // Rellenar dropdown de diseños
                 const $sel = $('#pe-diseno');
@@ -1456,17 +1713,42 @@
                 if (pedido.diseno && pedido.diseno.id) {
                     $sel.val(pedido.diseno.id);
                 }
+                // Disparar evento change para cargar la vista previa
+                $sel.trigger('change');
 
                 // Rellenar campos editables
                 $('#pe-cantidad').val(op.cantidadPlan || '');
                 $('#pe-fecha-fin').val(op.fechaFinPlan || '');
+                
+                // Recalcular total inicial
+                recalcularTotalEditar();
 
                 // Mostrar modal
                 $('#pedidoEditModal').modal('show');
 
-            }).fail(function() {
-                Swal.fire('Error', 'No se pudieron cargar los datos del pedido.', 'error');
+            }).fail(function(xhr, status, error) {
+                console.error('Error al cargar pedido:', xhr, status, error);
+                console.error('Response JSON:', xhr.responseJSON);
+                console.error('Response Text:', xhr.responseText);
+                
+                let errorMsg = 'No se pudieron cargar los datos del pedido.';
+                if (xhr.responseJSON) {
+                    if (xhr.responseJSON.message) {
+                        errorMsg += '\n\nDetalle: ' + xhr.responseJSON.message;
+                    }
+                    if (xhr.responseJSON.file && xhr.responseJSON.line) {
+                        errorMsg += '\n\nArchivo: ' + xhr.responseJSON.file + ':' + xhr.responseJSON.line;
+                    }
+                } else if (xhr.responseText) {
+                    errorMsg += '\n\n(Status: ' + xhr.status + ')';
+                }
+                Swal.fire('Error', errorMsg, 'error');
             });
+        });
+        
+        // Listener para cambio de cantidad
+        $('#pe-cantidad').on('input change', function() {
+            recalcularTotalEditar();
         });
 
         // 2. Guardar cambios
@@ -1523,6 +1805,10 @@
                         processData: false,
                         contentType: false,
                         dataType: 'json',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        },
                         success: function(resp) {
                             if (resp.success || resp.ok) {
                                 Swal.fire('¡Guardado!', 'El pedido ha sido actualizado.', 'success')
@@ -1531,9 +1817,15 @@
                                 Swal.fire('Error', resp.message || resp.error || 'Error desconocido', 'error');
                             }
                         },
-                        error: function(xhr) {
+                        error: function(xhr, status, error) {
                             let msg = 'Error al procesar la solicitud.';
-                            if (xhr.responseJSON && xhr.responseJSON.error) msg = xhr.responseJSON.error;
+                            if (xhr.responseJSON) {
+                                if (xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                                else if (xhr.responseJSON.error) msg = xhr.responseJSON.error;
+                            } else {
+                                msg += ` (${xhr.status} ${xhr.statusText})`;
+                                console.error('Error response:', xhr.responseText);
+                            }
                             Swal.fire('Error', msg, 'error');
                         }
                     });

@@ -83,6 +83,97 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Reporte OP -->
+<div class="modal fade" id="opReporteModal" tabindex="-1" aria-labelledby="opReporteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content text-dark">
+            <div class="modal-header">
+                <h5 class="modal-title" id="opReporteLabel">Reporte de Orden <span id="rep-op-folio"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i> Detalles del reporte para esta orden.
+                </div>
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-file-earmark-bar-graph display-1"></i>
+                    <p class="mt-3">Contenido del reporte en construcción...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary"><i class="bi bi-printer"></i> Imprimir</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Incidencia OP (Estilo Incidencias) -->
+<div class="modal fade" id="opIncidenciaModal" tabindex="-1" aria-labelledby="opIncidenciaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <form class="modal-content" id="formIncidenciaOp">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="opIncidenciaLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Reportar Incidencia
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <!-- OP (Solo lectura, ya que viene del click) -->
+                    <div class="col-md-4">
+                        <label class="form-label">OP (Folio)</label>
+                        <input type="text" class="form-control" id="inc-op-folio-input" readonly>
+                        <input type="hidden" id="inc-op-id-input" name="ordenProduccionFK">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Tipo</label>
+                        <select id="inc-tipo" name="tipo" class="form-select" required>
+                            <option value="">-- Selecciona --</option>
+                            <option>Paro de máquina</option>
+                            <option>Falta de material</option>
+                            <option>Calidad</option>
+                            <option>Seguridad</option>
+                            <option>Otro</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input id="inc-fecha" type="date" name="fecha" class="form-control" required>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Prioridad</label>
+                        <select id="inc-prioridad" name="prioridad" class="form-select">
+                            <option>Baja</option><option>Media</option><option>Alta</option>
+                        </select>
+                    </div>
+
+                    <!-- Empleado: Se omite select, se podría enviar el actual oculto si fuera necesario -->
+                    
+                    <div class="col-md-8">
+                        <label class="form-label">Acción/Seguimiento</label>
+                        <input id="inc-accion" name="accion" class="form-control" placeholder="Ej. Cambiar sensor, solicitar material, etc.">
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Descripción</label>
+                        <textarea id="inc-descripcion" name="descripcion" class="form-control" rows="3" placeholder="Describe la incidencia..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-warning">
+                    <i class="bi bi-send me-1"></i> Reportar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -91,6 +182,7 @@
     const __isRolCorte = <?= json_encode(strcasecmp(trim($__roleName), 'corte') === 0) ?>;
     const __isRolEmpleado = <?= json_encode(strcasecmp(trim($__roleName), 'empleado') === 0) ?>;
     const empId = <?= json_encode($empleadoId ?? null) ?>;
+    const maquiladoraId = <?= json_encode(session()->get('maquiladora_id') ?? null) ?>;
     
     // Función para cargar las órdenes
     function cargarOrdenes() {
@@ -136,20 +228,32 @@
                         actionButton = '<span class="badge bg-secondary">Ya finalizado</span>';
                     }
                     
-                    const right = (
-                        '<div class="d-flex align-items-center w-100">'
-                        + '<div class="flex-grow-1 d-flex justify-content-center gap-2">'
-                        + actionButton
+                    const reportButton = '<button class="btn btn-outline-secondary border-0 p-1 ms-2 btn-reporte-op" data-folio="' + (folio||'') + '" data-bs-toggle="modal" data-bs-target="#opReporteModal" title="Ver Reporte"><i class="bi bi-file-earmark-text fs-4"></i></button>';
+                    const warningButton = '<button class="btn btn-outline-warning border-0 p-1 me-2 btn-incidencia-op" data-folio="' + (folio||'') + '" data-id="' + (it.opId||it.id||'') + '" data-bs-toggle="modal" data-bs-target="#opIncidenciaModal" title="Reportar Incidencia"><i class="bi bi-exclamation-triangle fs-4"></i></button>';
+                    
+                    const left = (
+                        '<div>'
+                        + '<div class="d-flex align-items-center">'
+                        +   '<div class="fw-semibold fs-5">OP ' + folio + '</div>'
+                        +   reportButton
                         + '</div>'
-                        + '<span class="badge bg-info text-dark status-badge ms-auto">' + status + '</span>'
-                        + '</div>'
-                    );
-                    return (
-                        '<div class="border rounded p-3 mb-2 d-flex justify-content-between align-items-center">'
-                        + '<div>'
-                        + '<div class="fw-semibold">OP ' + folio + '</div>'
                         + '<div class="text-muted small">Desde: ' + desde + ' · Hasta: ' + hasta + '</div>'
                         + '</div>'
+                    );
+
+                    const right = (
+                        '<div class="d-flex align-items-center gap-3">'
+                        + '<div>' + actionButton + '</div>'
+                        + '<div class="d-flex align-items-center">'
+                        +   warningButton
+                        +   '<span class="badge bg-info text-dark status-badge">' + status + '</span>'
+                        + '</div>'
+                        + '</div>'
+                    );
+
+                    return (
+                        '<div class="border rounded p-3 mb-2 d-flex justify-content-between align-items-center">'
+                        + left
                         + right
                         + '</div>'
                     );
@@ -182,6 +286,89 @@
     
     // Cargar órdenes al inicio
     cargarOrdenes();
+
+    // Handler para el botón de reporte
+    document.addEventListener('click', function(ev){
+        const btn = ev.target.closest('.btn-reporte-op');
+        if (btn) {
+            const folio = btn.getAttribute('data-folio');
+            const el = document.getElementById('rep-op-folio');
+            if(el) el.textContent = folio;
+        }
+        
+        const btnInc = ev.target.closest('.btn-incidencia-op');
+        if (btnInc) {
+            const folio = btnInc.getAttribute('data-folio');
+            const id = btnInc.getAttribute('data-id');
+            
+            // Pre-llenar campos
+            const elFolio = document.getElementById('inc-op-folio-input');
+            const elId = document.getElementById('inc-op-id-input');
+            const elFecha = document.getElementById('inc-fecha');
+            
+            if(elFolio) elFolio.value = folio;
+            if(elId) elId.value = id;
+            if(elFecha && !elFecha.value) {
+                elFecha.value = new Date().toISOString().slice(0,10);
+            }
+        }
+    });
+
+    // Submit del formulario de incidencia via AJAX
+    document.getElementById('formIncidenciaOp').addEventListener('submit', function(e){
+        e.preventDefault();
+        const form = this;
+        const formData = new FormData(form);
+        
+        // Agregar empleado si está disponible
+        if (empId) formData.append('empleadoFK', empId);
+        // Agregar maquiladora si está disponible
+        if (maquiladoraId) formData.append('maquiladoraID', maquiladoraId);
+
+        const btn = form.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enviando...';
+
+        fetch('<?= base_url('modulo3/incidencias/crear') ?>', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => {
+            if (!r.ok) throw new Error('Error en la respuesta del servidor');
+            // Si redirige, fetch puede seguirlo, pero aquí esperamos JSON o redirección manual
+            return r.text().then(text => {
+                try { return JSON.parse(text); } catch(e) { return { ok: true, msg: 'Incidencia registrada (respuesta no JSON)' }; }
+            });
+        })
+        .then(data => {
+            Swal.fire({
+                icon: 'success',
+                title: 'Reportado',
+                text: 'La incidencia ha sido registrada correctamente.',
+                timer: 1500,
+                showConfirmButton: false
+            });
+            // Cerrar modal y limpiar
+            const modalEl = document.getElementById('opIncidenciaModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if(modal) modal.hide();
+            form.reset();
+        })
+        .catch(err => {
+            console.error(err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo registrar la incidencia. Verifique la conexión.'
+            });
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+    });
     const __runningTimers = new Map();
     function __format(ms){
         const s = Math.floor(ms/1000);

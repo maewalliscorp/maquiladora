@@ -1131,110 +1131,154 @@ class Modulos extends BaseController
     /** JSON detalle normalizado de pedido. */
     public function m1_pedido_json($id = null)
     {
-        $id = (int)($id ?? 0);
-        if ($id <= 0) {
-            return $this->response->setStatusCode(400)->setJSON(['error' => 'ID inválido']);
-        }
-
-        $pedidoModel = new \App\Models\PedidoModel();
-        // Traer detalle completo (cliente + clasificacion + items)
-        $detalle = $pedidoModel->getPedidoDetalle($id);
-        // Fallback: al menos datos básicos del pedido
-        if (!$detalle) {
-            $basic = $pedidoModel->getPedidoPorId($id);
-            if (!$basic) {
-                return $this->response->setStatusCode(404)->setJSON(['error' => 'Pedido no encontrado']);
+        try {
+            $id = (int)($id ?? 0);
+            if ($id <= 0) {
+                return $this->response->setStatusCode(400)->setJSON(['error' => 'ID inválido']);
             }
-            $detalle = [
-                'id' => (int)($basic['id'] ?? $id),
-                'folio' => $basic['folio'] ?? '',
-                'fecha' => $basic['fecha'] ?? null,
-                'estatus' => $basic['estatus'] ?? '',
-                'moneda' => $basic['moneda'] ?? '',
-                'total' => $basic['total'] ?? 0,
-                'cliente' => [
-                    'nombre' => $basic['empresa'] ?? '',
-                ],
-                'items' => [],
-            ];
-        }
 
-        // Rellenar diseño directamente si viniera vacío
-        if (empty($detalle['diseno'])) {
-            $db = \Config\Database::connect();
-            $row = null;
-            try {
-                $row = $db->query(
-                    "SELECT dv.*, d.id AS d_id, d.codigo AS d_codigo, d.nombre AS d_nombre, d.descripcion AS d_descripcion
-                     FROM orden_produccion op
-                     LEFT JOIN diseno_version dv ON dv.id = op.disenoVersionId
-                     LEFT JOIN diseno d ON d.id = dv.disenoId
-                     WHERE op.ordenCompraId = ?
-                     ORDER BY op.id DESC
-                     LIMIT 1",
-                    [$id]
-                )->getRowArray();
-            } catch (\Throwable $e) { $row = null; }
-            if (!$row) {
+            // Función helper para limpiar caracteres UTF-8 mal formados
+            $cleanUtf8 = function($data) use (&$cleanUtf8) {
+                if (is_array($data)) {
+                    return array_map($cleanUtf8, $data);
+                } elseif (is_string($data)) {
+                    // Limpiar caracteres UTF-8 mal formados
+                    return mb_convert_encoding($data, 'UTF-8', 'UTF-8');
+                }
+                return $data;
+            };
+
+            $pedidoModel = new \App\Models\PedidoModel();
+            // Traer detalle completo (cliente + clasificacion + items)
+            $detalle = $pedidoModel->getPedidoDetalle($id);
+            // Fallback: al menos datos básicos del pedido
+            if (!$detalle) {
+                $basic = $pedidoModel->getPedidoPorId($id);
+                if (!$basic) {
+                    return $this->response->setStatusCode(404)->setJSON(['error' => 'Pedido no encontrado']);
+                }
+                $detalle = [
+                    'id' => (int)($basic['id'] ?? $id),
+                    'folio' => $basic['folio'] ?? '',
+                    'fecha' => $basic['fecha'] ?? null,
+                    'estatus' => $basic['estatus'] ?? '',
+                    'moneda' => $basic['moneda'] ?? '',
+                    'total' => $basic['total'] ?? 0,
+                    'cliente' => [
+                        'nombre' => $basic['empresa'] ?? '',
+                    ],
+                    'items' => [],
+                ];
+            }
+
+            // Rellenar diseño directamente si viniera vacío
+            if (empty($detalle['diseno'])) {
+                $db = \Config\Database::connect();
+                $row = null;
                 try {
                     $row = $db->query(
                         "SELECT dv.*, d.id AS d_id, d.codigo AS d_codigo, d.nombre AS d_nombre, d.descripcion AS d_descripcion
-                         FROM OrdenProduccion op
-                         LEFT JOIN DisenoVersion dv ON dv.id = op.disenoVersionId
-                         LEFT JOIN Diseno d ON d.id = dv.disenoId
+                         FROM orden_produccion op
+                         LEFT JOIN diseno_version dv ON dv.id = op.disenoVersionId
+                         LEFT JOIN diseno d ON d.id = dv.disenoId
                          WHERE op.ordenCompraId = ?
                          ORDER BY op.id DESC
                          LIMIT 1",
                         [$id]
                     )->getRowArray();
-                } catch (\Throwable $e2) { $row = null; }
-            }
-            if ($row && isset($row['d_id'])) {
-                $detalle['diseno'] = [
-                    'id' => $row['d_id'],
-                    'codigo' => $row['d_codigo'] ?? '',
-                    'nombre' => $row['d_nombre'] ?? '',
-                    'descripcion' => $row['d_descripcion'] ?? '',
-                    'version' => [
-                        'id' => $row['id'] ?? null,
-                        'version' => $row['version'] ?? null,
-                        'fecha' => $row['fecha'] ?? null,
-                        'aprobado' => $row['aprobado'] ?? null,
-                        'notas' => $row['notas'] ?? null,
+                } catch (\Throwable $e) { $row = null; }
+                if (!$row) {
+                    try {
+                        $row = $db->query(
+                            "SELECT dv.*, d.id AS d_id, d.codigo AS d_codigo, d.nombre AS d_nombre, d.descripcion AS d_descripcion
+                             FROM OrdenProduccion op
+                             LEFT JOIN DisenoVersion dv ON dv.id = op.disenoVersionId
+                             LEFT JOIN Diseno d ON d.id = dv.disenoId
+                             WHERE op.ordenCompraId = ?
+                             ORDER BY op.id DESC
+                             LIMIT 1",
+                            [$id]
+                        )->getRowArray();
+                    } catch (\Throwable $e2) { $row = null; }
+                }
+                if ($row && isset($row['d_id'])) {
+                    $detalle['diseno'] = [
+                        'id' => $row['d_id'],
+                        'codigo' => $row['d_codigo'] ?? '',
+                        'nombre' => $row['d_nombre'] ?? '',
+                        'descripcion' => $row['d_descripcion'] ?? '',
+                        'version' => [
+                            'id' => $row['id'] ?? null,
+                            'version' => $row['version'] ?? null,
+                            'fecha' => $row['fecha'] ?? null,
+                            'aprobado' => $row['aprobado'] ?? null,
+                            'notas' => $row['notas'] ?? null,
+                            'archivoCadUrl' => $row['archivoCadUrl'] ?? null,
+                            'archivoPatronUrl' => $row['archivoPatronUrl'] ?? null,
+                        ],
                         'archivoCadUrl' => $row['archivoCadUrl'] ?? null,
                         'archivoPatronUrl' => $row['archivoPatronUrl'] ?? null,
-                    ],
-                    'archivoCadUrl' => $row['archivoCadUrl'] ?? null,
-                    'archivoPatronUrl' => $row['archivoPatronUrl'] ?? null,
-                ];
+                    ];
+                }
             }
+
+            // Normalizar para el modal
+            $out = [
+                'id' => (int)($detalle['id'] ?? $id),
+                'folio' => $detalle['folio'] ?? '',
+                'fecha' => isset($detalle['fecha']) ? date('Y-m-d', strtotime($detalle['fecha'])) : '',
+                'estatus' => $detalle['estatus'] ?? '',
+                'moneda' => $detalle['moneda'] ?? '',
+                'total' => isset($detalle['total']) ? number_format((float)$detalle['total'], 2) : '0.00',
+                'empresa' => $detalle['cliente']['nombre'] ?? ($detalle['empresa'] ?? ''),
+                'cliente' => $detalle['cliente'] ?? null,
+                'items' => $detalle['items'] ?? [],
+                'diseno' => $detalle['diseno'] ?? null,
+                'disenos' => $detalle['disenos'] ?? [],
+                'documento_url' => $detalle['documento_url'] ?? '',
+                // OP ligada
+                'op_id' => $detalle['op_id'] ?? null,
+                'op_folio' => $detalle['op_folio'] ?? null,
+                'op_disenoVersionId' => $detalle['op_disenoVersionId'] ?? null,
+                'op_cantidadPlan' => $detalle['op_cantidadPlan'] ?? null,
+                'op_fechaInicioPlan' => $detalle['op_fechaInicioPlan'] ?? null,
+                'op_fechaFinPlan' => $detalle['op_fechaFinPlan'] ?? null,
+                'op_status' => $detalle['op_status'] ?? null,
+            ];
+
+            // Convertir BLOBs a base64 en el diseño y versión
+            if (isset($out['diseno']) && is_array($out['diseno'])) {
+                // Convertir foto si existe
+                if (isset($out['diseno']['foto']) && !empty($out['diseno']['foto'])) {
+                    $out['diseno']['foto'] = base64_encode($out['diseno']['foto']);
+                }
+                if (isset($out['diseno']['patron']) && !empty($out['diseno']['patron'])) {
+                    $out['diseno']['patron'] = base64_encode($out['diseno']['patron']);
+                }
+                // Convertir en la versión anidada si existe
+                if (isset($out['diseno']['version']) && is_array($out['diseno']['version'])) {
+                    if (isset($out['diseno']['version']['foto']) && !empty($out['diseno']['version']['foto'])) {
+                        $out['diseno']['version']['foto'] = base64_encode($out['diseno']['version']['foto']);
+                    }
+                    if (isset($out['diseno']['version']['patron']) && !empty($out['diseno']['version']['patron'])) {
+                        $out['diseno']['version']['patron'] = base64_encode($out['diseno']['version']['patron']);
+                    }
+                }
+            }
+
+            // Limpiar datos antes de convertir a JSON
+            $out = $cleanUtf8($out);
+
+            return $this->response->setJSON($out);
+        } catch (\Throwable $e) {
+            log_message('error', 'Error en m1_pedido_json: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
+            return $this->response->setStatusCode(500)->setJSON([
+                'error' => 'Error interno al cargar el pedido',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
         }
-
-        // Normalizar para el modal
-        $out = [
-            'id' => (int)($detalle['id'] ?? $id),
-            'folio' => $detalle['folio'] ?? '',
-            'fecha' => isset($detalle['fecha']) ? date('Y-m-d', strtotime($detalle['fecha'])) : '',
-            'estatus' => $detalle['estatus'] ?? '',
-            'moneda' => $detalle['moneda'] ?? '',
-            'total' => isset($detalle['total']) ? number_format((float)$detalle['total'], 2) : '0.00',
-            'empresa' => $detalle['cliente']['nombre'] ?? ($detalle['empresa'] ?? ''),
-            'cliente' => $detalle['cliente'] ?? null,
-            'items' => $detalle['items'] ?? [],
-            'diseno' => $detalle['diseno'] ?? null,
-            'disenos' => $detalle['disenos'] ?? [],
-            'documento_url' => $detalle['documento_url'] ?? '',
-            // OP ligada
-            'op_id' => $detalle['op_id'] ?? null,
-            'op_folio' => $detalle['op_folio'] ?? null,
-            'op_disenoVersionId' => $detalle['op_disenoVersionId'] ?? null,
-            'op_cantidadPlan' => $detalle['op_cantidadPlan'] ?? null,
-            'op_fechaInicioPlan' => $detalle['op_fechaInicioPlan'] ?? null,
-            'op_fechaFinPlan' => $detalle['op_fechaFinPlan'] ?? null,
-            'op_status' => $detalle['op_status'] ?? null,
-        ];
-
-        return $this->response->setJSON($out);
     }
 
     /**
@@ -2146,11 +2190,13 @@ class Modulos extends BaseController
             // Obtener lista de otras maquiladoras para compartir
             $db = \Config\Database::connect();
             // Intentar minúsculas
+            // Intentar minúsculas
             try {
                 $maquiladoras = $db->table('maquiladora')
                     ->select('idmaquiladora as id, Nombre_Maquila as nombre')
                     ->where('idmaquiladora !=', $maquiladoraId)
                     ->where('status', 1) // Solo activas
+                    ->where('tipo', 'empresa externa') // Solo Empresa Externa
                     ->orderBy('Nombre_Maquila', 'ASC')
                     ->get()
                     ->getResultArray();
@@ -2160,6 +2206,7 @@ class Modulos extends BaseController
                     ->select('idmaquiladora as id, Nombre_Maquila as nombre')
                     ->where('idmaquiladora !=', $maquiladoraId)
                     ->where('status', 1)
+                    ->where('tipo', 'Empresa Externa') // Solo Empresa Externa
                     ->orderBy('Nombre_Maquila', 'ASC')
                     ->get()
                     ->getResultArray();
@@ -2273,7 +2320,7 @@ class Modulos extends BaseController
     {
         $pedidoModel = new \App\Models\PedidoModel();
 
-        if ($this->request->getMethod() === 'post') {
+        if (strtolower($this->request->getMethod()) === 'post') {
             // Obtener ID desde POST si no viene en la URL
             $idPost = (int)($this->request->getPost('id') ?? 0);
             if (!$id && $idPost) {
@@ -2323,6 +2370,12 @@ class Modulos extends BaseController
                 'moneda'  => $data['moneda'],
                 'total'   => $data['total'],
             ];
+            
+            // Si no viene fecha o está vacía, establecer fecha actual
+            if (empty($ocData['fecha'])) {
+                $ocData['fecha'] = date('Y-m-d');
+            }
+            
             // Normalizar fecha: aceptar dd/mm/yyyy -> yyyy-mm-dd
             if (!empty($ocData['fecha']) && is_string($ocData['fecha'])) {
                 $f = trim($ocData['fecha']);
@@ -2336,9 +2389,9 @@ class Modulos extends BaseController
                         }
                     }
                 }
-                // Si tras normalizar queda inválida, no actualizar la fecha
+                // Si tras normalizar queda inválida, establecer fecha actual
                 if ($ocData['fecha'] === '' || strtolower($ocData['fecha']) === 'invalid date') {
-                    unset($ocData['fecha']);
+                    $ocData['fecha'] = date('Y-m-d');
                 }
             }
             // Filtrar cadenas vacías para no sobreescribir con ""
@@ -2355,14 +2408,16 @@ class Modulos extends BaseController
                     // Actualizar orden_compra con Query Builder (evita restricciones de allowedFields)
                     $db = \Config\Database::connect();
                     $updated = false;
-                    try {
-                        $updated = $db->table('orden_compra')->where('id', (int)$id)->update($ocData);
-                        $rowsOC = $db->affectedRows();
-                    } catch (\Throwable $eQB1) { $updated = false; }
-                    if (!$updated) {
-                        try { $db->table('OrdenCompra')->where('id', (int)$id)->update($ocData); $rowsOC = $db->affectedRows(); } catch (\Throwable $eQB2) {}
+                    
+                    if (!empty($ocData)) {
+                        try {
+                            $updated = $db->table('orden_compra')->where('id', (int)$id)->update($ocData);
+                            $rowsOC = $db->affectedRows();
+                        } catch (\Throwable $eQB1) { $updated = false; }
+                        if (!$updated) {
+                            try { $db->table('OrdenCompra')->where('id', (int)$id)->update($ocData); $rowsOC = $db->affectedRows(); } catch (\Throwable $eQB2) {}
+                        }
                     }
-
                     // Actualizar OP ligada (última por ordenCompraId) si llegaron campos
                     $opCantidadPlan    = $this->request->getPost('op_cantidadPlan');
                     $disenoVersionId   = $this->request->getPost('disenoVersionId');

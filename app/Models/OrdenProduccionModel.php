@@ -59,7 +59,7 @@ class OrdenProduccionModel extends Model
     public function getDetalle(int $id): ?array
     {
         if ($id <= 0) return null;
-        // SQL MySQL directo para detalle
+        // SQL MySQL directo para detalle completo
         $sql = "SELECT
                     op.id,
                     op.ordenCompraId,
@@ -69,22 +69,42 @@ class OrdenProduccionModel extends Model
                     op.fechaInicioPlan,
                     op.fechaFinPlan,
                     op.status,
+                    d.codigo   AS disenoCodigo,
                     d.nombre   AS disenoNombre,
+                    d.descripcion AS disenoDescripcion,
+                    d.precio_unidad AS disenoPrecio,
                     dv.version AS disenoVersion,
                     dv.fecha   AS disenoFecha,
                     dv.notas   AS disenoNotas,
-                    dv.archivoCadUrl,   
-                    dv.archivoPatronUrl,
-                    dv.aprobado AS disenoAprobado
+                    dv.aprobado AS disenoAprobado,
+                    dv.foto     AS disenoFoto,
+                    dv.patron   AS disenoPatron,
+                    c.nombre    AS clienteNombre,
+                    oc.total    AS pedidoTotal
                 FROM orden_produccion op
                 LEFT JOIN diseno_version dv ON dv.id = op.disenoVersionId
                 LEFT JOIN diseno d          ON d.id  = dv.disenoId
+                LEFT JOIN orden_compra oc   ON oc.id = op.ordenCompraId
+                LEFT JOIN cliente c         ON c.id  = oc.clienteId
                 WHERE op.id = ?";
+        
         $row = $this->db->query($sql, [$id])->getRowArray();
 
         if (!$row) return null;
 
         $fmt = function($v){ return $v ? date('Y-m-d H:i:s', strtotime($v)) : ''; };
+        
+        // Convertir BLOBs a base64
+        $fotoBase64 = null;
+        if (!empty($row['disenoFoto'])) {
+            $fotoBase64 = 'data:image/jpeg;base64,' . base64_encode($row['disenoFoto']);
+        }
+        
+        $patronBase64 = null;
+        if (!empty($row['disenoPatron'])) {
+            $patronBase64 = 'data:image/jpeg;base64,' . base64_encode($row['disenoPatron']);
+        }
+
         return [
             'id'              => (int)$row['id'],
             'ordenCompraId'   => $row['ordenCompraId'] ?? null,
@@ -94,14 +114,20 @@ class OrdenProduccionModel extends Model
             'fechaInicioPlan' => $fmt($row['fechaInicioPlan'] ?? null),
             'fechaFinPlan'    => $fmt($row['fechaFinPlan'] ?? null),
             'status'          => $row['status'] ?? '',
+            'cliente'         => $row['clienteNombre'] ?? '',
+            'total'           => $row['pedidoTotal'] ?? null,
             'diseno'          => [
-                'nombre'  => $row['disenoNombre'] ?? '',
-                'version' => $row['disenoVersion'] ?? '',
-                'fecha'   => $fmt($row['disenoFecha'] ?? null),
-                'notas'   => $row['disenoNotas'] ?? '',
-                'archivoCadUrl'    => $row['disenoArchivoCadUrl'] ?? '',
-                'archivoPatronUrl' => $row['disenoArchivoPatronUrl'] ?? '',
-                'aprobado'         => isset($row['disenoAprobado']) ? (int)$row['disenoAprobado'] : null,
+                'codigo'      => $row['disenoCodigo'] ?? '',
+                'nombre'      => $row['disenoNombre'] ?? '',
+                'descripcion' => $row['disenoDescripcion'] ?? '',
+                'precio_unidad' => $row['disenoPrecio'] ?? null,
+                'version'     => $row['disenoVersion'] ?? '',
+                'fecha'       => $fmt($row['disenoFecha'] ?? null),
+                'notas'       => $row['disenoNotas'] ?? '',
+                'aprobado'    => isset($row['disenoAprobado']) ? (int)$row['disenoAprobado'] : null,
+                'archivoCadUrl' => $fotoBase64, // Usamos foto como archivoCadUrl para compatibilidad con frontend
+                'archivoPatronUrl' => $patronBase64,
+                'archivos'    => [] // Array vacío para compatibilidad
             ],
         ];
     }
