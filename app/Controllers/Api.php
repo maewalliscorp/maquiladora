@@ -5,13 +5,6 @@ use App\Controllers\BaseController;
 
 class Api extends BaseController
 {
-    protected $maquiladoraModel;
-
-    public function __construct()
-    {
-        $this->maquiladoraModel = new \App\Models\MaquiladoraModel();
-    }
-
     /**
      * Obtiene la lista de maquiladoras activas para el formulario de registro
      */
@@ -44,9 +37,68 @@ class Api extends BaseController
 
     public function dashboard()
     {
+        // Prevenir caché
+        $this->response->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+
         $db     = \Config\Database::connect();
         $range  = (int) ($this->request->getGet('range') ?? 30);
         $errors = [];
+
+        // Obtener ID de maquiladora de la sesión
+        $maquiladoraId = session()->get('maquiladora_id');
+
+        // Fallback: Si no está en sesión, intentar recargar desde DB usando user_id
+        if (empty($maquiladoraId) && session()->get('user_id')) {
+            try {
+                $u = $db->table('users')->select('maquiladoraIdFK')->where('id', session()->get('user_id'))->get()->getRowArray();
+                if ($u && !empty($u['maquiladoraIdFK'])) {
+                    $maquiladoraId = $u['maquiladoraIdFK'];
+                    session()->set('maquiladora_id', $maquiladoraId);
+                }
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        }
+
+        // Si aún no hay maquiladoraId, retornar ceros (seguridad para no mostrar todo)
+        if (empty($maquiladoraId)) {
+            return $this->response->setJSON([
+                'kpis' => [
+                    'ordenes_activas' => 0,
+                    'wip_cantidad'    => 0,
+                    'tasa_defectos'   => 0,
+                    'stock_critico'   => 0,
+                ],
+                'produccion' => [
+                    'labels'      => [],
+                    'datasets' => [['data' => []], ['data' => []]],
+                ],
+                'inventario' => [
+                    'labels' => [],
+                    'datasets' => [['data' => []]],
+                    'min' => [], 'max' => []
+                ],
+                'calidad' => ['labels' => [], 'tasa' => []],
+                'logistica' => ['labels' => [], 'data' => []],
+                'errors' => ['No se identificó la maquiladora del usuario'],
+                'debug' => [
+                    'maquiladora_id' => null,
+                    'user_id' => session()->get('user_id'),
+                    'message' => 'Maquiladora ID missing'
+                ]
+            ]);
+        }
+
+        // Filtro SQL para orden_produccion
+        $opFilter = " AND (op.maquiladoraID = " . $db->escape($maquiladoraId) . " OR op.maquiladoraCompartidaID = " . $db->escape($maquiladoraId) . ") ";
+
+        // Filtro SQL para inspeccion (asumiendo columna maquiladoraID)
+        $inspFilter = "";
+        // Verificar si la columna existe antes de filtrar
+        $hasInspCol = $db->fieldExists('maquiladoraID', 'inspeccion');
+        if ($hasInspCol) {
+            $inspFilter = " AND i.maquiladoraID = " . $db->escape($maquiladoraId) . " ";
+        }
 
         /* =========================================================
          * PRODUCCIÓN · últimas 6 semanas CON datos (usa OC.fecha como respaldo)
@@ -62,6 +114,7 @@ class Api extends BaseController
                   FROM orden_produccion op
                   LEFT JOIN orden_compra oc ON oc.id = op.ordenCompraId
                   WHERE COALESCE(op.fechaInicioPlan, op.fechaFinPlan, oc.fecha) IS NOT NULL
+                  $opFilter
                 ) t
                 WHERE yw IS NOT NULL
                 GROUP BY yw, week_no
@@ -88,6 +141,7 @@ class Api extends BaseController
                            op.fechaFinPlan IS NULL OR op.fechaFinPlan = '0000-00-00'
                            OR op.status NOT IN ('Completada','Finalizada','Cerrada')
                       )
+                      $opFilter
                     GROUP BY 1
                 ")->getResultArray();
                 $mapAct = [];
@@ -102,6 +156,7 @@ class Api extends BaseController
                            (op.fechaFinPlan IS NOT NULL AND op.fechaFinPlan <> '0000-00-00')
                            OR op.status IN ('Completada','Finalizada','Cerrada')
                       )
+                      $opFilter
                     GROUP BY 1
                 ")->getResultArray();
                 $mapCom = [];
@@ -169,16 +224,12 @@ class Api extends BaseController
 
         /* =========================================================
          * CALIDAD · 30 días → fallback 90
-         * - Si hay tabla inspeccion_defecto: usa join para tasa
-         * - Si no: usa resultado LIKE (flexible)
-         * - Si sigue vacío: rellena últimos N días con 0
          * ========================================================= */
         $c_labels = $c_tasa = [];
         $calidadRangeUsed = $range;
         $calidadSource = 'unknown';
 
         try {
-            // ¿Existe tabla inspeccion_defecto e incluye columna inspeccionId?
             $hasDefTable = (bool)$db->query("
                 SELECT 1 FROM INFORMATION_SCHEMA.TABLES
                  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='inspeccion_defecto'
@@ -196,7 +247,6 @@ class Api extends BaseController
                 $rows = [];
 
                 if ($hasDefTable && $hasDefCol) {
-                    // 1) Usar inspeccion_defecto
                     $rows = $db->query("
                         SELECT DATE(i.fecha) AS dia,
                                COUNT(*) AS total,
@@ -204,6 +254,7 @@ class Api extends BaseController
                         FROM inspeccion i
                         LEFT JOIN inspeccion_defecto idf ON idf.inspeccionId = i.id
                         WHERE i.fecha >= CURDATE() - INTERVAL {$days} DAY
+                        $inspFilter
                         GROUP BY DATE(i.fecha)
                         ORDER BY dia
                     ")->getResultArray();
@@ -222,7 +273,6 @@ class Api extends BaseController
                     }
                 }
 
-                // 2) Fallback: usar resultado LIKE (defecto/rechazado/no conforme)
                 $rows = $db->query("
                     SELECT DATE(fecha) AS dia,
                            ROUND(
@@ -233,8 +283,9 @@ class Api extends BaseController
                                  THEN 1 ELSE 0 END
                              ) / NULLIF(COUNT(*),0)
                            , 2) AS tasa
-                    FROM inspeccion
+                    FROM inspeccion i
                     WHERE fecha >= CURDATE() - INTERVAL {$days} DAY
+                    $inspFilter
                     GROUP BY DATE(fecha)
                     ORDER BY DATE(fecha)
                 ")->getResultArray();
@@ -248,7 +299,6 @@ class Api extends BaseController
                 }
             }
 
-            // 3) Si sigue vacío: rellenar últimos N días con ceros para que la gráfica no quede vacía
             if (empty($c_labels)) {
                 $calidadSource = 'zero_fill';
                 $calidadRangeUsed = $range;
@@ -291,22 +341,21 @@ class Api extends BaseController
          * ========================================================= */
         $k1=$k2=$k4=0; $k3=0.0;
         try {
-            $k1 = (int) ($db->query("
-                SELECT COUNT(*) c
-                FROM orden_produccion
-                WHERE (fechaFinPlan IS NULL OR fechaFinPlan = '0000-00-00')
-                   OR status IN ('Planificada','En proceso','Pausada')
-            ")->getRow('c') ?? 0);
+            $sqlK1 = "SELECT COUNT(*) c
+                FROM orden_produccion op
+                WHERE ((op.fechaFinPlan IS NULL OR op.fechaFinPlan = '0000-00-00')
+                   OR op.status IN ('Planificada','En proceso','Pausada'))
+                   $opFilter";
+            $k1 = (int) ($db->query($sqlK1)->getRow('c') ?? 0);
 
-            $k2 = (int) ($db->query("
-                SELECT COALESCE(SUM(cantidadPlan),0) c
-                FROM orden_produccion
-                WHERE (fechaFinPlan IS NULL OR fechaFinPlan = '0000-00-00')
-                   OR status IN ('Planificada','En proceso','Pausada')
-            ")->getRow('c') ?? 0);
+            $sqlK2 = "SELECT COALESCE(SUM(cantidadPlan),0) c
+                FROM orden_produccion op
+                WHERE ((op.fechaFinPlan IS NULL OR op.fechaFinPlan = '0000-00-00')
+                   OR op.status IN ('Planificada','En proceso','Pausada'))
+                   $opFilter";
+            $k2 = (int) ($db->query($sqlK2)->getRow('c') ?? 0);
 
             if (!empty($i_labels)) {
-                // Solo cuenta críticos si existe algún umbral
                 if ($colMin) {
                     $k4 = (int) ($db->query("
                         SELECT COUNT(*) c FROM (
@@ -332,20 +381,24 @@ class Api extends BaseController
          * ========================================================= */
         return $this->response->setJSON([
             'kpis' => [
-                ['label' => 'Órdenes activas', 'value' => $k1],
-                ['label' => 'WIP (pzs)',       'value' => $k2],
-                ['label' => 'Defectos (%)',    'value' => $k3],
-                ['label' => 'Stock crítico',   'value' => $k4],
+                'ordenes_activas' => $k1,
+                'wip_cantidad'    => $k2,
+                'tasa_defectos'   => $k3,
+                'stock_critico'   => $k4,
             ],
             'produccion' => [
                 'labels'      => $p_labels,
-                'activas'     => $p_activas,
-                'completadas' => $p_completadas,
+                'datasets' => [
+                    ['data' => $p_completadas],
+                    ['data' => $p_activas]
+                ],
                 'meta'        => ['window' => 'last_6_weeks_with_data_or_oc_date'],
             ],
             'inventario' => [
                 'labels' => $i_labels,
-                'actual' => $i_actual,
+                'datasets' => [
+                    ['data' => $i_actual]
+                ],
                 'min'    => $i_min,
                 'max'    => $i_max,
             ],
@@ -360,6 +413,11 @@ class Api extends BaseController
                 'meta'   => ['rangeDays' => $logRangeUsed],
             ],
             'errors' => $errors,
+            'debug' => [
+                'maquiladora_id' => $maquiladoraId,
+                'user_id' => session()->get('user_id'),
+                'sql_k1' => $sqlK1
+            ]
         ]);
     }
 }

@@ -11,17 +11,35 @@
             border-radius: .375rem !important;
         }
         .dt-buttons.btn-group .btn:last-child{ margin-right: 0; }
+
+        /* Estilos para las etiquetas de estatus */
+        .estatus {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-block;
+            color: white;
+        }
+        .estatus-activo {
+            background-color: #28a745; /* Verde */
+        }
+        .estatus-inactivo {
+            background-color: #6c757d; /* Gris */
+        }
+        .estatus-bajadelaempresa {
+            background-color: #dc3545; /* Rojo */
+        }
+        .estatus-enespera {
+            background-color: #ffc107; /* Amarillo */
+            color: #212529;
+        }
     </style>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
     <div class="d-flex align-items-center justify-content-between mb-4">
         <h1 class="me-3">Gestión de Usuarios</h1>
-        <div>
-            <a href="<?= base_url('modulo11/agregar') ?>" class="btn btn-success">
-                <i class="bi bi-person-plus"></i> Agregar Usuario
-            </a>
-        </div>
     </div>
 
     <div class="card shadow-sm">
@@ -32,21 +50,18 @@
             <table id="tablaUsuarios" class="table table-striped table-bordered text-center align-middle">
                 <thead>
                 <tr>
-                    <th>ID</th>
                     <th>NO. EMPLEADO</th>
                     <th>NOMBRE</th>
                     <th>EMAIL</th>
                     <th>PUESTO</th>
                     <th>ESTATUS</th>
                     <th>FECHA REGISTRO</th>
-                    <th>ÚLTIMO ACCESO</th>
                     <th>ACCIONES</th>
                 </tr>
                 </thead>
                 <tbody>
                 <?php foreach ($usuarios as $usuario): ?>
-                <tr>
-                    <td><?= $usuario['id'] ?></td>
+                <tr data-id="<?= $usuario['id'] ?>">
                     <td><?= $usuario['noEmpleado'] ?></td>
                     <td><?= $usuario['nombre'] ?></td>
                     <td><?= $usuario['email'] ?></td>
@@ -86,7 +101,6 @@
                         </span>
                     </td>
                     <td><?= date('d/m/Y', strtotime($usuario['fechaAlta'])) ?></td>
-                    <td><?= date('d/m/Y H:i', strtotime($usuario['ultimoAcceso'])) ?></td>
                     <td>
                         <button type="button" 
                             class="btn btn-sm btn-outline-primary btn-accion btn-editar" 
@@ -558,9 +572,7 @@
                     if (resp && resp.success) {
                         if (modalInstance) modalInstance.hide();
                         // Remover fila de la tabla (usando DataTable API)
-                        const row = $("#tablaUsuarios tbody tr").filter(function(){
-                            return $(this).find('td:first').text().trim() == String(id);
-                        });
+                        const row = $("#tablaUsuarios tbody tr[data-id='" + id + "']");
                         if (row.length && window.usuariosTable) {
                             window.usuariosTable.row(row).remove().draw(false);
                         }

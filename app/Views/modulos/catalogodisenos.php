@@ -168,10 +168,10 @@
                             <label class="form-label">Cliente (opcional)</label>
                             <div class="d-flex align-items-center gap-2">
                                 <select class="form-select" name="clienteId" id="selClienteNuevo" disabled>
-                                    <option value="">Cargando clientes…</option>
+                                    <option value="">Cargando </option>
                                 </select>
                                 <div id="clienteNuevoSpinner" class="spinner-border text-primary" role="status" style="width: 1.5rem; height: 1.5rem; display: none;">
-                                    <span class="visually-hidden">Cargando...</span>
+                                    <span class="visually-hidden"></span>
                                 </div>
                             </div>
                             <small class="text-muted">Si lo dejas vacío, el diseño se crea sin cliente asignado.</small>
@@ -204,7 +204,7 @@
 
                         <div class="col-md-3 d-flex align-items-end">
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="1" id="aprobadoCheck" name="aprobado">
+                                <input class="form-check-input" type="checkbox" value="1" id="aprobadoCheck" name="aprobado" disabled>
                                 <label class="form-check-label" for="aprobadoCheck">Aprobado</label>
                             </div>
                         </div>
@@ -333,7 +333,7 @@
 
                         <div class="col-md-3 d-flex align-items-end">
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="1" id="e-aprobadoCheck" name="aprobado">
+                                <input class="form-check-input" type="checkbox" value="1" id="e-aprobadoCheck" name="aprobado" disabled>
                                 <label class="form-check-label" for="e-aprobadoCheck">Aprobado</label>
                             </div>
                         </div>
@@ -345,7 +345,7 @@
                                         <option value="">Cargando clientes…</option>
                                     </select>
                                     <div id="e-clienteSpinner" class="spinner-border text-primary" role="status" style="width: 1.5rem; height: 1.5rem; display: none;">
-                                        <span class="visualmente-hidden">Cargando…</span>
+                                        <span class="visualmente-hidden"></span>
                                     </div>
                                 </div>
                                 <small class="text-muted">Si lo dejas vacío, se mantiene o elimina la relación (según guardes).</small>

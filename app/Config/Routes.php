@@ -415,6 +415,8 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
         $routes->post('puntos/crear', 'Inspeccion::puntoCrear', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
         $routes->post('puntos/editar', 'Inspeccion::puntoEditar', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
         $routes->post('puntos/eliminar', 'Inspeccion::puntoEliminar', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        // Evidencia fotográfica
+        $routes->get('evidencia/(:num)', 'Inspeccion::evidencia/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
     });
 
     // Inventario / Mantenimiento (modulo3)

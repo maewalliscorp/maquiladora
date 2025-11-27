@@ -93,11 +93,11 @@
                 <tr>
                     <th>No.</th>
                     <th>No. Inspección</th>
-                    <th>Orden</th>
+                    <th>Folio</th>
                     <th>Punto Inspección</th>
-                    <th>Observaciones</th>
-                    <th>Fecha</th>
                     <th>Resultado</th>
+                    <th>Fecha</th>
+                    <th>Observaciones</th>
                     <th>Reproceso</th>
                     <th>Acciones</th>
                 </tr>
@@ -108,7 +108,7 @@
                         <tr>
                             <td><?= $item['num'] ?? '' ?></td>
                             <td><?= esc($item['numero_inspeccion'] ?? 'N/A') ?></td>
-                            <td><?= esc($item['ordenProduccionId']) ?></td>
+                            <td><?= esc($item['ordenFolio']) ?></td>
                             <td>
                                 <select class="form-select form-select-sm punto-inspeccion-select"
                                         data-inspeccion-id="<?= $item['inspeccionId'] ?? $item['id'] ?>"
@@ -121,8 +121,6 @@
                                     <?php endforeach; ?>
                                 </select>
                             </td>
-                            <td class="small"><?= esc($item['observaciones'] ?? 'Sin observaciones') ?></td>
-                            <td><?= !empty($item['fecha']) ? date('d/m/Y', strtotime($item['fecha'])) : 'N/A' ?></td>
                             <td>
                                 <?php
                                 $badgeClass = 'secondary';
@@ -137,6 +135,8 @@
                                 ?>
                                 <span class="badge bg-<?= $badgeClass ?>"><?= esc(ucfirst($resultado)) ?></span>
                             </td>
+                            <td><?= !empty($item['fecha']) ? date('d/m/Y', strtotime($item['fecha'])) : 'N/A' ?></td>
+                            <td class="small"><?= esc($item['observaciones'] ?? 'Sin observaciones') ?></td>
                             <td>
                                 <?php if (!empty($item['reprocesoId'])): ?>
                                     <div class="small">
@@ -161,11 +161,27 @@
                             </td>
                             <td class="text-nowrap">
                                 <button type="button"
+                                        class="btn btn-accion btn-ver-detalles me-1"
+                                        title="Ver Detalles"
+                                        data-id="<?= $item['inspeccionId'] ?? $item['id'] ?>"
+                                        data-inspeccion="<?= esc($item['numero_inspeccion'] ?? 'N/A', 'attr') ?>"
+                                        data-orden-produccion="<?= esc($item['ordenFolio'] ?? 'N/A', 'attr') ?>"
+                                        data-punto-inspeccion="<?= esc($item['puntoInspeccionId'] ?? 'N/A', 'attr') ?>"
+                                        data-fecha="<?= !empty($item['fecha']) ? date('d/m/Y', strtotime($item['fecha'])) : 'N/A' ?>"
+                                        data-resultado="<?= strtolower($item['resultado'] ?? 'pendiente') ?>"
+                                        data-observaciones="<?= esc($item['observaciones'] ?? '', 'attr') ?>"
+                                        data-reproceso-id="<?= $item['reprocesoId'] ?? '' ?>"
+                                        data-accion-reproceso="<?= esc($item['accion'] ?? '', 'attr') ?>"
+                                        data-cantidad-reproceso="<?= $item['cantidad'] ?? '0' ?>"
+                                        data-fecha-reproceso="<?= $item['fechaReproceso'] ?? '' ?>">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button type="button"
                                         class="btn btn-accion btn-evaluar"
                                         title="Evaluar"
                                         data-id="<?= $item['inspeccionId'] ?? $item['id'] ?>"
                                         data-inspeccion="<?= esc($item['numero_inspeccion'] ?? 'N/A', 'attr') ?>"
-                                        data-orden-produccion="<?= esc($item['ordenProduccionId'] ?? 'N/A', 'attr') ?>"
+                                        data-orden-produccion="<?= esc($item['ordenFolio'] ?? 'N/A', 'attr') ?>"
                                         data-punto-inspeccion="<?= esc($item['puntoInspeccionId'] ?? 'N/A', 'attr') ?>"
                                         data-fecha="<?= !empty($item['fecha']) ? date('d/m/Y', strtotime($item['fecha'])) : 'N/A' ?>"
                                         data-resultado="<?= strtolower($item['resultado'] ?? 'pendiente') ?>"
@@ -260,6 +276,53 @@
                                   placeholder="Ingrese las observaciones de la inspección"></textarea>
                     </div>
 
+                    <!-- Sección de Evidencia Fotográfica (solo visible cuando resultado es "Rechazado") -->
+                    <div class="mb-3" id="evidencia-section" style="display: none;">
+                        <label class="form-label fw-bold">Evidencia Fotográfica <span class="text-danger">*</span></label>
+                        <div class="card">
+                            <div class="card-body">
+                                <!-- Evidencia existente (si hay) -->
+                                <div id="evidenciaExistente" class="mb-3" style="display: none;">
+                                    <div class="alert alert-info d-flex align-items-center">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <span>Esta inspección ya tiene una foto de evidencia</span>
+                                    </div>
+                                    <div class="text-center mb-3">
+                                        <img id="evidenciaExistenteImg" src="" alt="Evidencia Anterior" class="img-fluid rounded border" style="max-height: 300px;">
+                                    </div>
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        Si captura una nueva foto, reemplazará la evidencia anterior
+                                    </div>
+                                </div>
+
+                                <!-- Botón para capturar foto -->
+                                <div class="d-grid gap-2 mb-3">
+                                    <button type="button" class="btn btn-primary" id="btnCapturarFoto">
+                                        <i class="fas fa-camera me-2"></i><span id="btnCapturarTexto">Capturar Foto con Cámara</span>
+                                    </button>
+                                </div>
+                                
+                                <!-- Preview de la foto capturada -->
+                                <div id="fotoPreview" class="text-center" style="display: none;">
+                                    <img id="fotoPreviewImg" src="" alt="Evidencia" class="img-fluid rounded border" style="max-height: 300px;">
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-sm btn-danger" id="btnEliminarFoto">
+                                            <i class="fas fa-trash me-1"></i>Eliminar foto
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Input oculto para guardar la foto en base64 -->
+                                <input type="hidden" name="evidencia" id="evidenciaInput">
+                                
+                                <!-- Video para captura (oculto) -->
+                                <video id="videoCaptura" autoplay playsinline style="display: none; width: 100%; max-width: 400px; margin: 0 auto;"></video>
+                                <canvas id="canvasCaptura" style="display: none;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Sección de Reproceso -->
                     <div class="form-check form-switch mb-2">
                         <input class="form-check-input" type="checkbox" id="toggleReproceso">
@@ -302,6 +365,94 @@
                     </button>
                 </div>
                 <?= form_close() ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Ver Detalles (Solo Lectura) -->
+    <div class="modal fade" id="verDetallesModal" tabindex="-1" aria-labelledby="verDetallesModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="verDetallesModalLabel">
+                        <i class="fas fa-eye me-2"></i>Detalles de Inspección
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Información básica -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <strong class="text-muted">No. Inspección:</strong>
+                                <div id="ver_numero_inspeccion" class="fw-bold fs-5"></div>
+                            </div>
+                            <div class="mb-3">
+                                <strong class="text-muted">Orden de Producción:</strong>
+                                <div id="ver_orden_produccion"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <strong class="text-muted">Punto de Inspección:</strong>
+                                <div id="ver_punto_inspeccion"></div>
+                            </div>
+                            <div class="mb-3">
+                                <strong class="text-muted">Fecha:</strong>
+                                <div id="ver_fecha"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resultado -->
+                    <div class="mb-3">
+                        <strong class="text-muted">Resultado:</strong>
+                        <div id="ver_resultado"></div>
+                    </div>
+
+                    <!-- Observaciones -->
+                    <div class="mb-3">
+                        <strong class="text-muted">Observaciones:</strong>
+                        <div id="ver_observaciones" class="border rounded p-2 bg-light"></div>
+                    </div>
+
+                    <!-- Evidencia Fotográfica -->
+                    <div class="mb-3" id="ver_evidencia_section" style="display: none;">
+                        <strong class="text-muted">Evidencia Fotográfica:</strong>
+                        <div class="card mt-2">
+                            <div class="card-body text-center">
+                                <img id="ver_evidencia_img" src="" alt="Evidencia" class="img-fluid rounded border" style="max-height: 400px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información de Reproceso -->
+                    <div id="ver_reproceso_section" style="display: none;">
+                        <hr>
+                        <h6 class="fw-bold text-primary mb-3">
+                            <i class="fas fa-tools me-2"></i>Información de Reproceso
+                        </h6>
+                        <div class="mb-3">
+                            <strong class="text-muted">Acción de Reproceso:</strong>
+                            <div id="ver_accion_reproceso" class="border rounded p-2 bg-light"></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <strong class="text-muted">Cantidad:</strong>
+                                <div id="ver_cantidad_reproceso"></div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong class="text-muted">Fecha de Reproceso:</strong>
+                                <div id="ver_fecha_reproceso"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cerrar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -720,25 +871,40 @@
                 if (resultado) $('#resultado_select').val(resultado).trigger('change');
                 if (observaciones) $('#observaciones_text').val(observaciones);
 
+                // Limpiar sección de evidencia
+                $('#evidencia-section').hide();
+                $('#evidenciaInput').val('');
+                $('#fotoPreview').hide();
+                $('#fotoPreviewImg').attr('src', '');
+                stopCamera();
+
                 // Manejar datos de reproceso
                 const reprocesoId = $boton.attr('data-reproceso-id');
                 const accionReproceso = $boton.attr('data-accion-reproceso') || '';
                 const cantidadReproceso = $boton.attr('data-cantidad-reproceso') || '0';
                 const fechaReproceso = $boton.attr('data-fecha-reproceso');
 
+                // Siempre resetear el checkbox y ocultar la sección de reproceso al abrir el modal
+                $('#toggleReproceso').prop('checked', false);
+                $('#conReproceso').val('0');
+                $('.reproceso-section').hide();
+
+                // Guardar los datos de reproceso existentes en campos ocultos (si existen)
+                // pero NO mostrar la sección automáticamente
                 if (reprocesoId) {
                     $('#reprocesoId').val(reprocesoId);
                     $('#accionReproceso').val(accionReproceso);
                     $('#cantidadReproceso').val(cantidadReproceso);
 
                     // Establecer la fecha de reproceso si existe
-                    if (fechaReproceso) {
-                        $('#fechaReproceso').val(formatDateForInput(fechaReproceso));
-                    }
-
-                    $('.reproceso-section').show();
+                    const fechaHoy = new Date().toISOString().split('T')[0];
+                    $('#fechaReproceso').val(fechaReproceso ? formatDateForInput(fechaReproceso) : fechaHoy);
                 } else {
-                    $('.reproceso-section').hide();
+                    // Limpiar campos de reproceso
+                    $('#reprocesoId').val('');
+                    $('#accionReproceso').val('');
+                    $('#cantidadReproceso').val('');
+                    $('#fechaReproceso').val('');
                 }
 
                 // Manejar defectos
@@ -753,20 +919,43 @@
                     console.error('Error al procesar defectos:', e);
                 }
 
-                // Manejar datos de reproceso
-                const $seccionReproceso = $('.reproceso-section');
-                if (reprocesoId) {
-                    $('#reprocesoId').val(reprocesoId);
-                    $('#accionReproceso').val(accionReproceso);
-                    $('#cantidadReproceso').val(cantidadReproceso || '0');
-
-                    // Establecer la fecha de reproceso si existe, de lo contrario, establecer la fecha actual
-                    const fechaHoy = new Date().toISOString().split('T')[0];
-                    $('#fechaReproceso').val(fechaReproceso ? formatDateForInput(fechaReproceso) : fechaHoy);
-
-                    $seccionReproceso.show();
-                } else {
-                    $seccionReproceso.hide();
+                // Cargar evidencia existente si hay
+                $('#evidenciaExistente').hide();
+                $('#evidenciaExistenteImg').attr('src', '');
+                
+                if (inspeccionId) {
+                    console.log('Cargando evidencia para inspección ID:', inspeccionId);
+                    const evidenciaUrl = '<?= base_url('modulo3/inspeccion/evidencia') ?>/' + inspeccionId;
+                    console.log('URL de evidencia:', evidenciaUrl);
+                    
+                    $.ajax({
+                        url: evidenciaUrl,
+                        method: 'GET',
+                        dataType: 'json'
+                    }).done(function(response) {
+                        console.log('Respuesta de evidencia:', response);
+                        if (response.success && response.evidencia) {
+                            console.log('Evidencia encontrada, mostrando imagen');
+                            // Mostrar la evidencia existente
+                            $('#evidenciaExistenteImg').attr('src', response.evidencia);
+                            $('#evidenciaExistente').show();
+                            $('#btnCapturarTexto').text('Capturar Nueva Foto (Reemplazar)');
+                            
+                            // Pre-llenar el input oculto con la evidencia existente
+                            // para que no sea obligatorio capturar una nueva
+                            $('#evidenciaInput').val(response.evidencia);
+                            
+                            // Mostrar la sección de evidencia si hay foto, independientemente del resultado
+                            $('#evidencia-section').show();
+                        } else {
+                            console.log('No hay evidencia en la respuesta');
+                            $('#btnCapturarTexto').text('Capturar Foto con Cámara');
+                        }
+                    }).fail(function(xhr, status, error) {
+                        console.error('Error al cargar evidencia:', status, error);
+                        console.error('Respuesta del servidor:', xhr.responseText);
+                        $('#btnCapturarTexto').text('Capturar Foto con Cámara');
+                    });
                 }
 
                 // Limpiar y cargar defectos si existen
@@ -795,13 +984,183 @@
                 modal.show();
             });
 
+            // Variables para la cámara
+            let stream = null;
+
             // Manejar el evento de cambio en el select de resultado
             $('#resultado_select').on('change', function() {
-                if ($(this).val() === 'rechazado') {
+                const resultado = $(this).val();
+                
+                if (resultado === 'rechazado') {
                     $('#defectosContainer').show();
+                    $('#evidencia-section').show();
                 } else {
                     $('#defectosContainer').hide();
+                    $('#evidencia-section').hide();
+                    // Limpiar la foto si cambia de rechazado a otro estado
+                    $('#evidenciaInput').val('');
+                    $('#fotoPreview').hide();
+                    $('#fotoPreviewImg').attr('src', '');
+                    stopCamera();
                 }
+            });
+
+            // Función para detener la cámara
+            function stopCamera() {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    stream = null;
+                }
+                $('#videoCaptura').hide();
+                $('#btnCapturarFoto').html('<i class="fas fa-camera me-2"></i>Capturar Foto con Cámara');
+            }
+
+            // Botón para capturar foto
+            $('#btnCapturarFoto').on('click', function() {
+                const $video = $('#videoCaptura');
+                const $btn = $(this);
+
+                if (stream) {
+                    // Si la cámara está activa, capturar la foto
+                    const canvas = document.getElementById('canvasCaptura');
+                    const video = document.getElementById('videoCaptura');
+                    
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    
+                    const context = canvas.getContext('2d');
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    // Convertir a base64
+                    const fotoBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    // Guardar en el input oculto
+                    $('#evidenciaInput').val(fotoBase64);
+                    
+                    // Mostrar preview
+                    $('#fotoPreviewImg').attr('src', fotoBase64);
+                    $('#fotoPreview').show();
+                    
+                    // Detener la cámara
+                    stopCamera();
+                } else {
+                    // Activar la cámara
+                    navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            facingMode: 'environment' // Usar cámara trasera en móviles
+                        } 
+                    })
+                    .then(function(mediaStream) {
+                        stream = mediaStream;
+                        const video = document.getElementById('videoCaptura');
+                        video.srcObject = stream;
+                        $video.show();
+                        $btn.html('<i class="fas fa-camera me-2"></i>Tomar Foto');
+                    })
+                    .catch(function(err) {
+                        console.error('Error al acceder a la cámara:', err);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'No se pudo acceder a la cámara. Verifica los permisos.'
+                        });
+                    });
+                }
+            });
+
+            // Botón para eliminar foto
+            $('#btnEliminarFoto').on('click', function() {
+                $('#evidenciaInput').val('');
+                $('#fotoPreview').hide();
+                $('#fotoPreviewImg').attr('src', '');
+                stopCamera();
+            });
+
+            // Validar que se haya capturado foto cuando es rechazado
+            $('#formEvaluar').on('submit', function(e) {
+                const resultado = $('#resultado_select').val();
+                const evidencia = $('#evidenciaInput').val();
+                
+                if (resultado === 'rechazado' && !evidencia) {
+                    e.preventDefault();
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Evidencia requerida',
+                        text: 'Debe capturar una foto como evidencia cuando el resultado es Rechazado.'
+                    });
+                    return false;
+                }
+            });
+
+            // Botón Ver Detalles (Solo Lectura)
+            $(document).on('click', '.btn-ver-detalles', function(e) {
+                e.preventDefault();
+
+                const $boton = $(this);
+                const inspeccionId = $boton.attr('data-id');
+                const numeroInspeccion = $boton.attr('data-inspeccion');
+                const ordenProduccion = $boton.attr('data-orden-produccion');
+                const puntoInspeccion = $boton.attr('data-punto-inspeccion');
+                const fecha = $boton.attr('data-fecha');
+                const resultado = $boton.attr('data-resultado');
+                const observaciones = $boton.attr('data-observaciones');
+                const reprocesoId = $boton.attr('data-reproceso-id');
+                const accionReproceso = $boton.attr('data-accion-reproceso') || '';
+                const cantidadReproceso = $boton.attr('data-cantidad-reproceso') || '0';
+                const fechaReproceso = $boton.attr('data-fecha-reproceso');
+
+                // Llenar información básica
+                $('#ver_numero_inspeccion').text(numeroInspeccion || 'N/A');
+                $('#ver_orden_produccion').text(ordenProduccion || 'N/A');
+                
+                // Obtener el texto del punto de inspección
+                const puntoTexto = $boton.closest('tr').find('.punto-inspeccion-select option:selected').text() || 'N/A';
+                $('#ver_punto_inspeccion').text(puntoTexto);
+                $('#ver_fecha').text(fecha || 'N/A');
+
+                // Mostrar resultado con badge
+                let badgeClass = 'secondary';
+                let resultadoTexto = resultado || 'pendiente';
+                if (resultadoTexto === 'aprobado') badgeClass = 'success';
+                else if (resultadoTexto === 'rechazado') badgeClass = 'danger';
+                else if (resultadoTexto === 'pendiente') badgeClass = 'warning';
+                
+                $('#ver_resultado').html(`<span class="badge bg-${badgeClass} fs-6">${resultadoTexto.charAt(0).toUpperCase() + resultadoTexto.slice(1)}</span>`);
+
+                // Observaciones
+                $('#ver_observaciones').text(observaciones || 'Sin observaciones');
+
+                // Ocultar evidencia y reproceso por defecto
+                $('#ver_evidencia_section').hide();
+                $('#ver_reproceso_section').hide();
+
+                // Cargar evidencia fotográfica desde el servidor si existe
+                if (inspeccionId) {
+                    $.ajax({
+                        url: '<?= base_url('modulo3/inspeccion/evidencia') ?>/' + inspeccionId,
+                        method: 'GET',
+                        dataType: 'json'
+                    }).done(function(response) {
+                        if (response.success && response.evidencia) {
+                            $('#ver_evidencia_img').attr('src', response.evidencia);
+                            $('#ver_evidencia_section').show();
+                        }
+                    }).fail(function() {
+                        console.log('No hay evidencia fotográfica para esta inspección');
+                    });
+                }
+
+                // Mostrar información de reproceso si existe
+                if (reprocesoId) {
+                    $('#ver_accion_reproceso').text(accionReproceso || 'Sin acción definida');
+                    $('#ver_cantidad_reproceso').text(cantidadReproceso);
+                    $('#ver_fecha_reproceso').text(fechaReproceso ? formatDateForInput(fechaReproceso) : 'N/A');
+                    $('#ver_reproceso_section').show();
+                }
+
+                // Mostrar el modal
+                const modal = new bootstrap.Modal(document.getElementById('verDetallesModal'));
+                modal.show();
             });
 
             // Inicializar el array de defectos

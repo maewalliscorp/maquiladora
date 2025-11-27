@@ -19,13 +19,21 @@
 
     /* --- Small Box --- */
     .small-box {
-        border-radius: 0.25rem;
-        box-shadow: 0 0 1px rgba(0, 0, 0, .125), 0 1px 3px rgba(0, 0, 0, .2);
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         display: block;
         margin-bottom: 20px;
         position: relative;
-        color: #fff;
+        color: #333;
+        background-color: #fff;
+        border: 1px solid #e0e0e0;
         overflow: hidden;
+        transition: all 0.3s ease-in-out;
+    }
+    
+    .small-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     }
 
     .small-box>.inner {
@@ -33,15 +41,18 @@
     }
 
     .small-box h3 {
-        font-size: 2.2rem;
+        font-size: 2rem;
         font-weight: 700;
-        margin: 0 0 10px 0;
+        margin: 10px 0 5px 0;
         white-space: nowrap;
         padding: 0;
+        color: #333;
     }
 
     .small-box p {
         font-size: 1rem;
+        color: #666;
+        margin-bottom: 10px;
     }
 
     .small-box .icon {
@@ -50,11 +61,12 @@
     }
 
     .small-box .icon>i {
-        font-size: 90px;
+        font-size: 70px;
         position: absolute;
         right: 15px;
         top: 15px;
         transition: all .3s linear;
+        opacity: 0.4;
     }
 
     .small-box:hover .icon>i {
@@ -62,19 +74,21 @@
     }
 
     .small-box>.small-box-footer {
-        background-color: rgba(0, 0, 0, .1);
-        color: rgba(255, 255, 255, .8);
+        background-color: rgba(0, 0, 0, .05);
+        color: #555;
         display: block;
-        padding: 3px 0;
+        padding: 8px 0;
         position: relative;
         text-align: center;
         text-decoration: none;
         z-index: 10;
+        font-weight: 500;
+        border-top: 1px solid rgba(0,0,0,0.05);
     }
 
     .small-box>.small-box-footer:hover {
         background-color: rgba(0, 0, 0, .15);
-        color: #fff;
+        color: #5f5353ff;
     }
 
     /* Colors */
@@ -97,10 +111,22 @@
 
     /* --- Card Styles --- */
     .card {
-        box-shadow: 0 0 1px rgba(0, 0, 0, .125), 0 1px 3px rgba(0, 0, 0, .2);
-        margin-bottom: 1rem;
-        border-radius: 0.25rem;
-        border: 0;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        word-wrap: break-word;
+        background-color: #fff;
+        background-clip: border-box;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     .card-header {
@@ -115,25 +141,30 @@
     .card-title {
         float: left;
         font-size: 1.1rem;
-        font-weight: 400;
+        font-weight: 600;
         margin: 0;
+        color: #2c3e50;
     }
 
-    .card-tools {
-        float: right;
-        margin-right: -0.625rem;
+    .card-body {
+        flex: 1 1 auto;
+        min-height: 1px;
+        padding: 1.25rem;
+        background-color: #fff;
+        border-bottom-left-radius: 0.5rem;
+        border-bottom-right-radius: 0.5rem;
     }
 
     .card-tools .btn-tool {
         padding: 0.25rem 0.5rem;
-        color: #adb5bd;
+        color: #2e3133ff;
         font-size: 0.875rem;
         background: transparent;
         border: 0;
     }
 
     .card-tools .btn-tool:hover {
-        color: #495057;
+        color: #8f979eff;
     }
 
     /* --- Direct Chat --- */
@@ -171,8 +202,8 @@
 
     .direct-chat-text {
         border-radius: 0.3rem;
-        background-color: #d2d6de;
-        border: 1px solid #d2d6de;
+        background-color: #a8aab0ff;
+        border: 1px solid #d1d5e0ff;
         color: #444;
         margin: 5px 0 0 50px;
         padding: 5px 10px;
@@ -182,7 +213,7 @@
     .direct-chat-text::after,
     .direct-chat-text::before {
         border: solid transparent;
-        border-right-color: #d2d6de;
+        border-right-color: #3f4144ff;
         content: " ";
         height: 0;
         pointer-events: none;
@@ -210,7 +241,7 @@
     .direct-chat-msg.right .direct-chat-text {
         background-color: #3c8dbc;
         border-color: #3c8dbc;
-        color: #fff;
+        color: #2e2b2bff;
         margin-left: 0;
         margin-right: 50px;
     }
@@ -226,7 +257,7 @@
     .direct-chat-primary .right>.direct-chat-text {
         background-color: #007bff;
         border-color: #007bff;
-        color: #fff;
+        color: #3c3939ff;
     }
 
     .direct-chat-primary .right>.direct-chat-text::after,

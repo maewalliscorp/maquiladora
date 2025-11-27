@@ -25,6 +25,7 @@ class MuestraModel extends Model
             SELECT 
                 m.id AS muestraId,
                 p.codigo AS codigoPrototipo,
+                d.nombre AS disenoNombre,
                 m.solicitadaPor,
                 m.fechaSolicitud,
                 m.fechaEnvio,
@@ -88,6 +89,7 @@ class MuestraModel extends Model
                 a.clienteId,
                 c.nombre AS clienteNombre,
                 m.prototipoId,
+                d.nombre AS disenoNombre,
                 a.fecha,
                 m.solicitadaPor,
                 m.fechaSolicitud,

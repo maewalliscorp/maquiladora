@@ -61,10 +61,28 @@
                         <td><?= esc($orden['ini']) ?></td>
                         <td><?= esc($orden['fin']) ?></td>
                         <td>
-                            <?php $estatusActual = trim($orden['estatus'] ?? ''); ?>
+                            <?php 
+                            $estatusActual = trim($orden['estatus'] ?? '');
+                            $badgeClass = 'secondary';
+                            $estatusLower = strtolower($estatusActual);
+                            if (strpos($estatusLower, 'completada') !== false || strpos($estatusLower, 'finalizada') !== false) {
+                                $badgeClass = 'success';
+                            } elseif (strpos($estatusLower, 'planificada') !== false || strpos($estatusLower, 'planeada') !== false) {
+                                $badgeClass = 'info';
+                            } elseif (strpos($estatusLower, 'proceso') !== false || strpos($estatusLower, 'corte') !== false) {
+                                $badgeClass = 'primary';
+                            } elseif (strpos($estatusLower, 'pausada') !== false || strpos($estatusLower, 'detenida') !== false) {
+                                $badgeClass = 'secondary';
+                            } elseif (strpos($estatusLower, 'cancelada') !== false) {
+                                $badgeClass = 'danger';
+                            }
+                            ?>
                             <div class="d-flex align-items-center justify-content-center gap-2">
                                 <div class="spinner-border spinner-border-sm text-primary op-estatus-saving" role="status" style="display:none;" aria-hidden="true"></div>
-                                <select class="form-select form-select-sm op-estatus-select" data-id="<?= esc($orden['opId'] ?? '') ?>" data-prev="<?= esc($estatusActual) ?>" style="min-width: 150px;">
+                                <select class="form-select form-select-sm op-estatus-select bg-<?= $badgeClass ?> text-white border-<?= $badgeClass ?>" 
+                                        data-id="<?= esc($orden['opId'] ?? '') ?>" 
+                                        data-prev="<?= esc($estatusActual) ?>" 
+                                        style="min-width: 150px; font-weight: 500;">
                                     <option value="Planificada" <?= strcasecmp($estatusActual,'Planificada')===0 ? 'selected' : '' ?>>Planificada</option>
                                     <option value="En corte"     <?= strcasecmp($estatusActual,'En corte')===0 ? 'selected' : '' ?>>En corte</option>
                                     <option value="Corte finalizado"     <?= strcasecmp($estatusActual,'Corte finalizado')===0 ? 'selected' : '' ?>>Corte finalizado</option>
@@ -672,6 +690,29 @@
                 });
             });
 
+            // Función para actualizar el color del select según el estatus
+            function updateSelectColor($sel) {
+                const estatus = ($sel.val() || '').toString().toLowerCase();
+                // Remover todas las clases de color anteriores
+                $sel.removeClass('bg-success bg-info bg-primary bg-warning bg-danger bg-secondary');
+                $sel.removeClass('border-success border-info border-primary border-warning border-danger border-secondary');
+                
+                let badgeClass = 'secondary';
+                if (estatus.includes('completada') || estatus.includes('finalizada')) {
+                    badgeClass = 'success';
+                } else if (estatus.includes('planificada') || estatus.includes('planeada')) {
+                    badgeClass = 'info';
+                } else if (estatus.includes('proceso') || estatus.includes('corte')) {
+                    badgeClass = 'primary';
+                } else if (estatus.includes('pausada') || estatus.includes('detenida')) {
+                    badgeClass = 'secondary';
+                } else if (estatus.includes('cancelada')) {
+                    badgeClass = 'danger';
+                }
+                
+                $sel.addClass('bg-' + badgeClass + ' border-' + badgeClass);
+            }
+
             // Guardar estatus con confirmación y alertas
             $(document).on('change', '.op-estatus-select', function(){
                 const $sel = $(this);
@@ -692,7 +733,13 @@
                     confirmButtonText: 'Sí, cambiar',
                     cancelButtonText: 'Cancelar'
                 }).then(function(result){
-                    if (!result.isConfirmed) { if (prev) $sel.val(prev); return; }
+                    if (!result.isConfirmed) { 
+                        if (prev) {
+                            $sel.val(prev);
+                            updateSelectColor($sel);
+                        }
+                        return; 
+                    }
                     $sel.prop('disabled', true);
                     $spin.show();
                     $.ajax({
@@ -704,6 +751,10 @@
                         $sel.addClass('is-valid');
                         setTimeout(()=> $sel.removeClass('is-valid'), 1200);
                         $sel.data('prev', estatus);
+                        
+                        // Actualizar color del select
+                        updateSelectColor($sel);
+                        
                         try {
                             if (resp && resp.ok) {
                                 let msg = 'Estatus actualizado correctamente.';

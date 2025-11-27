@@ -21,7 +21,7 @@ class Inspeccion extends BaseController
         $db = db_connect();
         $builder = $db->table('inspeccion i')
             ->select('i.id AS inspeccionId, i.ordenProduccionId, i.puntoInspeccionId, i.resultado, i.observaciones, i.inspectorId, i.fecha,')
-            ->select('pi.tipo as punto_inspeccion, r.id AS reprocesoId, r.accion, r.cantidad, r.fecha AS fechaReproceso')
+            ->select('pi.tipo as punto_inspeccion, r.id AS reprocesoId, r.accion, r.cantidad, r.fecha AS fechaReproceso, op.folio')
             ->join('punto_inspeccion pi', 'pi.id = i.puntoInspeccionId', 'left')
             ->join('reproceso r', 'i.id = r.inspeccionId', 'left')
             ->join('orden_produccion op', 'op.id = i.ordenProduccionId', 'left')
@@ -52,6 +52,7 @@ class Inspeccion extends BaseController
                 'inspeccionId' => $row['inspeccionId'] ?? '',
                 'numero_inspeccion' => 'INSP-' . str_pad($row['inspeccionId'], 5, '0', STR_PAD_LEFT),
                 'ordenProduccionId' => $row['ordenProduccionId'] ?? 'N/A',
+                'ordenFolio' => $row['folio'] ?? 'N/A',
                 // Usar el ID real del punto de inspección (no el texto)
                 'puntoInspeccionId' => $row['puntoInspeccionId'] ?? null,
                 'inspectorId' => $row['inspectorId'] ?? 'N/A',
@@ -393,12 +394,27 @@ class Inspeccion extends BaseController
         $db->transStart();
 
         try {
-            // Actualizar la inspección (estatus, observaciones, fecha)
-            $model->update($id, [
+            // Procesar la evidencia fotográfica si viene en base64
+            $evidenciaBlob = null;
+            if (!empty($data['evidencia'])) {
+                // Remover el prefijo data:image/jpeg;base64, si existe
+                $evidenciaBase64 = preg_replace('/^data:image\/\w+;base64,/', '', $data['evidencia']);
+                $evidenciaBlob = base64_decode($evidenciaBase64);
+            }
+
+            // Actualizar la inspección (estatus, observaciones, fecha, evidencia)
+            $updateData = [
                 'resultado'     => $data['resultado'],
                 'observaciones' => $data['observaciones'] ?? null,
                 'fecha'         => $data['fecha'],
-            ]);
+            ];
+
+            // Solo agregar evidencia si hay una foto
+            if ($evidenciaBlob !== null) {
+                $updateData['evidencia'] = $evidenciaBlob;
+            }
+
+            $model->update($id, $updateData);
 
             // Guardar/actualizar reproceso según toggle
             if ($conReproceso) {
@@ -439,6 +455,23 @@ class Inspeccion extends BaseController
                         'accion_correctiva' => $defecto['accion_correctiva'],
                         'fecha_registro'   => date('Y-m-d H:i:s')
                     ]);
+                }
+            }
+
+            // Si el resultado es "rechazado", actualizar el estatus de la orden de producción a "Pausada"
+            if ($data['resultado'] === 'rechazado') {
+                // Obtener el ordenProduccionId de la inspección
+                $inspeccionData = $db->table('inspeccion')
+                    ->select('ordenProduccionId')
+                    ->where('id', $id)
+                    ->get()
+                    ->getRowArray();
+
+                if ($inspeccionData && !empty($inspeccionData['ordenProduccionId'])) {
+                    // Actualizar el estatus de la orden de producción a "Pausada"
+                    $db->table('orden_produccion')
+                        ->where('id', $inspeccionData['ordenProduccionId'])
+                        ->update(['status' => 'Pausada']);
                 }
             }
 
@@ -510,5 +543,40 @@ class Inspeccion extends BaseController
                 'data' => $inspeccion
             ]);
         }
+    }
+
+    /**
+     * Endpoint para obtener la evidencia fotográfica de una inspección
+     */
+    public function evidencia($id = null)
+    {
+        if (!$id) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'ID de inspección no proporcionado'
+            ])->setStatusCode(400);
+        }
+
+        $db = \Config\Database::connect();
+        $inspeccion = $db->table('inspeccion')
+            ->select('evidencia')
+            ->where('id', (int)$id)
+            ->get()
+            ->getRowArray();
+
+        if (!$inspeccion || empty($inspeccion['evidencia'])) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'No hay evidencia fotográfica para esta inspección'
+            ]);
+        }
+
+        // Convertir BLOB a base64
+        $evidenciaBase64 = 'data:image/jpeg;base64,' . base64_encode($inspeccion['evidencia']);
+
+        return $this->response->setJSON([
+            'success' => true,
+            'evidencia' => $evidenciaBase64
+        ]);
     }
 }

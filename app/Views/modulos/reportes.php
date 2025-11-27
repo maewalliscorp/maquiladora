@@ -3,40 +3,11 @@
 <?= $this->section('head') ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-    .letterhead {
-        border: 2px solid #2c3e50;
-        border-radius: 5px;
-        padding: 15px;
-        margin-bottom: 25px;
-        background-color: #f8f9fa;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .letterhead h3 {
-        color: #2c3e50;
-        font-size: 22px;
-        font-weight: 700;
-        margin: 0 0 10px 0;
-        text-align: center;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid #e9ecef;
-    }
-
-    .letterhead .maquiladora-info {
-        text-align: center;
-        margin: 15px 0;
-        font-size: 13px;
-        line-height: 1.6;
-        color: #495057;
-    }
-
     .report-title {
         text-align: center;
         font-size: 20px;
         font-weight: 600;
-        margin: 20px 0;
+        margin: 0 0 20px 0;
         text-transform: uppercase;
         color: #2c3e50;
         padding: 10px;
@@ -44,35 +15,99 @@
         border-radius: 4px;
     }
 
-    .report-details {
-        display: flex;
-        justify-content: space-between;
-        font-size: 12px;
-        margin-bottom: 15px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid #dee2e6;
-    }
-
     #chartContainer {
         position: relative;
         height: 400px;
         width: 100%;
     }
+    
+    /* Estilos para los botones de la lista de reportes */
+    .list-group-item-action {
+        font-size: 1.25rem; /* Letra más grande */
+        color: #000 !important; /* Texto negro */
+        padding: 1.2rem 1.5rem; /* Botones más grandes */
+        font-weight: 500;
+    }
+
+    .list-group-item-action i {
+        font-size: 1.4rem;
+        margin-right: 10px;
+    }
+
+    .list-group-item-action.active {
+        background-color: #667eea;
+        border-color: #667eea;
+        color: #000 !important; /* Texto negro al estar activo */
+        font-weight: 600;
+    }
+
+    @media print {
+        /* Ocultar todo lo que no sea el contenido principal */
+        body * {
+            visibility: hidden;
+        }
+        
+        /* Hacer visible solo el área del reporte y sus hijos */
+        #reportContent, #reportContent * {
+            visibility: visible;
+        }
+
+        /* Posicionar el reporte al inicio de la página */
+        #reportContent {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        /* Ajustes para gráficas en impresión */
+        #chartContainer {
+            width: 60% !important;
+            margin: 0 auto !important;
+            height: auto !important;
+        }
+        canvas {
+            max-width: 100% !important;
+            height: auto !important;
+            max-height: none !important;
+        }
+
+        /* Forzar visualización del membrete */
+        .d-print-block {
+            display: block !important;
+        }
+        
+        /* Ocultar elementos de UI explícitamente */
+        .d-print-none {
+            display: none !important;
+        }
+        
+        /* Quitar bordes y sombras de tarjetas */
+        .card, .shadow-sm {
+            box-shadow: none !important;
+            border: none !important;
+        }
+    }
 </style>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
-<div class="d-flex align-items-center mb-4">
+<div class="d-flex align-items-center mb-4 d-print-none">
     <h1 class="me-3">Reportes</h1>
     <span class="badge bg-primary">Módulo 3</span>
 </div>
-<div class="row g-3">
-    <div class="col-md-6">
-        <div class="card shadow-sm">
-            <div class="card-header">
-                <strong>Reportes de Producción</strong>
+
+<div class="row g-4">
+    <!-- Columna Izquierda: Opciones de Reportes (Oculto al imprimir) -->
+    <div class="col-md-4 d-print-none">
+        <!-- Reportes de Producción -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-primary text-dark">
+                <strong><i class="bi bi-graph-up me-2"></i>Reportes de Producción</strong>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <div class="list-group list-group-flush">
                     <a href="#" class="list-group-item list-group-item-action" data-report="eficiencia">
                         <i class="bi bi-graph-up me-2"></i>
@@ -85,14 +120,13 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="col-md-6">
+        <!-- Reportes de Calidad -->
         <div class="card shadow-sm">
-            <div class="card-header">
-                <strong>Reportes de Calidad</strong>
+            <div class="card-header bg-success text-dark">
+                <strong><i class="bi bi-check-circle me-2"></i>Reportes de Calidad</strong>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <div class="list-group list-group-flush">
                     <a href="#" class="list-group-item list-group-item-action" data-report="calidad">
                         <i class="bi bi-check-circle me-2"></i>
@@ -102,83 +136,74 @@
             </div>
         </div>
     </div>
-</div>
 
-<!-- Modal para visualización de reportes -->
-<div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="reportModalLabel">Vista Previa del Reporte</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <!-- Columna Derecha: Preview del Reporte -->
+    <div class="col-md-8 print-w-100">
+        <div class="card shadow-sm h-100 border-0-print">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center d-print-none">
+                <strong><i class="bi bi-file-earmark-text me-2"></i>Vista Previa del Reporte</strong>
+                <div>
+                    <button type="button" class="btn btn-sm btn-primary" id="btnImprimirReporte" disabled>
+                        <i class="bi bi-printer me-1"></i> Imprimir
+                    </button>
+                    <button type="button" class="btn btn-sm btn-success" id="btnExportarCSV" disabled>
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar CSV
+                    </button>
+                </div>
             </div>
-            <div class="modal-body" id="reportContent">
-                <!-- Encabezado del reporte -->
-                <div class="letterhead">
-                    <div class="text-center mb-3">
-                        <img src="<?= base_url('assets/img/logo.png') ?>" alt="Logo"
-                            style="max-height: 60px; margin-bottom: 10px;" onerror="this.style.display='none'">
-                    </div>
-                    <h3 id="maquiladoraNombre"><?= strtoupper(session()->get('maquiladora_nombre') ?? 'MAQUILADORA') ?>
-                    </h3>
-                    <div class="maquiladora-info">
-                        <div id="maquiladoraDomicilio" class="mb-2">
-                            <i
-                                class="bi bi-geo-alt-fill me-2"></i><?= session()->get('maquiladora_domicilio') ?? 'Dirección no especificada' ?>
-                        </div>
-                        <div class="mb-2">
-                            <?php if (session()->get('maquiladora_telefono')): ?>
-                                <span id="maquiladoraTelefono" class="me-3">
-                                    <i class="bi bi-telephone-fill me-1"></i> <?= session()->get('maquiladora_telefono') ?>
-                                </span>
-                            <?php endif; ?>
-                            <?php if (session()->get('maquiladora_correo')): ?>
-                                <span id="maquiladoraCorreo">
-                                    <i class="bi bi-envelope-fill me-1"></i> <?= session()->get('maquiladora_correo') ?>
-                                </span>
-                            <?php endif; ?>
-                        </div>
-                        <?php if (session()->get('maquiladora_dueno')): ?>
-                            <div id="maquiladoraRepresentante" class="mt-2 fw-medium">
-                                <i class="bi bi-person-badge-fill me-2"></i>Representante:
-                                <?= session()->get('maquiladora_dueno') ?>
-                            </div>
+            <div class="card-body" id="reportContent">
+                <!-- Estado inicial: Sin reporte seleccionado (Oculto al imprimir) -->
+                <div id="emptyState" class="text-center py-5 d-print-none">
+                    <i class="bi bi-file-earmark-text text-muted" style="font-size: 4rem;"></i>
+                    <h5 class="text-muted mt-3">Selecciona un reporte</h5>
+                    <p class="text-muted">Elige una opción del menú de la izquierda para ver el reporte</p>
+                </div>
+
+                <!-- Contenido del reporte (oculto inicialmente) -->
+                <div id="reportPreview" style="display: none;">
+                    
+                    <!-- Membrete SOLO para impresión -->
+                    <div class="d-none d-print-block mb-4 text-center">
+                        <?php if (!empty($maquiladora['logo_base64'])): ?>
+                            <img src="data:image/jpeg;base64,<?= $maquiladora['logo_base64'] ?>" alt="Logo" style="max-height: 80px; margin-bottom: 15px;">
                         <?php endif; ?>
-                    </div>
-                    <div class="report-title" id="reportTitle">TÍTULO DEL REPORTE</div>
-                    <div class="report-details d-flex justify-content-between align-items-center bg-light p-2 rounded">
-                        <div class="text-muted">
-                            <i class="bi bi-calendar3 me-1"></i>
-                            <?= strtoupper(ucfirst(utf8_encode(strftime('%A %d de %B de %Y', strtotime(date('Y-m-d')))))) ?>
+                        <h2 class="fw-bold mb-1"><?= strtoupper($maquiladora['Nombre_Maquila'] ?? 'MAQUILADORA') ?></h2>
+                        <p class="mb-0 text-muted"><?= $maquiladora['Domicilio'] ?? 'Dirección no especificada' ?></p>
+                        <div class="small text-muted mb-3">
+                            <?php if (!empty($maquiladora['Telefono'])): ?>
+                                <span class="me-3"><i class="bi bi-telephone-fill"></i> <?= $maquiladora['Telefono'] ?></span>
+                            <?php endif; ?>
+                            <?php if (!empty($maquiladora['Correo'])): ?>
+                                <span><i class="bi bi-envelope-fill"></i> <?= $maquiladora['Correo'] ?></span>
+                            <?php endif; ?>
                         </div>
-                        <div class="text-muted">
-                            <i class="bi bi-person-fill me-1"></i> <?= session()->get('username') ?? 'Usuario' ?>
-                        </div>
+                        <hr>
                     </div>
-                </div>
 
-                <!-- Cuerpo del reporte -->
-                <div id="reportBody">
-                    <div id="chartContainer">
-                        <canvas id="reportChart"></canvas>
+                    <!-- Título del reporte -->
+                    <div class="report-title" id="reportTitle">TÍTULO DEL REPORTE</div>
+                    
+                    <!-- Fecha y Usuario (Visible en impresión para contexto) -->
+                    <div class="d-flex justify-content-between text-muted small mb-3 d-none d-print-flex">
+                        <span><?= date('d/m/Y H:i') ?></span>
+                        <span>Generado por: <?= session()->get('username') ?></span>
                     </div>
-                    <div id="reportTableContainer" class="mt-4 table-responsive">
-                        <!-- Tabla dinámica aquí -->
+
+                    <!-- Cuerpo del reporte -->
+                    <div id="reportBody">
+                        <div id="chartContainer">
+                            <canvas id="reportChart"></canvas>
+                        </div>
+                        <div id="reportTableContainer" class="mt-4 table-responsive">
+                            <!-- Tabla dinámica aquí -->
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                <button type="button" class="btn btn-primary" id="btnImprimirReporte">
-                    <i class="bi bi-printer me-1"></i> Imprimir
-                </button>
-                <button type="button" class="btn btn-success" id="btnExportarCSV">
-                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar CSV
-                </button>
             </div>
         </div>
     </div>
 </div>
+<?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
 <script>
@@ -187,15 +212,33 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         const reportLinks = document.querySelectorAll('.list-group-item-action[data-report]');
+        const emptyState = document.getElementById('emptyState');
+        const reportPreview = document.getElementById('reportPreview');
+        const btnImprimir = document.getElementById('btnImprimirReporte');
+        const btnExportar = document.getElementById('btnExportarCSV');
 
         reportLinks.forEach(link => {
             link.addEventListener('click', function (e) {
                 e.preventDefault();
+                
+                // Remover clase active de todos los links
+                reportLinks.forEach(l => l.classList.remove('active'));
+                // Agregar clase active al link clickeado
+                this.classList.add('active');
+                
                 const reportType = this.getAttribute('data-report');
                 const reportTitle = this.textContent.trim();
 
                 currentReportType = reportType;
                 document.getElementById('reportTitle').textContent = reportTitle;
+
+                // Mostrar preview y ocultar empty state
+                emptyState.style.display = 'none';
+                reportPreview.style.display = 'block';
+                
+                // Habilitar botones
+                btnImprimir.disabled = false;
+                btnExportar.disabled = false;
 
                 // Limpiar contenido previo
                 document.getElementById('reportTableContainer').innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></div>';
@@ -203,9 +246,6 @@
                     currentChart.destroy();
                     currentChart = null;
                 }
-
-                const reportModal = new bootstrap.Modal(document.getElementById('reportModal'));
-                reportModal.show();
 
                 // Fetch data
                 fetch(`<?= base_url('modulo3/reportes/api') ?>/${reportType}`)
@@ -220,11 +260,11 @@
             });
         });
 
-        document.getElementById('btnImprimirReporte').addEventListener('click', function () {
+        btnImprimir.addEventListener('click', function () {
             window.print();
         });
 
-        document.getElementById('btnExportarCSV').addEventListener('click', function () {
+        btnExportar.addEventListener('click', function () {
             if (currentReportType) {
                 window.location.href = `<?= base_url('modulo3/reportes/exportar') ?>/${currentReportType}`;
             }
@@ -304,6 +344,4 @@
         container.innerHTML = html;
     }
 </script>
-<?= $this->endSection() ?>
-
 <?= $this->endSection() ?>

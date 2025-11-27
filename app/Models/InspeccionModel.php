@@ -19,6 +19,7 @@ class InspeccionModel extends Model
         'fecha',
         'resultado',
         'observaciones',
+        'evidencia',
         'maquiladoraID'
     ];
 

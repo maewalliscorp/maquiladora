@@ -82,16 +82,16 @@
 <div class="card shadow-sm">
     <div class="card-header bg-white">
     </div>
-    <div class="card-body p-0">
+    <div class="card-body">
         <div class="table-responsive">
             <table id="tablaMuestrasDecision" class="table table-hover table-striped align-middle" style="width:100%">
                 <thead class="table-light">
                 <tr>
                     <th>Prototipo ID</th>
+                    <th>Diseño</th>
                     <th>Fecha Aprobación</th>
                     <th>Solicitante</th>
                     <th>Fecha Solicitud</th>
-                    <th>Decisión</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
@@ -103,12 +103,19 @@
                             data-comentarios="<?= esc($row['comentarios'] ?? '') ?>"
                             data-observaciones="<?= esc($row['observaciones'] ?? '') ?>"
                             data-cliente-id="<?= esc($row['clienteId'] ?? '') ?>"
-                            data-cliente-nombre="<?= esc($row['clienteNombre'] ?? '') ?>">
+                            data-cliente-nombre="<?= esc($row['clienteNombre'] ?? '') ?>"
+                            data-prototipo-id="<?= esc($row['prototipoId']) ?>"
+                            data-diseno-nombre="<?= esc($row['disenoNombre'] ?? '') ?>"
+                            data-fecha-aprobacion="<?= !empty($row['fecha']) ? date('d/m/Y', strtotime($row['fecha'])) : 'N/A' ?>"
+                            data-solicitada-por="<?= esc($row['solicitadaPor']) ?>"
+                            data-fecha-solicitud="<?= !empty($row['fechaSolicitud']) ? date('d/m/Y', strtotime($row['fechaSolicitud'])) : 'N/A' ?>"
+                            data-decision="<?= esc($row['decision']) ?>"
+                            data-estado="<?= esc($row['estado']) ?>">
                             <td><?= esc($row['prototipoId']) ?></td>
+                            <td><?= esc($row['disenoNombre'] ?? '') ?></td>
                             <td><?= !empty($row['fecha']) ? date('d/m/Y', strtotime($row['fecha'])) : 'N/A' ?></td>
                             <td><?= esc($row['solicitadaPor']) ?></td>
                             <td><?= !empty($row['fechaSolicitud']) ? date('d/m/Y', strtotime($row['fechaSolicitud'])) : 'N/A' ?></td>
-                            <td><?= esc($row['decision']) ?></td>
                             <td><?= esc($row['estado']) ?></td>
                             <td>
                                 <button type="button"
@@ -341,12 +348,12 @@
 
             // Obtener los datos de la fila
             const clienteNombre = row.data('cliente-nombre') || '-';
-            const prototipoId = row.find('td:eq(0)').text().trim();
-            const fecha = row.find('td:eq(1)').text().trim();
-            const solicitadaPor = row.find('td:eq(2)').text().trim();
-            const fechaSolicitud = row.find('td:eq(3)').text().trim();
-            const decision = row.find('td:eq(4)').text().trim();
-            const estado = row.find('td:eq(5)').text().trim();
+            const prototipoId = String(row.data('prototipoId') || '');
+            const fecha = String(row.data('fechaAprobacion') || '');
+            const solicitadaPor = String(row.data('solicitadaPor') || '');
+            const fechaSolicitud = String(row.data('fechaSolicitud') || '');
+            const decision = String(row.data('decision') || '');
+            const estado = String(row.data('estado') || '');
             const comentarios = row.data('comentarios') || '-';
             const observaciones = row.data('observaciones') || '-';
 
@@ -368,15 +375,33 @@
             $.ajax({ url: '<?= base_url('muestras/archivo') ?>/' + encodeURIComponent(id), method: 'GET' })
                 .done(function(resp){
                     if (!resp || resp.ok !== true) { $pv.html('<div class="text-muted">Sin archivo disponible.</div>'); return; }
-                    const url = resp.cadUrl || resp.patronUrl;
-                    if (!url) { $pv.html('<div class="text-muted">Sin archivo disponible.</div>'); return; }
-                    const lower = String(url).toLowerCase();
-                    if (lower.endsWith('.pdf')) {
-                        $pv.html('<object data="'+url+'" type="application/pdf" width="100%" height="420px"><iframe src="'+url+'" width="100%" height="420px"></iframe></object>');
-                    } else if (lower.match(/\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/)) {
-                        $pv.html('<img src="'+url+'" alt="Diseño" class="img-fluid rounded">');
+                    
+                    let html = '';
+                    
+                    // Render Foto
+                    if (resp.fotoBase64) {
+                        html += '<div class="mb-3"><strong>Foto del Diseño:</strong><br>';
+                        html += '<img src="'+resp.fotoBase64+'" alt="Diseño" class="img-fluid rounded border" style="max-height: 400px;">';
+                        html += '</div>';
+                    }
+                    
+                    // Render Patron
+                    if (resp.patronBase64) {
+                        html += '<div class="mb-2"><strong>Patrón:</strong><br>';
+                        if (resp.patronMime === 'application/pdf') {
+                            html += '<object data="'+resp.patronBase64+'" type="application/pdf" width="100%" height="450px"><iframe src="'+resp.patronBase64+'" width="100%" height="450px"></iframe></object>';
+                        } else if (resp.patronMime && resp.patronMime.startsWith('image/')) {
+                            html += '<img src="'+resp.patronBase64+'" alt="Patrón" class="img-fluid rounded border" style="max-height: 400px;">';
+                        } else {
+                            html += '<a href="'+resp.patronBase64+'" download="patron" class="btn btn-outline-secondary btn-sm">Descargar Patrón</a>';
+                        }
+                        html += '</div>';
+                    }
+                    
+                    if (html === '') {
+                        $pv.html('<div class="text-muted">Sin archivos disponibles.</div>');
                     } else {
-                        $pv.html('<a href="'+url+'" target="_blank" class="btn btn-outline-secondary btn-sm">Abrir archivo</a>');
+                        $pv.html(html);
                     }
                 })
                 .fail(function(){
@@ -423,12 +448,12 @@
             // Obtener los datos de la fila
             const id = String(row.data('id') || '').trim();
             const clienteId = row.data('cliente-id') || '';
-            const prototipoId = row.find('td:eq(0)').text().trim();
-            const fecha = row.find('td:eq(1)').text().trim();
-            const solicitadaPor = row.find('td:eq(2)').text().trim();
-            const fechaSolicitud = row.find('td:eq(3)').text().trim();
-            const decision = row.find('td:eq(4)').text().trim();
-            const estado = row.find('td:eq(5)').text().trim();
+            const prototipoId = String(row.data('prototipoId') || '');
+            const fecha = String(row.data('fechaAprobacion') || '');
+            const solicitadaPor = String(row.data('solicitadaPor') || '');
+            const fechaSolicitud = String(row.data('fechaSolicitud') || '');
+            const decision = String(row.data('decision') || '');
+            const estado = String(row.data('estado') || '');
             const comentarios = row.data('comentarios') || '';
             const observaciones = row.data('observaciones') || '';
 
@@ -450,7 +475,10 @@
             // cargar clientes y preseleccionar
             cargarClientes(clienteId);
             $('#prototipoId').val(prototipoId);
-            $('#fecha').val(convertirFecha(fecha));
+            // Establecer fecha actual automáticamente
+            const now = new Date();
+            const localDate = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+            $('#fecha').val(localDate);
             $('#solicitadaPor').val(solicitadaPor);
             $('#fechaSolicitud').val(convertirFecha(fechaSolicitud));
             $('#decision').val(decision);
@@ -471,15 +499,33 @@
             $.ajax({ url: '<?= base_url('muestras/archivo') ?>/' + encodeURIComponent(id), method: 'GET' })
                 .done(function(resp){
                     if (!resp || resp.ok !== true) { $pv.html('<div class="text-muted">Sin archivo disponible.</div>'); return; }
-                    const url = resp.cadUrl || resp.patronUrl;
-                    if (!url) { $pv.html('<div class="text-muted">Sin archivo disponible.</div>'); return; }
-                    const lower = String(url).toLowerCase();
-                    if (lower.endsWith('.pdf')) {
-                        $pv.html('<object data="'+url+'" type="application/pdf" width="100%" height="480px"><iframe src="'+url+'" width="100%" height="480px"></iframe></object>');
-                    } else if (lower.match(/\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/)) {
-                        $pv.html('<img src="'+url+'" alt="Diseño" class="img-fluid rounded">');
+                    
+                    let html = '';
+                    
+                    // Render Foto
+                    if (resp.fotoBase64) {
+                        html += '<div class="mb-3"><strong>Foto del Diseño:</strong><br>';
+                        html += '<img src="'+resp.fotoBase64+'" alt="Diseño" class="img-fluid rounded border" style="max-height: 400px;">';
+                        html += '</div>';
+                    }
+                    
+                    // Render Patron
+                    if (resp.patronBase64) {
+                        html += '<div class="mb-2"><strong>Patrón:</strong><br>';
+                        if (resp.patronMime === 'application/pdf') {
+                            html += '<object data="'+resp.patronBase64+'" type="application/pdf" width="100%" height="450px"><iframe src="'+resp.patronBase64+'" width="100%" height="450px"></iframe></object>';
+                        } else if (resp.patronMime && resp.patronMime.startsWith('image/')) {
+                            html += '<img src="'+resp.patronBase64+'" alt="Patrón" class="img-fluid rounded border" style="max-height: 400px;">';
+                        } else {
+                            html += '<a href="'+resp.patronBase64+'" download="patron" class="btn btn-outline-secondary btn-sm">Descargar Patrón</a>';
+                        }
+                        html += '</div>';
+                    }
+                    
+                    if (html === '') {
+                        $pv.html('<div class="text-muted">Sin archivos disponibles.</div>');
                     } else {
-                        $pv.html('<a href="'+url+'" target="_blank" class="btn btn-outline-secondary btn-sm">Abrir archivo</a>');
+                        $pv.html(html);
                     }
                 })
                 .fail(function(){
@@ -553,7 +599,26 @@
         // Inicializar DataTable para la tabla de muestras con decisión
         $('#tablaMuestrasDecision').DataTable({
             language: {
-                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+                "processing": "Procesando...",
+                "lengthMenu": "Mostrar _MENU_ registros",
+                "zeroRecords": "No se encontraron resultados",
+                "emptyTable": "Ningún dato disponible en esta tabla",
+                "info": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+                "infoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
+                "infoFiltered": "(filtrado de un total de _MAX_ registros)",
+                "search": "Buscar:",
+                "infoThousands": ",",
+                "loadingRecords": "Cargando...",
+                "paginate": {
+                    "first": "Primero",
+                    "last": "Último",
+                    "next": "Siguiente",
+                    "previous": "Anterior"
+                },
+                "aria": {
+                    "sortAscending": ": Activar para ordenar la columna de manera ascendente",
+                    "sortDescending": ": Activar para ordenar la columna de manera descendente"
+                }
             },
             pageLength: 10,
             responsive: true,

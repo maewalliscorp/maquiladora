@@ -1,6 +1,145 @@
 <?= $this->extend('layouts/main') ?>
 
 <?= $this->section('content') ?>
+<style>
+    .profile-header {
+        background: transparent;
+        padding: 1.5rem 0;
+        margin-bottom: 1.5rem;
+    }
+    
+    .profile-header h1 {
+        color: #333;
+        font-weight: 600;
+        margin: 0;
+        font-size: 1.75rem;
+    }
+    
+    .profile-header .badge {
+        background: #667eea;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .profile-photo-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e9ecef;
+    }
+    
+    .profile-img-wrapper {
+        position: relative;
+        display: inline-block;
+        border-radius: 50%;
+        padding: 3px;
+        background: #667eea;
+    }
+    
+    .profile-img {
+        width: 180px;
+        height: 180px;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 3px solid white;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 8px;
+        padding: 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e9ecef;
+        overflow: hidden;
+    }
+    
+    .info-card-header {
+        background: #f8f9fa;
+        color: #333;
+        padding: 1rem 1.5rem;
+        border-bottom: 2px solid #667eea;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+    
+    .info-section {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .info-section:last-child {
+        border-bottom: none;
+    }
+    
+    .info-section h6 {
+        color: #495057;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .info-row {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 0;
+    }
+    
+    .info-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+        font-size: 1rem;
+        flex-shrink: 0;
+        background: #f8f9fa;
+        color: #667eea;
+    }
+    
+    .info-content {
+        flex: 1;
+    }
+    
+    .info-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        font-weight: 500;
+        margin-bottom: 0.15rem;
+    }
+    
+    .info-value {
+        font-size: 0.95rem;
+        color: #333;
+        font-weight: 400;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .status-badge.active {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .status-badge.inactive {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+</style>
+
 <?php 
 // Depuración temporal - verificar sesión
 $userId = session()->get('user_id');
@@ -9,63 +148,218 @@ $logged_in = session()->get('logged_in');
 ?>
 <!-- DEBUG: Sesión activa: <?php var_dump($userId); ?> | <?php var_dump($userName); ?> | <?php var_dump($logged_in); ?> -->
 <?php $hasEmpleado = !empty($empleado); ?>
-<div class="d-flex align-items-center mb-4">
-    <h1 class="me-3">Perfil del Empleado</h1>
-    <span class="badge bg-primary">Módulo 1</span>
-    <div class="ms-auto">
+
+<div class="profile-header d-flex align-items-center">
+    <div class="flex-grow-1">
+        <h1><i class="bi bi-person-circle me-2"></i>Perfil del Empleado</h1>
+    </div>
+    <span class="badge me-3">Módulo 1</span>
+    <div>
         <?php if ($hasEmpleado): ?>
-            <button type="button" class="btn btn-primary" id="btnEditarEmp">Editar</button>
+            <button type="button" class="btn btn-primary" id="btnEditarEmp">
+                <i class="bi bi-pencil-square me-2"></i>Editar
+            </button>
         <?php else: ?>
-            <button type="button" class="btn btn-success" id="btnAgregarEmp">Agregar</button>
+            <button type="button" class="btn btn-success" id="btnAgregarEmp">
+                <i class="bi bi-plus-circle me-2"></i>Agregar
+            </button>
         <?php endif; ?>
-       
     </div>
-    </div>
-<div class="row justify-content-center">
+</div>
+
+<div class="row justify-content-center g-4">
     <!-- Foto -->
-    <div class="col-md-3 text-center">
-        <div class="card shadow-sm">
+    <div class="col-md-4 col-lg-3">
+        <div class="card profile-photo-card text-center">
             <div class="card-body">
                 <?php 
-                $defaultAvatar = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%23eee%22%2F%3E%3Ctext%20x%3D%22100%22%20y%3D%22110%22%20font-family%3D%22Arial%22%20font-size%3D%2280%22%20text-anchor%3D%22middle%22%20fill%3D%22%23999%22%3E👤%3C%2Ftext%3E%3C%2Fsvg%3E';
+                $defaultAvatar = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%23e9ecef%22%2F%3E%3Ctext%20x%3D%22100%22%20y%3D%22120%22%20font-family%3D%22Arial%22%20font-size%3D%2280%22%20text-anchor%3D%22middle%22%20fill%3D%22%23667eea%22%3E👤%3C%2Ftext%3E%3C%2Fsvg%3E';
                 $avatarSrc = isset($empleado['foto']) && !empty($empleado['foto']) ? 
                     'data:image/jpeg;base64,' . $empleado['foto'] : 
                     $defaultAvatar;
                 ?>
-                <img src="<?= $avatarSrc ?>" alt="Foto" class="profile-img" style="width: 200px; height: 200px; object-fit: cover;">
+                <div class="profile-img-wrapper mb-3">
+                    <img src="<?= $avatarSrc ?>" alt="Foto" class="profile-img">
+                </div>
+                <h5 class="mb-1">
+                    <?= esc(trim(($empleado['nombre'] ?? '').' '.($empleado['apellido'] ?? ''))) ?: 'Sin nombre' ?>
+                </h5>
+                <p class="text-muted mb-2 small">
+                    <i class="bi bi-briefcase me-1"></i><?= esc($empleado['puesto'] ?? 'Sin puesto') ?>
+                </p>
+                <p class="text-muted small">
+                    <i class="bi bi-building me-1"></i><?= esc($empleado['nombre_maquiladora'] ?? 'No asignada') ?>
+                </p>
             </div>
         </div>
     </div>
 
     <!-- Datos -->
-    <div class="col-md-8">
-        <div class="card shadow-sm">
-            <div class="card-header">
-                <strong>Información Personal</strong>
+    <div class="col-md-8 col-lg-9">
+        <div class="card info-card">
+            <div class="card-header info-card-header">
+                <i class="bi bi-info-circle me-2"></i>Información Completa
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
+                <!-- Datos Personales -->
                 <div class="info-section">
-                    <h6>Datos Personales</h6>
-                    <p><strong>Nombre completo:</strong> <?= esc(trim(($empleado['nombre'] ?? '').' '.($empleado['apellido'] ?? ''))) ?></p>
-                    <p><strong>Usuario:</strong> <?= esc($empleado['username'] ?? '') ?></p>
-                    <p><strong>Fecha de Nacimiento:</strong> <?= esc($empleado['fecha_nac'] ?? '') ?></p>
-                    <p><strong>CURP:</strong> <?= esc($empleado['curp'] ?? '') ?></p>
-                    <p><strong>Edad:</strong> <?= esc($empleado['edad'] ?? '') ?></p>
+                    <h6><i class="bi bi-person-fill me-2"></i>Datos Personales</h6>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="info-row">
+                                <div class="info-icon">
+                                    <i class="bi bi-person-badge"></i>
+                                </div>
+                                <div class="info-content">
+                                    <div class="info-label">Usuario</div>
+                                    <div class="info-value"><?= esc($empleado['username'] ?? 'No asignado') ?></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="info-row">
+                                <div class="info-icon">
+                                    <i class="bi bi-calendar-event"></i>
+                                </div>
+                                <div class="info-content">
+                                    <div class="info-label">Fecha de Nacimiento</div>
+                                    <div class="info-value"><?= esc($empleado['fecha_nac'] ?? 'No registrada') ?></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="info-row">
+                                <div class="info-icon">
+                                    <i class="bi bi-card-text"></i>
+                                </div>
+                                <div class="info-content">
+                                    <div class="info-label">CURP</div>
+                                    <div class="info-value"><?= esc($empleado['curp'] ?? 'No registrado') ?></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="info-row">
+                                <div class="info-icon">
+                                    <i class="bi bi-hourglass-split"></i>
+                                </div>
+                                <div class="info-content">
+                                    <div class="info-label">Edad</div>
+                                    <div class="info-value"><?= esc($empleado['edad'] ?? 'No calculada') ?> años</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- Contacto -->
                 <div class="info-section">
-                    <h6>Contacto</h6>
-                    <p><strong>Domicilio:</strong> <?= esc($empleado['domicilio'] ?? '') ?></p>
-                    <p><strong>Teléfono:</strong> <?= esc($empleado['telefono'] ?? '') ?></p>
-                    <p><strong>Email:</strong> <?= esc($empleado['email'] ?? ($empleado['correo'] ?? '')) ?></p>
+                    <h6><i class="bi bi-telephone-fill me-2"></i>Información de Contacto</h6>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="info-row">
+                                <div class="info-icon">
+                                    <i class="bi bi-house-door"></i>
+                                </div>
+                                <div class="info-content">
+                                    <div class="info-label">Domicilio</div>
+                                    <div class="info-value"><?= esc($empleado['domicilio'] ?? 'No registrado') ?></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="info-row">
+                                <div class="info-icon">
+                                    <i class="bi bi-phone"></i>
+                                </div>
+                                <div class="info-content">
+                                    <div class="info-label">Teléfono</div>
+                                    <div class="info-value"><?= esc($empleado['telefono'] ?? 'No registrado') ?></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <div class="info-row">
+                                <div class="info-icon">
+                                    <i class="bi bi-envelope"></i>
+                                </div>
+                                <div class="info-content">
+                                    <div class="info-label">Email</div>
+                                    <div class="info-value"><?= esc($empleado['email'] ?? ($empleado['correo'] ?? 'No registrado')) ?></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- Información Laboral -->
                 <div class="info-section">
-                    <h6>Información Laboral</h6>
-                    <p><strong>Empresa:</strong> <?= esc($empleado['nombre_maquiladora'] ?? 'No asignada') ?></p>
-                    <p><strong>Puesto:</strong> <?= esc($empleado['puesto'] ?? '') ?></p>
-                    <p><strong>No. Empleado:</strong> <?= esc($empleado['noEmpleado'] ?? '') ?></p>
-                    <p><strong>Estatus Usuario:</strong> <?= isset($empleado['usuario_activo']) ? (((int)$empleado['usuario_activo'] === 1) ? 'Activo' : 'Inactivo') : '-' ?></p>
+                    <h6><i class="bi bi-briefcase-fill me-2"></i>Información Laboral</h6>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="info-row">
+                                <div class="info-icon">
+                                    <i class="bi bi-building"></i>
+                                </div>
+                                <div class="info-content">
+                                    <div class="info-label">Empresa</div>
+                                    <div class="info-value"><?= esc($empleado['nombre_maquiladora'] ?? 'No asignada') ?></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="info-row">
+                                <div class="info-icon">
+                                    <i class="bi bi-award"></i>
+                                </div>
+                                <div class="info-content">
+                                    <div class="info-label">Puesto</div>
+                                    <div class="info-value"><?= esc($empleado['puesto'] ?? 'No asignado') ?></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="info-row">
+                                <div class="info-icon">
+                                    <i class="bi bi-hash"></i>
+                                </div>
+                                <div class="info-content">
+                                    <div class="info-label">No. Empleado</div>
+                                    <div class="info-value"><?= esc($empleado['noEmpleado'] ?? 'No asignado') ?></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="info-row">
+                                <div class="info-icon">
+                                    <i class="bi bi-toggle-on"></i>
+                                </div>
+                                <div class="info-content">
+                                    <div class="info-label">Estatus de Usuario</div>
+                                    <div class="info-value">
+                                        <?php 
+                                        $isActive = isset($empleado['usuario_activo']) && ((int)$empleado['usuario_activo'] === 1);
+                                        ?>
+                                        <span class="status-badge <?= $isActive ? 'active' : 'inactive' ?>">
+                                            <i class="bi bi-<?= $isActive ? 'check-circle' : 'x-circle' ?> me-1"></i>
+                                            <?= $isActive ? 'Activo' : 'Inactivo' ?>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -73,90 +367,252 @@ $logged_in = session()->get('logged_in');
 </div>
 
 <!-- Modal para editar/agregar empleado -->
-<div class="modal fade" id="modalEmpleado" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+<style>
+    .modal-empleado .modal-content {
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .modal-empleado .modal-header {
+        background: #f8f9fa;
+        color: #333;
+        padding: 1.25rem 1.5rem;
+        border-bottom: 2px solid #667eea;
+    }
+    
+    .modal-empleado .modal-title {
+        font-weight: 600;
+        font-size: 1.25rem;
+    }
+    
+    .modal-empleado .modal-body {
+        padding: 1.5rem;
+    }
+    
+    .photo-upload-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .photo-preview-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+    
+    .photo-preview-ring {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        padding: 3px;
+        background: #667eea;
+        display: inline-block;
+    }
+    
+    #foto-preview {
+        width: 144px;
+        height: 144px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid white;
+    }
+    
+    .photo-controls {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .photo-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid white;
+    }
+    
+    .photo-btn:hover {
+        transform: scale(1.1);
+    }
+    
+    .photo-btn.upload {
+        background: #667eea;
+    }
+    
+    .photo-btn.camera {
+        background: #28a745;
+    }
+    
+    .photo-btn.webcam {
+        background: #17a2b8;
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 8px;
+        padding: 1.25rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .modal-empleado .form-label {
+        font-weight: 500;
+        color: #495057;
+        font-size: 0.9rem;
+        margin-bottom: 0.4rem;
+    }
+    
+    .modal-empleado .form-label i {
+        color: #667eea;
+        font-size: 0.85rem;
+    }
+    
+    .modal-empleado .form-control {
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        padding: 0.6rem 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    .modal-empleado .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.15rem rgba(102, 126, 234, 0.15);
+    }
+    
+    .modal-empleado .modal-footer {
+        background: #f8f9fa;
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #dee2e6;
+    }
+    
+    .photo-help-text {
+        color: #6c757d;
+        font-size: 0.8rem;
+        margin-top: 0.75rem;
+    }
+</style>
+
+<div class="modal fade modal-empleado" id="modalEmpleado" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title"><?= $hasEmpleado ? 'Editar datos del empleado' : 'Agregar datos del empleado' ?></h5>
+        <h5 class="modal-title">
+            <i class="bi bi-person-circle me-2"></i>
+            <?= $hasEmpleado ? 'Editar datos del empleado' : 'Agregar datos del empleado' ?>
+        </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="formEmpleado" method="post" action="<?= base_url('modulo1/empleado/guardar') ?>" enctype="multipart/form-data">
         <?= csrf_field() ?>
         <div class="modal-body">
-          <div class="row g-3">
-            <div class="col-12 mb-3 text-center">
-              <div class="mb-3">
-                <div class="position-relative d-inline-block">
-                  <img id="foto-preview" src="<?= $hasEmpleado && !empty($empleado['foto']) ? 'data:image/jpeg;base64,' . $empleado['foto'] : base_url('assets/img/default-avatar.png') ?>" 
-                       class="rounded-circle border" 
-                       style="width: 150px; height: 150px; object-fit: cover;"
-                       alt="Foto de perfil">
-                  <div class="position-absolute bottom-0 start-0 d-flex gap-1">
-                    <label for="emp-foto" class="bg-primary text-white rounded-circle p-2" style="cursor: pointer;" title="Subir archivo">
-                      <i class="bi bi-upload"></i>
-                      <input type="file" class="d-none" id="emp-foto" name="foto" accept="image/*">
-                    </label>
-                    <label for="emp-foto-cam" class="bg-success text-white rounded-circle p-2" style="cursor: pointer;" title="Tomar foto" onclick="abrirCamaraMovil(event)">
-                      <i class="bi bi-camera"></i>
-                      <input type="file" class="d-none" id="emp-foto-cam" name="foto" accept="image/*" capture="environment">
-                    </label>
-                    <label for="emp-foto-webcam" class="bg-info text-white rounded-circle p-2" style="cursor: pointer;" title="Cámara web" onclick="abrirWebcam(event)">
-                      <i class="bi bi-webcam"></i>
-                      <input type="file" class="d-none" id="emp-foto-webcam" name="foto" accept="image/*">
-                    </label>
-                  </div>
-                </div>
+          <!-- Sección de Foto -->
+          <div class="photo-upload-section text-center">
+            <div class="photo-preview-wrapper">
+              <div class="photo-preview-ring">
+                <img id="foto-preview" 
+                     src="<?= $hasEmpleado && !empty($empleado['foto']) ? 'data:image/jpeg;base64,' . $empleado['foto'] : base_url('assets/img/default-avatar.png') ?>" 
+                     alt="Foto de perfil">
               </div>
-              <div>
-                <small class="form-text text-muted">Formatos: JPG, PNG, GIF. Tamaño máximo: 2MB</small>
+              <div class="photo-controls">
+                <label for="emp-foto" class="photo-btn upload" title="Subir archivo">
+                  <i class="bi bi-upload"></i>
+                  <input type="file" class="d-none" id="emp-foto" name="foto" accept="image/*">
+                </label>
+                <label for="emp-foto-webcam" class="photo-btn webcam" title="Cámara web" onclick="abrirWebcam(event)">
+                  <i class="bi bi-webcam"></i>
+                  <input type="file" class="d-none" id="emp-foto-webcam" name="foto" accept="image/*">
+                </label>
               </div>
             </div>
-            <div class="col-md-4" id="grp-noEmpleado">
-              <label class="form-label">No. Empleado</label>
-              <input type="text" class="form-control" id="emp-noEmpleado" name="noEmpleado">
+            <div class="photo-help-text">
+              <i class="bi bi-info-circle me-1"></i>
+              Formatos: JPG, PNG, GIF • Tamaño máximo: 2MB
             </div>
-            <div class="col-md-4">
-              <label class="form-label">Nombre</label>
-              <input type="text" class="form-control" id="emp-nombre" name="nombre" required>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Apellido</label>
-              <input type="text" class="form-control" id="emp-apellido" name="apellido" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Email</label>
-              <input type="email" class="form-control" id="emp-email" name="email" readonly>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Teléfono</label>
-              <input type="text" class="form-control" id="emp-telefono" name="telefono">
-            </div>
-            <div class="col-md-8">
-              <label class="form-label">Domicilio</label>
-              <input type="text" class="form-control" id="emp-domicilio" name="domicilio">
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Puesto</label>
-              <input type="text" class="form-control" id="emp-puesto" name="puesto" readonly>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Fecha de nacimiento</label>
-              <input type="date" class="form-control" id="emp-fecha_nac" name="fecha_nac">
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">CURP</label>
-              <input type="text" class="form-control" id="emp-curp" name="curp" maxlength="18">
+          </div>
+
+          <!-- Formulario de Datos -->
+          <div class="form-section">
+            <div class="row g-3">
+              <div class="col-md-4" id="grp-noEmpleado">
+                <label class="form-label">
+                  <i class="bi bi-hash"></i> No. Empleado
+                </label>
+                <input type="text" class="form-control" id="emp-noEmpleado" name="noEmpleado" placeholder="Automático">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">
+                  <i class="bi bi-person"></i> Nombre <span class="text-danger">*</span>
+                </label>
+                <input type="text" class="form-control" id="emp-nombre" name="nombre" required placeholder="Ingrese el nombre">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">
+                  <i class="bi bi-person"></i> Apellido <span class="text-danger">*</span>
+                </label>
+                <input type="text" class="form-control" id="emp-apellido" name="apellido" required placeholder="Ingrese el apellido">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">
+                  <i class="bi bi-envelope"></i> Email
+                </label>
+                <input type="email" class="form-control" id="emp-email" name="email" readonly placeholder="email@ejemplo.com">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">
+                  <i class="bi bi-phone"></i> Teléfono
+                </label>
+                <input type="text" class="form-control" id="emp-telefono" name="telefono" placeholder="Ej: 6441234567">
+              </div>
+              <div class="col-md-8">
+                <label class="form-label">
+                  <i class="bi bi-house-door"></i> Domicilio
+                </label>
+                <input type="text" class="form-control" id="emp-domicilio" name="domicilio" placeholder="Calle, número, colonia">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">
+                  <i class="bi bi-briefcase"></i> Puesto
+                </label>
+                <input type="text" class="form-control" id="emp-puesto" name="puesto" readonly>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">
+                  <i class="bi bi-calendar-event"></i> Fecha de nacimiento
+                </label>
+                <input type="date" class="form-control" id="emp-fecha_nac" name="fecha_nac">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">
+                  <i class="bi bi-card-text"></i> CURP
+                </label>
+                <input type="text" class="form-control" id="emp-curp" name="curp" maxlength="18" placeholder="18 caracteres">
+              </div>
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Guardar</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle me-2"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-circle me-2"></i>Guardar
+          </button>
         </div>
       </form>
     </div>
   </div>
 </div>
+
 
 <?= $this->endSection() ?>
 

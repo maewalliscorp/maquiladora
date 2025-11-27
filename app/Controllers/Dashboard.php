@@ -25,14 +25,27 @@ class Dashboard extends BaseController
             'inventario' => $service->getInventarioStats(),
         ];
 
+        // Obtener nombre de la maquiladora
+        $db = \Config\Database::connect();
+        $maquiladoraId = session()->get('maquiladora_id');
+        $maquiladoraName = '';
+        
+        if ($maquiladoraId) {
+            $row = $db->table('maquiladora')->select('Nombre_Maquila')->where('idmaquiladora', $maquiladoraId)->get()->getRow();
+            if ($row) {
+                $maquiladoraName = $row->Nombre_Maquila;
+            }
+        }
+
         return view('modulos/dashboard', [
             'title' => 'Dashboard Principal',
             'kpis' => $kpis,
             'notifications' => $notifications,
             'charts' => $charts,
-            'userEmail' => session()->get('user_email') ?? 'usuario@fabrica.com',
+            'userEmail' => session()->get('email') ?? 'usuario@fabrica.com',
             'userName' => session()->get('user_name') ?? 'Usuario',
-            'userRole' => session()->get('user_role') ?? 'empleado'
+            'userRole' => session()->get('user_role') ?? 'empleado',
+            'maquiladoraName' => $maquiladoraName
         ]);
     }
     public function api()

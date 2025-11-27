@@ -579,7 +579,22 @@
                         <td><?= esc($p['folio'] ?? '-') ?></td>
                         <td><?= esc($p['empresa'] ?? '-') ?></td>
                         <td><?= isset($p['fecha']) ? esc(date('Y-m-d', strtotime($p['fecha']))) : '-' ?></td>
-                        <td><?= esc($p['estatus'] ?? '-') ?></td>
+                        <td>
+                            <?php
+                            $badgeClass = 'secondary';
+                            $estatus = strtolower($p['estatus'] ?? 'pendiente');
+                            if (strpos($estatus, 'aprobada') !== false || strpos($estatus, 'finalizada') !== false) {
+                                $badgeClass = 'success';
+                            } elseif (strpos($estatus, 'pendiente') !== false) {
+                                $badgeClass = 'warning';
+                            } elseif (strpos($estatus, 'cancelada') !== false || strpos($estatus, 'rechazada') !== false) {
+                                $badgeClass = 'danger';
+                            } elseif (strpos($estatus, 'proceso') !== false || strpos($estatus, 'en curso') !== false) {
+                                $badgeClass = 'info';
+                            }
+                            ?>
+                            <span class="badge bg-<?= $badgeClass ?>"><?= esc(ucfirst($p['estatus'] ?? 'Pendiente')) ?></span>
+                        </td>
                         <td><?= isset($p['fechaFinPlan']) ? esc(date('Y-m-d', strtotime($p['fechaFinPlan']))) : '-' ?></td>
                         <td><?= isset($p['total']) ? number_format((float)$p['total'], 2) : '0.00' ?></td>
                         <td>

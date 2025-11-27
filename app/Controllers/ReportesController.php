@@ -32,6 +32,10 @@ class ReportesController extends BaseController
                 ->where('idmaquiladora', $maquiladoraId)
                 ->get()
                 ->getRowArray();
+
+            if ($maquiladora && !empty($maquiladora['logo'])) {
+                $maquiladora['logo_base64'] = base64_encode($maquiladora['logo']);
+            }
         }
 
         return view('modulos/reportes', [
@@ -152,25 +156,19 @@ class ReportesController extends BaseController
      */
     public function calidadControl()
     {
-        // Assuming we have an InspeccionModel or table 'inspeccion'
-        // Let's try to use the DB directly if model is uncertain, 
-        // but we saw InspeccionModel.php earlier.
-
+        $maquiladoraId = session()->get('maquiladora_id');
         $db = \Config\Database::connect();
-        // Check table name, usually 'inspeccion'
-        // We want to group by 'resultado' or 'estatus'
-
-        // Mocking structure based on typical needs
-        // Assuming 'resultado' column exists: 'Aprobado', 'Rechazado', 'Condicionado'
 
         try {
+            // Unir con orden_produccion para filtrar por maquiladoraID
             $query = $db->table('inspeccion')
-                ->select('resultado, COUNT(*) as total')
-                ->groupBy('resultado')
+                ->select('inspeccion.resultado, COUNT(*) as total')
+                ->join('orden_produccion', 'orden_produccion.id = inspeccion.ordenProduccionId')
+                ->where('orden_produccion.maquiladoraID', $maquiladoraId)
+                ->groupBy('inspeccion.resultado')
                 ->get();
             $results = $query->getResultArray();
         } catch (\Exception $e) {
-            // Fallback if table/column doesn't exist
             $results = [];
         }
 
@@ -267,10 +265,13 @@ class ReportesController extends BaseController
             fputcsv($out, ['Resultado', 'Cantidad']);
 
             $db = \Config\Database::connect();
+            $maquiladoraId = session()->get('maquiladora_id');
             try {
                 $query = $db->table('inspeccion')
-                    ->select('resultado, COUNT(*) as total')
-                    ->groupBy('resultado')
+                    ->select('inspeccion.resultado, COUNT(*) as total')
+                    ->join('orden_produccion', 'orden_produccion.id = inspeccion.ordenProduccionId')
+                    ->where('orden_produccion.maquiladoraID', $maquiladoraId)
+                    ->groupBy('inspeccion.resultado')
                     ->get();
                 foreach ($query->getResultArray() as $row) {
                     fputcsv($out, [

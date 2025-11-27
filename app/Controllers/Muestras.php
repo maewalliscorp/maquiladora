@@ -104,6 +104,22 @@ class Muestras extends BaseController
                 $db->table('aprobacion_muestra')->insert($aData);
             }
 
+            // Si la decisión y el estado son "Aprobada", actualizar diseno_version.aprobado = 1
+            if ($decision === 'Aprobada' && $estado === 'Aprobada') {
+                $rowP = $db->query("
+                    SELECT p.disenoVersionId 
+                    FROM muestra m 
+                    JOIN prototipo p ON m.prototipoId = p.id 
+                    WHERE m.id = ?
+                ", [$id])->getRowArray();
+
+                if ($rowP && !empty($rowP['disenoVersionId'])) {
+                    $db->table('diseno_version')
+                       ->where('id', $rowP['disenoVersionId'])
+                       ->update(['aprobado' => 1]);
+                }
+            }
+
             $db->transComplete();
             if ($db->transStatus() === false) { throw new \Exception('Error en la transacción'); }
             return $this->response->setJSON(['ok'=>true, 'message'=>'Guardado']);
@@ -113,7 +129,7 @@ class Muestras extends BaseController
         }
     }
 
-    // Devuelve URLs de archivos del diseño asociado a la muestra (por su prototipo -> diseno_version)
+    // Devuelve archivos (blobs) del diseño asociado a la muestra (por su prototipo -> diseno_version)
     public function archivo($id = null)
     {
         $muestraId = (int)($id ?? 0);
@@ -124,7 +140,7 @@ class Muestras extends BaseController
         $db = \Config\Database::connect();
         try {
             $row = $db->query(
-                "SELECT dv.archivoCadUrl, dv.archivoPatronUrl
+                "SELECT dv.foto, dv.patron
                  FROM muestra m
                  JOIN prototipo p ON p.id = m.prototipoId
                  JOIN diseno_version dv ON dv.id = p.disenoVersionId
@@ -136,23 +152,38 @@ class Muestras extends BaseController
                 return $this->response->setStatusCode(404)->setJSON(['ok'=>false, 'message'=>'No se encontraron archivos para la muestra']);
             }
 
-            $cad = $row['archivoCadUrl'] ?? null;
-            $pat = $row['archivoPatronUrl'] ?? null;
+            $fotoBlob = $row['foto'] ?? null;
+            $patronBlob = $row['patron'] ?? null;
 
-            $toAbs = static function ($rel) {
-                if (!$rel) return null;
-                // Si ya es absoluta, devolver tal cual
-                if (preg_match('/^https?:\/\//i', $rel)) return $rel;
-                return base_url(trim($rel, '/'));
-            };
+            $response = ['ok' => true];
 
-            return $this->response->setJSON([
-                'ok' => true,
-                'cadUrl' => $toAbs($cad),
-                'patronUrl' => $toAbs($pat),
-            ]);
+            if ($fotoBlob) {
+                $mime = $this->getMimeType($fotoBlob);
+                $response['fotoBase64'] = 'data:' . $mime . ';base64,' . base64_encode($fotoBlob);
+                $response['fotoMime'] = $mime;
+            } else {
+                $response['fotoBase64'] = null;
+            }
+
+            if ($patronBlob) {
+                $mime = $this->getMimeType($patronBlob);
+                $response['patronBase64'] = 'data:' . $mime . ';base64,' . base64_encode($patronBlob);
+                $response['patronMime'] = $mime;
+            } else {
+                $response['patronBase64'] = null;
+            }
+
+            return $this->response->setJSON($response);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['ok'=>false, 'message'=>'Error: '.$e->getMessage()]);
         }
+    }
+
+    private function getMimeType($data) {
+        if (strncmp($data, "\x89PNG", 4) === 0) return 'image/png';
+        if (strncmp($data, "\xFF\xD8", 2) === 0) return 'image/jpeg';
+        if (strncmp($data, "GIF8", 4) === 0) return 'image/gif';
+        if (strncmp($data, "%PDF", 4) === 0) return 'application/pdf';
+        return 'application/octet-stream';
     }
 }
