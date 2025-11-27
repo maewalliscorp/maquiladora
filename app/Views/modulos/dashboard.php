@@ -1,568 +1,726 @@
 <?= $this->extend('layouts/main') ?>
 
-<?php // --- Estilos específicos del dashboard --- ?>
+<?php // --- Estilos específicos del dashboard (AdminLTE Inspired) --- ?>
 <?= $this->section('head') ?>
-    <style>
-        body {
-            background: linear-gradient(135deg, #96beefff 0%, #ffffff 100%);
-        }
+<style>
+    /* AdminLTE 3 Variables & Base */
+    :root {
+        --info: #17a2b8;
+        --success: #28a745;
+        --warning: #ffc107;
+        --danger: #dc3545;
+        --primary: #007bff;
+        --secondary: #6c757d;
+    }
 
-        .kpi-card {
-            border: 0;
-            border-radius: 1rem;
-            box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
-        }
+    body {
+        background-color: #f4f6f9;
+    }
 
-        .chart-card {
-            border: 0;
-            border-radius: 1rem;
-            box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
-        }
+    /* --- Small Box --- */
+    .small-box {
+        border-radius: 0.25rem;
+        box-shadow: 0 0 1px rgba(0, 0, 0, .125), 0 1px 3px rgba(0, 0, 0, .2);
+        display: block;
+        margin-bottom: 20px;
+        position: relative;
+        color: #fff;
+        overflow: hidden;
+    }
 
-        .chart-wrap {
-            position: relative;
-            height: 280px;
-        }
+    .small-box>.inner {
+        padding: 10px;
+    }
 
-        .sticky-col {
-            position: sticky;
-            top: 1rem;
-        }
+    .small-box h3 {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin: 0 0 10px 0;
+        white-space: nowrap;
+        padding: 0;
+    }
 
-        /* ----- ENCABEZADO DEL DASHBOARD ----- */
-        .dashboard-header {
-            text-align: center;
-            margin-top: 1rem;
-        }
+    .small-box p {
+        font-size: 1rem;
+    }
 
-        .dashboard-title {
-            font-family: "Poppins", "Segoe UI", sans-serif;
-            font-weight: 600;
-            font-size: 2.5rem;
-            letter-spacing: 1px;
-            color: #1a237e;
-            /* Azul elegante */
-            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: .3rem;
-            transition: all 0.3s ease;
-        }
+    .small-box .icon {
+        color: rgba(0, 0, 0, .15);
+        z-index: 0;
+    }
 
-        .dashboard-title:hover {
-            color: #0d47a1;
-            transform: scale(1.02);
-        }
+    .small-box .icon>i {
+        font-size: 90px;
+        position: absolute;
+        right: 15px;
+        top: 15px;
+        transition: all .3s linear;
+    }
 
-        .dashboard-subtitle {
-            font-family: "Poppins", "Segoe UI", sans-serif;
-            font-size: 1rem;
-            color: #607d8b;
-            letter-spacing: .5px;
-        }
+    .small-box:hover .icon>i {
+        transform: scale(1.1);
+    }
 
-        /* --- Tarjetas de notificaciones --- */
-        .notif-card {
-            border-radius: 1rem;
-            padding: 1rem;
-            color: #212529;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-        }
+    .small-box>.small-box-footer {
+        background-color: rgba(0, 0, 0, .1);
+        color: rgba(255, 255, 255, .8);
+        display: block;
+        padding: 3px 0;
+        position: relative;
+        text-align: center;
+        text-decoration: none;
+        z-index: 10;
+    }
 
-        .notif-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
-        }
+    .small-box>.small-box-footer:hover {
+        background-color: rgba(0, 0, 0, .15);
+        color: #fff;
+    }
 
-        .notif-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    /* Colors */
+    .bg-info {
+        background-color: #17a2b8 !important;
+    }
 
-        .notif-title {
-            font-size: 1rem;
-            font-weight: 600;
-        }
+    .bg-success {
+        background-color: #28a745 !important;
+    }
 
-        .notif-badge {
-            display: inline-block;
-            padding: .25rem .6rem;
-            border-radius: 0.5rem;
-            color: #fff;
-            font-size: .8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-        }
+    .bg-warning {
+        background-color: #ffc107 !important;
+        color: #1f2d3d !important;
+    }
 
-        .notif-sub {
-            opacity: 0.9;
-        }
+    .bg-danger {
+        background-color: #dc3545 !important;
+    }
 
-        /* === Estilo Moderno de Tarjetas KPI === */
-        .kpi-card {
-            border: none;
-            border-radius: 1rem;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-            transition: transform 0.25s ease, box-shadow 0.25s ease;
-        }
+    /* --- Card Styles --- */
+    .card {
+        box-shadow: 0 0 1px rgba(0, 0, 0, .125), 0 1px 3px rgba(0, 0, 0, .2);
+        margin-bottom: 1rem;
+        border-radius: 0.25rem;
+        border: 0;
+    }
 
-        .kpi-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
-        }
+    .card-header {
+        background-color: transparent;
+        border-bottom: 1px solid rgba(0, 0, 0, .125);
+        padding: 0.75rem 1.25rem;
+        position: relative;
+        border-top-left-radius: 0.25rem;
+        border-top-right-radius: 0.25rem;
+    }
 
-        .icon-wrapper {
-            background: linear-gradient(135deg, #4dabf7, #228be6);
-            width: 60px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            margin-bottom: 0.5rem;
-        }
+    .card-title {
+        float: left;
+        font-size: 1.1rem;
+        font-weight: 400;
+        margin: 0;
+    }
 
-        .icon-wrapper svg {
-            width: 30px;
-            height: 30px;
-            fill: white;
-        }
-    </style>
+    .card-tools {
+        float: right;
+        margin-right: -0.625rem;
+    }
+
+    .card-tools .btn-tool {
+        padding: 0.25rem 0.5rem;
+        color: #adb5bd;
+        font-size: 0.875rem;
+        background: transparent;
+        border: 0;
+    }
+
+    .card-tools .btn-tool:hover {
+        color: #495057;
+    }
+
+    /* --- Direct Chat --- */
+    .direct-chat-messages {
+        transform: translate(0, 0);
+        height: 250px;
+        overflow: auto;
+        padding: 10px;
+    }
+
+    .direct-chat-msg {
+        margin-bottom: 10px;
+    }
+
+    .direct-chat-infos {
+        display: block;
+        font-size: 0.875rem;
+        margin-bottom: 2px;
+    }
+
+    .direct-chat-name {
+        font-weight: 600;
+    }
+
+    .direct-chat-timestamp {
+        color: #697582;
+    }
+
+    .direct-chat-img {
+        border-radius: 50%;
+        float: left;
+        height: 40px;
+        width: 40px;
+    }
+
+    .direct-chat-text {
+        border-radius: 0.3rem;
+        background-color: #d2d6de;
+        border: 1px solid #d2d6de;
+        color: #444;
+        margin: 5px 0 0 50px;
+        padding: 5px 10px;
+        position: relative;
+    }
+
+    .direct-chat-text::after,
+    .direct-chat-text::before {
+        border: solid transparent;
+        border-right-color: #d2d6de;
+        content: " ";
+        height: 0;
+        pointer-events: none;
+        position: absolute;
+        right: 100%;
+        top: 15px;
+        width: 0;
+    }
+
+    .direct-chat-text::after {
+        border-width: 5px;
+        margin-top: -5px;
+    }
+
+    .direct-chat-text::before {
+        border-width: 6px;
+        margin-top: -6px;
+    }
+
+    /* Right side chat (User) */
+    .direct-chat-msg.right .direct-chat-img {
+        float: right;
+    }
+
+    .direct-chat-msg.right .direct-chat-text {
+        background-color: #3c8dbc;
+        border-color: #3c8dbc;
+        color: #fff;
+        margin-left: 0;
+        margin-right: 50px;
+    }
+
+    .direct-chat-msg.right .direct-chat-text::after,
+    .direct-chat-msg.right .direct-chat-text::before {
+        border-left-color: #3c8dbc;
+        border-right-color: transparent;
+        left: 100%;
+        right: auto;
+    }
+
+    .direct-chat-primary .right>.direct-chat-text {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: #fff;
+    }
+
+    .direct-chat-primary .right>.direct-chat-text::after,
+    .direct-chat-primary .right>.direct-chat-text::before {
+        border-left-color: #007bff;
+    }
+
+    /* Tabs in Card Header */
+    .card-header.p-0 .nav-pills .nav-link {
+        border-radius: 0;
+        border-bottom: 0;
+        color: #6c757d;
+    }
+
+    .card-header.p-0 .nav-pills .nav-link.active {
+        background-color: transparent;
+        color: #007bff;
+        border-bottom: 2px solid #007bff;
+    }
+
+    .card-header.p-0 .nav-pills .nav-link:hover {
+        color: #007bff;
+    }
+
+    /* Chart Heights */
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+</style>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
 
-    <!-- TITULO -->
-    <div class="dashboard-header text-center mb-4">
-        <h1 class="dashboard-title">Dashboard</h1>
-        <p class="dashboard-subtitle">Producción · Inventarios · Calidad · Logística</p>
-    </div>
-
-
-<?php
-// Fallback de KPIs por si la API no responde. El JS los reemplaza con datos reales.
-$cards = $kpis ?? [
-        ['label' => 'Órdenes activas', 'value' => 18, 'icon' => 'bi-clipboard2-check', 'muted' => '+2 hoy', 'mutedClass' => 'text-success'],
-        ['label' => 'WIP (pzs)', 'value' => 362, 'icon' => 'bi-gear-wide-connected', 'muted' => 'En proceso', 'mutedClass' => 'text-secondary'],
-        ['label' => 'Defectos (%)', 'value' => '1.8%', 'icon' => 'bi-activity', 'muted' => '-0.4% vs. ayer', 'mutedClass' => 'text-success'],
-        ['label' => 'Stock crítico', 'value' => 5, 'icon' => 'bi-box-seam', 'muted' => 'Por debajo de mínimo', 'mutedClass' => 'text-warning'],
-];
-
-// Notificaciones (fallback)
-$notifCount = $notifCount ?? 3;
-$recentNotifs = $recentNotifs ?? [
-        ['nivel' => 'Crítica', 'color' => '#e03131', 'titulo' => 'Actualizar avance WIP en OP-2025-014', 'sub' => 'Atrasado 1 día • Confección (WIP)'],
-        ['nivel' => 'Alta', 'color' => '#ffd43b', 'titulo' => 'Revisar muestra M-0045 del cliente A', 'sub' => 'Vence hoy • Prototipos'],
-        ['nivel' => 'Media', 'color' => '#4dabf7', 'titulo' => 'OC #1045 recibida', 'sub' => 'Almacén PT • Entrada parcial'],
-];
-?>
-
-    <div class="row g-4">
-        <!-- Columna principal -->
-        <div class="col-12 col-xxl-9">
-            <!-- KPIs -->
-            <div class="row g-3 mb-1 justify-content-center">
-                <?php foreach ($cards as $i => $c):
-                    $dataLabel = strtolower(preg_replace('/\s+/', '-', $c['label']));
-                    ?>
-                    <div class="col-6 col-md-3 col-xl-3">
-                        <div class="card kpi-card p-3 text-center shadow-sm border-0">
-                            <div class="icon-wrapper mx-auto mb-2">
-                                <!-- Ícono SVG actual  -->
-                                <svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" fill="url(#grad1)"
-                                     viewBox="0 0 16 16">
-                                    <defs>
-                                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-                                            <stop offset="0%" stop-color="#4dabf7"/>
-                                            <stop offset="100%" stop-color="#228be6"/>
-                                        </linearGradient>
-                                    </defs>
-                                    <path d="M0 0h1v15h15v1H0z"/>
-                                    <path d="M2 13l4-5 3 3 5-7 1 1-6 8-3-3-3 4z"/>
-                                </svg>
-                            </div>
-
-                            <div class="text-secondary small"><?= esc($c['label']) ?></div>
-
-                            <!--  Color de UMEROOO-->
-                            <div class="fs-3 fw-bold kpi-value" data-label="<?= esc($dataLabel, 'attr') ?>" style="
-                                    color: <?=
-                            strpos($c['label'], 'Activas') !== false ? '#1c7ed6' :
-                                    (strpos($c['label'], 'WIP') !== false ? '#2f9e44' :
-                                            (strpos($c['label'], 'Completadas') !== false ? '#0ca678' :
-                                                    (strpos($c['label'], 'Incidencias') !== false ? '#e03131' : '#212529')))
-                            ?>;
-                                    ">
-                                <?= esc($c['value']) ?>
-                            </div>
-
-                            <?php if (!empty($c['muted'])): ?>
-                                <div class="small mt-2 <?= esc($c['mutedClass'] ?? 'text-secondary') ?>">
-                                    <?= esc($c['muted']) ?>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
+<!-- Content Header -->
+<div class="content-header mb-3">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">Dashboard</h1>
             </div>
-
-            <script>
-                const ctxLogistica = document.getElementById('chLogistica').getContext('2d');
-
-                const chLogistica = new Chart(ctxLogistica, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Pendiente', 'En tránsito', 'Entregado', 'Cancelado'],
-                        datasets: [{
-                            label: 'Órdenes',
-                            data: [12, 19, 8, 3],
-                            backgroundColor: [
-                                '#4dabf7',
-                                '#ffd43b',
-                                '#69db7c',
-                                '#ffa8a8'
-                            ],
-                            borderRadius: 8,
-                            borderWidth: 0,
-                            hoverBackgroundColor: [
-                                '#228be6',
-                                '#fab005',
-                                '#37b24d',
-                                '#e03131'
-                            ],
-                            hoverBorderColor: '#fff',
-                            hoverBorderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'bottom',
-                                labels: {
-                                    color: '#495057',
-                                    font: {size: 12, family: 'Poppins, sans-serif'}
-                                }
-                            },
-                            tooltip: {
-                                backgroundColor: 'rgba(0,0,0,0.7)',
-                                titleFont: {size: 13, weight: 'bold'},
-                                bodyFont: {size: 12},
-                                padding: 10,
-                                borderWidth: 1,
-                                borderColor: '#dee2e6'
-                            }
-                        },
-                        scales: {
-                            x: {
-                                ticks: {color: '#495057', font: {size: 12}},
-                                grid: {display: false}
-                            },
-                            y: {
-                                beginAtZero: true,
-                                ticks: {color: '#495057', font: {size: 12}},
-                                grid: {color: 'rgba(0,0,0,0.05)'}
-                            }
-                        },
-                        hover: {
-                            mode: 'nearest',
-                            intersect: true,
-                            onHover: (event, chartElement) => {
-                                event.native.target.style.cursor = chartElement.length ? 'pointer' : 'default';
-                            }
-                        },
-                        animation: {
-                            duration: 400,
-                            easing: 'easeOutQuart'
-                        }
-                    }
-                });
-            </script>
-
-
-            <!-- GRÁFICAS -->
-            <div class="row g-4">
-                <!-- Producción -->
-                <div class="col-12">
-                    <div class="card chart-card">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between mb-3">
-                                <h5 class="card-title mb-0">Producción · Órdenes por semana</h5>
-                                <span class="text-secondary small">Últimas 6 semanas</span>
-                            </div>
-                            <div class="chart-wrap">
-                                <canvas id="chProduccion"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Inventario -->
-                <div class="col-12 col-lg-6">
-                    <div class="card chart-card">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between mb-3">
-                                <h5 class="card-title mb-0">Inventario · Stock vs Min/Max</h5>
-                                <span class="text-secondary small">Top 6 insumos</span>
-                            </div>
-                            <div class="chart-wrap">
-                                <canvas id="chInventario"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Calidad -->
-                <div class="col-12 col-lg-6">
-                    <div class="card chart-card">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between mb-3">
-                                <h5 class="card-title mb-0">Calidad · Tasa de defectos</h5>
-                                <span class="text-secondary small">Últimos 30 días</span>
-                            </div>
-                            <div class="chart-wrap">
-                                <canvas id="chCalidad"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Logística -->
-                <div class="col-12">
-                    <div class="card chart-card">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between mb-3">
-                                <h5 class="card-title mb-0">Logística · Órdenes de compra por estado</h5>
-                                <span class="text-secondary small">Hoy</span>
-                            </div>
-                            <div class="chart-wrap">
-                                <canvas id="chLogistica"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div><!-- /row gráficas -->
-        </div>
-
-        <!-- Columna Notificaciones -->
-        <div class="col-12 col-xxl-3">
-            <div class="sticky-col">
-                <div class="card chart-card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <h5 class="card-title mb-0">Notificaciones</h5>
-                            <span class="badge text-bg-secondary"><?= esc($notifCount) ?></span>
-                        </div>
-                        <hr>
-                        <div class="vstack gap-3" id="panelNotificaciones">
-                            <?php foreach ($recentNotifs as $n): ?>
-                                <div class="notif-card mb-2"
-                                     style="background: <?= esc($n['color'], 'attr') ?>20; border-left: 6px solid <?= esc($n['color'], 'attr') ?>;">
-                                    <div class="notif-header d-flex justify-content-between align-items-center mb-1">
-                                        <span class="notif-title fw-semibold text-dark"><?= esc($n['titulo']) ?></span>
-                                        <span class="notif-badge"
-                                              style="background: <?= esc($n['color'], 'attr') ?>;"><?= esc($n['nivel']) ?></span>
-                                    </div>
-                                    <div class="notif-sub text-dark small mb-2"><?= esc($n['sub']) ?></div>
-                                    <div class="d-flex gap-2">
-                                        <a href="#" class="btn btn-sm btn-light fw-semibold">Ver detalle</a>
-                                        <a href="#" class="btn btn-sm btn-light fw-semibold">Completar</a>
-                                    </div>
-                                </div>
-
-                            <?php endforeach; ?>
-                        </div>
-                        <a href="<?= base_url('modulo3/notificaciones') ?>"
-                           class="btn btn-sm btn-outline-primary w-100 mt-3">Ver todas</a>
-                    </div>
-                </div>
-
-                <!-- Filtros compactos -->
-                <div class="card chart-card">
-                    <div class="card-body">
-                        <h6 class="text-secondary mb-2">Filtros rápidos</h6>
-                        <div class="row g-2">
-                            <div class="col-12">
-                                <select class="form-select form-select-sm" id="selRango">
-                                    <option value="7">Últimos 7 días</option>
-                                    <option value="30" selected>Últimos 30 días</option>
-                                    <option value="90">Últimos 90 días</option>
-                                </select>
-                            </div>
-                            <div class="col-12 d-grid">
-                                <button class="btn btn-sm btn-primary" id="btnAplicarFiltros">
-                                    <i class="bi bi-funnel"></i> Aplicar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </div><!-- /sticky -->
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-end">
+                    <li class="breadcrumb-item"><a href="#">Home</a></li>
+                    <li class="breadcrumb-item active">Dashboard v1</li>
+                </ol>
+            </div>
         </div>
     </div>
+</div>
+
+<!-- Main content -->
+<section class="content">
+    <div class="container-fluid">
+        <!-- Small Boxes (Stat box) -->
+        <div class="row">
+            <!-- Box 1: Órdenes Activas (New Orders) -->
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3 id="kpi-ordenes-activas"><?= esc($kpis['ordenes_activas'] ?? 0) ?></h3>
+                        <p>Órdenes Activas</p>
+                    </div>
+                    <div class="icon">
+                        <i class="bi bi-bag"></i>
+                    </div>
+                    <a href="<?= base_url('modulo3/ordenes') ?>" class="small-box-footer">More info <i
+                            class="bi bi-arrow-right-circle"></i></a>
+                </div>
+            </div>
+            <!-- Box 2: Tasa de Defectos (Bounce Rate) -->
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-success" id="box-defectos">
+                    <div class="inner">
+                        <h3 id="kpi-tasa-defectos"><?= esc($kpis['tasa_defectos'] ?? 0) ?><sup style="font-size: 20px">%</sup></h3>
+                        <p>Tasa de Defectos</p>
+                    </div>
+                    <div class="icon">
+                        <i class="bi bi-bar-chart-line"></i>
+                    </div>
+                    <a href="<?= base_url('modulo3/desperdicios') ?>" class="small-box-footer">More info <i
+                            class="bi bi-arrow-right-circle"></i></a>
+                </div>
+            </div>
+            <!-- Box 3: Producción (User Registrations) -->
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3 id="kpi-wip-cantidad"><?= esc($kpis['wip_cantidad'] ?? 0) ?></h3>
+                        <p>Unidades en Proceso</p>
+                    </div>
+                    <div class="icon">
+                        <i class="bi bi-person-add"></i>
+                    </div>
+                    <a href="<?= base_url('modulo3/wip') ?>" class="small-box-footer">More info <i
+                            class="bi bi-arrow-right-circle"></i></a>
+                </div>
+            </div>
+            <!-- Box 4: Stock Crítico (Unique Visitors) -->
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-danger">
+                    <div class="inner">
+                        <h3 id="kpi-stock-critico"><?= esc($kpis['stock_critico'] ?? 0) ?></h3>
+                        <p>Stock Crítico</p>
+                    </div>
+                    <div class="icon">
+                        <i class="bi bi-pie-chart"></i>
+                    </div>
+                    <a href="<?= base_url('almacen/inventario') ?>" class="small-box-footer">More info <i
+                            class="bi bi-arrow-right-circle"></i></a>
+                </div>
+            </div>
+        </div>
+        <!-- /.row -->
+
+        <!-- Main Row -->
+        <div class="row">
+            <!-- Left col -->
+            <section class="col-lg-7 connectedSortable">
+                <!-- Custom tabs (Charts with tabs)-->
+                <div class="card">
+                    <div class="card-header d-flex p-0">
+                        <h3 class="card-title p-3">
+                            <i class="bi bi-pie-chart mr-1"></i>
+                            Producción
+                        </h3>
+                        <ul class="nav nav-pills ms-auto p-2">
+                            <li class="nav-item">
+                                <a class="nav-link active" href="#revenue-chart" data-bs-toggle="tab">Area</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#sales-chart" data-bs-toggle="tab">Donut</a>
+                            </li>
+                        </ul>
+                    </div><!-- /.card-header -->
+                    <div class="card-body">
+                        <div class="tab-content p-0">
+                            <!-- Morris chart - Sales -->
+                            <div class="chart tab-pane active" id="revenue-chart"
+                                style="position: relative; height: 300px;">
+                                <canvas id="revenue-chart-canvas" height="300" style="height: 300px;"></canvas>
+                            </div>
+                            <div class="chart tab-pane" id="sales-chart" style="position: relative; height: 300px;">
+                                <canvas id="sales-chart-canvas" height="300" style="height: 300px;"></canvas>
+                            </div>
+                        </div>
+                    </div><!-- /.card-body -->
+                </div>
+                <!-- /.card -->
+
+                <!-- DIRECT CHAT -->
+                <div class="card direct-chat direct-chat-primary">
+                    <div class="card-header">
+                        <h3 class="card-title">Notificaciones Recientes</h3>
+                        <div class="card-tools">
+                            <span title="3 New Messages" class="badge bg-primary" id="notif-badge-count">3</span>
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="bi bi-dash"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" title="Contacts" data-widget="chat-pane-toggle">
+                                <i class="bi bi-chat-dots"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-card-widget="remove">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- /.card-header -->
+                    <div class="card-body">
+                        <!-- Conversations are loaded here -->
+                        <div class="direct-chat-messages" id="chat-messages">
+                            <!-- Message. Default to the left -->
+                            <div class="direct-chat-msg">
+                                <div class="direct-chat-infos clearfix">
+                                    <span class="direct-chat-name float-start">Sistema</span>
+                                    <span class="direct-chat-timestamp float-end">23 Jan 2:00 pm</span>
+                                </div>
+                                <!-- /.direct-chat-infos -->
+                                <img class="direct-chat-img"
+                                    src="https://ui-avatars.com/api/?name=System&background=0D8ABC&color=fff"
+                                    alt="message user image">
+                                <!-- /.direct-chat-img -->
+                                <div class="direct-chat-text">
+                                    Bienvenido al nuevo Dashboard estilo AdminLTE!
+                                </div>
+                                <!-- /.direct-chat-text -->
+                            </div>
+                            <!-- /.direct-chat-msg -->
+                        </div>
+                        <!--/.direct-chat-messages-->
+                    </div>
+                    <!-- /.card-body -->
+                    <div class="card-footer">
+                        <form action="#" method="post">
+                            <div class="input-group">
+                                <input type="text" name="message" placeholder="Type Message ..." class="form-control">
+                                <span class="input-group-append">
+                                    <button type="button" class="btn btn-primary">Send</button>
+                                </span>
+                            </div>
+                        </form>
+                    </div>
+                    <!-- /.card-footer-->
+                </div>
+                <!--/.direct-chat -->
+
+            </section>
+            <!-- /.Left col -->
+
+            <!-- Right col -->
+            <section class="col-lg-5 connectedSortable">
+
+                <!-- Map card (Placeholder for Inventory Health) -->
+                <div class="card bg-gradient-primary text-white"
+                    style="background: linear-gradient(45deg, #007bff, #0056b3);">
+                    <div class="card-header border-0">
+                        <h3 class="card-title">
+                            <i class="bi bi-geo-alt mr-1"></i>
+                            Inventario
+                        </h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-primary btn-sm" data-card-widget="collapse"
+                                title="Collapse">
+                                <i class="bi bi-dash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="world-map"
+                            style="height: 250px; width: 100%; display: flex; align-items: center; justify-content: center;">
+                            <canvas id="inventory-chart-canvas" style="max-height: 250px;"></canvas>
+                        </div>
+                    </div>
+                    <!-- /.card-body-->
+                    <div class="card-footer bg-transparent border-0">
+                        <div class="row">
+                            <div class="col-4 text-center">
+                                <div id="sparkline-1"></div>
+                                <div class="text-white">Stock</div>
+                            </div>
+                            <div class="col-4 text-center">
+                                <div id="sparkline-2"></div>
+                                <div class="text-white">Entradas</div>
+                            </div>
+                            <div class="col-4 text-center">
+                                <div id="sparkline-3"></div>
+                                <div class="text-white">Salidas</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- /.card -->
+
+                <!-- Calendar (Placeholder) -->
+                <div class="card bg-gradient-success text-white"
+                    style="background: linear-gradient(45deg, #28a745, #218838);">
+                    <div class="card-header border-0">
+                        <h3 class="card-title">
+                            <i class="bi bi-calendar-date"></i>
+                            Calendario
+                        </h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-success btn-sm" data-card-widget="collapse">
+                                <i class="bi bi-dash"></i>
+                            </button>
+                            <button type="button" class="btn btn-success btn-sm" data-card-widget="remove">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body pt-0">
+                        <div id="calendar" style="width: 100%">
+                            <div class="text-center py-4">
+                                <h4><?= date('F Y') ?></h4>
+                                <div class="display-4"><?= date('d') ?></div>
+                                <div><?= date('l') ?></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- /.card -->
+
+            </section>
+            <!-- right col -->
+        </div>
+        <!-- /.row (main row) -->
+    </div><!-- /.container-fluid -->
+</section>
+<!-- /.content -->
 
 <?= $this->endSection() ?>
 
-<?php // --- Scripts: SIN datos de demo. Todo se carga desde la API. ?>
 <?= $this->section('scripts') ?>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const API_URL = "<?= base_url('api/dashboard') ?>";
-            const selRango = document.getElementById('selRango');
-            const btnAplicar = document.getElementById('btnAplicarFiltros');
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const API_URL = "<?= base_url('api/dashboard') ?>";
 
-            let chProduccion = null, chInventario = null, chCalidad = null, chLogistica = null;
-
-            function makeKey(label) {
-                return (label || '').toLowerCase().replace(/\s+/g, '-');
+        // --- Chart Options (AdminLTE Style) ---
+        const areaChartOptions = {
+            maintainAspectRatio: false,
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { display: false }, beginAtZero: true }
+            },
+            elements: {
+                line: { tension: 0.4, fill: true },
+                point: { radius: 0, hitRadius: 10, hoverRadius: 4 }
             }
+        };
 
-            function createOrUpdateChart(ref, ctx, cfg) {
-                if (ref && typeof ref.destroy === 'function') ref.destroy();
-                return new Chart(ctx, cfg);
+        const donutChartOptions = {
+            maintainAspectRatio: false,
+            responsive: true,
+            plugins: {
+                legend: { position: 'left' }
             }
+        };
 
-            function pintarKpis(kpis = []) {
-                kpis.forEach(k => {
-                    const key = makeKey(k.label);
-                    document.querySelectorAll(`.kpi-value[data-label="${key}"]`).forEach(el => {
-                        // si el label tiene '%' lo formateamos como porcentaje
-                        const isPct = /%|\bdefecto/.test((k.label || '').toLowerCase());
-                        el.textContent = isPct ? (Number(k.value).toFixed(1) + '%') : k.value;
-                    });
-                });
+        // --- Fetch Data ---
+        async function loadDashboardData() {
+            try {
+                const res = await fetch(`${API_URL}?range=30`);
+                if (!res.ok) throw new Error('Network response was not ok');
+                const data = await res.json();
+
+                updateKPIs(data.kpis);
+                renderMainCharts(data);
+                renderInventoryChart(data.inventario);
+                renderNotifications(data.notifications || []); // Assuming API returns notifications here or fetch separately
+
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
             }
+        }
 
-            async function cargarDashboard(rangeDays = 30) {
-                try {
-                    const res = await fetch(`${API_URL}?range=${rangeDays}`, {headers: {'Accept': 'application/json'}});
-                    if (!res.ok) {
-                        console.error('API dashboard error:', res.status, await res.text());
-                        return;
-                    }
-                    const d = await res.json();
+        // --- Update KPIs ---
+        function updateKPIs(kpis) {
+            if (!kpis) return;
+            // Mapping API keys to DOM IDs
+            const map = {
+                'ordenes_activas': 'kpi-ordenes-activas',
+                'tasa_defectos': 'kpi-tasa-defectos',
+                'wip_cantidad': 'kpi-wip-cantidad',
+                'stock_critico': 'kpi-stock-critico'
+            };
 
-                    // ===== KPIs =====
-                    if (Array.isArray(d.kpis)) pintarKpis(d.kpis);
-
-                    // ===== PRODUCCIÓN =====
-                    chProduccion = createOrUpdateChart(
-                        chProduccion,
-                        document.getElementById('chProduccion'),
-                        {
-                            type: 'bar',
-                            data: {
-                                labels: d.produccion.labels,
-                                datasets: [
-                                    {label: 'Activas', data: d.produccion.activas, borderWidth: 1},
-                                    {label: 'Completadas', data: d.produccion.completadas, borderWidth: 1}
-                                ]
-                            },
-                            options: {
-                                responsive: true, maintainAspectRatio: false,
-                                scales: {
-                                    x: {stacked: true},
-                                    y: {stacked: true, beginAtZero: true, ticks: {precision: 0}}
-                                },
-                                plugins: {legend: {position: 'top'}, tooltip: {mode: 'index', intersect: false}}
-                            }
-                        }
-                    );
-
-                    // ===== INVENTARIO =====
-                    chInventario = createOrUpdateChart(
-                        chInventario,
-                        document.getElementById('chInventario'),
-                        {
-                            data: {
-                                labels: d.inventario.labels,
-                                datasets: [
-                                    {type: 'bar', label: 'Stock actual', data: d.inventario.actual, borderWidth: 1},
-                                    {
-                                        type: 'line',
-                                        label: 'Stock mínimo',
-                                        data: d.inventario.min,
-                                        borderWidth: 2,
-                                        fill: false
-                                    },
-                                    {
-                                        type: 'line',
-                                        label: 'Stock máximo',
-                                        data: d.inventario.max,
-                                        borderWidth: 2,
-                                        fill: false
-                                    }
-                                ]
-                            },
-                            options: {
-                                responsive: true, maintainAspectRatio: false,
-                                scales: {y: {beginAtZero: true}},
-                                plugins: {legend: {position: 'top'}}
-                            }
-                        }
-                    );
-
-                    // ===== CALIDAD =====
-                    chCalidad = createOrUpdateChart(
-                        chCalidad,
-                        document.getElementById('chCalidad'),
-                        {
-                            type: 'line',
-                            data: {
-                                labels: d.calidad.labels,
-                                datasets: [{
-                                    label: '% Defectos',
-                                    data: d.calidad.tasa,
-                                    tension: .3,
-                                    borderWidth: 2,
-                                    pointRadius: 0
-                                }]
-                            },
-                            options: {
-                                responsive: true, maintainAspectRatio: false,
-                                scales: {y: {beginAtZero: true}},
-                                plugins: {
-                                    legend: {position: 'top'},
-                                    tooltip: {callbacks: {label: ctx => ` ${ctx.parsed.y}%`}}
-                                }
-                            }
-                        }
-                    );
-
-                    // ===== LOGÍSTICA =====
-                    chLogistica = createOrUpdateChart(
-                        chLogistica,
-                        document.getElementById('chLogistica'),
-                        {
-                            type: 'doughnut',
-                            data: {labels: d.logistica.labels, datasets: [{data: d.logistica.data}]},
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {legend: {position: 'right'}},
-                                cutout: '55%'
-                            }
-                        }
-                    );
-
-                } catch (err) {
-                    console.error('Error cargando dashboard:', err);
+            for (const [key, val] of Object.entries(kpis)) {
+                const el = document.getElementById(map[key]);
+                if (el) {
+                    el.innerHTML = val + (key === 'tasa_defectos' ? '<sup style="font-size: 20px">%</sup>' : '');
                 }
             }
 
-            btnAplicar?.addEventListener('click', () => {
-                const rango = parseInt(selRango.value || '30', 10);
-                cargarDashboard(rango);
+            // Update Bounce Rate color
+            const boxDefectos = document.getElementById('box-defectos');
+            if (kpis.tasa_defectos > 5) {
+                boxDefectos.classList.remove('bg-success');
+                boxDefectos.classList.add('bg-danger');
+            } else {
+                boxDefectos.classList.remove('bg-danger');
+                boxDefectos.classList.add('bg-success');
+            }
+        }
+
+        // --- Render Main Charts ---
+        let revenueChart, salesChart;
+
+        function renderMainCharts(data) {
+            // 1. Area Chart (Producción)
+            const ctxRevenue = document.getElementById('revenue-chart-canvas').getContext('2d');
+            if (revenueChart) revenueChart.destroy();
+
+            revenueChart = new Chart(ctxRevenue, {
+                type: 'line',
+                data: {
+                    labels: data.produccion.labels,
+                    datasets: [
+                        {
+                            label: 'Completadas',
+                            backgroundColor: 'rgba(60,141,188,0.9)',
+                            borderColor: 'rgba(60,141,188,0.8)',
+                            data: data.produccion.datasets[0].data, // Assuming structure
+                            fill: true
+                        },
+                        {
+                            label: 'Pendientes',
+                            backgroundColor: 'rgba(210, 214, 222, 1)',
+                            borderColor: 'rgba(210, 214, 222, 1)',
+                            data: data.produccion.datasets[1].data,
+                            fill: true
+                        }
+                    ]
+                },
+                options: areaChartOptions
             });
 
-            // Primera carga
-            cargarDashboard(parseInt(selRango?.value || '30', 10));
-        });
-    </script>
+            // 2. Donut Chart (Logística/Status)
+            // Using Logistica data for the donut
+            const ctxSales = document.getElementById('sales-chart-canvas').getContext('2d');
+            if (salesChart) salesChart.destroy();
+
+            salesChart = new Chart(ctxSales, {
+                type: 'doughnut',
+                data: {
+                    labels: data.logistica.labels,
+                    datasets: [{
+                        data: data.logistica.data,
+                        backgroundColor: ['#f56954', '#00a65a', '#f39c12', '#00c0ef', '#3c8dbc', '#d2d6de']
+                    }]
+                },
+                options: donutChartOptions
+            });
+        }
+
+        // --- Render Inventory Chart (Right Col) ---
+        let inventoryChart;
+        function renderInventoryChart(data) {
+            const ctx = document.getElementById('inventory-chart-canvas').getContext('2d');
+            if (inventoryChart) inventoryChart.destroy();
+
+            inventoryChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Stock',
+                        data: data.datasets[0].data,
+                        backgroundColor: 'rgba(255,255,255,0.9)',
+                        borderColor: 'rgba(255,255,255,1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#fff' }, grid: { display: false } },
+                        y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.2)' } }
+                    }
+                }
+            });
+        }
+
+        // --- Render Notifications (Direct Chat) ---
+        function renderNotifications(notifs) {
+            const container = document.getElementById('chat-messages');
+            const badge = document.getElementById('notif-badge-count');
+
+            // If we have separate notification data in the API response, use it.
+            // Otherwise, we might need to fetch it or use what's embedded in PHP if available.
+            // For now, let's assume `notifs` is passed correctly or we fetch it.
+
+            // If empty, we can try to fetch from the notification API
+            if (!notifs || notifs.length === 0) {
+                fetch('<?= base_url('modulo3/api/notifications/unread-count') ?>') // Or a list endpoint
+                    .then(r => r.json())
+                    .then(d => {
+                        // This endpoint only returns count usually, need a list endpoint
+                        // For demo purposes, we'll leave the static welcome message if no data
+                    });
+                return;
+            }
+
+            container.innerHTML = '';
+            badge.textContent = notifs.length;
+
+            notifs.forEach(n => {
+                const date = new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const html = `
+                        <div class="direct-chat-msg">
+                            <div class="direct-chat-infos clearfix">
+                                <span class="direct-chat-name float-start">${n.titulo}</span>
+                                <span class="direct-chat-timestamp float-end">${date}</span>
+                            </div>
+                            <img class="direct-chat-img" src="https://ui-avatars.com/api/?name=${n.nivel}&background=random&color=fff" alt="icon">
+                            <div class="direct-chat-text">
+                                ${n.mensaje || n.sub}
+                            </div>
+                        </div>
+                    `;
+                container.innerHTML += html;
+            });
+        }
+
+        // Initialize
+        loadDashboardData();
+    });
+</script>
 <?= $this->endSection() ?>

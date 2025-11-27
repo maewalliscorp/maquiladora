@@ -5,15 +5,15 @@ use CodeIgniter\Model;
 
 class MrpOcModel extends Model
 {
-    protected $table            = 'mrp_oc';
-    protected $primaryKey       = 'id';
-    protected $returnType       = 'array';
-    protected $useSoftDeletes   = false;
+    protected $table = 'mrp_oc';
+    protected $primaryKey = 'id';
+    protected $returnType = 'array';
+    protected $useSoftDeletes = false;
 
-    protected $allowedFields    = ['prov','mat','cant','u','eta'];
+    protected $allowedFields = ['prov', 'mat', 'cant', 'u', 'eta', 'pdf_path'];
 
-    protected $useTimestamps    = true;
-    protected $dateFormat       = 'datetime';
-    protected $createdField     = 'created_at';
-    protected $updatedField     = 'updated_at';
+    protected $useTimestamps = true;
+    protected $dateFormat = 'datetime';
+    protected $createdField = 'created_at';
+    protected $updatedField = 'updated_at';
 }

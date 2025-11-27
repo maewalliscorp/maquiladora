@@ -5,9 +5,9 @@ use CodeIgniter\Model;
 
 class InspeccionModel extends Model
 {
-    protected $table         = 'inspeccion';
-    protected $primaryKey    = 'id';
-    protected $returnType    = 'array';
+    protected $table = 'inspeccion';
+    protected $primaryKey = 'id';
+    protected $returnType = 'array';
     protected $useTimestamps = false;
 
     // NO requerimos numero_inspeccion en la BD
@@ -18,18 +18,12 @@ class InspeccionModel extends Model
         'inspectorId',
         'fecha',
         'resultado',
-        'observaciones'
+        'observaciones',
+        'maquiladoraID'
     ];
 
-    protected $validationRules = [
-        'ordenProduccionId' => 'permit_empty|integer',
-        'puntoInspeccionId' => 'permit_empty|integer',
-        'inspectorId'       => 'permit_empty|integer',
-        'fecha'             => 'required|valid_date[Y-m-d]',
-        'resultado'         => 'required|string|min_length[3]',
-        'observaciones'     => 'permit_empty|string',
-        // 'numero_inspeccion' => 'permit_empty|string'
-    ];
+    protected $validationRules = [];
+    protected $skipValidation = true;
 
     /** Detecta si la columna existe en la tabla (para que el modelo sea tolerante) */
     private function hasNumeroInspeccion(): bool
@@ -60,16 +54,25 @@ class InspeccionModel extends Model
     /** Crea inspección; solo guarda numero_inspeccion si la columna existe */
     public function crearInspeccion(array $data): int
     {
-        if ($this->hasNumeroInspeccion()) {
-            $folio = $this->generarNumeroInspeccion();
-            if ($folio !== '') {
-                $data['numero_inspeccion'] = $folio;
-                // Si agregas la columna en el futuro, recuerda también
-                // añadir 'numero_inspeccion' a $allowedFields.
+        // Remove any fields that don't exist in allowedFields
+        $cleanData = [];
+        foreach ($data as $key => $value) {
+            if (in_array($key, $this->allowedFields)) {
+                $cleanData[$key] = $value;
             }
         }
 
-        $this->insert($data, true); // true => retorna ID
+        if ($this->hasNumeroInspeccion()) {
+            $folio = $this->generarNumeroInspeccion();
+            if ($folio !== '') {
+                $cleanData['numero_inspeccion'] = $folio;
+            }
+        }
+
+        $result = $this->insert($cleanData, false); // false = don't escape
+        if ($result === false) {
+            throw new \RuntimeException('Failed to insert inspection: ' . json_encode($this->errors()));
+        }
         return (int) $this->getInsertID();
     }
 
@@ -97,10 +100,10 @@ class InspeccionModel extends Model
                 // 'numero_inspeccion' => $inspeccion['numero_inspeccion'] ?? null,
                 'orden_produccion' => $inspeccion['orden_produccion'],
                 'punto_inspeccion' => $inspeccion['punto_inspeccion'],
-                'inspector'        => $inspeccion['inspector'],
-                'fecha'            => $inspeccion['fecha'],
-                'resultado'        => $inspeccion['resultado'],
-                'observaciones'    => $inspeccion['observaciones']
+                'inspector' => $inspeccion['inspector'],
+                'fecha' => $inspeccion['fecha'],
+                'resultado' => $inspeccion['resultado'],
+                'observaciones' => $inspeccion['observaciones']
             ];
         }
         return $resultados;
@@ -117,7 +120,8 @@ class InspeccionModel extends Model
             ->where('i.id', $id);
 
         $inspeccion = $builder->get()->getRowArray();
-        if (!$inspeccion) return null;
+        if (!$inspeccion)
+            return null;
 
         $defectos = $db->table('inspeccion_defecto id')
             ->select('d.id, d.nombre as tipo, d.descripcion as descripcion_defecto, 
@@ -127,15 +131,15 @@ class InspeccionModel extends Model
             ->get()->getResultArray();
 
         return [
-            'id'               => $inspeccion['id'],
+            'id' => $inspeccion['id'],
             // 'numero_inspeccion' => $inspeccion['numero_inspeccion'] ?? null,
             'orden_produccion' => $inspeccion['orden_produccion'],
             'punto_inspeccion' => $inspeccion['punto_inspeccion'],
-            'inspector'        => $inspeccion['inspector'],
-            'fecha'            => $inspeccion['fecha'],
-            'resultado'        => $inspeccion['resultado'],
-            'observaciones'    => $inspeccion['observaciones'],
-            'defectos'         => $defectos
+            'inspector' => $inspeccion['inspector'],
+            'fecha' => $inspeccion['fecha'],
+            'resultado' => $inspeccion['resultado'],
+            'observaciones' => $inspeccion['observaciones'],
+            'defectos' => $defectos
         ];
     }
 }

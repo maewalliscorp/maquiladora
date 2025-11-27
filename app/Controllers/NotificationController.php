@@ -1,0 +1,152 @@
+<?php
+
+namespace App\Controllers;
+
+use App\Models\NotificacionModel;
+use App\Models\UsuarioNotificacionModel;
+use CodeIgniter\RESTful\ResourceController;
+
+class NotificationController extends ResourceController
+{
+    protected $notificationModel;
+    protected $userNotificationModel;
+    protected $format = 'json';
+
+    public function __construct()
+    {
+        $this->notificationModel = new NotificacionModel();
+        $this->userNotificationModel = new UsuarioNotificacionModel();
+    }
+
+    /**
+     * Get current user and maquiladora from session
+     */
+    protected function getCurrentUserData(): array
+    {
+        $session = session();
+        return [
+            'userId' => $session->get('userId') ?? 1, // Default to 1 for testing
+            'maquiladoraId' => $session->get('maquiladoraID') ?? 1 // Default to 1 for testing
+        ];
+    }
+
+    /**
+     * GET /api/notifications
+     * Get recent notifications with read status
+     */
+    public function index()
+    {
+        $userData = $this->getCurrentUserData();
+        $limit = $this->request->getVar('limit') ?? 10;
+
+        $notifications = $this->notificationModel->getWithReadStatus(
+            $userData['maquiladoraId'],
+            $userData['userId'],
+            (int) $limit
+        );
+
+        // Add time ago for each notification
+        foreach ($notifications as &$notification) {
+            $notification['time_ago'] = $this->timeAgo($notification['created_at']);
+        }
+
+        return $this->respond([
+            'success' => true,
+            'data' => $notifications
+        ]);
+    }
+
+    /**
+     * GET /api/notifications/unread-count
+     * Get count of unread notifications
+     */
+    public function unreadCount()
+    {
+        $userData = $this->getCurrentUserData();
+
+        $count = $this->notificationModel->getUnreadCount(
+            $userData['maquiladoraId'],
+            $userData['userId']
+        );
+
+        return $this->respond([
+            'success' => true,
+            'count' => $count
+        ]);
+    }
+
+    /**
+     * POST /api/notifications/:id/read
+     * Mark notification as read
+     */
+    public function markAsRead($id = null)
+    {
+        if (!$id) {
+            return $this->fail('ID de notificación requerido', 400);
+        }
+
+        $userData = $this->getCurrentUserData();
+
+        $success = $this->userNotificationModel->markAsRead(
+            (int) $id,
+            $userData['userId'],
+            $userData['maquiladoraId']
+        );
+
+        if ($success) {
+            return $this->respond([
+                'success' => true,
+                'message' => 'Notificación marcada como leída'
+            ]);
+        } else {
+            return $this->failServerError('Error al marcar notificación');
+        }
+    }
+
+    /**
+     * POST /api/notifications/read-all
+     * Mark all notifications as read
+     */
+    public function markAllAsRead()
+    {
+        $userData = $this->getCurrentUserData();
+
+        $success = $this->userNotificationModel->markAllAsRead(
+            $userData['userId'],
+            $userData['maquiladoraId']
+        );
+
+        if ($success) {
+            return $this->respond([
+                'success' => true,
+                'message' => 'Todas las notificaciones marcadas como leídas'
+            ]);
+        } else {
+            return $this->failServerError('Error al marcar notificaciones');
+        }
+    }
+
+    /**
+     * Helper: Convert timestamp to "time ago" format
+     */
+    protected function timeAgo($datetime): string
+    {
+        $timestamp = strtotime($datetime);
+        $diff = time() - $timestamp;
+
+        if ($diff < 60) {
+            return 'Justo ahora';
+        } elseif ($diff < 3600) {
+            $mins = floor($diff / 60);
+            return "Hace {$mins} " . ($mins == 1 ? 'minuto' : 'minutos');
+        } elseif ($diff < 86400) {
+            $hours = floor($diff / 3600);
+            return "Hace {$hours} " . ($hours == 1 ? 'hora' : 'horas');
+        } elseif ($diff < 604800) {
+            $days = floor($diff / 86400);
+            return "Hace {$days} " . ($days == 1 ? 'día' : 'días');
+        } else {
+            return date('d/m/Y', $timestamp);
+        }
+    }
+}

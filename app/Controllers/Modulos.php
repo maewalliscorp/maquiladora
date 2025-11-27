@@ -10,7 +10,7 @@ class Modulos extends BaseController
     {
         $base = [
             'notifCount' => $data['notifCount'] ?? 0,
-            'userEmail'  => session()->get('email') ?: 'admin@fabrica.com',
+            'userEmail' => session()->get('email') ?: 'admin@fabrica.com',
         ];
         return array_merge($base, $data);
     }
@@ -19,10 +19,16 @@ class Modulos extends BaseController
     public function m1_pedido_eliminar()
     {
         $method = strtolower($this->request->getMethod());
-        if ($method === 'options') { return $this->response->setJSON(['ok'=>true]); }
-        if ($method !== 'post') { return $this->response->setStatusCode(405)->setJSON(['error'=>'Método no permitido']); }
-        $ocId = (int)($this->request->getPost('id') ?? $this->request->getVar('id') ?? $this->request->getPost('ocId') ?? 0);
-        if ($ocId <= 0) { return $this->response->setStatusCode(400)->setJSON(['error'=>'ID inválido']); }
+        if ($method === 'options') {
+            return $this->response->setJSON(['ok' => true]);
+        }
+        if ($method !== 'post') {
+            return $this->response->setStatusCode(405)->setJSON(['error' => 'Método no permitido']);
+        }
+        $ocId = (int) ($this->request->getPost('id') ?? $this->request->getVar('id') ?? $this->request->getPost('ocId') ?? 0);
+        if ($ocId <= 0) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'ID inválido']);
+        }
         $db = \Config\Database::connect();
         // Maquiladora del usuario autenticado
         $maquiladoraId = session()->get('maquiladora_id');
@@ -33,12 +39,19 @@ class Modulos extends BaseController
             $opIds = [];
             try {
                 $rows = $db->query('SELECT id FROM orden_produccion WHERE ordenCompraId = ?', [$ocId])->getResultArray();
-                foreach ($rows as $r) { if (isset($r['id'])) $opIds[] = (int)$r['id']; }
+                foreach ($rows as $r) {
+                    if (isset($r['id']))
+                        $opIds[] = (int) $r['id'];
+                }
             } catch (\Throwable $e) {
                 try {
                     $rows = $db->query('SELECT id FROM OrdenProduccion WHERE ordenCompraId = ?', [$ocId])->getResultArray();
-                    foreach ($rows as $r) { if (isset($r['id'])) $opIds[] = (int)$r['id']; }
-                } catch (\Throwable $e2) { /* ignore */ }
+                    foreach ($rows as $r) {
+                        if (isset($r['id']))
+                            $opIds[] = (int) $r['id'];
+                    }
+                } catch (\Throwable $e2) { /* ignore */
+                }
             }
 
             foreach ($opIds as $opId) {
@@ -46,40 +59,87 @@ class Modulos extends BaseController
                 $insIds = [];
                 try {
                     $rins = $db->query('SELECT id FROM inspeccion WHERE ordenProduccionId = ?', [$opId])->getResultArray();
-                    foreach ($rins as $ri) { if (isset($ri['id'])) $insIds[] = (int)$ri['id']; }
+                    foreach ($rins as $ri) {
+                        if (isset($ri['id']))
+                            $insIds[] = (int) $ri['id'];
+                    }
                 } catch (\Throwable $e) {
                     try {
                         $rins = $db->query('SELECT id FROM Inspeccion WHERE ordenProduccionId = ?', [$opId])->getResultArray();
-                        foreach ($rins as $ri) { if (isset($ri['id'])) $insIds[] = (int)$ri['id']; }
-                    } catch (\Throwable $e2) { /* ignore */ }
-                }
-                if (!empty($insIds)) {
-                    try { $db->table('reproceso')->whereIn('inspeccionId', $insIds)->delete(); } catch (\Throwable $e) {
-                        try { $db->table('Reproceso')->whereIn('inspeccionId', $insIds)->delete(); } catch (\Throwable $e2) { /* ignore */ }
+                        foreach ($rins as $ri) {
+                            if (isset($ri['id']))
+                                $insIds[] = (int) $ri['id'];
+                        }
+                    } catch (\Throwable $e2) { /* ignore */
                     }
                 }
-                try { $db->table('inspeccion')->where('ordenProduccionId', $opId)->delete(); } catch (\Throwable $e) {
-                    try { $db->table('Inspeccion')->where('ordenProduccionId', $opId)->delete(); } catch (\Throwable $e2) { /* ignore */ }
+                if (!empty($insIds)) {
+                    try {
+                        $db->table('reproceso')->whereIn('inspeccionId', $insIds)->delete();
+                    } catch (\Throwable $e) {
+                        try {
+                            $db->table('Reproceso')->whereIn('inspeccionId', $insIds)->delete();
+                        } catch (\Throwable $e2) { /* ignore */
+                        }
+                    }
                 }
-                try { $db->table('asignacion_tarea')->where('ordenProduccionId', $opId)->delete(); } catch (\Throwable $e) { /* ignore */ }
+                try {
+                    $db->table('inspeccion')->where('ordenProduccionId', $opId)->delete();
+                } catch (\Throwable $e) {
+                    try {
+                        $db->table('Inspeccion')->where('ordenProduccionId', $opId)->delete();
+                    } catch (\Throwable $e2) { /* ignore */
+                    }
+                }
+                try {
+                    $db->table('asignacion_tarea')->where('ordenProduccionId', $opId)->delete();
+                } catch (\Throwable $e) { /* ignore */
+                }
                 // Borrar OP
                 $okDelOp = false;
-                try { $okDelOp = (bool)$db->table('orden_produccion')->where('id', $opId)->delete(); } catch (\Throwable $e) { $okDelOp = false; }
-                if (!$okDelOp) { try { $okDelOp = (bool)$db->table('OrdenProduccion')->where('id', $opId)->delete(); } catch (\Throwable $e2) { $okDelOp = false; } }
+                try {
+                    $okDelOp = (bool) $db->table('orden_produccion')->where('id', $opId)->delete();
+                } catch (\Throwable $e) {
+                    $okDelOp = false;
+                }
+                if (!$okDelOp) {
+                    try {
+                        $okDelOp = (bool) $db->table('OrdenProduccion')->where('id', $opId)->delete();
+                    } catch (\Throwable $e2) {
+                        $okDelOp = false;
+                    }
+                }
             }
 
             // Finalmente, borrar la Orden de Compra
             $okOc = false;
-            try { $okOc = (bool)$db->table('orden_compra')->where('id', $ocId)->delete(); } catch (\Throwable $e) { $okOc = false; }
-            if (!$okOc) { try { $okOc = (bool)$db->table('OrdenCompra')->where('id', $ocId)->delete(); } catch (\Throwable $e2) { $okOc = false; } }
-            if (!$okOc) { throw new \Exception('No se pudo eliminar el pedido (Orden de Compra)'); }
+            try {
+                $okOc = (bool) $db->table('orden_compra')->where('id', $ocId)->delete();
+            } catch (\Throwable $e) {
+                $okOc = false;
+            }
+            if (!$okOc) {
+                try {
+                    $okOc = (bool) $db->table('OrdenCompra')->where('id', $ocId)->delete();
+                } catch (\Throwable $e2) {
+                    $okOc = false;
+                }
+            }
+            if (!$okOc) {
+                throw new \Exception('No se pudo eliminar el pedido (Orden de Compra)');
+            }
 
             $db->transComplete();
-            if ($db->transStatus() === false) { throw new \Exception('Error en la transacción'); }
-            return $this->response->setJSON(['ok'=>true, 'id'=>$ocId]);
+            if ($db->transStatus() === false) {
+                throw new \Exception('Error en la transacción');
+            }
+            return $this->response->setJSON(['ok' => true, 'id' => $ocId]);
         } catch (\Throwable $e) {
-            try { $db->transRollback(); } catch (\Throwable $e2) {}
-            return $this->response->setStatusCode(500)->setJSON(['error'=>'Error al eliminar pedido: '.$e->getMessage()]);
+            try {
+                $db->transRollback();
+            } catch (\Throwable $e2) {
+            }
+            return $this->response->setStatusCode(500)->setJSON(['error' => 'Error al eliminar pedido: ' . $e->getMessage()]);
         }
     }
 
@@ -88,14 +148,14 @@ class Modulos extends BaseController
      */
     public function m11_obtener_usuario($id = null)
     {
-        $id = (int)($id ?? 0);
+        $id = (int) ($id ?? 0);
         if ($id <= 0) {
             return $this->response->setStatusCode(400)->setJSON([
                 'success' => false,
                 'message' => 'ID inválido',
             ]);
         }
-        
+
         // Conexión a base de datos
         $db = \Config\Database::connect();
         try {
@@ -113,7 +173,9 @@ class Modulos extends BaseController
             try {
                 $map = $db->table('usuario_rol')->where('usuarioIdFK', $id)->get()->getRowArray();
                 $rolActual = $map['rolIdFK'] ?? null;
-            } catch (\Throwable $e) { $rolActual = null; }
+            } catch (\Throwable $e) {
+                $rolActual = null;
+            }
 
             // Alias a 'name' para coincidir con el JS de la vista, filtrando por maquiladora cuando aplique
             $rolesBuilder = $db->table('rol')->select('id, nombre as name');
@@ -122,22 +184,23 @@ class Modulos extends BaseController
                 try {
                     $fields = $db->getFieldNames('rol');
                     if (in_array('maquiladoraID', $fields, true)) {
-                        $rolesBuilder->where('maquiladoraID', (int)$maquiladoraId);
+                        $rolesBuilder->where('maquiladoraID', (int) $maquiladoraId);
                     }
-                } catch (\Throwable $e) {}
+                } catch (\Throwable $e) {
+                }
             }
-            $roles = $rolesBuilder->orderBy('nombre','ASC')->get()->getResultArray();
+            $roles = $rolesBuilder->orderBy('nombre', 'ASC')->get()->getResultArray();
 
             // Maquiladoras
             $maqs = $db->table('maquiladora')->select('idmaquiladora as id, Nombre_Maquila as nombre')
-                    ->orderBy('Nombre_Maquila','ASC')->get()->getResultArray();
+                ->orderBy('Nombre_Maquila', 'ASC')->get()->getResultArray();
 
             $out = [
-                'id' => (int)$user['id'],
+                'id' => (int) $user['id'],
                 'username' => $user['username'] ?? '',
                 'email' => $user['correo'] ?? '',
                 'maquiladoraIdFK' => $user['maquiladoraIdFK'] ?? null,
-                'activo' => (int)($user['active'] ?? 1),
+                'activo' => (int) ($user['active'] ?? 1),
                 'rol_id' => $rolActual,
                 'roles' => $roles,
                 'maquiladoras' => $maqs,
@@ -159,49 +222,53 @@ class Modulos extends BaseController
     public function m11_actualizar_usuario()
     {
         // Aceptar la petición sin forzar método (la ruta es POST, pero algunos entornos envían como AJAX genérico)
-        $id = (int)($this->request->getPost('id') ?? $this->request->getVar('id'));
+        $id = (int) ($this->request->getPost('id') ?? $this->request->getVar('id'));
         if ($id <= 0) {
             return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'ID inválido']);
         }
 
-        $nombre = trim((string)($this->request->getPost('nombre') ?? $this->request->getVar('nombre') ?? ''));
-        $email  = trim((string)($this->request->getPost('email')  ?? $this->request->getVar('email')  ?? ''));
-        $rolId  = $this->request->getPost('rol') ?? $this->request->getVar('rol');
-        $maqId  = $this->request->getPost('idmaquiladora') ?? $this->request->getVar('idmaquiladora');
-        $activo = (int)($this->request->getPost('activo') ?? $this->request->getVar('activo') ?? 1);
-        $pwd    = (string)($this->request->getPost('password') ?? $this->request->getVar('password') ?? '');
+        $nombre = trim((string) ($this->request->getPost('nombre') ?? $this->request->getVar('nombre') ?? ''));
+        $email = trim((string) ($this->request->getPost('email') ?? $this->request->getVar('email') ?? ''));
+        $rolId = $this->request->getPost('rol') ?? $this->request->getVar('rol');
+        $maqId = $this->request->getPost('idmaquiladora') ?? $this->request->getVar('idmaquiladora');
+        $activo = (int) ($this->request->getPost('activo') ?? $this->request->getVar('activo') ?? 1);
+        $pwd = (string) ($this->request->getPost('password') ?? $this->request->getVar('password') ?? '');
 
         $db = \Config\Database::connect();
         try {
             $db->transStart();
             $upd = [
                 'username' => $nombre,
-                'correo'   => $email,
-                'active'   => $activo,
+                'correo' => $email,
+                'active' => $activo,
             ];
             if ($maqId !== null && $maqId !== '') {
-                $upd['maquiladoraIdFK'] = (int)$maqId;
+                $upd['maquiladoraIdFK'] = (int) $maqId;
             }
             if ($pwd !== '') {
-                $upd['password'] = password_hash($pwd, PASSWORD_BCRYPT, ['cost'=>10]);
+                $upd['password'] = password_hash($pwd, PASSWORD_BCRYPT, ['cost' => 10]);
             }
             $db->table('users')->where('id', $id)->update($upd);
-            
+
             // Actualizar rol: borrar asignaciones previas del usuario y dejar solo una
-            if ($rolId !== null && $rolId !== '' && (int)$rolId > 0) {
+            if ($rolId !== null && $rolId !== '' && (int) $rolId > 0) {
                 $db->table('usuario_rol')->where('usuarioIdFK', $id)->delete();
 
                 // Como la PK incluye 'id' y no es autoincrement, generamos uno único (MAX(id)+1)
                 $nextId = 1;
                 try {
                     $rowNext = $db->query('SELECT COALESCE(MAX(id),0)+1 AS nextId FROM usuario_rol')->getRowArray();
-                    if ($rowNext && isset($rowNext['nextId'])) { $nextId = (int)$rowNext['nextId']; }
-                } catch (\Throwable $e) { $nextId = time(); }
+                    if ($rowNext && isset($rowNext['nextId'])) {
+                        $nextId = (int) $rowNext['nextId'];
+                    }
+                } catch (\Throwable $e) {
+                    $nextId = time();
+                }
 
                 $okRole = $db->table('usuario_rol')->insert([
-                    'id'           => $nextId,
-                    'usuarioIdFK'  => $id,
-                    'rolIdFK'      => (int)$rolId,
+                    'id' => $nextId,
+                    'usuarioIdFK' => $id,
+                    'rolIdFK' => (int) $rolId,
                 ]);
                 if (!$okRole) {
                     $dbErr = $db->error();
@@ -214,15 +281,24 @@ class Modulos extends BaseController
             if ($db->transStatus() === false) {
                 $dbErr = $db->error();
                 $dbMsg = isset($dbErr['message']) && $dbErr['message'] ? $dbErr['message'] : 'Error en la transacción';
-                try { log_message('error', 'm11_actualizar_usuario transStatus=false: ' . $dbMsg); } catch (\Throwable $e) {}
+                try {
+                    log_message('error', 'm11_actualizar_usuario transStatus=false: ' . $dbMsg);
+                } catch (\Throwable $e) {
+                }
                 throw new \Exception($dbMsg);
             }
 
             return $this->response->setJSON(['success' => true, 'message' => 'Usuario y rol actualizados correctamente']);
         } catch (\Throwable $e) {
-            try { $db->transRollback(); } catch (\Throwable $e3) {}
+            try {
+                $db->transRollback();
+            } catch (\Throwable $e3) {
+            }
             $errMsg = $e->getMessage();
-            try { log_message('error', 'm11_actualizar_usuario exception: ' . $errMsg); } catch (\Throwable $e2) {}
+            try {
+                log_message('error', 'm11_actualizar_usuario exception: ' . $errMsg);
+            } catch (\Throwable $e2) {
+            }
             return $this->response->setStatusCode(500)->setJSON([
                 'success' => false,
                 'message' => 'Error al actualizar: ' . $errMsg,
@@ -238,10 +314,11 @@ class Modulos extends BaseController
     public function m11_eliminar_usuario()
     {
         // Aceptar la petición sin forzar método, la ruta ya limita a POST
-        $id = (int)($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
+        $id = (int) ($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
         if ($id <= 0) {
             return $this->response->setStatusCode(400)->setJSON([
-                'success' => false, 'message' => 'ID inválido'
+                'success' => false,
+                'message' => 'ID inválido'
             ]);
         }
 
@@ -288,7 +365,7 @@ class Modulos extends BaseController
         if ($method !== 'post') {
             return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
         }
-        $id = (int)($id ?? 0);
+        $id = (int) ($id ?? 0);
         if ($id <= 0) {
             return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
         }
@@ -298,32 +375,42 @@ class Modulos extends BaseController
         // Datos a actualizar
         $dataDiseno = [];
         $dataVersion = [];
-        $mapGet = function(string $k) { return trim((string)($this->request->getPost($k) ?? '')); };
-        foreach (['codigo','nombre','descripcion'] as $k) {
-            $v = $mapGet($k); if ($v !== '') { $dataDiseno[$k] = $v; }
+        $mapGet = function (string $k) {
+            return trim((string) ($this->request->getPost($k) ?? ''));
+        };
+        foreach (['codigo', 'nombre', 'descripcion'] as $k) {
+            $v = $mapGet($k);
+            if ($v !== '') {
+                $dataDiseno[$k] = $v;
+            }
         }
         // clienteId (opcional, permitir limpiar cuando viene vacío)
         $cliIdUp = $this->request->getPost('clienteId') ?? $this->request->getVar('clienteId');
         if ($cliIdUp !== null) {
-            $dataDiseno['clienteId'] = ($cliIdUp === '') ? null : (int)$cliIdUp;
+            $dataDiseno['clienteId'] = ($cliIdUp === '') ? null : (int) $cliIdUp;
         }
         // precio_unidad (opcional, numérico)
         if ($this->request->getPost('precio_unidad') !== null && $this->request->getPost('precio_unidad') !== '') {
-            $pu = (float)$this->request->getPost('precio_unidad');
-            if ($pu >= 0) { $dataDiseno['precio_unidad'] = $pu; }
+            $pu = (float) $this->request->getPost('precio_unidad');
+            if ($pu >= 0) {
+                $dataDiseno['precio_unidad'] = $pu;
+            }
         }
         // Campos de catálogo (sexo, talla, tipo corte, tipo ropa)
         foreach (['idSexoFK', 'idTallasFK', 'idTipoCorteFK', 'idTipoRopaFK'] as $k) {
             $val = $this->request->getPost($k);
             if ($val !== null) {
-                $dataDiseno[$k] = ($val === '' || $val === '0') ? null : (int)$val;
+                $dataDiseno[$k] = ($val === '' || $val === '0') ? null : (int) $val;
             }
         }
-        foreach (['version','fecha','notas'] as $k) {
-            $v = $mapGet($k); if ($v !== '') { $dataVersion[$k] = $v; }
+        foreach (['version', 'fecha', 'notas'] as $k) {
+            $v = $mapGet($k);
+            if ($v !== '') {
+                $dataVersion[$k] = $v;
+            }
         }
         if ($this->request->getPost('aprobado') !== null) {
-            $dataVersion['aprobado'] = (int)(bool)$this->request->getPost('aprobado');
+            $dataVersion['aprobado'] = (int) (bool) $this->request->getPost('aprobado');
         }
 
         // Manejo de archivos (BLOBs)
@@ -332,20 +419,26 @@ class Modulos extends BaseController
             if ($fotoFile && $fotoFile->isValid()) {
                 $dataVersion['foto'] = file_get_contents($fotoFile->getTempName());
             }
-        } catch (\Throwable $e) { /* ignore */ }
+        } catch (\Throwable $e) { /* ignore */
+        }
         try {
             $patronFile = $this->request->getFile('patron');
             if ($patronFile && $patronFile->isValid()) {
                 $dataVersion['patron'] = file_get_contents($patronFile->getTempName());
             }
-        } catch (\Throwable $e) { /* ignore */ }
+        } catch (\Throwable $e) { /* ignore */
+        }
 
         $db->transStart();
         try {
             // Update diseno
             if (!empty($dataDiseno)) {
-                foreach (['diseno','Diseno'] as $t) {
-                    try { $db->table($t)->where('id', $id)->update($dataDiseno); break; } catch (\Throwable $e) { /* next */ }
+                foreach (['diseno', 'Diseno'] as $t) {
+                    try {
+                        $db->table($t)->where('id', $id)->update($dataDiseno);
+                        break;
+                    } catch (\Throwable $e) { /* next */
+                    }
                 }
             }
 
@@ -362,53 +455,77 @@ class Modulos extends BaseController
                         "SELECT dv.id FROM disenoversion dv WHERE dv.disenoId = ? ORDER BY dv.fecha DESC, dv.id DESC LIMIT 1",
                         [$id]
                     )->getRow('id');
-                } catch (\Throwable $e2) { $dvId = null; }
+                } catch (\Throwable $e2) {
+                    $dvId = null;
+                }
             }
 
-            if (!$dvId) { throw new \Exception('No se encontró la versión a actualizar'); }
+            if (!$dvId) {
+                throw new \Exception('No se encontró la versión a actualizar');
+            }
 
             // Update versión
             if (!empty($dataVersion)) {
-                foreach (['diseno_version','disenoversion'] as $t) {
-                    try { $db->table($t)->where('id', (int)$dvId)->update($dataVersion); break; } catch (\Throwable $e) { /* next */ }
+                foreach (['diseno_version', 'disenoversion'] as $t) {
+                    try {
+                        $db->table($t)->where('id', (int) $dvId)->update($dataVersion);
+                        break;
+                    } catch (\Throwable $e) { /* next */
+                    }
                 }
             }
 
             // Reemplazar materiales si vienen
             $materialsRaw = $this->request->getPost('materials');
             if ($materialsRaw) {
-                $materials = is_array($materialsRaw) ? $materialsRaw : json_decode((string)$materialsRaw, true);
+                $materials = is_array($materialsRaw) ? $materialsRaw : json_decode((string) $materialsRaw, true);
                 if (is_array($materials)) {
-                    $lmTables = ['lista_materiales','listamateriales','ListaMateriales'];
+                    $lmTables = ['lista_materiales', 'listamateriales', 'ListaMateriales'];
                     // Borrar actuales
                     foreach ($lmTables as $t) {
-                        try { $db->table($t)->where('disenoVersionId', (int)$dvId)->delete(); break; } catch (\Throwable $e) { /* next */ }
+                        try {
+                            $db->table($t)->where('disenoVersionId', (int) $dvId)->delete();
+                            break;
+                        } catch (\Throwable $e) { /* next */
+                        }
                     }
                     // Insertar nuevos
                     foreach ($materials as $m) {
-                        $artId = isset($m['articuloId']) ? (int)$m['articuloId'] : (int)($m['id'] ?? 0);
-                        if ($artId <= 0) { continue; }
-                        $cant  = isset($m['cantidadPorUnidad']) ? (float)$m['cantidadPorUnidad'] : (float)($m['cantidad'] ?? 0);
-                        $merma = isset($m['mermaPct']) ? (float)$m['mermaPct'] : (isset($m['merma']) ? (float)$m['merma'] : null);
+                        $artId = isset($m['articuloId']) ? (int) $m['articuloId'] : (int) ($m['id'] ?? 0);
+                        if ($artId <= 0) {
+                            continue;
+                        }
+                        $cant = isset($m['cantidadPorUnidad']) ? (float) $m['cantidadPorUnidad'] : (float) ($m['cantidad'] ?? 0);
+                        $merma = isset($m['mermaPct']) ? (float) $m['mermaPct'] : (isset($m['merma']) ? (float) $m['merma'] : null);
                         $rowLM = [
-                            'disenoVersionId'   => (int)$dvId,
-                            'articuloId'        => $artId,
+                            'disenoVersionId' => (int) $dvId,
+                            'articuloId' => $artId,
                             'cantidadPorUnidad' => $cant,
-                            'mermaPct'          => $merma,
+                            'mermaPct' => $merma,
                         ];
                         $inserted = false;
                         foreach ($lmTables as $t) {
-                            try { $db->table($t)->insert($rowLM); $inserted = true; break; } catch (\Throwable $e) { /* next */ }
+                            try {
+                                $db->table($t)->insert($rowLM);
+                                $inserted = true;
+                                break;
+                            } catch (\Throwable $e) { /* next */
+                            }
                         }
                         if (!$inserted) {
-                            try { $db->query('INSERT INTO lista_materiales (disenoVersionId, articuloId, cantidadPorUnidad, mermaPct) VALUES (?,?,?,?)', [(int)$dvId, $artId, $cant, $merma]); } catch (\Throwable $e) {}
+                            try {
+                                $db->query('INSERT INTO lista_materiales (disenoVersionId, articuloId, cantidadPorUnidad, mermaPct) VALUES (?,?,?,?)', [(int) $dvId, $artId, $cant, $merma]);
+                            } catch (\Throwable $e) {
+                            }
                         }
                     }
                 }
             }
 
             $db->transComplete();
-            if ($db->transStatus() === false) { throw new \Exception('Error en la transacción'); }
+            if ($db->transStatus() === false) {
+                throw new \Exception('Error en la transacción');
+            }
 
             return $this->response->setJSON(['ok' => true, 'message' => 'Diseño actualizado']);
         } catch (\Throwable $e) {
@@ -434,38 +551,46 @@ class Modulos extends BaseController
 
         $db = \Config\Database::connect();
         $dataDiseno = [
-            'codigo'      => trim((string)$this->request->getPost('codigo')) ?: null,
-            'nombre'      => trim((string)$this->request->getPost('nombre')),
-            'descripcion' => trim((string)$this->request->getPost('descripcion')) ?: null,
+            'codigo' => trim((string) $this->request->getPost('codigo')) ?: null,
+            'nombre' => trim((string) $this->request->getPost('nombre')),
+            'descripcion' => trim((string) $this->request->getPost('descripcion')) ?: null,
         ];
         // Asignar maquiladora del usuario autenticado, si existe en sesión
         $maquiladoraId = session()->get('maquiladora_id');
         if ($maquiladoraId) {
-            $dataDiseno['maquiladoraID'] = (int)$maquiladoraId;
+            $dataDiseno['maquiladoraID'] = (int) $maquiladoraId;
         }
         // clienteId opcional desde el modal
         $cid = $this->request->getPost('clienteId') ?? $this->request->getVar('clienteId');
         if ($cid !== null) {
-            $dataDiseno['clienteId'] = ($cid === '') ? null : (int)$cid;
+            $dataDiseno['clienteId'] = ($cid === '') ? null : (int) $cid;
         }
         // precio_unidad desde el modal (float)
         if (($p = $this->request->getPost('precio_unidad')) !== null && $p !== '') {
-            $dataDiseno['precio_unidad'] = (float)$p;
+            $dataDiseno['precio_unidad'] = (float) $p;
         }
         // FK opcionales (sexo, talla, tipo corte, tipo ropa)
-        $idSexo   = $this->request->getPost('idSexoFK')      ?? $this->request->getPost('id_sexo')      ?? $this->request->getPost('sexoId');
-        $idTalla  = $this->request->getPost('idTallasFK')    ?? $this->request->getPost('id_talla')     ?? $this->request->getPost('tallaId');
-        $idCorte  = $this->request->getPost('idTipoCorteFK') ?? $this->request->getPost('id_tipo_corte')?? $this->request->getPost('tipoCorteId');
-        $idRopa   = $this->request->getPost('idTipoRopaFK')  ?? $this->request->getPost('id_tipo_ropa') ?? $this->request->getPost('tipoRopaId');
-        if ($idSexo  !== null && $idSexo  !== '') { $dataDiseno['idSexoFK']      = (int)$idSexo; }
-        if ($idTalla !== null && $idTalla !== '') { $dataDiseno['IdTallasFK']    = (int)$idTalla; }
-        if ($idCorte !== null && $idCorte !== '') { $dataDiseno['idTipoCorteFK'] = (int)$idCorte; }
-        if ($idRopa  !== null && $idRopa  !== '') { $dataDiseno['idTipoRopaFK']  = (int)$idRopa; }
+        $idSexo = $this->request->getPost('idSexoFK') ?? $this->request->getPost('id_sexo') ?? $this->request->getPost('sexoId');
+        $idTalla = $this->request->getPost('idTallasFK') ?? $this->request->getPost('id_talla') ?? $this->request->getPost('tallaId');
+        $idCorte = $this->request->getPost('idTipoCorteFK') ?? $this->request->getPost('id_tipo_corte') ?? $this->request->getPost('tipoCorteId');
+        $idRopa = $this->request->getPost('idTipoRopaFK') ?? $this->request->getPost('id_tipo_ropa') ?? $this->request->getPost('tipoRopaId');
+        if ($idSexo !== null && $idSexo !== '') {
+            $dataDiseno['idSexoFK'] = (int) $idSexo;
+        }
+        if ($idTalla !== null && $idTalla !== '') {
+            $dataDiseno['IdTallasFK'] = (int) $idTalla;
+        }
+        if ($idCorte !== null && $idCorte !== '') {
+            $dataDiseno['idTipoCorteFK'] = (int) $idCorte;
+        }
+        if ($idRopa !== null && $idRopa !== '') {
+            $dataDiseno['idTipoRopaFK'] = (int) $idRopa;
+        }
         $dataVersion = [
-            'version'         => trim((string)$this->request->getPost('version')),
-            'fecha'           => $this->request->getPost('fecha') ?: date('Y-m-d'),
-            'notas'           => trim((string)$this->request->getPost('notas')) ?: null,
-            'aprobado'        => $this->request->getPost('aprobado') === null ? null : (int)(bool)$this->request->getPost('aprobado'),
+            'version' => trim((string) $this->request->getPost('version')),
+            'fecha' => $this->request->getPost('fecha') ?: date('Y-m-d'),
+            'notas' => trim((string) $this->request->getPost('notas')) ?: null,
+            'aprobado' => $this->request->getPost('aprobado') === null ? null : (int) (bool) $this->request->getPost('aprobado'),
         ];
 
         // Manejo de archivos (BLOBs)
@@ -474,14 +599,16 @@ class Modulos extends BaseController
             if ($fotoFile && $fotoFile->isValid()) {
                 $dataVersion['foto'] = file_get_contents($fotoFile->getTempName());
             }
-        } catch (\Throwable $e) { /* ignorar carga foto */ }
+        } catch (\Throwable $e) { /* ignorar carga foto */
+        }
 
         try {
             $patronFile = $this->request->getFile('patron');
             if ($patronFile && $patronFile->isValid()) {
                 $dataVersion['patron'] = file_get_contents($patronFile->getTempName());
             }
-        } catch (\Throwable $e) { /* ignorar carga patrón */ }
+        } catch (\Throwable $e) { /* ignorar carga patrón */
+        }
 
         // Validación mínima
         if ($dataDiseno['nombre'] === '' || $dataVersion['version'] === '') {
@@ -494,27 +621,37 @@ class Modulos extends BaseController
             $db->table('diseno')->insert($dataDiseno);
             // Revisar error inmediato
             $err = $db->error();
-            if (!empty($err['message'])) { throw new \Exception('Error al insertar en diseno: '.$err['message']); }
-            $idDiseno = (int)$db->insertID();
+            if (!empty($err['message'])) {
+                throw new \Exception('Error al insertar en diseno: ' . $err['message']);
+            }
+            $idDiseno = (int) $db->insertID();
             if ($idDiseno === 0) {
                 // Fallback: obtener último ID insertado por orden
                 try {
                     $row = $db->query('SELECT id FROM diseno ORDER BY id DESC LIMIT 1')->getRowArray();
-                    if ($row && isset($row['id'])) { $idDiseno = (int)$row['id']; }
-                } catch (\Throwable $e) { /* intentar mayúscula */ }
+                    if ($row && isset($row['id'])) {
+                        $idDiseno = (int) $row['id'];
+                    }
+                } catch (\Throwable $e) { /* intentar mayúscula */
+                }
             }
 
             if (!$idDiseno) {
                 // Fallback por mayúsculas
                 $db->table('Diseno')->insert($dataDiseno);
                 $err = $db->error();
-                if (!empty($err['message'])) { throw new \Exception('Error al insertar en Diseno: '.$err['message']); }
-                $idDiseno = (int)$db->insertID();
+                if (!empty($err['message'])) {
+                    throw new \Exception('Error al insertar en Diseno: ' . $err['message']);
+                }
+                $idDiseno = (int) $db->insertID();
                 if ($idDiseno === 0) {
                     try {
                         $row = $db->query('SELECT id FROM Diseno ORDER BY id DESC LIMIT 1')->getRowArray();
-                        if ($row && isset($row['id'])) { $idDiseno = (int)$row['id']; }
-                    } catch (\Throwable $e) { /* no se pudo obtener */ }
+                        if ($row && isset($row['id'])) {
+                            $idDiseno = (int) $row['id'];
+                        }
+                    } catch (\Throwable $e) { /* no se pudo obtener */
+                    }
                 }
             }
 
@@ -526,25 +663,35 @@ class Modulos extends BaseController
             $dataVersion['disenoId'] = $idDiseno;
             $db->table('diseno_version')->insert($dataVersion);
             $err = $db->error();
-            if (!empty($err['message'])) { throw new \Exception('Error al insertar en diseno_version: '.$err['message']); }
-            $idVersion = (int)$db->insertID();
+            if (!empty($err['message'])) {
+                throw new \Exception('Error al insertar en diseno_version: ' . $err['message']);
+            }
+            $idVersion = (int) $db->insertID();
             if ($idVersion === 0) {
                 try {
                     $row = $db->query('SELECT id FROM diseno_version WHERE disenoId = ? ORDER BY id DESC LIMIT 1', [$idDiseno])->getRowArray();
-                    if ($row && isset($row['id'])) { $idVersion = (int)$row['id']; }
-                } catch (\Throwable $e) { /* fallback abajo */ }
+                    if ($row && isset($row['id'])) {
+                        $idVersion = (int) $row['id'];
+                    }
+                } catch (\Throwable $e) { /* fallback abajo */
+                }
             }
             if (!$idVersion) {
                 // Fallback por mayúsculas / sin guiones
                 $db->table('disenoversion')->insert($dataVersion);
                 $err = $db->error();
-                if (!empty($err['message'])) { throw new \Exception('Error al insertar en disenoversion: '.$err['message']); }
-                $idVersion = (int)$db->insertID();
+                if (!empty($err['message'])) {
+                    throw new \Exception('Error al insertar en disenoversion: ' . $err['message']);
+                }
+                $idVersion = (int) $db->insertID();
                 if ($idVersion === 0) {
                     try {
                         $row = $db->query('SELECT id FROM disenoversion WHERE disenoId = ? ORDER BY id DESC LIMIT 1', [$idDiseno])->getRowArray();
-                        if ($row && isset($row['id'])) { $idVersion = (int)$row['id']; }
-                    } catch (\Throwable $e) { /* no se pudo obtener */ }
+                        if ($row && isset($row['id'])) {
+                            $idVersion = (int) $row['id'];
+                        }
+                    } catch (\Throwable $e) { /* no se pudo obtener */
+                    }
                 }
             }
 
@@ -555,58 +702,63 @@ class Modulos extends BaseController
             // Guardar materiales si vienen en la solicitud
             $materialsRaw = $this->request->getPost('materials');
             if ($materialsRaw) {
-                $materials = is_array($materialsRaw) ? $materialsRaw : json_decode((string)$materialsRaw, true);
+                $materials = is_array($materialsRaw) ? $materialsRaw : json_decode((string) $materialsRaw, true);
                 if (is_array($materials)) {
                     // Intentar varios nombres de tabla por compatibilidad
-                    $lmTables = ['lista_materiales','listamateriales','ListaMateriales'];
+                    $lmTables = ['lista_materiales', 'listamateriales', 'ListaMateriales'];
                     foreach ($materials as $m) {
-                        $artId = isset($m['articuloId']) ? (int)$m['articuloId'] : (int)($m['id'] ?? 0);
-                        if ($artId <= 0) { continue; }
-                        $cant  = isset($m['cantidadPorUnidad']) ? (float)$m['cantidadPorUnidad'] : (float)($m['cantidad'] ?? 0);
-                        $merma = isset($m['mermaPct']) ? (float)$m['mermaPct'] : (isset($m['merma']) ? (float)$m['merma'] : null);
+                        $artId = isset($m['articuloId']) ? (int) $m['articuloId'] : (int) ($m['id'] ?? 0);
+                        if ($artId <= 0) {
+                            continue;
+                        }
+                        $cant = isset($m['cantidadPorUnidad']) ? (float) $m['cantidadPorUnidad'] : (float) ($m['cantidad'] ?? 0);
+                        $merma = isset($m['mermaPct']) ? (float) $m['mermaPct'] : (isset($m['merma']) ? (float) $m['merma'] : null);
                         $rowLM = [
-                            'disenoVersionId'   => $idVersion,
-                            'articuloId'        => $artId,
+                            'disenoVersionId' => $idVersion,
+                            'articuloId' => $artId,
                             'cantidadPorUnidad' => $cant,
-                            'mermaPct'          => $merma,
+                            'mermaPct' => $merma,
                         ];
                         $inserted = false;
                         foreach ($lmTables as $t) {
                             try {
                                 $db->table($t)->insert($rowLM);
-                                $inserted = true; break;
-                            } catch (\Throwable $e) { /* probar siguiente */ }
+                                $inserted = true;
+                                break;
+                            } catch (\Throwable $e) { /* probar siguiente */
+                            }
                         }
                         if (!$inserted) {
                             // Como último recurso, intenta con columnas alternativas
                             try {
                                 $db->query('INSERT INTO lista_materiales (disenoVersionId, articuloId, cantidadPorUnidad, mermaPct) VALUES (?,?,?,?)', [$idVersion, $artId, $cant, $merma]);
-                            } catch (\Throwable $e) { /* ignorar error individual */ }
+                            } catch (\Throwable $e) { /* ignorar error individual */
+                            }
                         }
                     }
                 }
             }
 
             // === Crear automáticamente PROTOTIPO y MUESTRA ===
-            $userName = (string)(session()->get('user_name') ?? '');
+            $userName = (string) (session()->get('user_name') ?? '');
 
             // 1) PROTOTIPO: referenciar la versión, dejar fechas/estado/notas en NULL
             $prototipoId = null;
             $rowProt = [
                 'disenoVersionId' => $idVersion,
-                'codigo'          => $dataDiseno['codigo'] ?? null,
-                'fechainicio'     => null,
-                'fechaFin'        => null,
-                'estado'          => null,
-                'notas'           => null,
+                'codigo' => $dataDiseno['codigo'] ?? null,
+                'fechainicio' => null,
+                'fechaFin' => null,
+                'estado' => null,
+                'notas' => null,
             ];
             try {
                 $db->table('prototipo')->insert($rowProt);
-                $prototipoId = (int)$db->insertID();
+                $prototipoId = (int) $db->insertID();
             } catch (\Throwable $e) {
                 try {
                     $db->table('Prototipo')->insert($rowProt);
-                    $prototipoId = (int)$db->insertID();
+                    $prototipoId = (int) $db->insertID();
                 } catch (\Throwable $e2) {
                     $err = $db->error();
                     $msg = $err['message'] ?? $e2->getMessage() ?? 'Error desconocido al crear prototipo';
@@ -621,12 +773,12 @@ class Modulos extends BaseController
 
             // 2) MUESTRA: prototipoId del paso anterior; solicitadaPor = username; fechaSolicitud = hoy; demás NULL
             $rowMuestra = [
-                'prototipoId'    => $prototipoId,
-                'solicitadaPor'  => $userName !== '' ? $userName : null,
+                'prototipoId' => $prototipoId,
+                'solicitadaPor' => $userName !== '' ? $userName : null,
                 'fechaSolicitud' => date('Y-m-d'),
-                'fechaEnvio'     => null,
-                'estado'         => 'Pendiente',
-                'observaciones'  => null,
+                'fechaEnvio' => null,
+                'estado' => 'Pendiente',
+                'observaciones' => null,
             ];
             try {
                 $db->table('muestra')->insert($rowMuestra);
@@ -640,16 +792,22 @@ class Modulos extends BaseController
                 }
             }
             // Obtener ID de la muestra recién creada
-            $muestraId = (int)$db->insertID();
+            $muestraId = (int) $db->insertID();
             if ($muestraId === 0) {
                 try {
                     $row = $db->query('SELECT id FROM muestra ORDER BY id DESC LIMIT 1')->getRowArray();
-                    if ($row && isset($row['id'])) { $muestraId = (int)$row['id']; }
+                    if ($row && isset($row['id'])) {
+                        $muestraId = (int) $row['id'];
+                    }
                 } catch (\Throwable $e) {
                     try {
                         $row = $db->query('SELECT id FROM Muestra ORDER BY id DESC LIMIT 1')->getRowArray();
-                        if ($row && isset($row['id'])) { $muestraId = (int)$row['id']; }
-                    } catch (\Throwable $e2) { $muestraId = 0; }
+                        if ($row && isset($row['id'])) {
+                            $muestraId = (int) $row['id'];
+                        }
+                    } catch (\Throwable $e2) {
+                        $muestraId = 0;
+                    }
                 }
             }
             if ($muestraId <= 0) {
@@ -658,11 +816,11 @@ class Modulos extends BaseController
 
             // Crear registro de aprobacion_muestra con valores NULL
             $rowAprob = [
-                'muestraId'  => $muestraId,
-                'clienteId'  => null,
-                'fecha'      => null,
-                'decision'   => 'Pendiente',
-                'comentarios'=> null,
+                'muestraId' => $muestraId,
+                'clienteId' => null,
+                'fecha' => null,
+                'decision' => 'Pendiente',
+                'comentarios' => null,
             ];
             $insertedAprob = false;
             try {
@@ -672,7 +830,8 @@ class Modulos extends BaseController
                 try {
                     $db->table('Aprobacion_Muestra')->insert($rowAprob);
                     $insertedAprob = true;
-                } catch (\Throwable $e2) { /* se validará abajo */ }
+                } catch (\Throwable $e2) { /* se validará abajo */
+                }
             }
             if (!$insertedAprob) {
                 $err = $db->error();
@@ -686,10 +845,10 @@ class Modulos extends BaseController
             }
 
             return $this->response->setJSON([
-                'ok'        => true,
-                'id'        => $idDiseno,
+                'ok' => true,
+                'id' => $idDiseno,
                 'versionId' => $idVersion,
-                'message'   => 'Diseño creado correctamente'
+                'message' => 'Diseño creado correctamente'
             ]);
         } catch (\Throwable $e) {
             $db->transRollback();
@@ -737,7 +896,12 @@ class Modulos extends BaseController
             "SELECT id, nombre FROM Productos ORDER BY nombre",
         ];
         foreach ($queries as $q) {
-            try { $rows = $db->query($q)->getResultArray(); if ($rows !== null) break; } catch (\Throwable $e) { /* intenta siguiente */ }
+            try {
+                $rows = $db->query($q)->getResultArray();
+                if ($rows !== null)
+                    break;
+            } catch (\Throwable $e) { /* intenta siguiente */
+            }
         }
         return $this->response->setJSON(['items' => $rows]);
     }
@@ -751,8 +915,15 @@ class Modulos extends BaseController
             "SELECT id_sexo AS id, nombre, descripcion FROM sexo ORDER BY nombre",
             "SELECT id_sexo AS id, nombre, descripcion FROM Sexo ORDER BY nombre",
         ];
-        foreach ($queries as $q) { try { $rows = $db->query($q)->getResultArray(); if ($rows !== null) break; } catch (\Throwable $e) {} }
-        return $this->response->setJSON(['items'=>$rows]);
+        foreach ($queries as $q) {
+            try {
+                $rows = $db->query($q)->getResultArray();
+                if ($rows !== null)
+                    break;
+            } catch (\Throwable $e) {
+            }
+        }
+        return $this->response->setJSON(['items' => $rows]);
     }
 
     /** Catálogo: tallas */
@@ -764,8 +935,15 @@ class Modulos extends BaseController
             "SELECT id_talla AS id, nombre, descripcion FROM tallas ORDER BY nombre",
             "SELECT id_talla AS id, nombre, descripcion FROM Tallas ORDER BY nombre",
         ];
-        foreach ($queries as $q) { try { $rows = $db->query($q)->getResultArray(); if ($rows !== null) break; } catch (\Throwable $e) {} }
-        return $this->response->setJSON(['items'=>$rows]);
+        foreach ($queries as $q) {
+            try {
+                $rows = $db->query($q)->getResultArray();
+                if ($rows !== null)
+                    break;
+            } catch (\Throwable $e) {
+            }
+        }
+        return $this->response->setJSON(['items' => $rows]);
     }
 
     /** Catálogo: tipo de corte */
@@ -778,8 +956,15 @@ class Modulos extends BaseController
             "SELECT id_tipo_corte AS id, nombre, descripcion FROM Tipo_Corte ORDER BY nombre",
             "SELECT id_tipo_corte AS id, nombre, descripcion FROM tipocorte ORDER BY nombre",
         ];
-        foreach ($queries as $q) { try { $rows = $db->query($q)->getResultArray(); if ($rows !== null) break; } catch (\Throwable $e) {} }
-        return $this->response->setJSON(['items'=>$rows]);
+        foreach ($queries as $q) {
+            try {
+                $rows = $db->query($q)->getResultArray();
+                if ($rows !== null)
+                    break;
+            } catch (\Throwable $e) {
+            }
+        }
+        return $this->response->setJSON(['items' => $rows]);
     }
 
     /** Catálogo: tipo de ropa */
@@ -792,21 +977,31 @@ class Modulos extends BaseController
             "SELECT id_tipo_ropa AS id, nombre, descripcion FROM Tipo_Ropa ORDER BY nombre",
             "SELECT id_tipo_ropa AS id, nombre, descripcion FROM tiporopa ORDER BY nombre",
         ];
-        foreach ($queries as $q) { try { $rows = $db->query($q)->getResultArray(); if ($rows !== null) break; } catch (\Throwable $e) {} }
-        return $this->response->setJSON(['items'=>$rows]);
+        foreach ($queries as $q) {
+            try {
+                $rows = $db->query($q)->getResultArray();
+                if ($rows !== null)
+                    break;
+            } catch (\Throwable $e) {
+            }
+        }
+        return $this->response->setJSON(['items' => $rows]);
     }
 
     // ====== CRUD Catálogo Sexo ======
     public function m2_catalogo_sexo_crear()
     {
         $method = strtolower($this->request->getMethod());
-        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
-        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
-        
-        $nombre = trim((string)$this->request->getPost('nombre'));
-        $descripcion = trim((string)$this->request->getPost('descripcion')) ?: null;
-        if (!$nombre) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'Nombre requerido']);
-        
+        if ($method === 'options')
+            return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post')
+            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+
+        $nombre = trim((string) $this->request->getPost('nombre'));
+        $descripcion = trim((string) $this->request->getPost('descripcion')) ?: null;
+        if (!$nombre)
+            return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'Nombre requerido']);
+
         $db = \Config\Database::connect();
         try {
             $tablas = ['sexo', 'Sexo'];
@@ -816,9 +1011,11 @@ class Modulos extends BaseController
                     $db->table($tabla)->insert(['nombre' => $nombre, 'descripcion' => $descripcion]);
                     $insertado = true;
                     break;
-                } catch (\Throwable $e) {}
+                } catch (\Throwable $e) {
+                }
             }
-            if (!$insertado) throw new \Exception('No se pudo insertar');
+            if (!$insertado)
+                throw new \Exception('No se pudo insertar');
             return $this->response->setJSON(['ok' => true, 'id' => $db->insertID()]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
@@ -828,14 +1025,17 @@ class Modulos extends BaseController
     public function m2_catalogo_sexo_actualizar($id = null)
     {
         $method = strtolower($this->request->getMethod());
-        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
-        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
-        
-        $id = (int)($id ?? 0);
-        $nombre = trim((string)$this->request->getPost('nombre'));
-        $descripcion = trim((string)$this->request->getPost('descripcion')) ?: null;
-        if ($id <= 0 || !$nombre) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID y nombre requeridos']);
-        
+        if ($method === 'options')
+            return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post')
+            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+
+        $id = (int) ($id ?? 0);
+        $nombre = trim((string) $this->request->getPost('nombre'));
+        $descripcion = trim((string) $this->request->getPost('descripcion')) ?: null;
+        if ($id <= 0 || !$nombre)
+            return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID y nombre requeridos']);
+
         $db = \Config\Database::connect();
         try {
             $tablas = ['sexo', 'Sexo'];
@@ -843,10 +1043,15 @@ class Modulos extends BaseController
             foreach ($tablas as $tabla) {
                 try {
                     $ok = $db->table($tabla)->where('id_sexo', $id)->update(['nombre' => $nombre, 'descripcion' => $descripcion]);
-                    if ($ok) { $actualizado = true; break; }
-                } catch (\Throwable $e) {}
+                    if ($ok) {
+                        $actualizado = true;
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                }
             }
-            if (!$actualizado) throw new \Exception('No se pudo actualizar');
+            if (!$actualizado)
+                throw new \Exception('No se pudo actualizar');
             return $this->response->setJSON(['ok' => true]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
@@ -856,12 +1061,15 @@ class Modulos extends BaseController
     public function m2_catalogo_sexo_eliminar($id = null)
     {
         $method = strtolower($this->request->getMethod());
-        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
-        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
-        
-        $id = (int)($id ?? 0);
-        if ($id <= 0) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
-        
+        if ($method === 'options')
+            return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post')
+            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+
+        $id = (int) ($id ?? 0);
+        if ($id <= 0)
+            return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
+
         $db = \Config\Database::connect();
         try {
             $tablas = ['sexo', 'Sexo'];
@@ -869,10 +1077,15 @@ class Modulos extends BaseController
             foreach ($tablas as $tabla) {
                 try {
                     $ok = $db->table($tabla)->where('id_sexo', $id)->delete();
-                    if ($ok) { $eliminado = true; break; }
-                } catch (\Throwable $e) {}
+                    if ($ok) {
+                        $eliminado = true;
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                }
             }
-            if (!$eliminado) throw new \Exception('No se pudo eliminar');
+            if (!$eliminado)
+                throw new \Exception('No se pudo eliminar');
             return $this->response->setJSON(['ok' => true]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
@@ -883,13 +1096,16 @@ class Modulos extends BaseController
     public function m2_catalogo_tallas_crear()
     {
         $method = strtolower($this->request->getMethod());
-        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
-        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
-        
-        $nombre = trim((string)$this->request->getPost('nombre'));
-        $descripcion = trim((string)$this->request->getPost('descripcion')) ?: null;
-        if (!$nombre) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'Nombre requerido']);
-        
+        if ($method === 'options')
+            return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post')
+            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+
+        $nombre = trim((string) $this->request->getPost('nombre'));
+        $descripcion = trim((string) $this->request->getPost('descripcion')) ?: null;
+        if (!$nombre)
+            return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'Nombre requerido']);
+
         $db = \Config\Database::connect();
         try {
             $tablas = ['tallas', 'Tallas'];
@@ -899,9 +1115,11 @@ class Modulos extends BaseController
                     $db->table($tabla)->insert(['nombre' => $nombre, 'descripcion' => $descripcion]);
                     $insertado = true;
                     break;
-                } catch (\Throwable $e) {}
+                } catch (\Throwable $e) {
+                }
             }
-            if (!$insertado) throw new \Exception('No se pudo insertar');
+            if (!$insertado)
+                throw new \Exception('No se pudo insertar');
             return $this->response->setJSON(['ok' => true, 'id' => $db->insertID()]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
@@ -911,14 +1129,17 @@ class Modulos extends BaseController
     public function m2_catalogo_tallas_actualizar($id = null)
     {
         $method = strtolower($this->request->getMethod());
-        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
-        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
-        
-        $id = (int)($id ?? 0);
-        $nombre = trim((string)$this->request->getPost('nombre'));
-        $descripcion = trim((string)$this->request->getPost('descripcion')) ?: null;
-        if ($id <= 0 || !$nombre) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID y nombre requeridos']);
-        
+        if ($method === 'options')
+            return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post')
+            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+
+        $id = (int) ($id ?? 0);
+        $nombre = trim((string) $this->request->getPost('nombre'));
+        $descripcion = trim((string) $this->request->getPost('descripcion')) ?: null;
+        if ($id <= 0 || !$nombre)
+            return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID y nombre requeridos']);
+
         $db = \Config\Database::connect();
         try {
             $tablas = ['tallas', 'Tallas'];
@@ -926,10 +1147,15 @@ class Modulos extends BaseController
             foreach ($tablas as $tabla) {
                 try {
                     $ok = $db->table($tabla)->where('id_talla', $id)->update(['nombre' => $nombre, 'descripcion' => $descripcion]);
-                    if ($ok) { $actualizado = true; break; }
-                } catch (\Throwable $e) {}
+                    if ($ok) {
+                        $actualizado = true;
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                }
             }
-            if (!$actualizado) throw new \Exception('No se pudo actualizar');
+            if (!$actualizado)
+                throw new \Exception('No se pudo actualizar');
             return $this->response->setJSON(['ok' => true]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
@@ -939,12 +1165,15 @@ class Modulos extends BaseController
     public function m2_catalogo_tallas_eliminar($id = null)
     {
         $method = strtolower($this->request->getMethod());
-        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
-        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
-        
-        $id = (int)($id ?? 0);
-        if ($id <= 0) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
-        
+        if ($method === 'options')
+            return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post')
+            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+
+        $id = (int) ($id ?? 0);
+        if ($id <= 0)
+            return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
+
         $db = \Config\Database::connect();
         try {
             $tablas = ['tallas', 'Tallas'];
@@ -952,10 +1181,15 @@ class Modulos extends BaseController
             foreach ($tablas as $tabla) {
                 try {
                     $ok = $db->table($tabla)->where('id_talla', $id)->delete();
-                    if ($ok) { $eliminado = true; break; }
-                } catch (\Throwable $e) {}
+                    if ($ok) {
+                        $eliminado = true;
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                }
             }
-            if (!$eliminado) throw new \Exception('No se pudo eliminar');
+            if (!$eliminado)
+                throw new \Exception('No se pudo eliminar');
             return $this->response->setJSON(['ok' => true]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
@@ -966,13 +1200,16 @@ class Modulos extends BaseController
     public function m2_catalogo_tipo_corte_crear()
     {
         $method = strtolower($this->request->getMethod());
-        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
-        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
-        
-        $nombre = trim((string)$this->request->getPost('nombre'));
-        $descripcion = trim((string)$this->request->getPost('descripcion')) ?: null;
-        if (!$nombre) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'Nombre requerido']);
-        
+        if ($method === 'options')
+            return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post')
+            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+
+        $nombre = trim((string) $this->request->getPost('nombre'));
+        $descripcion = trim((string) $this->request->getPost('descripcion')) ?: null;
+        if (!$nombre)
+            return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'Nombre requerido']);
+
         $db = \Config\Database::connect();
         try {
             $tablas = ['tipo_corte', 'Tipo_Corte', 'tipocorte'];
@@ -982,9 +1219,11 @@ class Modulos extends BaseController
                     $db->table($tabla)->insert(['nombre' => $nombre, 'descripcion' => $descripcion]);
                     $insertado = true;
                     break;
-                } catch (\Throwable $e) {}
+                } catch (\Throwable $e) {
+                }
             }
-            if (!$insertado) throw new \Exception('No se pudo insertar');
+            if (!$insertado)
+                throw new \Exception('No se pudo insertar');
             return $this->response->setJSON(['ok' => true, 'id' => $db->insertID()]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
@@ -994,14 +1233,17 @@ class Modulos extends BaseController
     public function m2_catalogo_tipo_corte_actualizar($id = null)
     {
         $method = strtolower($this->request->getMethod());
-        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
-        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
-        
-        $id = (int)($id ?? 0);
-        $nombre = trim((string)$this->request->getPost('nombre'));
-        $descripcion = trim((string)$this->request->getPost('descripcion')) ?: null;
-        if ($id <= 0 || !$nombre) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID y nombre requeridos']);
-        
+        if ($method === 'options')
+            return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post')
+            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+
+        $id = (int) ($id ?? 0);
+        $nombre = trim((string) $this->request->getPost('nombre'));
+        $descripcion = trim((string) $this->request->getPost('descripcion')) ?: null;
+        if ($id <= 0 || !$nombre)
+            return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID y nombre requeridos']);
+
         $db = \Config\Database::connect();
         try {
             $tablas = ['tipo_corte', 'Tipo_Corte', 'tipocorte'];
@@ -1009,10 +1251,15 @@ class Modulos extends BaseController
             foreach ($tablas as $tabla) {
                 try {
                     $ok = $db->table($tabla)->where('id_tipo_corte', $id)->update(['nombre' => $nombre, 'descripcion' => $descripcion]);
-                    if ($ok) { $actualizado = true; break; }
-                } catch (\Throwable $e) {}
+                    if ($ok) {
+                        $actualizado = true;
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                }
             }
-            if (!$actualizado) throw new \Exception('No se pudo actualizar');
+            if (!$actualizado)
+                throw new \Exception('No se pudo actualizar');
             return $this->response->setJSON(['ok' => true]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
@@ -1022,12 +1269,15 @@ class Modulos extends BaseController
     public function m2_catalogo_tipo_corte_eliminar($id = null)
     {
         $method = strtolower($this->request->getMethod());
-        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
-        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
-        
-        $id = (int)($id ?? 0);
-        if ($id <= 0) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
-        
+        if ($method === 'options')
+            return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post')
+            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+
+        $id = (int) ($id ?? 0);
+        if ($id <= 0)
+            return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
+
         $db = \Config\Database::connect();
         try {
             $tablas = ['tipo_corte', 'Tipo_Corte', 'tipocorte'];
@@ -1035,10 +1285,15 @@ class Modulos extends BaseController
             foreach ($tablas as $tabla) {
                 try {
                     $ok = $db->table($tabla)->where('id_tipo_corte', $id)->delete();
-                    if ($ok) { $eliminado = true; break; }
-                } catch (\Throwable $e) {}
+                    if ($ok) {
+                        $eliminado = true;
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                }
             }
-            if (!$eliminado) throw new \Exception('No se pudo eliminar');
+            if (!$eliminado)
+                throw new \Exception('No se pudo eliminar');
             return $this->response->setJSON(['ok' => true]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
@@ -1049,13 +1304,16 @@ class Modulos extends BaseController
     public function m2_catalogo_tipo_ropa_crear()
     {
         $method = strtolower($this->request->getMethod());
-        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
-        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
-        
-        $nombre = trim((string)$this->request->getPost('nombre'));
-        $descripcion = trim((string)$this->request->getPost('descripcion')) ?: null;
-        if (!$nombre) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'Nombre requerido']);
-        
+        if ($method === 'options')
+            return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post')
+            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+
+        $nombre = trim((string) $this->request->getPost('nombre'));
+        $descripcion = trim((string) $this->request->getPost('descripcion')) ?: null;
+        if (!$nombre)
+            return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'Nombre requerido']);
+
         $db = \Config\Database::connect();
         try {
             $tablas = ['tipo_ropa', 'Tipo_Ropa', 'tiporopa'];
@@ -1065,9 +1323,11 @@ class Modulos extends BaseController
                     $db->table($tabla)->insert(['nombre' => $nombre, 'descripcion' => $descripcion]);
                     $insertado = true;
                     break;
-                } catch (\Throwable $e) {}
+                } catch (\Throwable $e) {
+                }
             }
-            if (!$insertado) throw new \Exception('No se pudo insertar');
+            if (!$insertado)
+                throw new \Exception('No se pudo insertar');
             return $this->response->setJSON(['ok' => true, 'id' => $db->insertID()]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
@@ -1077,14 +1337,17 @@ class Modulos extends BaseController
     public function m2_catalogo_tipo_ropa_actualizar($id = null)
     {
         $method = strtolower($this->request->getMethod());
-        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
-        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
-        
-        $id = (int)($id ?? 0);
-        $nombre = trim((string)$this->request->getPost('nombre'));
-        $descripcion = trim((string)$this->request->getPost('descripcion')) ?: null;
-        if ($id <= 0 || !$nombre) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID y nombre requeridos']);
-        
+        if ($method === 'options')
+            return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post')
+            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+
+        $id = (int) ($id ?? 0);
+        $nombre = trim((string) $this->request->getPost('nombre'));
+        $descripcion = trim((string) $this->request->getPost('descripcion')) ?: null;
+        if ($id <= 0 || !$nombre)
+            return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID y nombre requeridos']);
+
         $db = \Config\Database::connect();
         try {
             $tablas = ['tipo_ropa', 'Tipo_Ropa', 'tiporopa'];
@@ -1092,10 +1355,15 @@ class Modulos extends BaseController
             foreach ($tablas as $tabla) {
                 try {
                     $ok = $db->table($tabla)->where('id_tipo_ropa', $id)->update(['nombre' => $nombre, 'descripcion' => $descripcion]);
-                    if ($ok) { $actualizado = true; break; }
-                } catch (\Throwable $e) {}
+                    if ($ok) {
+                        $actualizado = true;
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                }
             }
-            if (!$actualizado) throw new \Exception('No se pudo actualizar');
+            if (!$actualizado)
+                throw new \Exception('No se pudo actualizar');
             return $this->response->setJSON(['ok' => true]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
@@ -1105,12 +1373,15 @@ class Modulos extends BaseController
     public function m2_catalogo_tipo_ropa_eliminar($id = null)
     {
         $method = strtolower($this->request->getMethod());
-        if ($method === 'options') return $this->response->setJSON(['ok' => true]);
-        if ($method !== 'post') return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
-        
-        $id = (int)($id ?? 0);
-        if ($id <= 0) return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
-        
+        if ($method === 'options')
+            return $this->response->setJSON(['ok' => true]);
+        if ($method !== 'post')
+            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+
+        $id = (int) ($id ?? 0);
+        if ($id <= 0)
+            return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
+
         $db = \Config\Database::connect();
         try {
             $tablas = ['tipo_ropa', 'Tipo_Ropa', 'tiporopa'];
@@ -1118,10 +1389,15 @@ class Modulos extends BaseController
             foreach ($tablas as $tabla) {
                 try {
                     $ok = $db->table($tabla)->where('id_tipo_ropa', $id)->delete();
-                    if ($ok) { $eliminado = true; break; }
-                } catch (\Throwable $e) {}
+                    if ($ok) {
+                        $eliminado = true;
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                }
             }
-            if (!$eliminado) throw new \Exception('No se pudo eliminar');
+            if (!$eliminado)
+                throw new \Exception('No se pudo eliminar');
             return $this->response->setJSON(['ok' => true]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => $e->getMessage()]);
@@ -1132,13 +1408,13 @@ class Modulos extends BaseController
     public function m1_pedido_json($id = null)
     {
         try {
-            $id = (int)($id ?? 0);
+            $id = (int) ($id ?? 0);
             if ($id <= 0) {
                 return $this->response->setStatusCode(400)->setJSON(['error' => 'ID inválido']);
             }
 
             // Función helper para limpiar caracteres UTF-8 mal formados
-            $cleanUtf8 = function($data) use (&$cleanUtf8) {
+            $cleanUtf8 = function ($data) use (&$cleanUtf8) {
                 if (is_array($data)) {
                     return array_map($cleanUtf8, $data);
                 } elseif (is_string($data)) {
@@ -1158,7 +1434,7 @@ class Modulos extends BaseController
                     return $this->response->setStatusCode(404)->setJSON(['error' => 'Pedido no encontrado']);
                 }
                 $detalle = [
-                    'id' => (int)($basic['id'] ?? $id),
+                    'id' => (int) ($basic['id'] ?? $id),
                     'folio' => $basic['folio'] ?? '',
                     'fecha' => $basic['fecha'] ?? null,
                     'estatus' => $basic['estatus'] ?? '',
@@ -1186,7 +1462,9 @@ class Modulos extends BaseController
                          LIMIT 1",
                         [$id]
                     )->getRowArray();
-                } catch (\Throwable $e) { $row = null; }
+                } catch (\Throwable $e) {
+                    $row = null;
+                }
                 if (!$row) {
                     try {
                         $row = $db->query(
@@ -1199,7 +1477,9 @@ class Modulos extends BaseController
                              LIMIT 1",
                             [$id]
                         )->getRowArray();
-                    } catch (\Throwable $e2) { $row = null; }
+                    } catch (\Throwable $e2) {
+                        $row = null;
+                    }
                 }
                 if ($row && isset($row['d_id'])) {
                     $detalle['diseno'] = [
@@ -1224,12 +1504,12 @@ class Modulos extends BaseController
 
             // Normalizar para el modal
             $out = [
-                'id' => (int)($detalle['id'] ?? $id),
+                'id' => (int) ($detalle['id'] ?? $id),
                 'folio' => $detalle['folio'] ?? '',
                 'fecha' => isset($detalle['fecha']) ? date('Y-m-d', strtotime($detalle['fecha'])) : '',
                 'estatus' => $detalle['estatus'] ?? '',
                 'moneda' => $detalle['moneda'] ?? '',
-                'total' => isset($detalle['total']) ? number_format((float)$detalle['total'], 2) : '0.00',
+                'total' => isset($detalle['total']) ? number_format((float) $detalle['total'], 2) : '0.00',
                 'empresa' => $detalle['cliente']['nombre'] ?? ($detalle['empresa'] ?? ''),
                 'cliente' => $detalle['cliente'] ?? null,
                 'items' => $detalle['items'] ?? [],
@@ -1290,12 +1570,12 @@ class Modulos extends BaseController
         $maquiladora = [];
         // Obtener el ID de la maquiladora de la sesión (puede estar como 'maquiladora_id' o 'maquiladoraIdFK')
         $maquiladoraId = session()->get('maquiladora_id') ?? session()->get('maquiladoraIdFK');
-        
+
         log_message('debug', 'ID de maquiladora obtenido de la sesión: ' . $maquiladoraId);
-        
+
         if ($maquiladoraId) {
             $db = \Config\Database::connect();
-            
+
             // Primero intentamos con la tabla en minúsculas
             $maquiladora = $db->table('maquiladora')
                 ->select([
@@ -1310,9 +1590,9 @@ class Modulos extends BaseController
                 ->where('idmaquiladora', $maquiladoraId)
                 ->get()
                 ->getRowArray();
-                
+
             log_message('debug', 'Primer intento - Datos de la maquiladora: ' . print_r($maquiladora, true));
-            
+
             // Si no se encontró, intentar con mayúsculas
             if (empty($maquiladora)) {
                 $maquiladora = $db->table('Maquiladora')
@@ -1328,10 +1608,10 @@ class Modulos extends BaseController
                     ->where('idmaquiladora', $maquiladoraId)
                     ->get()
                     ->getRowArray();
-                
+
                 log_message('debug', 'Segundo intento - Datos de la maquiladora: ' . print_r($maquiladora, true));
             }
-            
+
             // Si aún no hay datos, crear un array con valores por defecto
             if (empty($maquiladora)) {
                 $maquiladora = [
@@ -1362,7 +1642,7 @@ class Modulos extends BaseController
             }
         }
 
-        $id = (int)($id ?? 0);
+        $id = (int) ($id ?? 0);
         if ($id <= 0) {
             return $this->response->setStatusCode(400)->setJSON(['error' => 'ID inválido']);
         }
@@ -1371,14 +1651,14 @@ class Modulos extends BaseController
             $pedidoModel = new \App\Models\PedidoModel();
             // Obtener detalle completo del pedido
             $detalle = $pedidoModel->getPedidoDetalle($id);
-            
+
             if (!$detalle) {
                 $basic = $pedidoModel->getPedidoPorId($id);
                 if (!$basic) {
                     return $this->response->setStatusCode(404)->setJSON(['error' => 'Pedido no encontrado']);
                 }
                 $detalle = [
-                    'id' => (int)($basic['id'] ?? $id),
+                    'id' => (int) ($basic['id'] ?? $id),
                     'folio' => $basic['folio'] ?? '',
                     'fecha' => $basic['fecha'] ?? null,
                     'estatus' => $basic['estatus'] ?? '',
@@ -1408,7 +1688,9 @@ class Modulos extends BaseController
                          LIMIT 1",
                         [$id]
                     )->getRowArray();
-                } catch (\Throwable $e) { $row = null; }
+                } catch (\Throwable $e) {
+                    $row = null;
+                }
                 if (!$row) {
                     try {
                         $row = $db->query(
@@ -1422,7 +1704,9 @@ class Modulos extends BaseController
                              LIMIT 1",
                             [$id]
                         )->getRowArray();
-                    } catch (\Throwable $e2) { $row = null; }
+                    } catch (\Throwable $e2) {
+                        $row = null;
+                    }
                 }
                 if ($row && isset($row['d_id'])) {
                     $detalle['diseno'] = [
@@ -1445,12 +1729,12 @@ class Modulos extends BaseController
             $data = [
                 'maquiladora' => $maquiladora,
                 'pedido' => [
-                    'id' => (int)($detalle['id'] ?? $id),
+                    'id' => (int) ($detalle['id'] ?? $id),
                     'folio' => $detalle['folio'] ?? '',
                     'fecha' => isset($detalle['fecha']) ? date('d/m/Y', strtotime($detalle['fecha'])) : date('d/m/Y'),
                     'estatus' => $detalle['estatus'] ?? '',
                     'moneda' => $detalle['moneda'] ?? 'MXN',
-                    'total' => isset($detalle['total']) ? number_format((float)$detalle['total'], 2) : '0.00',
+                    'total' => isset($detalle['total']) ? number_format((float) $detalle['total'], 2) : '0.00',
                 ],
                 'cliente' => $detalle['cliente'] ?? [],
                 'diseno' => $detalle['diseno'] ?? null,
@@ -1475,7 +1759,9 @@ class Modulos extends BaseController
             $pdfBytes = $dompdf->output();
 
             // Limpiar cualquier output buffer
-            while (ob_get_level() > 0) { @ob_end_clean(); }
+            while (ob_get_level() > 0) {
+                @ob_end_clean();
+            }
 
             // Responder con el PDF
             $filename = 'pedido_' . ($data['pedido']['folio'] ?: $id) . '.pdf';
@@ -1483,7 +1769,7 @@ class Modulos extends BaseController
             return $this->response
                 ->setStatusCode(200)
                 ->setHeader('Content-Type', 'application/pdf')
-                ->setHeader('Content-Disposition', 'inline; filename="'.$filename.'"')
+                ->setHeader('Content-Disposition', 'inline; filename="' . $filename . '"')
                 ->setHeader('Cache-Control', 'private, max-age=0, must-revalidate')
                 ->setHeader('Pragma', 'public')
                 ->setBody($pdfBytes);
@@ -1501,7 +1787,7 @@ class Modulos extends BaseController
      */
     public function m1_pedido_excel($id = null)
     {
-        $id = (int)($id ?? 0);
+        $id = (int) ($id ?? 0);
         if ($id <= 0) {
             return $this->response->setStatusCode(400)->setJSON(['error' => 'ID inválido']);
         }
@@ -1510,14 +1796,14 @@ class Modulos extends BaseController
             $pedidoModel = new \App\Models\PedidoModel();
             // Obtener detalle completo del pedido
             $detalle = $pedidoModel->getPedidoDetalle($id);
-            
+
             if (!$detalle) {
                 $basic = $pedidoModel->getPedidoPorId($id);
                 if (!$basic) {
                     return $this->response->setStatusCode(404)->setJSON(['error' => 'Pedido no encontrado']);
                 }
                 $detalle = [
-                    'id' => (int)($basic['id'] ?? $id),
+                    'id' => (int) ($basic['id'] ?? $id),
                     'folio' => $basic['folio'] ?? '',
                     'fecha' => $basic['fecha'] ?? null,
                     'estatus' => $basic['estatus'] ?? '',
@@ -1547,7 +1833,9 @@ class Modulos extends BaseController
                          LIMIT 1",
                         [$id]
                     )->getRowArray();
-                } catch (\Throwable $e) { $row = null; }
+                } catch (\Throwable $e) {
+                    $row = null;
+                }
                 if (!$row) {
                     try {
                         $row = $db->query(
@@ -1561,7 +1849,9 @@ class Modulos extends BaseController
                              LIMIT 1",
                             [$id]
                         )->getRowArray();
-                    } catch (\Throwable $e2) { $row = null; }
+                    } catch (\Throwable $e2) {
+                        $row = null;
+                    }
                 }
                 if ($row && isset($row['d_id'])) {
                     $detalle['diseno'] = [
@@ -1582,12 +1872,12 @@ class Modulos extends BaseController
 
             // Preparar datos
             $pedido = [
-                'id' => (int)($detalle['id'] ?? $id),
+                'id' => (int) ($detalle['id'] ?? $id),
                 'folio' => $detalle['folio'] ?? '',
                 'fecha' => isset($detalle['fecha']) ? date('d/m/Y', strtotime($detalle['fecha'])) : date('d/m/Y'),
                 'estatus' => $detalle['estatus'] ?? '',
                 'moneda' => $detalle['moneda'] ?? 'MXN',
-                'total' => isset($detalle['total']) ? number_format((float)$detalle['total'], 2) : '0.00',
+                'total' => isset($detalle['total']) ? number_format((float) $detalle['total'], 2) : '0.00',
             ];
             $cliente = $detalle['cliente'] ?? [];
             $diseno = $detalle['diseno'] ?? null;
@@ -1607,7 +1897,7 @@ class Modulos extends BaseController
             $xml .= '<Table>' . "\n";
 
             // Función helper para agregar fila
-            $addRow = function($cells) use (&$xml) {
+            $addRow = function ($cells) use (&$xml) {
                 $xml .= '<Row>' . "\n";
                 foreach ($cells as $cell) {
                     $type = is_numeric($cell) ? 'Number' : 'String';
@@ -1643,12 +1933,18 @@ class Modulos extends BaseController
             if (!empty($cliente['direccion_detalle'])) {
                 $dir = $cliente['direccion_detalle'];
                 $direccion = ($dir['calle'] ?? '');
-                if (!empty($dir['numExt'])) $direccion .= ' #' . $dir['numExt'];
-                if (!empty($dir['numInt'])) $direccion .= ' Int. ' . $dir['numInt'];
-                if (!empty($dir['ciudad'])) $direccion .= ', ' . $dir['ciudad'];
-                if (!empty($dir['estado'])) $direccion .= ', ' . $dir['estado'];
-                if (!empty($dir['cp'])) $direccion .= ' CP ' . $dir['cp'];
-                if (!empty($dir['pais'])) $direccion .= ', ' . $dir['pais'];
+                if (!empty($dir['numExt']))
+                    $direccion .= ' #' . $dir['numExt'];
+                if (!empty($dir['numInt']))
+                    $direccion .= ' Int. ' . $dir['numInt'];
+                if (!empty($dir['ciudad']))
+                    $direccion .= ', ' . $dir['ciudad'];
+                if (!empty($dir['estado']))
+                    $direccion .= ', ' . $dir['estado'];
+                if (!empty($dir['cp']))
+                    $direccion .= ' CP ' . $dir['cp'];
+                if (!empty($dir['pais']))
+                    $direccion .= ', ' . $dir['pais'];
                 if ($direccion) {
                     $addRow(['Dirección:', $direccion]);
                 }
@@ -1668,7 +1964,7 @@ class Modulos extends BaseController
                     $addRow(['Descripción:', $diseno['descripcion']]);
                 }
                 if (!empty($diseno['precio_unidad'])) {
-                    $addRow(['Precio Unitario:', $pedido['moneda'] . ' ' . number_format((float)$diseno['precio_unidad'], 2)]);
+                    $addRow(['Precio Unitario:', $pedido['moneda'] . ' ' . number_format((float) $diseno['precio_unidad'], 2)]);
                 }
                 if (!empty($diseno['version'])) {
                     $ver = is_array($diseno['version']) ? $diseno['version'] : ['version' => $diseno['version']];
@@ -1686,11 +1982,11 @@ class Modulos extends BaseController
             $addRow(['PLAN']);
             $addRow(['Concepto', 'Valor']);
             if (!empty($op_cantidadPlan)) {
-                $addRow(['Cantidad Plan', number_format((float)$op_cantidadPlan, 0) . ' unidades']);
+                $addRow(['Cantidad Plan', number_format((float) $op_cantidadPlan, 0) . ' unidades']);
             }
             if (!empty($diseno['precio_unidad']) && !empty($op_cantidadPlan)) {
-                $addRow(['Precio Unitario', $pedido['moneda'] . ' ' . number_format((float)$diseno['precio_unidad'], 2)]);
-                $addRow(['Subtotal', $pedido['moneda'] . ' ' . number_format((float)$diseno['precio_unidad'] * (float)$op_cantidadPlan, 2)]);
+                $addRow(['Precio Unitario', $pedido['moneda'] . ' ' . number_format((float) $diseno['precio_unidad'], 2)]);
+                $addRow(['Subtotal', $pedido['moneda'] . ' ' . number_format((float) $diseno['precio_unidad'] * (float) $op_cantidadPlan, 2)]);
             }
             if (!empty($op_fechaInicioPlan)) {
                 $addRow(['Fecha Inicio Plan', $op_fechaInicioPlan]);
@@ -1706,7 +2002,9 @@ class Modulos extends BaseController
             $xml .= '</Workbook>';
 
             // Limpiar cualquier output buffer
-            while (ob_get_level() > 0) { @ob_end_clean(); }
+            while (ob_get_level() > 0) {
+                @ob_end_clean();
+            }
 
             // Responder con el Excel
             $filename = 'pedido_' . ($pedido['folio'] ?: $id) . '.xls';
@@ -1714,7 +2012,7 @@ class Modulos extends BaseController
             return $this->response
                 ->setStatusCode(200)
                 ->setHeader('Content-Type', 'application/vnd.ms-excel')
-                ->setHeader('Content-Disposition', 'attachment; filename="'.$filename.'"')
+                ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
                 ->setHeader('Cache-Control', 'private, max-age=0, must-revalidate')
                 ->setHeader('Pragma', 'public')
                 ->setBody($xml);
@@ -1734,39 +2032,60 @@ class Modulos extends BaseController
     public function m2_eliminar_diseno($id = null)
     {
         $method = strtolower($this->request->getMethod());
-        if ($method === 'options') { return $this->response->setJSON(['ok'=>true]); }
-        if ($method !== 'post') {
-            return $this->response->setStatusCode(405)->setJSON(['ok'=>false,'message'=>'Método no permitido']);
+        if ($method === 'options') {
+            return $this->response->setJSON(['ok' => true]);
         }
-        $id = (int)($id ?? 0);
-        if ($id <= 0) { return $this->response->setStatusCode(400)->setJSON(['ok'=>false,'message'=>'ID inválido']); }
+        if ($method !== 'post') {
+            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
+        }
+        $id = (int) ($id ?? 0);
+        if ($id <= 0) {
+            return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
+        }
 
         $db = \Config\Database::connect();
         try {
             $db->transStart();
 
             // Obtener IDs de versiones
-            $dvIds = array_map(function($r){ return (int)$r['id']; }, $db->query('SELECT id FROM diseno_version WHERE disenoId = ?', [$id])->getResultArray() ?? []);
+            $dvIds = array_map(function ($r) {
+                return (int) $r['id'];
+            }, $db->query('SELECT id FROM diseno_version WHERE disenoId = ?', [$id])->getResultArray() ?? []);
             if (!$dvIds) {
-                $dvIds = array_map(function($r){ return (int)$r['id']; }, $db->query('SELECT id FROM disenoversion WHERE disenoId = ?', [$id])->getResultArray() ?? []);
+                $dvIds = array_map(function ($r) {
+                    return (int) $r['id'];
+                }, $db->query('SELECT id FROM disenoversion WHERE disenoId = ?', [$id])->getResultArray() ?? []);
             }
 
             if (!empty($dvIds)) {
                 $in = implode(',', array_fill(0, count($dvIds), '?'));
                 // Borrar materiales por versiones
-                foreach (['lista_materiales','listamateriales','ListaMateriales'] as $t) {
-                    try { $db->query("DELETE FROM $t WHERE disenoVersionId IN ($in)", $dvIds); break; } catch (\Throwable $e) { /* try next */ }
+                foreach (['lista_materiales', 'listamateriales', 'ListaMateriales'] as $t) {
+                    try {
+                        $db->query("DELETE FROM $t WHERE disenoVersionId IN ($in)", $dvIds);
+                        break;
+                    } catch (\Throwable $e) { /* try next */
+                    }
                 }
                 // Borrar versiones
-                foreach (['diseno_version','disenoversion'] as $t) {
-                    try { $db->query("DELETE FROM $t WHERE id IN ($in)", $dvIds); break; } catch (\Throwable $e) { /* try next */ }
+                foreach (['diseno_version', 'disenoversion'] as $t) {
+                    try {
+                        $db->query("DELETE FROM $t WHERE id IN ($in)", $dvIds);
+                        break;
+                    } catch (\Throwable $e) { /* try next */
+                    }
                 }
             }
 
             // Borrar diseño
             $deleted = false;
-            foreach (['diseno','Diseno'] as $t) {
-                try { $db->table($t)->where('id', $id)->delete(); $deleted = true; break; } catch (\Throwable $e) { /* next */ }
+            foreach (['diseno', 'Diseno'] as $t) {
+                try {
+                    $db->table($t)->where('id', $id)->delete();
+                    $deleted = true;
+                    break;
+                } catch (\Throwable $e) { /* next */
+                }
             }
 
             $db->transComplete();
@@ -1774,17 +2093,20 @@ class Modulos extends BaseController
                 throw new \Exception('No se pudo eliminar el diseño');
             }
 
-            return $this->response->setJSON(['ok'=>true,'message'=>'Diseño eliminado']);
+            return $this->response->setJSON(['ok' => true, 'message' => 'Diseño eliminado']);
         } catch (\Throwable $e) {
-            try { $db->transRollback(); } catch (\Throwable $ee) {}
-            return $this->response->setStatusCode(500)->setJSON(['ok'=>false,'message'=>'Error al eliminar: '.$e->getMessage()]);
+            try {
+                $db->transRollback();
+            } catch (\Throwable $ee) {
+            }
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => 'Error al eliminar: ' . $e->getMessage()]);
         }
     }
 
     /** JSON detalle normalizado de diseño. */
     public function m2_diseno_json($id = null)
     {
-        $id = (int)($id ?? 0);
+        $id = (int) ($id ?? 0);
         if ($id <= 0) {
             return $this->response->setStatusCode(400)->setJSON(['error' => 'ID inválido']);
         }
@@ -1797,7 +2119,7 @@ class Modulos extends BaseController
 
         // Normalizar salida y agregar campos convenientes
         $out = [
-            'id' => (int)$detalle['id'],
+            'id' => (int) $detalle['id'],
             'codigo' => $detalle['codigo'] ?? '',
             'nombre' => $detalle['nombre'] ?? '',
             'descripcion' => $detalle['descripcion'] ?? '',
@@ -1833,7 +2155,7 @@ class Modulos extends BaseController
     {
         $db = \Config\Database::connect();
         $maquiladoraId = session()->get('maquiladora_id');
-        
+
         $disenos = [];
         try {
             // Intentar con diferentes nombres de tabla
@@ -1849,16 +2171,17 @@ class Modulos extends BaseController
                  WHERE d.maquiladoraID = ? 
                  ORDER BY d.nombre",
             ];
-            
+
             foreach ($queries as $query) {
                 try {
                     $disenos = $db->query($query, [$maquiladoraId])->getResultArray();
-                    if ($disenos !== null) break;
+                    if ($disenos !== null)
+                        break;
                 } catch (\Throwable $e) {
                     // Intentar siguiente query
                 }
             }
-            
+
             // Si no se encontraron diseños con maquiladoraID, intentar sin filtro (fallback)
             if (empty($disenos)) {
                 $fallbackQueries = [
@@ -1871,11 +2194,12 @@ class Modulos extends BaseController
                      FROM Diseno d 
                      ORDER BY d.nombre",
                 ];
-                
+
                 foreach ($fallbackQueries as $query) {
                     try {
                         $disenos = $db->query($query)->getResultArray();
-                        if ($disenos !== null) break;
+                        if ($disenos !== null)
+                            break;
                     } catch (\Throwable $e) {
                         // Intentar siguiente query
                     }
@@ -1886,38 +2210,38 @@ class Modulos extends BaseController
                 'error' => 'Error al obtener diseños: ' . $e->getMessage()
             ]);
         }
-        
+
         return $this->response->setJSON($disenos);
     }
 
     public function ordenes()
     {
         $ordenes = [
-            ['op'=>'OP-0001','cliente'=>'Textiles MX','responsable'=>'Juan Pérez','ini'=>'2025-09-20','fin'=>'2025-09-25','estatus'=>'En proceso'],
-            ['op'=>'OP-0002','cliente'=>'Fábrica Sur','responsable'=>'María López','ini'=>'2025-09-21','fin'=>'2025-09-27','estatus'=>'Planificada'],
-            ['op'=>'OP-0003','cliente'=>'Industrias PZ','responsable'=>'Carlos Ruiz','ini'=>'2025-09-19','fin'=>'2025-09-24','estatus'=>'En proceso'],
+            ['op' => 'OP-0001', 'cliente' => 'Textiles MX', 'responsable' => 'Juan Pérez', 'ini' => '2025-09-20', 'fin' => '2025-09-25', 'estatus' => 'En proceso'],
+            ['op' => 'OP-0002', 'cliente' => 'Fábrica Sur', 'responsable' => 'María López', 'ini' => '2025-09-21', 'fin' => '2025-09-27', 'estatus' => 'Planificada'],
+            ['op' => 'OP-0003', 'cliente' => 'Industrias PZ', 'responsable' => 'Carlos Ruiz', 'ini' => '2025-09-19', 'fin' => '2025-09-24', 'estatus' => 'En proceso'],
         ];
 
-        return view('modulos/ordenes', $this->payload([
-            'title'   => 'Órdenes',
+        return view('modulos/m1_ordenes', $this->payload([
+            'title' => 'Órdenes',
             'ordenes' => $ordenes,
             'notifCount' => 0,
         ]));
     }
 
-    
+
 
     public function wip()
     {
         $etapas = [
-            ['etapa'=>'Corte','resp'=>'Juan Pérez','ini'=>'2025-09-20','fin'=>'2025-09-22','prog'=>80],
-            ['etapa'=>'Confección','resp'=>'María López','ini'=>'2025-09-22','fin'=>'2025-09-25','prog'=>45],
-            ['etapa'=>'Acabado','resp'=>'Carlos Ruiz','ini'=>'2025-09-25','fin'=>'2025-09-27','prog'=>10],
+            ['etapa' => 'Corte', 'resp' => 'Juan Pérez', 'ini' => '2025-09-20', 'fin' => '2025-09-22', 'prog' => 80],
+            ['etapa' => 'Confección', 'resp' => 'María López', 'ini' => '2025-09-22', 'fin' => '2025-09-25', 'prog' => 45],
+            ['etapa' => 'Acabado', 'resp' => 'Carlos Ruiz', 'ini' => '2025-09-25', 'fin' => '2025-09-27', 'prog' => 10],
         ];
 
         return view('modulos/wip', $this->payload([
-            'title'      => 'WIP',
-            'etapas'     => $etapas,
+            'title' => 'WIP',
+            'etapas' => $etapas,
             'notifCount' => 0,
         ]));
     }
@@ -1925,125 +2249,340 @@ class Modulos extends BaseController
     public function incidencias()
     {
         $lista = [
-            ['fecha'=>'2025-09-21','op'=>'OP-0001','tipo'=>'Paro de máquina','desc'=>'Mantenimiento no programado'],
-            ['fecha'=>'2025-09-22','op'=>'OP-0003','tipo'=>'Falta de material','desc'=>'Faltan rollos de tela'],
+            ['fecha' => '2025-09-21', 'op' => 'OP-0001', 'tipo' => 'Paro de máquina', 'desc' => 'Mantenimiento no programado'],
+            ['fecha' => '2025-09-22', 'op' => 'OP-0003', 'tipo' => 'Falta de material', 'desc' => 'Faltan rollos de tela'],
         ];
 
         return view('modulos/incidencias', $this->payload([
-            'title'      => 'Incidencias',
-            'lista'      => $lista,
+            'title' => 'Incidencias',
+            'lista' => $lista,
             'notifCount' => count($lista),
         ]));
     }
 
     public function reportes()
-{
-    $maquiladora = [];
-    $maquiladoraId = session()->get('maquiladora_id');
-    
-    // Depuración
-    log_message('debug', 'ID de maquiladora en sesión: ' . print_r($maquiladoraId, true));
-    
-    if ($maquiladoraId) {
-        try {
-            $db = \Config\Database::connect();
-            
-            // Verificar si la tabla existe
-            $tables = $db->listTables();
-            log_message('debug', 'Tablas en la base de datos: ' . print_r($tables, true));
-            
-            // Obtener los campos de la tabla maquiladora
-            $fields = $db->getFieldData('maquiladora');
-            log_message('debug', 'Campos de la tabla maquiladora: ' . print_r(array_column($fields, 'name'), true));
-            
-            // Intentar con minúsculas primero
-            $maquiladora = $db->table('maquiladora')
-                ->select('*')
-                ->where('idmaquiladora', $maquiladoraId)
-                ->get()
-                ->getRowArray();
-                
-            log_message('debug', 'Consulta 1 (minúsculas): ' . $db->getLastQuery());
-            
-            // Si no se encontró, intentar con mayúsculas
-            if (empty($maquiladora)) {
-                $maquiladora = $db->table('Maquiladora')
+    {
+        $maquiladora = [];
+        $maquiladoraId = session()->get('maquiladora_id');
+
+        // Depuración
+        log_message('debug', 'ID de maquiladora en sesión: ' . print_r($maquiladoraId, true));
+
+        if ($maquiladoraId) {
+            try {
+                $db = \Config\Database::connect();
+
+                // Verificar si la tabla existe
+                $tables = $db->listTables();
+                log_message('debug', 'Tablas en la base de datos: ' . print_r($tables, true));
+
+                // Obtener los campos de la tabla maquiladora
+                $fields = $db->getFieldData('maquiladora');
+                log_message('debug', 'Campos de la tabla maquiladora: ' . print_r(array_column($fields, 'name'), true));
+
+                // Intentar con minúsculas primero
+                $maquiladora = $db->table('maquiladora')
                     ->select('*')
                     ->where('idmaquiladora', $maquiladoraId)
                     ->get()
                     ->getRowArray();
-                    
-                log_message('debug', 'Consulta 2 (mayúsculas): ' . $db->getLastQuery());
-            }
-            
-            log_message('debug', 'Datos de maquiladora: ' . print_r($maquiladora, true));
-            
-        } catch (\Exception $e) {
-            log_message('error', 'Error al obtener datos de la maquiladora: ' . $e->getMessage());
-        }
-    }
 
-    return view('modulos/reportes', $this->payload([
-        'title'      => 'Reportes',
-        'maquiladora' => $maquiladora,
-        'notifCount' => 0,
-        'debug_info' => [
-            'maquiladora_id' => $maquiladoraId,
-            'maquiladora_data' => $maquiladora
-        ]
-    ]));
-}
+                log_message('debug', 'Consulta 1 (minúsculas): ' . $db->getLastQuery());
+
+                // Si no se encontró, intentar con mayúsculas
+                if (empty($maquiladora)) {
+                    $maquiladora = $db->table('Maquiladora')
+                        ->select('*')
+                        ->where('idmaquiladora', $maquiladoraId)
+                        ->get()
+                        ->getRowArray();
+
+                    log_message('debug', 'Consulta 2 (mayúsculas): ' . $db->getLastQuery());
+                }
+
+                log_message('debug', 'Datos de maquiladora: ' . print_r($maquiladora, true));
+
+            } catch (\Exception $e) {
+                log_message('error', 'Error al obtener datos de la maquiladora: ' . $e->getMessage());
+            }
+        }
+
+        return view('modulos/reportes', $this->payload([
+            'title' => 'Reportes',
+            'maquiladora' => $maquiladora,
+            'notifCount' => 0,
+            'debug_info' => [
+                'maquiladora_id' => $maquiladoraId,
+                'maquiladora_data' => $maquiladora
+            ]
+        ]));
+    }
 
     public function notificaciones()
     {
         $items = [
-            ['nivel'=>'Crítica','color'=>'#e03131','titulo'=>'Actualizar avance WIP en OP-2025-014','sub'=>'Atrasado 1 día • Módulo: Confección (WIP)'],
-            ['nivel'=>'Alta','color'=>'#ffd43b','titulo'=>'Revisar muestra M-0045 del cliente A','sub'=>'Vence hoy • Módulo: Prototipos'],
-            ['nivel'=>'Media','color'=>'#4dabf7','titulo'=>'Revisar muestra M-0045 del cliente A','sub'=>'Módulo: Prototipos'],
+            ['nivel' => 'Crítica', 'color' => '#e03131', 'titulo' => 'Actualizar avance WIP en OP-2025-014', 'sub' => 'Atrasado 1 día • Módulo: Confección (WIP)'],
+            ['nivel' => 'Alta', 'color' => '#ffd43b', 'titulo' => 'Revisar muestra M-0045 del cliente A', 'sub' => 'Vence hoy • Módulo: Prototipos'],
+            ['nivel' => 'Media', 'color' => '#4dabf7', 'titulo' => 'Revisar muestra M-0045 del cliente A', 'sub' => 'Módulo: Prototipos'],
         ];
 
         return view('modulos/notificaciones', $this->payload([
-            'title'      => 'Notificaciones',
-            'items'      => $items,
+            'title' => 'Notificaciones',
+            'items' => $items,
             'notifCount' => count($items),
         ]));
     }
 
     public function mrp()
     {
-        $reqs = [
-            ['mat'=>'Tela Algodón 180g','u'=>'m','necesidad'=>1200,'stock'=>450,'comprar'=>750],
-            ['mat'=>'Hilo 40/2','u'=>'rollo','necesidad'=>35,'stock'=>10,'comprar'=>25],
-            ['mat'=>'Etiqueta talla','u'=>'pz','necesidad'=>1000,'stock'=>1200,'comprar'=>0],
-        ];
-        $ocs = [
-            ['prov'=>'Textiles MX','mat'=>'Tela Algodón 180g','cant'=>750,'u'=>'m','eta'=>'2025-10-02'],
-            ['prov'=>'Hilos del Norte','mat'=>'Hilo 40/2','cant'=>25,'u'=>'rollo','eta'=>'2025-09-30'],
-        ];
+        $reqModel = new \App\Models\MrpRequerimientoModel();
+        $ocModel = new \App\Models\MrpOcModel();
+
+        // Obtener todos los requerimientos y OCs de la base de datos
+        $reqs = $reqModel->findAll();
+        $ocs = $ocModel->findAll();
 
         return view('modulos/mrp', $this->payload([
-            'title'      => 'MRP',
-            'reqs'       => $reqs,
-            'ocs'        => $ocs,
+            'title' => 'MRP',
+            'reqs' => $reqs,
+            'ocs' => $ocs,
             'notifCount' => 0,
         ]));
+    }
+
+    // ===== CRUD Requerimientos =====
+    public function crearRequerimiento()
+    {
+        $reqModel = new \App\Models\MrpRequerimientoModel();
+        $post = $this->request->getPost();
+
+        try {
+            $data = [
+                'mat' => $post['mat'] ?? null,
+                'u' => $post['u'] ?? null,
+                'necesidad' => $post['necesidad'] ?? 0,
+                'stock' => $post['stock'] ?? 0,
+                'comprar' => $post['comprar'] ?? 0,
+            ];
+
+            $reqModel->insert($data);
+            return redirect()->to('/modulo3/mrp')->with('success', 'Requerimiento creado');
+        } catch (\Throwable $e) {
+            log_message('error', '[MRP Req] ' . $e->getMessage());
+            return redirect()->to('/modulo3/mrp')->with('error', 'Error al crear requerimiento');
+        }
+    }
+
+    public function editarRequerimiento($id)
+    {
+        $reqModel = new \App\Models\MrpRequerimientoModel();
+        $post = $this->request->getPost();
+
+        try {
+            $data = [
+                'mat' => $post['mat'] ?? null,
+                'u' => $post['u'] ?? null,
+                'necesidad' => $post['necesidad'] ?? 0,
+                'stock' => $post['stock'] ?? 0,
+                'comprar' => $post['comprar'] ?? 0,
+            ];
+
+            $reqModel->update($id, $data);
+            return redirect()->to('/modulo3/mrp')->with('success', 'Requerimiento actualizado');
+        } catch (\Throwable $e) {
+            log_message('error', '[MRP Req Edit] ' . $e->getMessage());
+            return redirect()->to('/modulo3/mrp')->with('error', 'Error al actualizar requerimiento');
+        }
+    }
+
+    public function eliminarRequerimiento($id)
+    {
+        $reqModel = new \App\Models\MrpRequerimientoModel();
+
+        try {
+            $reqModel->delete($id);
+            return redirect()->to('/modulo3/mrp')->with('success', 'Requerimiento eliminado');
+        } catch (\Throwable $e) {
+            log_message('error', '[MRP Req Delete] ' . $e->getMessage());
+            return redirect()->to('/modulo3/mrp')->with('error', 'Error al eliminar requerimiento');
+        }
+    }
+
+    public function requerimientoJson($id)
+    {
+        $reqModel = new \App\Models\MrpRequerimientoModel();
+        $req = $reqModel->find($id);
+
+        if (!$req) {
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'No encontrado']);
+        }
+
+        return $this->response->setJSON($req);
+    }
+
+    // ===== CRUD OCs =====
+    public function crearOC()
+    {
+        $ocModel = new \App\Models\MrpOcModel();
+        $post = $this->request->getPost();
+
+        try {
+            $data = [
+                'prov' => $post['prov'] ?? null,
+                'mat' => $post['mat'] ?? null,
+                'cant' => $post['cant'] ?? 0,
+                'u' => $post['u'] ?? null,
+                'eta' => $post['eta'] ?? date('Y-m-d'),
+            ];
+
+            $ocId = $ocModel->insert($data);
+
+            // Generate PDF
+            $pdfGenerator = new \App\Libraries\PdfGenerator();
+            $ocData = $ocModel->find($ocId);
+            $pdfPath = $pdfGenerator->generateOCPdf($ocData);
+
+            if ($pdfPath) {
+                $ocModel->update($ocId, ['pdf_path' => $pdfPath]);
+            }
+
+            return redirect()->to('/modulo3/mrp')->with('success', 'OC creada');
+        } catch (\Throwable $e) {
+            log_message('error', '[MRP OC] ' . $e->getMessage());
+            return redirect()->to('/modulo3/mrp')->with('error', 'Error al crear OC');
+        }
+    }
+
+    public function editarOC($id)
+    {
+        $ocModel = new \App\Models\MrpOcModel();
+        $post = $this->request->getPost();
+
+        try {
+            $data = [
+                'prov' => $post['prov'] ?? null,
+                'mat' => $post['mat'] ?? null,
+                'cant' => $post['cant'] ?? 0,
+                'u' => $post['u'] ?? null,
+                'eta' => $post['eta'] ?? date('Y-m-d'),
+            ];
+
+            $ocModel->update($id, $data);
+            return redirect()->to('/modulo3/mrp')->with('success', 'OC actualizada');
+        } catch (\Throwable $e) {
+            log_message('error', '[MRP OC Edit] ' . $e->getMessage());
+            return redirect()->to('/modulo3/mrp')->with('error', 'Error al actualizar OC');
+        }
+    }
+
+    public function eliminarOC($id)
+    {
+        $ocModel = new \App\Models\MrpOcModel();
+
+        try {
+            $ocModel->delete($id);
+            return redirect()->to('/modulo3/mrp')->with('success', 'OC eliminada');
+        } catch (\Throwable $e) {
+            log_message('error', '[MRP OC Delete] ' . $e->getMessage());
+            return redirect()->to('/modulo3/mrp')->with('error', 'Error al eliminar OC');
+        }
+    }
+
+    public function ocJson($id)
+    {
+        $ocModel = new \App\Models\MrpOcModel();
+        $oc = $ocModel->find($id);
+
+        if (!$oc) {
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'No encontrado']);
+        }
+
+        return $this->response->setJSON($oc);
+    }
+
+    public function generarOCDesdeRequerimiento($id)
+    {
+        $reqModel = new \App\Models\MrpRequerimientoModel();
+        $ocModel = new \App\Models\MrpOcModel();
+
+        try {
+            // Obtener el requerimiento
+            $req = $reqModel->find($id);
+
+            if (!$req) {
+                return redirect()->to('/modulo3/mrp')->with('error', 'Requerimiento no encontrado');
+            }
+
+            // Solo generar OC si hay cantidad a comprar
+            if ($req['comprar'] <= 0) {
+                return redirect()->to('/modulo3/mrp')->with('error', 'No hay cantidad a comprar para este requerimiento');
+            }
+
+            // Crear la OC automáticamente
+            $data = [
+                'prov' => 'Proveedor por definir',
+                'mat' => $req['mat'],
+                'cant' => $req['comprar'],
+                'u' => $req['u'],
+                'eta' => date('Y-m-d', strtotime('+15 days')), // ETA en 15 días
+            ];
+
+            $ocId = $ocModel->insert($data);
+
+            // Generate PDF
+            $pdfGenerator = new \App\Libraries\PdfGenerator();
+            $ocData = $ocModel->find($ocId);
+            $pdfPath = $pdfGenerator->generateOCPdf($ocData);
+
+            if ($pdfPath) {
+                $ocModel->update($ocId, ['pdf_path' => $pdfPath]);
+            }
+
+            // Create notification
+            $notifService = new \App\Services\NotificationService();
+            $maquiladoraId = session('maquiladoraID') ?? 1;
+            $notifService->createOCNotification($maquiladoraId, $ocId, $ocData['mat']);
+
+            return redirect()->to('/modulo3/mrp')->with('success', 'OC generada exitosamente');
+        } catch (\Throwable $e) {
+            log_message('error', '[MRP Gen OC] ' . $e->getMessage());
+            return redirect()->to('/modulo3/mrp')->with('error', 'Error al generar OC');
+        }
+    }
+
+    public function descargarOCPdf($id)
+    {
+        $ocModel = new \App\Models\MrpOcModel();
+        $oc = $ocModel->find($id);
+
+        if (!$oc || !$oc['pdf_path']) {
+            return redirect()->to('/modulo3/mrp')->with('error', 'PDF no encontrado');
+        }
+
+        $filepath = WRITEPATH . $oc['pdf_path'];
+
+        if (!file_exists($filepath)) {
+            return redirect()->to('/modulo3/mrp')->with('error', 'Archivo PDF no existe');
+        }
+
+        return $this->response->download($filepath, null)->setFileName('OC_' . str_pad($id, 6, '0', STR_PAD_LEFT) . '.pdf');
     }
 
     public function desperdicios()
     {
         $desp = [
-            ['fecha'=>'2025-09-20','op'=>'OP-0012','mat'=>'Tela','cant'=>'15 m','motivo'=>'Manchas'],
-            ['fecha'=>'2025-09-21','op'=>'OP-0010','mat'=>'Piezas','cant'=>'8 pz','motivo'=>'Corte chueco'],
+            ['fecha' => '2025-09-20', 'op' => 'OP-0012', 'mat' => 'Tela', 'cant' => '15 m', 'motivo' => 'Manchas'],
+            ['fecha' => '2025-09-21', 'op' => 'OP-0010', 'mat' => 'Piezas', 'cant' => '8 pz', 'motivo' => 'Corte chueco'],
         ];
         $rep = [
-            ['op'=>'OP-0014','tarea'=>'Costura lateral','pend'=>25,'resp'=>'María','eta'=>'2025-09-24'],
-            ['op'=>'OP-0011','tarea'=>'Rebasteado','pend'=>10,'resp'=>'Luis','eta'=>'2025-09-23'],
+            ['op' => 'OP-0014', 'tarea' => 'Costura lateral', 'pend' => 25, 'resp' => 'María', 'eta' => '2025-09-24'],
+            ['op' => 'OP-0011', 'tarea' => 'Rebasteado', 'pend' => 10, 'resp' => 'Luis', 'eta' => '2025-09-23'],
         ];
 
         return view('modulos/desperdicios', $this->payload([
-            'title'      => 'Desperdicios y Reprocesos',
-            'desp'       => $desp,
-            'rep'        => $rep,
+            'title' => 'Desperdicios y Reprocesos',
+            'desp' => $desp,
+            'rep' => $rep,
             'notifCount' => 2,
         ]));
     }
@@ -2055,13 +2594,13 @@ class Modulos extends BaseController
     public function mantenimientoInventario()
     {
         $maq = [
-            ['cod'=>'MC-0001','modelo'=>'Juki DDL-8700','compra'=>'2022-01-10','ubic'=>'Línea 1','estado'=>'Operativa'],
-            ['cod'=>'MC-0002','modelo'=>'Brother 8450','compra'=>'2021-07-05','ubic'=>'Línea 3','estado'=>'En reparación'],
+            ['cod' => 'MC-0001', 'modelo' => 'Juki DDL-8700', 'compra' => '2022-01-10', 'ubic' => 'Línea 1', 'estado' => 'Operativa'],
+            ['cod' => 'MC-0002', 'modelo' => 'Brother 8450', 'compra' => '2021-07-05', 'ubic' => 'Línea 3', 'estado' => 'En reparación'],
         ];
 
         return view('modulos/mantenimiento_inventario', $this->payload([
-            'title'      => 'Mantenimiento · Inventario',
-            'maq'        => $maq,
+            'title' => 'Mantenimiento · Inventario',
+            'maq' => $maq,
             'notifCount' => 0,
         ]));
     }
@@ -2069,13 +2608,13 @@ class Modulos extends BaseController
     public function mantenimientoPreventivo()
     {
         $prox = [
-            ['fecha'=>'2025-09-25','maq'=>'MC-0001','tarea'=>'Lubricación','resp'=>'Carlos','estado'=>'Próximo'],
-            ['fecha'=>'2025-09-28','maq'=>'MC-0002','tarea'=>'Ajuste correa','resp'=>'Ana','estado'=>'Programado'],
+            ['fecha' => '2025-09-25', 'maq' => 'MC-0001', 'tarea' => 'Lubricación', 'resp' => 'Carlos', 'estado' => 'Próximo'],
+            ['fecha' => '2025-09-28', 'maq' => 'MC-0002', 'tarea' => 'Ajuste correa', 'resp' => 'Ana', 'estado' => 'Programado'],
         ];
 
         return view('modulos/dashboard', $this->payload([
-            'title'      => 'Mantenimiento · Preventivo',
-            'prox'       => $prox,
+            'title' => 'Mantenimiento · Preventivo',
+            'prox' => $prox,
             'notifCount' => 0,
         ]));
     }
@@ -2083,13 +2622,13 @@ class Modulos extends BaseController
     public function mantenimientoCorrectivo()
     {
         $hist = [
-            ['fecha'=>'2025-09-20','maq'=>'MC-0002','falla'=>'Correa rota','accion'=>'Reemplazo','estado'=>'Cerrada'],
-            ['fecha'=>'2025-09-22','maq'=>'MC-0003','falla'=>'Vibración','accion'=>'Ajuste base','estado'=>'En reparación'],
+            ['fecha' => '2025-09-20', 'maq' => 'MC-0002', 'falla' => 'Correa rota', 'accion' => 'Reemplazo', 'estado' => 'Cerrada'],
+            ['fecha' => '2025-09-22', 'maq' => 'MC-0003', 'falla' => 'Vibración', 'accion' => 'Ajuste base', 'estado' => 'En reparación'],
         ];
 
         return view('modulos/mantenimiento_correctivo', $this->payload([
-            'title'      => 'Mantenimiento · Correctivo',
-            'hist'       => $hist,
+            'title' => 'Mantenimiento · Correctivo',
+            'hist' => $hist,
             'notifCount' => 0,
         ]));
     }
@@ -2101,13 +2640,13 @@ class Modulos extends BaseController
     public function logisticaPreparacion()
     {
         $cons = [
-            ['pedido'=>'PED-0041','op'=>'OP-0011','cajas'=>3,'peso'=>25,'dest'=>'Cliente B'],
-            ['pedido'=>'PED-0042','op'=>'OP-0012','cajas'=>6,'peso'=>54,'dest'=>'Cliente C'],
+            ['pedido' => 'PED-0041', 'op' => 'OP-0011', 'cajas' => 3, 'peso' => 25, 'dest' => 'Cliente B'],
+            ['pedido' => 'PED-0042', 'op' => 'OP-0012', 'cajas' => 6, 'peso' => 54, 'dest' => 'Cliente C'],
         ];
 
         return view('modulos/logistica_preparacion', $this->payload([
-            'title'      => 'Logística · Preparación de Envíos',
-            'cons'       => $cons,
+            'title' => 'Logística · Preparación de Envíos',
+            'cons' => $cons,
             'notifCount' => 0,
         ]));
     }
@@ -2115,13 +2654,13 @@ class Modulos extends BaseController
     public function logisticaGestion()
     {
         $env = [
-            ['fecha'=>'2025-09-21','empresa'=>'DHL','guia'=>'JD0148899001','estado'=>'En tránsito'],
-            ['fecha'=>'2025-09-22','empresa'=>'FedEx','guia'=>'FE99223311','estado'=>'Entregado'],
+            ['fecha' => '2025-09-21', 'empresa' => 'DHL', 'guia' => 'JD0148899001', 'estado' => 'En tránsito'],
+            ['fecha' => '2025-09-22', 'empresa' => 'FedEx', 'guia' => 'FE99223311', 'estado' => 'Entregado'],
         ];
 
         return view('modulos/logistica_gestion', $this->payload([
-            'title'      => 'Logística · Gestión de Envíos',
-            'env'        => $env,
+            'title' => 'Logística · Gestión de Envíos',
+            'env' => $env,
             'notifCount' => 0,
         ]));
     }
@@ -2129,13 +2668,13 @@ class Modulos extends BaseController
     public function logisticaDocumentos()
     {
         $docs = [
-            ['tipo'=>'Factura','num'=>'FAC-2025-001','fecha'=>'2025-09-21','estado'=>'Emitida'],
-            ['tipo'=>'Lista de empaque','num'=>'PL-2025-009','fecha'=>'2025-09-21','estado'=>'Emitida'],
+            ['tipo' => 'Factura', 'num' => 'FAC-2025-001', 'fecha' => '2025-09-21', 'estado' => 'Emitida'],
+            ['tipo' => 'Lista de empaque', 'num' => 'PL-2025-009', 'fecha' => '2025-09-21', 'estado' => 'Emitida'],
         ];
 
         return view('modulos/logistica_documentos', $this->payload([
-            'title'      => 'Logística · Documentos de Embarque',
-            'docs'       => $docs,
+            'title' => 'Logística · Documentos de Embarque',
+            'docs' => $docs,
             'notifCount' => 0,
         ]));
     }
@@ -2146,7 +2685,7 @@ class Modulos extends BaseController
     public function inspeccion()
     {
         return view('modulos/inspeccion', $this->payload([
-            'title'      => 'Inspección de Producción',
+            'title' => 'Inspección de Producción',
             'notifCount' => 0,
         ]));
     }
@@ -2169,8 +2708,8 @@ class Modulos extends BaseController
         $pedidos = $pedidoModel->getListadoPedidos($maquiladoraId);
 
         return view('modulos/pedidos', $this->payload([
-            'title'      => 'Módulo 1 · Pedidos',
-            'pedidos'    => $pedidos,
+            'title' => 'Módulo 1 · Pedidos',
+            'pedidos' => $pedidos,
             'notifCount' => 0,
         ]));
     }
@@ -2181,12 +2720,12 @@ class Modulos extends BaseController
         $ordenes = [];
         $maquiladoras = [];
         $maquiladoraId = session()->get('maquiladora_id');
-        
+
         try {
             $opModel = new \App\Models\OrdenProduccionModel();
             // Filtrar OP por maquiladora del usuario autenticado
             $ordenes = $opModel->getListado($maquiladoraId);
-            
+
             // Obtener lista de otras maquiladoras para compartir
             $db = \Config\Database::connect();
             // Intentar minúsculas
@@ -2201,8 +2740,8 @@ class Modulos extends BaseController
                     ->get()
                     ->getResultArray();
             } catch (\Throwable $e) {
-                 // Intentar con mayúsculas
-                 $maquiladoras = $db->table('Maquiladora')
+                // Intentar con mayúsculas
+                $maquiladoras = $db->table('Maquiladora')
                     ->select('idmaquiladora as id, Nombre_Maquila as nombre')
                     ->where('idmaquiladora !=', $maquiladoraId)
                     ->where('status', 1)
@@ -2211,14 +2750,14 @@ class Modulos extends BaseController
                     ->get()
                     ->getResultArray();
             }
-            
+
         } catch (\Throwable $e) {
             $ordenes = [];
         }
 
         return view('modulos/m1_ordenes', $this->payload([
-            'title'      => 'Módulo 1 · Órdenes',
-            'ordenes'    => $ordenes,
+            'title' => 'Módulo 1 · Órdenes',
+            'ordenes' => $ordenes,
             'maquiladoras' => $maquiladoras,
             'currentMaquiladoraId' => $maquiladoraId,
             'notifCount' => 0,
@@ -2230,18 +2769,18 @@ class Modulos extends BaseController
      */
     public function m1_ordenes_compartir()
     {
-        $opId = (int)$this->request->getPost('opId');
-        $maquiladoraId = (int)$this->request->getPost('maquiladoraId');
-        
+        $opId = (int) $this->request->getPost('opId');
+        $maquiladoraId = (int) $this->request->getPost('maquiladoraId');
+
         if ($opId <= 0 || $maquiladoraId <= 0) {
             return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Datos inválidos']);
         }
-        
+
         $db = \Config\Database::connect();
         try {
             // Verificar que la OP exista y pertenezca a la maquiladora actual (seguridad básica)
             $currentMaquiladoraId = session()->get('maquiladora_id');
-            
+
             // Actualizar
             $updated = false;
             // Intentar tabla minúsculas
@@ -2251,7 +2790,7 @@ class Modulos extends BaseController
                     $builder->where('maquiladoraID', $currentMaquiladoraId);
                 }
                 $builder->where('id', $opId)->update(['maquiladoraCompartidaID' => $maquiladoraId]);
-                
+
                 // Verificar si se actualizó algo (o si ya tenía ese valor, affectedRows podría ser 0, pero la query corrió)
                 // Asumimos éxito si no lanza excepción, aunque lo ideal es checkear affectedRows si cambia
                 $updated = true;
@@ -2269,13 +2808,13 @@ class Modulos extends BaseController
                     log_message('error', 'Error al compartir OP: ' . $e2->getMessage());
                 }
             }
-            
+
             if ($updated) {
                 return $this->response->setJSON(['success' => true, 'message' => 'Orden compartida correctamente']);
             } else {
                 return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'No se pudo actualizar la orden']);
             }
-            
+
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Error del servidor: ' . $e->getMessage()]);
         }
@@ -2285,20 +2824,24 @@ class Modulos extends BaseController
     {
         $empleadoId = null;
         try {
-            $userId = (int)(session()->get('user_id') ?? 0);
+            $userId = (int) (session()->get('user_id') ?? 0);
             if ($userId > 0) {
                 $emp = (new \App\Models\EmpleadoModel())
                     ->where('idusuario', $userId)
                     ->select('id')
                     ->first();
-                if ($emp && isset($emp['id'])) { $empleadoId = (int)$emp['id']; }
+                if ($emp && isset($emp['id'])) {
+                    $empleadoId = (int) $emp['id'];
+                }
             }
-        } catch (\Throwable $e) { $empleadoId = null; }
+        } catch (\Throwable $e) {
+            $empleadoId = null;
+        }
 
         return view('modulos/produccion', $this->payload([
-            'title'       => 'Módulo 1 · Producción',
-            'notifCount'  => 0,
-            'empleadoId'  => $empleadoId,
+            'title' => 'Módulo 1 · Producción',
+            'notifCount' => 0,
+            'empleadoId' => $empleadoId,
         ]));
     }
 
@@ -2310,7 +2853,7 @@ class Modulos extends BaseController
         }
 
         return view('modulos/agregar_pedido', $this->payload([
-            'title'      => 'Módulo 1 · Agregar Pedido',
+            'title' => 'Módulo 1 · Agregar Pedido',
             'notifCount' => 0,
         ]));
     }
@@ -2322,13 +2865,13 @@ class Modulos extends BaseController
 
         if (strtolower($this->request->getMethod()) === 'post') {
             // Obtener ID desde POST si no viene en la URL
-            $idPost = (int)($this->request->getPost('id') ?? 0);
+            $idPost = (int) ($this->request->getPost('id') ?? 0);
             if (!$id && $idPost) {
                 $id = $idPost;
             }
 
             // Si no hay ID en POST/URL, responder apropiadamente (JSON si XHR o Accept JSON)
-            $acceptsJson = stripos((string)$this->request->getHeaderLine('accept'), 'application/json') !== false;
+            $acceptsJson = stripos((string) $this->request->getHeaderLine('accept'), 'application/json') !== false;
             if (!$id) {
                 if ($this->request->isAJAX() || $acceptsJson) {
                     return $this->response->setStatusCode(400)->setJSON([
@@ -2341,41 +2884,43 @@ class Modulos extends BaseController
             // Procesar formulario: actualizar campos del pedido
             // Normalizar total a número
             $totalPost = $this->request->getPost('total');
-            if (is_string($totalPost)) { $totalPost = str_replace(',', '', $totalPost); }
-            $totalPost = ($totalPost === '' || $totalPost === null) ? null : (float)$totalPost;
+            if (is_string($totalPost)) {
+                $totalPost = str_replace(',', '', $totalPost);
+            }
+            $totalPost = ($totalPost === '' || $totalPost === null) ? null : (float) $totalPost;
 
             $data = [
-                'descripcion'      => $this->request->getPost('descripcion') ?? null,
-                'cantidad'         => $this->request->getPost('cantidad') ?? null,
+                'descripcion' => $this->request->getPost('descripcion') ?? null,
+                'cantidad' => $this->request->getPost('cantidad') ?? null,
                 'especificaciones' => $this->request->getPost('especificaciones') ?? null,
-                'materiales'       => $this->request->getPost('materiales') ?? null,
-                'modelo'           => $this->request->getPost('modelo') ?? null,
-                'tallas'           => $this->request->getPost('tallas') ?? null,
-                'color'            => $this->request->getPost('color') ?? null,
-                'fecha_entrega'    => $this->request->getPost('fecha_entrega') ?? null,
+                'materiales' => $this->request->getPost('materiales') ?? null,
+                'modelo' => $this->request->getPost('modelo') ?? null,
+                'tallas' => $this->request->getPost('tallas') ?? null,
+                'color' => $this->request->getPost('color') ?? null,
+                'fecha_entrega' => $this->request->getPost('fecha_entrega') ?? null,
                 // Solo actualizar estatus si viene en POST; no establecer valor por defecto aquí
-                'estatus'          => $this->request->getPost('estatus'),
-                'fecha'            => $this->request->getPost('fecha') ?? null,
-                'folio'            => $this->request->getPost('folio') ?? null,
-                'moneda'           => $this->request->getPost('moneda') ?? null,
-                'total'            => $totalPost,
-                'progreso'         => $this->request->getPost('progreso') ?? null,
+                'estatus' => $this->request->getPost('estatus'),
+                'fecha' => $this->request->getPost('fecha') ?? null,
+                'folio' => $this->request->getPost('folio') ?? null,
+                'moneda' => $this->request->getPost('moneda') ?? null,
+                'total' => $totalPost,
+                'progreso' => $this->request->getPost('progreso') ?? null,
             ];
 
             // Solo columnas válidas de orden_compra (normalizar y filtrar)
             $ocData = [
-                'folio'   => $data['folio'],
-                'fecha'   => $data['fecha'],
+                'folio' => $data['folio'],
+                'fecha' => $data['fecha'],
                 'estatus' => $data['estatus'],
-                'moneda'  => $data['moneda'],
-                'total'   => $data['total'],
+                'moneda' => $data['moneda'],
+                'total' => $data['total'],
             ];
-            
+
             // Si no viene fecha o está vacía, establecer fecha actual
             if (empty($ocData['fecha'])) {
                 $ocData['fecha'] = date('Y-m-d');
             }
-            
+
             // Normalizar fecha: aceptar dd/mm/yyyy -> yyyy-mm-dd
             if (!empty($ocData['fecha']) && is_string($ocData['fecha'])) {
                 $f = trim($ocData['fecha']);
@@ -2383,7 +2928,9 @@ class Modulos extends BaseController
                     $parts = preg_split('/[\/]/', $f);
                     if (count($parts) === 3) {
                         // asume dd/mm/yyyy
-                        $dd = (int)$parts[0]; $mm = (int)$parts[1]; $yy = (int)$parts[2];
+                        $dd = (int) $parts[0];
+                        $mm = (int) $parts[1];
+                        $yy = (int) $parts[2];
                         if ($dd > 0 && $mm > 0 && $yy > 0) {
                             $ocData['fecha'] = sprintf('%04d-%02d-%02d', $yy, $mm, $dd);
                         }
@@ -2395,41 +2942,52 @@ class Modulos extends BaseController
                 }
             }
             // Filtrar cadenas vacías para no sobreescribir con ""
-            foreach (['folio','estatus','moneda'] as $k) {
-                if (!isset($ocData[$k]) || $ocData[$k] === '') { unset($ocData[$k]); }
+            foreach (['folio', 'estatus', 'moneda'] as $k) {
+                if (!isset($ocData[$k]) || $ocData[$k] === '') {
+                    unset($ocData[$k]);
+                }
             }
             // Si total es null, no lo enviamos; si es numérico, mantener
-            if ($ocData['total'] === null || $ocData['total'] === '') { unset($ocData['total']); }
+            if ($ocData['total'] === null || $ocData['total'] === '') {
+                unset($ocData['total']);
+            }
 
             // Guardar
             try {
-                $rowsOC = 0; $rowsOP = 0;
+                $rowsOC = 0;
+                $rowsOP = 0;
                 if ($id) {
                     // Actualizar orden_compra con Query Builder (evita restricciones de allowedFields)
                     $db = \Config\Database::connect();
                     $updated = false;
-                    
+
                     if (!empty($ocData)) {
                         try {
-                            $updated = $db->table('orden_compra')->where('id', (int)$id)->update($ocData);
+                            $updated = $db->table('orden_compra')->where('id', (int) $id)->update($ocData);
                             $rowsOC = $db->affectedRows();
-                        } catch (\Throwable $eQB1) { $updated = false; }
+                        } catch (\Throwable $eQB1) {
+                            $updated = false;
+                        }
                         if (!$updated) {
-                            try { $db->table('OrdenCompra')->where('id', (int)$id)->update($ocData); $rowsOC = $db->affectedRows(); } catch (\Throwable $eQB2) {}
+                            try {
+                                $db->table('OrdenCompra')->where('id', (int) $id)->update($ocData);
+                                $rowsOC = $db->affectedRows();
+                            } catch (\Throwable $eQB2) {
+                            }
                         }
                     }
                     // Actualizar OP ligada (última por ordenCompraId) si llegaron campos
-                    $opCantidadPlan    = $this->request->getPost('op_cantidadPlan');
-                    $disenoVersionId   = $this->request->getPost('disenoVersionId');
-                    $disenoId          = $this->request->getPost('disenoId');
+                    $opCantidadPlan = $this->request->getPost('op_cantidadPlan');
+                    $disenoVersionId = $this->request->getPost('disenoVersionId');
+                    $disenoId = $this->request->getPost('disenoId');
 
                     // Si viene disenoId pero no disenoVersionId, buscar la última versión del diseño
                     if ((!$disenoVersionId || $disenoVersionId == '') && $disenoId) {
                         try {
                             // Buscar última versión del diseño
-                            $verRow = $db->query('SELECT id FROM diseno_version WHERE disenoId = ? ORDER BY id DESC LIMIT 1', [(int)$disenoId])->getRowArray();
+                            $verRow = $db->query('SELECT id FROM diseno_version WHERE disenoId = ? ORDER BY id DESC LIMIT 1', [(int) $disenoId])->getRowArray();
                             if (!$verRow) {
-                                $verRow = $db->query('SELECT id FROM DisenoVersion WHERE disenoId = ? ORDER BY id DESC LIMIT 1', [(int)$disenoId])->getRowArray();
+                                $verRow = $db->query('SELECT id FROM DisenoVersion WHERE disenoId = ? ORDER BY id DESC LIMIT 1', [(int) $disenoId])->getRowArray();
                             }
                             if ($verRow && isset($verRow['id'])) {
                                 $disenoVersionId = $verRow['id'];
@@ -2442,12 +3000,16 @@ class Modulos extends BaseController
                     // Normalizar fecha fin plan si viene como dd/mm/yyyy
                     $opFechaFinPlan = null;
                     if ($opFechaFinPlanRaw !== null && $opFechaFinPlanRaw !== '') {
-                        $ff = trim((string)$opFechaFinPlanRaw);
+                        $ff = trim((string) $opFechaFinPlanRaw);
                         if (strpos($ff, '/') !== false) {
                             $pp = preg_split('/[\/]/', $ff);
                             if (count($pp) === 3) {
-                                $dd=(int)$pp[0]; $mm=(int)$pp[1]; $yy=(int)$pp[2];
-                                if ($dd>0 && $mm>0 && $yy>0) { $opFechaFinPlan = sprintf('%04d-%02d-%02d', $yy, $mm, $dd); }
+                                $dd = (int) $pp[0];
+                                $mm = (int) $pp[1];
+                                $yy = (int) $pp[2];
+                                if ($dd > 0 && $mm > 0 && $yy > 0) {
+                                    $opFechaFinPlan = sprintf('%04d-%02d-%02d', $yy, $mm, $dd);
+                                }
                             }
                         } else {
                             $opFechaFinPlan = $ff; // ya en yyyy-mm-dd
@@ -2457,54 +3019,94 @@ class Modulos extends BaseController
                         // $db ya definido
                         $op = null;
                         try {
-                            $op = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int)$id])->getRowArray();
-                        } catch (\Throwable $e1) { $op = null; }
+                            $op = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
+                        } catch (\Throwable $e1) {
+                            $op = null;
+                        }
                         if (!$op) {
-                            try { $op = $db->query('SELECT * FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int)$id])->getRowArray(); }
-                            catch (\Throwable $e2) { $op = null; }
+                            try {
+                                $op = $db->query('SELECT * FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
+                            } catch (\Throwable $e2) {
+                                $op = null;
+                            }
                         }
                         if ($op) {
                             $set = [];
-                            if ($opCantidadPlan !== null && $opCantidadPlan !== '') { $set['cantidadPlan'] = (int)$opCantidadPlan; }
-                            if ($disenoVersionId !== null && (int)$disenoVersionId > 0) { $set['disenoVersionId'] = (int)$disenoVersionId; }
-                            if ($opFechaFinPlan !== null && $opFechaFinPlan !== '') { $set['fechaFinPlan'] = $opFechaFinPlan; }
+                            if ($opCantidadPlan !== null && $opCantidadPlan !== '') {
+                                $set['cantidadPlan'] = (int) $opCantidadPlan;
+                            }
+                            if ($disenoVersionId !== null && (int) $disenoVersionId > 0) {
+                                $set['disenoVersionId'] = (int) $disenoVersionId;
+                            }
+                            if ($opFechaFinPlan !== null && $opFechaFinPlan !== '') {
+                                $set['fechaFinPlan'] = $opFechaFinPlan;
+                            }
                             if (!empty($set)) {
                                 // Intentar con variantes de columna para fecha fin plan
                                 $variants = [$set];
                                 if (isset($set['fechaFinPlan'])) {
-                                    $alt1 = $set; $alt1['FechaFinPlan'] = $alt1['fechaFinPlan']; unset($alt1['fechaFinPlan']);
-                                    $alt2 = $set; $alt2['fecha_fin_plan'] = $alt2['fechaFinPlan']; unset($alt2['fechaFinPlan']);
+                                    $alt1 = $set;
+                                    $alt1['FechaFinPlan'] = $alt1['fechaFinPlan'];
+                                    unset($alt1['fechaFinPlan']);
+                                    $alt2 = $set;
+                                    $alt2['fecha_fin_plan'] = $alt2['fechaFinPlan'];
+                                    unset($alt2['fechaFinPlan']);
                                     $variants = [$set, $alt1, $alt2];
                                 }
                                 foreach ($variants as $trySet) {
-                                    try { $db->table('orden_produccion')->where('id', (int)$op['id'])->update($trySet); $rowsOP = max($rowsOP, $db->affectedRows()); }
-                                    catch (\Throwable $e3) {
-                                        try { $db->table('OrdenProduccion')->where('id', (int)$op['id'])->update($trySet); $rowsOP = max($rowsOP, $db->affectedRows()); } catch (\Throwable $e4) { /* siguiente variante */ }
+                                    try {
+                                        $db->table('orden_produccion')->where('id', (int) $op['id'])->update($trySet);
+                                        $rowsOP = max($rowsOP, $db->affectedRows());
+                                    } catch (\Throwable $e3) {
+                                        try {
+                                            $db->table('OrdenProduccion')->where('id', (int) $op['id'])->update($trySet);
+                                            $rowsOP = max($rowsOP, $db->affectedRows());
+                                        } catch (\Throwable $e4) { /* siguiente variante */
+                                        }
                                     }
                                 }
                             }
                         } else {
                             // No hay OP, crearla
                             $newOp = [
-                                'ordenCompraId'   => (int)$id,
-                                'disenoVersionId' => ($disenoVersionId !== null && (int)$disenoVersionId > 0) ? (int)$disenoVersionId : null,
-                                'folio'           => null,
-                                'cantidadPlan'    => ($opCantidadPlan !== null && $opCantidadPlan !== '') ? (int)$opCantidadPlan : null,
+                                'ordenCompraId' => (int) $id,
+                                'disenoVersionId' => ($disenoVersionId !== null && (int) $disenoVersionId > 0) ? (int) $disenoVersionId : null,
+                                'folio' => null,
+                                'cantidadPlan' => ($opCantidadPlan !== null && $opCantidadPlan !== '') ? (int) $opCantidadPlan : null,
                                 'fechaInicioPlan' => null,
-                                'fechaFinPlan'    => ($opFechaFinPlan !== null && $opFechaFinPlan !== '') ? $opFechaFinPlan : null,
-                                'status'          => 'Planeada',
+                                'fechaFinPlan' => ($opFechaFinPlan !== null && $opFechaFinPlan !== '') ? $opFechaFinPlan : null,
+                                'status' => 'Planeada',
                             ];
-                            try { $db->table('orden_produccion')->insert($newOp); $rowsOP = $db->affectedRows(); }
-                            catch (\Throwable $e5) {
+                            try {
+                                $db->table('orden_produccion')->insert($newOp);
+                                $rowsOP = $db->affectedRows();
+                            } catch (\Throwable $e5) {
                                 // Reintentar con variantes de columna para fecha fin plan
                                 $tryNew = $newOp;
                                 if (array_key_exists('fechaFinPlan', $tryNew)) {
-                                    $alt1 = $tryNew; $alt1['FechaFinPlan'] = $alt1['fechaFinPlan']; unset($alt1['fechaFinPlan']);
-                                    $alt2 = $tryNew; $alt2['fecha_fin_plan'] = $alt2['FechaFinPlan'] ?? ($tryNew['fechaFinPlan'] ?? null); unset($alt2['fechaFinPlan']); unset($alt2['FechaFinPlan']);
-                                    try { $db->table('OrdenProduccion')->insert($alt1); $rowsOP = $db->affectedRows(); }
-                                    catch (\Throwable $e6) { try { $db->table('OrdenProduccion')->insert($alt2); $rowsOP = $db->affectedRows(); } catch (\Throwable $e7) {} }
+                                    $alt1 = $tryNew;
+                                    $alt1['FechaFinPlan'] = $alt1['fechaFinPlan'];
+                                    unset($alt1['fechaFinPlan']);
+                                    $alt2 = $tryNew;
+                                    $alt2['fecha_fin_plan'] = $alt2['FechaFinPlan'] ?? ($tryNew['fechaFinPlan'] ?? null);
+                                    unset($alt2['fechaFinPlan']);
+                                    unset($alt2['FechaFinPlan']);
+                                    try {
+                                        $db->table('OrdenProduccion')->insert($alt1);
+                                        $rowsOP = $db->affectedRows();
+                                    } catch (\Throwable $e6) {
+                                        try {
+                                            $db->table('OrdenProduccion')->insert($alt2);
+                                            $rowsOP = $db->affectedRows();
+                                        } catch (\Throwable $e7) {
+                                        }
+                                    }
                                 } else {
-                                    try { $db->table('OrdenProduccion')->insert($tryNew); $rowsOP = $db->affectedRows(); } catch (\Throwable $e6) {}
+                                    try {
+                                        $db->table('OrdenProduccion')->insert($tryNew);
+                                        $rowsOP = $db->affectedRows();
+                                    } catch (\Throwable $e6) {
+                                    }
                                 }
                             }
                         }
@@ -2513,8 +3115,18 @@ class Modulos extends BaseController
                         try {
                             // Obtener OP actualizada (última)
                             $opNow = null;
-                            try { $opNow = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int)$id])->getRowArray(); } catch (\Throwable $eR1) { $opNow = null; }
-                            if (!$opNow) { try { $opNow = $db->query('SELECT * FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int)$id])->getRowArray(); } catch (\Throwable $eR2) { $opNow = null; } }
+                            try {
+                                $opNow = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
+                            } catch (\Throwable $eR1) {
+                                $opNow = null;
+                            }
+                            if (!$opNow) {
+                                try {
+                                    $opNow = $db->query('SELECT * FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
+                                } catch (\Throwable $eR2) {
+                                    $opNow = null;
+                                }
+                            }
                             if ($opNow) {
                                 $dvId = $opNow['disenoVersionId'] ?? null;
                                 $cant = $opNow['cantidadPlan'] ?? null;
@@ -2522,37 +3134,67 @@ class Modulos extends BaseController
                                     // Precio desde diseño
                                     $precio = null;
                                     try {
-                                        $rowP = $db->query('SELECT d.precio_unidad FROM diseno_version dv LEFT JOIN diseno d ON d.id = dv.disenoId WHERE dv.id = ?', [(int)$dvId])->getRowArray();
+                                        $rowP = $db->query('SELECT d.precio_unidad FROM diseno_version dv LEFT JOIN diseno d ON d.id = dv.disenoId WHERE dv.id = ?', [(int) $dvId])->getRowArray();
                                         $precio = $rowP['precio_unidad'] ?? null;
-                                    } catch (\Throwable $eP1) { $precio = null; }
+                                    } catch (\Throwable $eP1) {
+                                        $precio = null;
+                                    }
                                     if ($precio === null) {
                                         try {
-                                            $rowP = $db->query('SELECT d.precio_unidad FROM DisenoVersion dv LEFT JOIN Diseno d ON d.id = dv.disenoId WHERE dv.id = ?', [(int)$dvId])->getRowArray();
+                                            $rowP = $db->query('SELECT d.precio_unidad FROM DisenoVersion dv LEFT JOIN Diseno d ON d.id = dv.disenoId WHERE dv.id = ?', [(int) $dvId])->getRowArray();
                                             $precio = $rowP['precio_unidad'] ?? null;
-                                        } catch (\Throwable $eP2) { $precio = null; }
+                                        } catch (\Throwable $eP2) {
+                                            $precio = null;
+                                        }
                                     }
                                     if ($precio !== null) {
-                                        $calcTotal = (float)$precio * (float)$cant;
+                                        $calcTotal = (float) $precio * (float) $cant;
                                         try {
-                                            $db->table('orden_compra')->where('id', (int)$id)->update(['total' => $calcTotal]);
+                                            $db->table('orden_compra')->where('id', (int) $id)->update(['total' => $calcTotal]);
                                             $rowsOC = max($rowsOC, $db->affectedRows());
                                         } catch (\Throwable $eUT1) {
-                                            try { $db->table('OrdenCompra')->where('id', (int)$id)->update(['total' => $calcTotal]); $rowsOC = max($rowsOC, $db->affectedRows()); } catch (\Throwable $eUT2) {}
+                                            try {
+                                                $db->table('OrdenCompra')->where('id', (int) $id)->update(['total' => $calcTotal]);
+                                                $rowsOC = max($rowsOC, $db->affectedRows());
+                                            } catch (\Throwable $eUT2) {
+                                            }
                                         }
                                     }
                                 }
                             }
-                        } catch (\Throwable $eR) {}
+                        } catch (\Throwable $eR) {
+                        }
                     }
                 }
                 // Si la petición viene por AJAX o Accept JSON, responder JSON con estado actual
                 if ($this->request->isAJAX() || $acceptsJson) {
                     $db = \Config\Database::connect();
-                    $ocRow = null; $opRow = null;
-                    try { $ocRow = $db->query('SELECT id, folio, fecha, estatus, moneda, total FROM orden_compra WHERE id = ?', [(int)$id])->getRowArray(); } catch (\Throwable $eO1) { $ocRow = null; }
-                    if (!$ocRow) { try { $ocRow = $db->query('SELECT id, folio, fecha, estatus, moneda, total FROM OrdenCompra WHERE id = ?', [(int)$id])->getRowArray(); } catch (\Throwable $eO2) { $ocRow = null; } }
-                    try { $opRow = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int)$id])->getRowArray(); } catch (\Throwable $ePR1) { $opRow = null; }
-                    if (!$opRow) { try { $opRow = $db->query('SELECT * FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int)$id])->getRowArray(); } catch (\Throwable $ePR2) { $opRow = null; } }
+                    $ocRow = null;
+                    $opRow = null;
+                    try {
+                        $ocRow = $db->query('SELECT id, folio, fecha, estatus, moneda, total FROM orden_compra WHERE id = ?', [(int) $id])->getRowArray();
+                    } catch (\Throwable $eO1) {
+                        $ocRow = null;
+                    }
+                    if (!$ocRow) {
+                        try {
+                            $ocRow = $db->query('SELECT id, folio, fecha, estatus, moneda, total FROM OrdenCompra WHERE id = ?', [(int) $id])->getRowArray();
+                        } catch (\Throwable $eO2) {
+                            $ocRow = null;
+                        }
+                    }
+                    try {
+                        $opRow = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
+                    } catch (\Throwable $ePR1) {
+                        $opRow = null;
+                    }
+                    if (!$opRow) {
+                        try {
+                            $opRow = $db->query('SELECT * FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
+                        } catch (\Throwable $ePR2) {
+                            $opRow = null;
+                        }
+                    }
                     return $this->response->setJSON([
                         'success' => true,
                         'message' => 'Pedido actualizado correctamente',
@@ -2565,18 +3207,18 @@ class Modulos extends BaseController
                 return redirect()->to('/modulo1/pedidos')->with('success', 'Pedido actualizado correctamente');
             } catch (\Throwable $e) {
                 if ($this->request->isAJAX() || $acceptsJson) {
-                    return $this->response->setStatusCode(500)->setJSON(['success'=>false,'message'=>$e->getMessage()]);
+                    return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => $e->getMessage()]);
                 }
-                return redirect()->to('/modulo1/pedidos')->with('error', 'Error al actualizar: '.$e->getMessage());
+                return redirect()->to('/modulo1/pedidos')->with('error', 'Error al actualizar: ' . $e->getMessage());
             }
         }
 
-        $pedido = $pedidoModel->getPedidoPorId((int)$id);
+        $pedido = $pedidoModel->getPedidoPorId((int) $id);
 
         return view('modulos/editarpedido', $this->payload([
-            'title'      => 'Módulo 1 · Editar Pedido',
-            'pedido'     => $pedido,
-            'id'         => $id,
+            'title' => 'Módulo 1 · Editar Pedido',
+            'pedido' => $pedido,
+            'id' => $id,
             'notifCount' => 0,
         ]));
     }
@@ -2586,7 +3228,7 @@ class Modulos extends BaseController
     {
         $pedidoModel = new \App\Models\PedidoModel();
         // Traer detalle completo para incluir cliente, direcciones, y diseño asignado
-        $pedido = $pedidoModel->getPedidoDetalle((int)$id);
+        $pedido = $pedidoModel->getPedidoDetalle((int) $id);
 
         // Normalizar campos esperados por la vista
         if (is_array($pedido)) {
@@ -2596,9 +3238,9 @@ class Modulos extends BaseController
         }
 
         return view('modulos/detalle_pedido', $this->payload([
-            'title'      => 'Módulo 1 · Detalle del Pedido',
-            'pedido'     => $pedido,
-            'id'         => $id,
+            'title' => 'Módulo 1 · Detalle del Pedido',
+            'pedido' => $pedido,
+            'id' => $id,
             'notifCount' => 0,
         ]));
     }
@@ -2614,7 +3256,7 @@ class Modulos extends BaseController
 
         // Datos de ejemplo; en producción vendrán de la BD
         $ordenData = [
-            'folio' => 'OP-' . str_pad((string)$id, 4, '0', STR_PAD_LEFT),
+            'folio' => 'OP-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT),
             'cantidadPlan' => 100,
         ];
 
@@ -2625,11 +3267,11 @@ class Modulos extends BaseController
         ];
 
         return view('evaluar', $this->payload([
-            'title'       => 'Evaluar Orden',
-            'orden_id'    => $id,
-            'orden_data'  => $ordenData,
-            'defectos'    => $defectos,
-            'notifCount'  => 0,
+            'title' => 'Evaluar Orden',
+            'orden_id' => $id,
+            'orden_data' => $ordenData,
+            'defectos' => $defectos,
+            'notifCount' => 0,
         ]));
     }
 
@@ -2655,7 +3297,7 @@ class Modulos extends BaseController
     {
         // Vista de listado de muestras (puede reusar una tabla similar a inspección)
         return view('modulos/muestras', $this->payload([
-            'title'      => 'Muestras de Prototipos',
+            'title' => 'Muestras de Prototipos',
             'notifCount' => 0,
         ]));
     }
@@ -2668,7 +3310,7 @@ class Modulos extends BaseController
 
         // Datos de ejemplo; en producción vendrán de la BD
         $muestraData = [
-            'prototipo_codigo' => 'PR-' . str_pad((string)$id, 4, '0', STR_PAD_LEFT),
+            'prototipo_codigo' => 'PR-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT),
             'solicitadaPor' => 'Cliente Demo',
             'archivoCadUrl' => '',
             'archivoPatronUrl' => '',
@@ -2680,11 +3322,11 @@ class Modulos extends BaseController
         ];
 
         return view('modulos/evaluar_muestra', $this->payload([
-            'title'        => 'Evaluar Muestra',
-            'muestra_id'   => $id,
+            'title' => 'Evaluar Muestra',
+            'muestra_id' => $id,
             'muestra_data' => $muestraData,
             'responsables' => $responsables,
-            'notifCount'   => 0,
+            'notifCount' => 0,
         ]));
     }
 
@@ -2703,14 +3345,14 @@ class Modulos extends BaseController
         $pedidos = $pedidoModel->getListadoPedidos();
 
         return view('modulos/ordenesclientes', $this->payload([
-            'title'      => 'Módulo 1 · Órdenes de Clientes',
-            'pedidos'    => $pedidos,
+            'title' => 'Módulo 1 · Órdenes de Clientes',
+            'pedidos' => $pedidos,
             'notifCount' => 0,
         ]));
     }
     public function m1_perfilempleado()
     {
-        $uid = (int)(session()->get('user_id') ?? 0);
+        $uid = (int) (session()->get('user_id') ?? 0);
         $empleado = [];
         try {
             $db = \Config\Database::connect();
@@ -2729,9 +3371,12 @@ class Modulos extends BaseController
                      FROM empleado e 
                      INNER JOIN users u ON e.idusuario = u.id
                      LEFT JOIN maquiladora m ON u.maquiladoraIdFK = m.idmaquiladora
-                     WHERE u.id = ? LIMIT 1', [$uid]
+                     WHERE u.id = ? LIMIT 1',
+                    [$uid]
                 )->getRowArray();
-            } catch (\Throwable $e1) { $row = null; }
+            } catch (\Throwable $e1) {
+                $row = null;
+            }
             // Variantes por mayúsculas/campos alternos
             if (!$row) {
                 try {
@@ -2747,26 +3392,29 @@ class Modulos extends BaseController
                          FROM Empleado e 
                          INNER JOIN Users u ON e.idusuario = u.id
                          LEFT JOIN Maquiladora m ON u.maquiladoraIdFK = m.idmaquiladora
-                         WHERE u.id = ? LIMIT 1', [$uid]
+                         WHERE u.id = ? LIMIT 1',
+                        [$uid]
                     )->getRowArray();
-                } catch (\Throwable $e2) { $row = null; }
+                } catch (\Throwable $e2) {
+                    $row = null;
+                }
             }
             if ($row) {
                 // Completar faltantes desde sesión (email/puesto)
                 if (!isset($row['email']) || $row['email'] === null || $row['email'] === '') {
                     $row['email'] = $row['correo']
-                        ?? (string)(session()->get('user_email') ?? '')
-                        ?? (string)(session()->get('correo') ?? '');
+                        ?? (string) (session()->get('user_email') ?? '')
+                        ?? (string) (session()->get('correo') ?? '');
                 }
-                
+
                 // Codificar la imagen en base64 si existe
                 if (!empty($row['foto'])) {
                     $row['foto'] = base64_encode($row['foto']);
                 }
                 if (!isset($row['puesto']) || $row['puesto'] === null || $row['puesto'] === '') {
                     $primary = session()->get('primary_role');
-                    $rnames  = session()->get('role_names');
-                    $row['puesto'] = (string)(
+                    $rnames = session()->get('role_names');
+                    $row['puesto'] = (string) (
                         ($primary ?: (is_array($rnames) && isset($rnames[0]) ? $rnames[0] : null))
                         ?? session()->get('user_role')
                         ?? session()->get('status')
@@ -2775,11 +3423,13 @@ class Modulos extends BaseController
                 }
                 $empleado = $row;
             }
-        } catch (\Throwable $e) { $empleado = []; }
+        } catch (\Throwable $e) {
+            $empleado = [];
+        }
 
         return view('modulos/perfilempleado', $this->payload([
-            'title'      => 'Módulo 1 · Perfil de Empleado',
-            'empleado'   => $empleado,
+            'title' => 'Módulo 1 · Perfil de Empleado',
+            'empleado' => $empleado,
             'notifCount' => 0,
         ]));
     }
@@ -2794,17 +3444,19 @@ class Modulos extends BaseController
         if (strtolower($this->request->getMethod()) !== 'post') {
             return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Método no permitido']);
         }
-        $uid = (int)(session()->get('user_id') ?? 0);
+        $uid = (int) (session()->get('user_id') ?? 0);
         if ($uid <= 0) {
             return $this->response->setStatusCode(401)->setJSON(['success' => false, 'message' => 'Sesión no válida']);
         }
 
-        $in = static function($k, $t='str') {
-            $v = trim((string)service('request')->getPost($k));
-            if ($t === 'date') { return $v === '' ? null : $v; }
+        $in = static function ($k, $t = 'str') {
+            $v = trim((string) service('request')->getPost($k));
+            if ($t === 'date') {
+                return $v === '' ? null : $v;
+            }
             return $v === '' ? null : $v;
         };
-        
+
         // Procesar la foto si se subió
         $fotoData = null;
         $fotoFile = $this->request->getFile('foto');
@@ -2818,24 +3470,24 @@ class Modulos extends BaseController
         }
 
         $row = [
-            'noEmpleado'    => $in('noEmpleado'),
-            'nombre'        => $in('nombre'),
-            'apellido'      => $in('apellido'),
-            'email'         => $in('email'),
-            'telefono'      => $in('telefono'),
-            'domicilio'     => $in('domicilio'),
-            'puesto'        => $in('puesto'),
-            'fecha_nac'     => $in('fecha_nac','date'),
-            'curp'          => $in('curp'),
-            'activo'        => 1,
+            'noEmpleado' => $in('noEmpleado'),
+            'nombre' => $in('nombre'),
+            'apellido' => $in('apellido'),
+            'email' => $in('email'),
+            'telefono' => $in('telefono'),
+            'domicilio' => $in('domicilio'),
+            'puesto' => $in('puesto'),
+            'fecha_nac' => $in('fecha_nac', 'date'),
+            'curp' => $in('curp'),
+            'activo' => 1,
         ];
 
         // Asignar siempre la maquiladora del usuario autenticado (si existe en sesión)
         $maquiladoraId = session()->get('maquiladora_id');
         if ($maquiladoraId) {
-            $row['maquiladoraID'] = (int)$maquiladoraId;
+            $row['maquiladoraID'] = (int) $maquiladoraId;
         }
-        
+
         // Solo actualizar la foto si se subió una nueva
         if ($fotoData !== null) {
             $row['foto'] = $fotoData;
@@ -2848,12 +3500,12 @@ class Modulos extends BaseController
                 $row['noEmpleado'] = 'EMP0' . $uid;
             }
             if (empty($row['email'])) {
-                $row['email'] = (string)(session()->get('user_email') ?? '');
+                $row['email'] = (string) (session()->get('user_email') ?? '');
             }
             if (empty($row['puesto'])) {
                 $primary = session()->get('primary_role');
-                $rnames  = session()->get('role_names');
-                $row['puesto'] = (string)(
+                $rnames = session()->get('role_names');
+                $row['puesto'] = (string) (
                     ($primary ?: (is_array($rnames) && isset($rnames[0]) ? $rnames[0] : null))
                     ?? session()->get('user_role')
                     ?? session()->get('status')
@@ -2862,42 +3514,62 @@ class Modulos extends BaseController
             }
             // ¿Existe empleado ligado a este usuario?
             $emp = null;
-            try { 
+            try {
                 $emp = $db->table('empleado')
-                         ->select('*')
-                         ->select('foto') // Asegurarse de obtener la foto actual
-                         ->where('idusuario', $uid)
-                         ->get()
-                         ->getRowArray(); 
-            } catch (\Throwable $e) { $emp = null; }
-            
-            if (!$emp) { 
-                try { 
+                    ->select('*')
+                    ->select('foto') // Asegurarse de obtener la foto actual
+                    ->where('idusuario', $uid)
+                    ->get()
+                    ->getRowArray();
+            } catch (\Throwable $e) {
+                $emp = null;
+            }
+
+            if (!$emp) {
+                try {
                     $emp = $db->table('Empleado')
-                             ->select('*')
-                             ->select('foto') // Asegurarse de obtener la foto actual
-                             ->where('idusuario', $uid)
-                             ->get()
-                             ->getRowArray(); 
-                } catch (\Throwable $e2) { $emp = null; } 
+                        ->select('*')
+                        ->select('foto') // Asegurarse de obtener la foto actual
+                        ->where('idusuario', $uid)
+                        ->get()
+                        ->getRowArray();
+                } catch (\Throwable $e2) {
+                    $emp = null;
+                }
             }
 
             if ($emp) {
                 // Update
-                $ok = false; $tables = ['empleado','Empleado'];
+                $ok = false;
+                $tables = ['empleado', 'Empleado'];
                 foreach ($tables as $t) {
-                    try { $ok = $db->table($t)->where('idusuario', $uid)->update($row); if ($ok) break; } catch (\Throwable $e) { /* try next */ }
+                    try {
+                        $ok = $db->table($t)->where('idusuario', $uid)->update($row);
+                        if ($ok)
+                            break;
+                    } catch (\Throwable $e) { /* try next */
+                    }
                 }
-                if (!$ok) { throw new \Exception('No se pudo actualizar'); }
+                if (!$ok) {
+                    throw new \Exception('No se pudo actualizar');
+                }
                 return $this->response->setJSON(['success' => true, 'updated' => true]);
             } else {
                 // Insert con vínculo
                 $row['idusuario'] = $uid;
-                $ok = false; $tables = ['empleado','Empleado'];
+                $ok = false;
+                $tables = ['empleado', 'Empleado'];
                 foreach ($tables as $t) {
-                    try { $ok = $db->table($t)->insert($row); if ($ok) break; } catch (\Throwable $e) { /* try next */ }
+                    try {
+                        $ok = $db->table($t)->insert($row);
+                        if ($ok)
+                            break;
+                    } catch (\Throwable $e) { /* try next */
+                    }
                 }
-                if (!$ok) { throw new \Exception('No se pudo insertar'); }
+                if (!$ok) {
+                    throw new \Exception('No se pudo insertar');
+                }
                 return $this->response->setJSON(['success' => true, 'inserted' => true]);
             }
         } catch (\Throwable $e) {
@@ -2926,8 +3598,8 @@ class Modulos extends BaseController
         ];
 
         return view('modulos/perfildisenador', $this->payload([
-            'title'      => 'Módulo 2 · Perfil del Diseñador',
-            'disenador'  => $disenador,
+            'title' => 'Módulo 2 · Perfil del Diseñador',
+            'disenador' => $disenador,
             'notifCount' => 0,
         ]));
     }
@@ -2941,8 +3613,8 @@ class Modulos extends BaseController
         $disenos = $disenoModel->getCatalogoDisenosTodasVersiones($maquiladoraId);
 
         return view('modulos/catalogodisenos', $this->payload([
-            'title'      => 'Módulo 2 · Catálogo de Diseños',
-            'disenos'    => $disenos,
+            'title' => 'Módulo 2 · Catálogo de Diseños',
+            'disenos' => $disenos,
             'notifCount' => 0,
         ]));
     }
@@ -2951,27 +3623,27 @@ class Modulos extends BaseController
     {
         if ($this->request->getMethod() === 'post') {
             $db = \Config\Database::connect();
-            
+
             // Datos del diseño
             $dataDiseno = [
-                'nombre'      => trim((string)$this->request->getPost('nombre')),
-                'descripcion' => trim((string)$this->request->getPost('descripcion')),
+                'nombre' => trim((string) $this->request->getPost('nombre')),
+                'descripcion' => trim((string) $this->request->getPost('descripcion')),
             ];
             $maquiladoraId = session()->get('maquiladora_id');
             if ($maquiladoraId) {
-                $dataDiseno['maquiladoraID'] = (int)$maquiladoraId;
+                $dataDiseno['maquiladoraID'] = (int) $maquiladoraId;
             }
 
             // Datos de la versión
-            $materialesTxt = trim((string)$this->request->getPost('materiales'));
-            $cortesTxt     = trim((string)$this->request->getPost('cortes'));
+            $materialesTxt = trim((string) $this->request->getPost('materiales'));
+            $cortesTxt = trim((string) $this->request->getPost('cortes'));
             $notas = "Materiales:\n$materialesTxt\n\nCortes:\n$cortesTxt";
 
             $dataVersion = [
                 'version' => '1.0',
-                'fecha'   => date('Y-m-d'),
-                'notas'   => $notas,
-                'aprobado'=> 0
+                'fecha' => date('Y-m-d'),
+                'notas' => $notas,
+                'aprobado' => 0
             ];
 
             // Archivos (BLOBs)
@@ -2980,52 +3652,54 @@ class Modulos extends BaseController
                 if ($fotoFile && $fotoFile->isValid()) {
                     $dataVersion['foto'] = file_get_contents($fotoFile->getTempName());
                 }
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
 
             try {
                 $patronFile = $this->request->getFile('patron');
                 if ($patronFile && $patronFile->isValid()) {
                     $dataVersion['patron'] = file_get_contents($patronFile->getTempName());
                 }
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
 
             $db->transStart();
             try {
                 // Insertar Diseño
                 $db->table('diseno')->insert($dataDiseno);
                 $idDiseno = $db->insertID();
-                
+
                 // Insertar Versión
                 $dataVersion['disenoId'] = $idDiseno;
                 $db->table('diseno_version')->insert($dataVersion);
                 $idVersion = $db->insertID();
 
                 // Crear Prototipo y Muestra (automático)
-                $userName = (string)(session()->get('user_name') ?? '');
+                $userName = (string) (session()->get('user_name') ?? '');
                 $rowProt = [
                     'disenoVersionId' => $idVersion,
-                    'fechainicio'     => null,
-                    'estado'          => null
+                    'fechainicio' => null,
+                    'estado' => null
                 ];
                 $db->table('prototipo')->insert($rowProt);
                 $prototipoId = $db->insertID();
 
                 $rowMuestra = [
-                    'prototipoId'    => $prototipoId,
-                    'solicitadaPor'  => $userName ?: null,
+                    'prototipoId' => $prototipoId,
+                    'solicitadaPor' => $userName ?: null,
                     'fechaSolicitud' => date('Y-m-d'),
-                    'estado'         => 'Pendiente'
+                    'estado' => 'Pendiente'
                 ];
                 $db->table('muestra')->insert($rowMuestra);
                 $muestraId = $db->insertID();
 
                 $db->table('aprobacion_muestra')->insert([
                     'muestraId' => $muestraId,
-                    'decision'  => 'Pendiente'
+                    'decision' => 'Pendiente'
                 ]);
 
                 $db->transComplete();
-                
+
                 if ($db->transStatus() === false) {
                     throw new \Exception('Error al guardar en base de datos.');
                 }
@@ -3038,7 +3712,7 @@ class Modulos extends BaseController
         }
 
         return view('modulos/agregardiseno', $this->payload([
-            'title'      => 'Módulo 2 · Agregar Diseño',
+            'title' => 'Módulo 2 · Agregar Diseño',
             'notifCount' => 0,
         ]));
     }
@@ -3052,25 +3726,25 @@ class Modulos extends BaseController
 
         // Traer detalle desde BD usando DisenoModel
         $disenoModel = new \App\Models\DisenoModel();
-        $detalle = $disenoModel->getDisenoDetalle((int)$id);
+        $detalle = $disenoModel->getDisenoDetalle((int) $id);
         if (!$detalle) {
             return redirect()->to('/modulo2/catalogodisenos')->with('error', 'Diseño no encontrado');
         }
 
         // Adaptar al formato que espera la vista editardiseno
         $diseno = [
-            'id'          => $detalle['id'],
-            'nombre'      => $detalle['nombre'],
+            'id' => $detalle['id'],
+            'nombre' => $detalle['nombre'],
             'descripcion' => $detalle['descripcion'],
-            'materiales'  => implode("\n", $detalle['materiales'] ?? []),
-            'cortes'      => $detalle['notas'] ?? '',
-            'archivo'     => $detalle['archivoCadUrl'] ?? '',
+            'materiales' => implode("\n", $detalle['materiales'] ?? []),
+            'cortes' => $detalle['notas'] ?? '',
+            'archivo' => $detalle['archivoCadUrl'] ?? '',
         ];
 
         return view('modulos/editardiseno', $this->payload([
-            'title'      => 'Módulo 2 · Editar Diseño',
-            'diseno'     => $diseno,
-            'id'         => $id,
+            'title' => 'Módulo 2 · Editar Diseño',
+            'diseno' => $diseno,
+            'id' => $id,
             'notifCount' => 0,
         ]));
     }
@@ -3090,11 +3764,12 @@ class Modulos extends BaseController
                 try {
                     $fields = $db->getFieldNames('rol');
                     if (in_array('maquiladoraID', $fields, true)) {
-                        $builder->where('maquiladoraID', (int)$maquiladoraId);
+                        $builder->where('maquiladoraID', (int) $maquiladoraId);
                     }
-                } catch (\Throwable $e) {}
+                } catch (\Throwable $e) {
+                }
             }
-            $roles = $builder->orderBy('id','ASC')->get()->getResultArray();
+            $roles = $builder->orderBy('id', 'ASC')->get()->getResultArray();
         } catch (\Throwable $e) {
             $roles = [];
         }
@@ -3103,7 +3778,7 @@ class Modulos extends BaseController
         if ($this->request->getGet('debug')) {
             $html = "<!doctype html><html><head><meta charset='utf-8'><title>Diag Roles</title></head><body><h1>Diag Roles</h1><pre>" .
                 htmlspecialchars(print_r($roles, true)) . "</pre></body></html>";
-            return $this->response->setHeader('Content-Type','text/html; charset=utf-8')->setBody($html);
+            return $this->response->setHeader('Content-Type', 'text/html; charset=utf-8')->setBody($html);
         }
 
         return view('modulos/roles', $this->payload([
@@ -3114,49 +3789,51 @@ class Modulos extends BaseController
 
     }
     public function m11_roles_agregar()
-{
-    $nom  = trim((string)($this->request->getPost('nombre') ?? $this->request->getVar('nombre') ?? ''));
-    $desc = trim((string)($this->request->getPost('descripcion') ?? $this->request->getVar('descripcion') ?? ''));
+    {
+        $nom = trim((string) ($this->request->getPost('nombre') ?? $this->request->getVar('nombre') ?? ''));
+        $desc = trim((string) ($this->request->getPost('descripcion') ?? $this->request->getVar('descripcion') ?? ''));
 
-    if ($nom === '') {
-        return $this->response->setStatusCode(400)->setJSON([
-            'success' => false,
-            'message' => 'El nombre es obligatorio'
-        ]);
-    }
+        if ($nom === '') {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'message' => 'El nombre es obligatorio'
+            ]);
+        }
 
-    $db = \Config\Database::connect();
-    try {
-        $data = [
-            'nombre' => $nom,
-            'descripcion' => $desc,
-        ];
+        $db = \Config\Database::connect();
+        try {
+            $data = [
+                'nombre' => $nom,
+                'descripcion' => $desc,
+            ];
 
-        // Si la tabla rol tiene maquiladoraID, asignar la maquila actual
-        $maquiladoraId = session()->get('maquiladora_id');
-        if ($maquiladoraId) {
-            try {
-                $fields = $db->getFieldNames('rol');
-                if (in_array('maquiladoraID', $fields, true)) {
-                    $data['maquiladoraID'] = (int)$maquiladoraId;
+            // Si la tabla rol tiene maquiladoraID, asignar la maquila actual
+            $maquiladoraId = session()->get('maquiladora_id');
+            if ($maquiladoraId) {
+                try {
+                    $fields = $db->getFieldNames('rol');
+                    if (in_array('maquiladoraID', $fields, true)) {
+                        $data['maquiladoraID'] = (int) $maquiladoraId;
+                    }
+                } catch (\Throwable $e) {
                 }
-            } catch (\Throwable $e) {}
-        }
+            }
 
-        $ok = $db->table('rol')->insert($data);
-        if (!$ok) {
-            $err = $db->error(); $msg = $err['message'] ?? 'No se pudo insertar';
-            throw new \Exception($msg);
+            $ok = $db->table('rol')->insert($data);
+            if (!$ok) {
+                $err = $db->error();
+                $msg = $err['message'] ?? 'No se pudo insertar';
+                throw new \Exception($msg);
+            }
+            $id = $db->insertID();
+            return $this->response->setJSON(['success' => true, 'id' => (int) $id, 'message' => 'Rol agregado correctamente']);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ]);
         }
-        $id = $db->insertID();
-        return $this->response->setJSON(['success' => true, 'id' => (int)$id, 'message' => 'Rol agregado correctamente']);
-    } catch (\Throwable $e) {
-        return $this->response->setStatusCode(500)->setJSON([
-            'success' => false,
-            'message' => 'Error: '.$e->getMessage()
-        ]);
     }
-}
 
     /**
      * Actualiza un rol (POST): id, nombre, descripcion
@@ -3165,9 +3842,9 @@ class Modulos extends BaseController
     public function m11_roles_actualizar()
     {
         // Aceptar tanto POST normal como AJAX
-        $id   = (int)($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
-        $nom  = trim((string)($this->request->getPost('nombre') ?? $this->request->getVar('nombre') ?? ''));
-        $desc = trim((string)($this->request->getPost('descripcion') ?? $this->request->getVar('descripcion') ?? ''));
+        $id = (int) ($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
+        $nom = trim((string) ($this->request->getPost('nombre') ?? $this->request->getVar('nombre') ?? ''));
+        $desc = trim((string) ($this->request->getPost('descripcion') ?? $this->request->getVar('descripcion') ?? ''));
 
         if ($id <= 0 || $nom === '') {
             return $this->response->setStatusCode(400)->setJSON([
@@ -3202,8 +3879,8 @@ class Modulos extends BaseController
      */
     public function m11_roles_permisos()
     {
-        $rolId = (int)($this->request->getPost('rol_id') ?? $this->request->getVar('rol_id') ?? 0);
-        
+        $rolId = (int) ($this->request->getPost('rol_id') ?? $this->request->getVar('rol_id') ?? 0);
+
         if ($rolId <= 0) {
             return $this->response->setStatusCode(400)->setJSON([
                 'success' => false,
@@ -3212,10 +3889,10 @@ class Modulos extends BaseController
         }
 
         $db = \Config\Database::connect();
-        
+
         // Verificar si existe la tabla rol_permiso
         $this->crearTablaRolPermisoSiNoExiste($db);
-        
+
         try {
             // Obtener permisos del rol desde la tabla rol_permiso
             $permisos = $db->table('rol_permiso')
@@ -3223,9 +3900,9 @@ class Modulos extends BaseController
                 ->where('rol_id', $rolId)
                 ->get()
                 ->getResultArray();
-            
+
             $permisoList = array_column($permisos, 'permiso');
-            
+
             return $this->response->setJSON([
                 'success' => true,
                 'permisos' => $permisoList
@@ -3244,12 +3921,12 @@ class Modulos extends BaseController
      */
     public function m11_roles_guardar_permisos()
     {
-        $rolId = (int)($this->request->getPost('rol_id') ?? $this->request->getVar('rol_id') ?? 0);
+        $rolId = (int) ($this->request->getPost('rol_id') ?? $this->request->getVar('rol_id') ?? 0);
         $permisos = $this->request->getPost('permisos') ?? [];
-        
+
         // Depuración
         log_message('debug', 'Guardando permisos - rol_id: ' . $rolId . ', permisos: ' . json_encode($permisos));
-        
+
         if ($rolId <= 0) {
             return $this->response->setStatusCode(400)->setJSON([
                 'success' => false,
@@ -3258,17 +3935,17 @@ class Modulos extends BaseController
         }
 
         $db = \Config\Database::connect();
-        
+
         // Verificar si existe la tabla rol_permiso
         $this->crearTablaRolPermisoSiNoExiste($db);
-        
+
         try {
             // Iniciar transacción
             $db->transStart();
-            
+
             // Eliminar todos los permisos actuales del rol
             $db->table('rol_permiso')->where('rol_id', $rolId)->delete();
-            
+
             // Insertar los nuevos permisos
             if (!empty($permisos)) {
                 $data = [];
@@ -3281,18 +3958,18 @@ class Modulos extends BaseController
                 log_message('debug', 'Datos a insertar: ' . json_encode($data));
                 $db->table('rol_permiso')->insertBatch($data);
             }
-            
+
             // Completar transacción
             $db->transComplete();
-            
+
             if ($db->transStatus() === false) {
                 // Obtener el error de la base de datos
                 $error = $db->error();
                 throw new \Exception('Error en la transacción: ' . ($error['message'] ?? 'Error desconocido'));
             }
-            
+
             log_message('debug', 'Permisos guardados exitosamente para rol_id: ' . $rolId);
-            
+
             return $this->response->setJSON([
                 'success' => true,
                 'message' => 'Permisos guardados correctamente'
@@ -3330,7 +4007,7 @@ class Modulos extends BaseController
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Permisos asignados a los roles';
                 ";
                 $db->query($sql);
-                
+
                 // Insertar permisos predeterminados
                 $this->insertarPermisosPredeterminados($db);
             }
@@ -3339,7 +4016,7 @@ class Modulos extends BaseController
             log_message('error', 'Error al verificar/crear tabla rol_permiso: ' . $e->getMessage());
         }
     }
-    
+
     /**
      * Insertar permisos predeterminados para todos los roles
      */
@@ -3348,48 +4025,99 @@ class Modulos extends BaseController
         try {
             // Obtener todos los roles
             $roles = $db->table('rol')->get()->getResultArray();
-            
+
             // Definir permisos por rol
             $permisosPorRol = [
                 'Administrador' => [
-                    'menu.catalogo_disenos', 'menu.pedidos', 'menu.ordenes', 'menu.produccion',
-                    'menu.muestras', 'menu.inspeccion', 'menu.inventario_almacen', 'menu.inv_maquinas',
-                    'menu.desperdicios', 'menu.incidencias', 'menu.logistica_preparacion',
-                    'menu.logistica_gestion', 'menu.logistica_documentos', 'menu.planificacion_materiales',
-                    'menu.mant_correctivo', 'menu.mant_programacion', 'menu.mrp', 'menu.ordenes_clientes',
-                    'menu.usuarios', 'menu.roles'
+                    'menu.catalogo_disenos',
+                    'menu.pedidos',
+                    'menu.ordenes',
+                    'menu.produccion',
+                    'menu.muestras',
+                    'menu.inspeccion',
+                    'menu.inventario_almacen',
+                    'menu.inv_maquinas',
+                    'menu.desperdicios',
+                    'menu.incidencias',
+                    'menu.logistica_preparacion',
+                    'menu.logistica_gestion',
+                    'menu.logistica_documentos',
+                    'menu.planificacion_materiales',
+                    'menu.mant_correctivo',
+                    'menu.mant_programacion',
+                    'menu.mrp',
+                    'menu.ordenes_clientes',
+                    'menu.usuarios',
+                    'menu.roles'
                 ],
                 'Jefe' => [
-                    'menu.catalogo_disenos', 'menu.pedidos', 'menu.ordenes', 'menu.produccion',
-                    'menu.muestras', 'menu.inspeccion', 'menu.inventario_almacen', 'menu.inv_maquinas',
-                    'menu.desperdicios', 'menu.incidencias', 'menu.logistica_preparacion',
-                    'menu.logistica_gestion', 'menu.logistica_documentos', 'menu.planificacion_materiales',
-                    'menu.mant_correctivo', 'menu.mant_programacion', 'menu.mrp', 'menu.ordenes_clientes',
-                    'menu.usuarios', 'menu.roles'
+                    'menu.catalogo_disenos',
+                    'menu.pedidos',
+                    'menu.ordenes',
+                    'menu.produccion',
+                    'menu.muestras',
+                    'menu.inspeccion',
+                    'menu.inventario_almacen',
+                    'menu.inv_maquinas',
+                    'menu.desperdicios',
+                    'menu.incidencias',
+                    'menu.logistica_preparacion',
+                    'menu.logistica_gestion',
+                    'menu.logistica_documentos',
+                    'menu.planificacion_materiales',
+                    'menu.mant_correctivo',
+                    'menu.mant_programacion',
+                    'menu.mrp',
+                    'menu.ordenes_clientes',
+                    'menu.usuarios',
+                    'menu.roles'
                 ],
                 'Empleado' => [
-                    'menu.produccion', 'menu.incidencias'
+                    'menu.produccion',
+                    'menu.incidencias'
                 ],
                 'Inspector' => [
-                    'menu.pedidos', 'menu.ordenes', 'menu.produccion', 'menu.muestras', 'menu.inspeccion'
+                    'menu.pedidos',
+                    'menu.ordenes',
+                    'menu.produccion',
+                    'menu.muestras',
+                    'menu.inspeccion'
                 ],
                 'Almacenista' => [
-                    'menu.inventario_almacen', 'menu.inv_maquinas', 'menu.desperdicios',
-                    'menu.incidencias', 'menu.logistica_preparacion', 'menu.logistica_gestion',
-                    'menu.logistica_documentos', 'menu.planificacion_materiales', 'menu.mant_correctivo'
+                    'menu.inventario_almacen',
+                    'menu.inv_maquinas',
+                    'menu.desperdicios',
+                    'menu.incidencias',
+                    'menu.logistica_preparacion',
+                    'menu.logistica_gestion',
+                    'menu.logistica_documentos',
+                    'menu.planificacion_materiales',
+                    'menu.mant_correctivo'
                 ],
                 'Calidad' => [
-                    'menu.inspeccion', 'menu.muestras', 'menu.pedidos', 'menu.logistica_preparacion',
-                    'menu.logistica_gestion', 'menu.logistica_documentos', 'menu.desperdicios'
+                    'menu.inspeccion',
+                    'menu.muestras',
+                    'menu.pedidos',
+                    'menu.logistica_preparacion',
+                    'menu.logistica_gestion',
+                    'menu.logistica_documentos',
+                    'menu.desperdicios'
                 ],
                 'Diseñador' => [
-                    'menu.catalogo_disenos', 'menu.pedidos', 'menu.produccion', 'menu.muestras', 'menu.desperdicios'
+                    'menu.catalogo_disenos',
+                    'menu.pedidos',
+                    'menu.produccion',
+                    'menu.muestras',
+                    'menu.desperdicios'
                 ],
                 'RH' => [
-                    'menu.ordenes_clientes', 'menu.ordenes', 'menu.usuarios', 'menu.roles'
+                    'menu.ordenes_clientes',
+                    'menu.ordenes',
+                    'menu.usuarios',
+                    'menu.roles'
                 ]
             ];
-            
+
             // Insertar permisos para cada rol
             foreach ($roles as $rol) {
                 $rolNombre = $rol['nombre'];
@@ -3406,7 +4134,7 @@ class Modulos extends BaseController
                     }
                 }
             }
-            
+
             log_message('info', 'Permisos predeterminados insertados correctamente');
         } catch (\Throwable $e) {
             log_message('error', 'Error al insertar permisos predeterminados: ' . $e->getMessage());
@@ -3419,8 +4147,8 @@ class Modulos extends BaseController
      */
     public function m11_roles_eliminar()
     {
-        $id = (int)($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
-        
+        $id = (int) ($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
+
         if ($id <= 0) {
             return $this->response->setStatusCode(400)->setJSON([
                 'success' => false,
@@ -3434,7 +4162,7 @@ class Modulos extends BaseController
             $usuariosConRol = $db->table('usuario_rol')
                 ->where('rolIdFK', $id)
                 ->countAllResults();
-                
+
             if ($usuariosConRol > 0) {
                 return $this->response->setStatusCode(400)->setJSON([
                     'success' => false,
@@ -3444,21 +4172,21 @@ class Modulos extends BaseController
 
             // Eliminar permisos del rol primero
             $db->table('rol_permiso')->where('rol_id', $id)->delete();
-            
+
             // Eliminar el rol
             $ok = $db->table('rol')->where('id', $id)->delete();
-            
+
             if (!$ok) {
-                $err = $db->error(); 
+                $err = $db->error();
                 $msg = $err['message'] ?? 'No se pudo eliminar el rol';
                 throw new \Exception($msg);
             }
-            
+
             return $this->response->setJSON([
                 'success' => true,
                 'message' => 'Rol eliminado correctamente'
             ]);
-            
+
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON([
                 'success' => false,
@@ -3466,7 +4194,7 @@ class Modulos extends BaseController
             ]);
         }
     }
-    
+
     /**
      * Inicializar permisos predeterminados (GET)
      * Endpoint: modulo11/roles/inicializar_permisos
@@ -3475,16 +4203,16 @@ class Modulos extends BaseController
     {
         try {
             $db = \Config\Database::connect();
-            
+
             // Verificar si la tabla existe
             $this->crearTablaRolPermisoSiNoExiste($db);
-            
+
             // Limpiar permisos existentes
             $db->table('rol_permiso')->emptyTable();
-            
+
             // Insertar permisos predeterminados
             $this->insertarPermisosPredeterminados($db);
-            
+
             return $this->response->setJSON([
                 'success' => true,
                 'message' => 'Permisos inicializados correctamente'
@@ -3497,58 +4225,60 @@ class Modulos extends BaseController
         }
     }
 
-public function m11_usuarios()
-{
-    $usuarioModel = new \App\Models\UsuarioModel();
-    $maquiladoraId = session()->get('maquiladora_id');
+    public function m11_usuarios()
+    {
+        $usuarioModel = new \App\Models\UsuarioModel();
+        $maquiladoraId = session()->get('maquiladora_id');
 
-    // Obtener usuarios (excepto eliminados lógicamente), filtrados por maquiladora cuando aplique
-    $builder = $usuarioModel->where('deleted_at', null);
-    if ($maquiladoraId) {
-        $builder = $builder->where('maquiladoraIdFK', (int)$maquiladoraId);
-    }
-    $usuarios = $builder->findAll();
-
-    // Obtener mapa de roles por usuario
-    $rolesPorUsuario = [];
-    try {
-        $db = \Config\Database::connect();
-        $rows = $db->table('usuario_rol ur')
-            ->select('ur.usuarioIdFK as uid, r.nombre as rol')
-            ->join('rol r', 'r.id = ur.rolIdFK', 'left')
-            ->get()->getResultArray();
-        foreach ($rows as $r) {
-            if (!isset($r['uid'])) { continue; }
-            $rolesPorUsuario[(int)$r['uid']] = $r['rol'] ?? 'Usuario';
+        // Obtener usuarios (excepto eliminados lógicamente), filtrados por maquiladora cuando aplique
+        $builder = $usuarioModel->where('deleted_at', null);
+        if ($maquiladoraId) {
+            $builder = $builder->where('maquiladoraIdFK', (int) $maquiladoraId);
         }
-    } catch (\Throwable $e) {
+        $usuarios = $builder->findAll();
+
+        // Obtener mapa de roles por usuario
         $rolesPorUsuario = [];
-    }
+        try {
+            $db = \Config\Database::connect();
+            $rows = $db->table('usuario_rol ur')
+                ->select('ur.usuarioIdFK as uid, r.nombre as rol')
+                ->join('rol r', 'r.id = ur.rolIdFK', 'left')
+                ->get()->getResultArray();
+            foreach ($rows as $r) {
+                if (!isset($r['uid'])) {
+                    continue;
+                }
+                $rolesPorUsuario[(int) $r['uid']] = $r['rol'] ?? 'Usuario';
+            }
+        } catch (\Throwable $e) {
+            $rolesPorUsuario = [];
+        }
 
-    // Formatear los datos para la vista
-    $usuariosFormateados = [];
-    foreach ($usuarios as $usuario) {
-        $usuariosFormateados[] = [
-            'id' => $usuario['id'],
-            'noEmpleado' => $usuario['id'], // Usar ID como número de empleado temporal
-            'nombre' => $usuario['username'] ?? 'Sin nombre',
-            'apellido' => '', // No hay campo apellido en la tabla
-            'email' => $usuario['correo'] ?? 'Sin correo',
-            // Mostrar el nombre del rol en la columna PUESTO
-            'puesto' => $rolesPorUsuario[(int)$usuario['id']] ?? 'Usuario',
-            'idmaquiladora' => $usuario['maquiladoraIdFK'] ?? 'Sin asignar',
-            'activo' => $usuario['active'] ?? 1,
-            'fechaAlta' => $usuario['created_at'] ?? date('Y-m-d H:i:s'),
-            'ultimoAcceso' => $usuario['last_active'] ?? 'Nunca'
-        ];
-    }
+        // Formatear los datos para la vista
+        $usuariosFormateados = [];
+        foreach ($usuarios as $usuario) {
+            $usuariosFormateados[] = [
+                'id' => $usuario['id'],
+                'noEmpleado' => $usuario['id'], // Usar ID como número de empleado temporal
+                'nombre' => $usuario['username'] ?? 'Sin nombre',
+                'apellido' => '', // No hay campo apellido en la tabla
+                'email' => $usuario['correo'] ?? 'Sin correo',
+                // Mostrar el nombre del rol en la columna PUESTO
+                'puesto' => $rolesPorUsuario[(int) $usuario['id']] ?? 'Usuario',
+                'idmaquiladora' => $usuario['maquiladoraIdFK'] ?? 'Sin asignar',
+                'activo' => $usuario['active'] ?? 1,
+                'fechaAlta' => $usuario['created_at'] ?? date('Y-m-d H:i:s'),
+                'ultimoAcceso' => $usuario['last_active'] ?? 'Nunca'
+            ];
+        }
 
-    return view('modulos/usuarios', $this->payload([
-        'title'      => 'Gestión de Usuarios',
-        'usuarios'   => $usuariosFormateados,
-        'notifCount' => 0,
-    ]));
-}
+        return view('modulos/usuarios', $this->payload([
+            'title' => 'Gestión de Usuarios',
+            'usuarios' => $usuariosFormateados,
+            'notifCount' => 0,
+        ]));
+    }
 
     public function m11_agregar_usuario()
     {
@@ -3626,7 +4356,7 @@ public function m11_usuarios()
         }
 
         return view('modulos/agregar_usuario', $this->payload([
-            'title'      => 'Módulo 11 · Agregar Usuario',
+            'title' => 'Módulo 11 · Agregar Usuario',
             'notifCount' => 0,
         ]));
     }
@@ -3641,25 +4371,25 @@ public function m11_usuarios()
             if (!$this->request->isAJAX()) {
                 throw new \RuntimeException('Método no permitido');
             }
-            
+
             // Validar ID
-            $id = (int)$id;
+            $id = (int) $id;
             if ($id <= 0) {
                 throw new \InvalidArgumentException('ID de usuario inválido');
             }
-            
+
             // Cargar modelo de usuarios
             $usuarioModel = new \App\Models\UsuarioModel();
-            
+
             // Buscar usuario
             $usuario = $usuarioModel->find($id);
-            
+
             if (!$usuario) {
                 throw new \RuntimeException('Usuario no encontrado');
             }
-            
+
             $db = \Config\Database::connect();
-            
+
             // Datos básicos del usuario
             $usuarioData = [
                 'id' => $usuario['id'] ?? null,
@@ -3679,7 +4409,7 @@ public function m11_usuarios()
                 ['id' => 2, 'name' => 'Usuario'],
                 ['id' => 3, 'name' => 'Invitado']
             ];
-            
+
             // Establecer un rol por defecto
             $usuarioData['rol_id'] = 2; // Usuario por defecto
             $usuarioData['rol_actual'] = 'Usuario';
@@ -3706,15 +4436,15 @@ public function m11_usuarios()
                     ['id' => 1, 'nombre' => 'Maquiladora Principal']
                 ];
             }
-            
+
             return $this->response->setJSON([
                 'success' => true,
                 'data' => $usuarioData
             ]);
-            
+
         } catch (\Exception $e) {
             log_message('error', 'Error en obtener_usuario: ' . $e->getMessage());
-            
+
             return $this->response->setStatusCode(500)->setJSON([
                 'success' => false,
                 'message' => 'Error al obtener los datos del usuario: ' . $e->getMessage(),
@@ -3731,50 +4461,50 @@ public function m11_usuarios()
         if (!$this->request->isAJAX()) {
             return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Método no permitido']);
         }
-        
-        $id = (int)$this->request->getPost('id');
+
+        $id = (int) $this->request->getPost('id');
         $nombre = trim($this->request->getPost('nombre'));
         $email = trim($this->request->getPost('email'));
         $rol = $this->request->getPost('rol');
         $maquiladoraId = $this->request->getPost('idmaquiladora');
-        $activo = (int)$this->request->getPost('activo');
+        $activo = (int) $this->request->getPost('activo');
         $password = $this->request->getPost('password');
-        
+
         // Validar datos
         if (empty($nombre) || empty($email)) {
             return $this->response->setJSON(['success' => false, 'message' => 'Nombre y correo son obligatorios']);
         }
-        
+
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return $this->response->setJSON(['success' => false, 'message' => 'El formato del correo no es válido']);
         }
-        
+
         // Cargar modelo de usuarios
         $usuarioModel = new \App\Models\UsuarioModel();
-        
+
         // Verificar si el usuario existe
         $usuario = $usuarioModel->find($id);
         if (!$usuario) {
             return $this->response->setJSON(['success' => false, 'message' => 'Usuario no encontrado']);
         }
-        
+
         // Verificar si el correo ya existe (excepto para el usuario actual)
         $existeCorreo = $usuarioModel->where('correo', $email)
-                                    ->where('id !=', $id)
-                                    ->first();
+            ->where('id !=', $id)
+            ->first();
         if ($existeCorreo) {
             return $this->response->setJSON(['success' => false, 'message' => 'El correo electrónico ya está en uso']);
         }
-        
+
         // Actualizar datos del usuario
         $data = [
             'username' => $nombre,
             'correo' => $email,
-            'maquiladoraIdFK' => !empty($maquiladoraId) ? (int)$maquiladoraId : null,
+            'maquiladoraIdFK' => !empty($maquiladoraId) ? (int) $maquiladoraId : null,
             'active' => $activo,
             'updated_at' => date('Y-m-d H:i:s')
         ];
-        
+
         // Actualizar contraseña si se proporcionó
         if (!empty($password)) {
             if (strlen($password) < 8) {
@@ -3782,59 +4512,59 @@ public function m11_usuarios()
             }
             $data['password'] = password_hash($password, PASSWORD_DEFAULT);
         }
-        
+
         // Iniciar transacción
         $db = \Config\Database::connect();
         $db->transStart();
-        
+
         try {
             // Actualizar datos del usuario
             $usuarioModel->update($id, $data);
-            
+
             // Actualizar rol del usuario si se proporcionó
             if (!empty($rol)) {
                 $builder = $db->table('auth_groups_users');
-                
+
                 // Verificar si el rol existe
                 $rolExiste = $db->table('auth_groups')
-                              ->where('id', $rol)
-                              ->countAllResults() > 0;
-                
+                    ->where('id', $rol)
+                    ->countAllResults() > 0;
+
                 if ($rolExiste) {
                     // Eliminar roles existentes
                     $builder->where('user_id', $id)->delete();
-                    
+
                     // Agregar nuevo rol
                     $builder->insert([
-                        'group_id' => (int)$rol,
+                        'group_id' => (int) $rol,
                         'user_id' => $id,
                         'created_at' => date('Y-m-d H:i:s')
                     ]);
                 }
             }
-            
+
             $db->transComplete();
-            
+
             if ($db->transStatus() === false) {
                 throw new \Exception('Error al actualizar el usuario en la base de datos');
             }
-            
+
             // Obtener datos actualizados del usuario para la respuesta
             $usuarioActualizado = $usuarioModel->find($id);
             $builder = $db->table('auth_groups_users')->where('user_id', $id);
             $roles = $builder->get()->getResultArray();
             $rolNombre = 'Usuario';
-            
+
             if (!empty($roles)) {
                 $rol = $db->table('auth_groups')
-                         ->where('id', $roles[0]['group_id'])
-                         ->get()
-                         ->getRowArray();
+                    ->where('id', $roles[0]['group_id'])
+                    ->get()
+                    ->getRowArray();
                 if ($rol) {
                     $rolNombre = $rol['name'];
                 }
             }
-            
+
             return $this->response->setJSON([
                 'success' => true,
                 'message' => 'Usuario actualizado correctamente',
@@ -3847,7 +4577,7 @@ public function m11_usuarios()
                     'activo' => $usuarioActualizado['active']
                 ]
             ]);
-            
+
         } catch (\Exception $e) {
             $db->transRollback();
             log_message('error', 'Error al actualizar usuario: ' . $e->getMessage());
@@ -3943,9 +4673,9 @@ public function m11_usuarios()
         }
 
         return view('modulos/editar_usuario', $this->payload([
-            'title'      => 'Módulo 11 · Editar Usuario',
-            'usuario'    => $usuario,
-            'id'         => $id,
+            'title' => 'Módulo 11 · Editar Usuario',
+            'usuario' => $usuario,
+            'id' => $id,
             'notifCount' => 0,
         ]));
     }
@@ -3954,37 +4684,41 @@ public function m11_usuarios()
     {
         $method = strtolower($this->request->getMethod());
         if ($method !== 'post') {
-            return $this->response->setStatusCode(405)->setJSON(['ok'=>false,'message'=>'Método no permitido']);
+            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
         }
 
         // Obtener maquiladoraId desde la sesión
         $maquiladoraId = session()->get('maquiladora_id');
 
-        $clienteId         = (int)($this->request->getPost('oc_clienteId'));
-        $ocEstatus         = (string)($this->request->getPost('oc_estatus') ?? 'Pendiente');
-        $ocFolio           = trim((string)$this->request->getPost('oc_folio'));
-        $ocFecha           = (string)$this->request->getPost('oc_fecha');
-        $ocMoneda          = trim((string)$this->request->getPost('oc_moneda')) ?: 'MXN';
-        $ocTotal           = (float)($this->request->getPost('oc_total'));
+        $clienteId = (int) ($this->request->getPost('oc_clienteId'));
+        $ocEstatus = (string) ($this->request->getPost('oc_estatus') ?? 'Pendiente');
+        $ocFolio = trim((string) $this->request->getPost('oc_folio'));
+        $ocFecha = (string) $this->request->getPost('oc_fecha');
+        $ocMoneda = trim((string) $this->request->getPost('oc_moneda')) ?: 'MXN';
+        $ocTotal = (float) ($this->request->getPost('oc_total'));
 
-        $opFolio           = trim((string)$this->request->getPost('op_folio'));
-        $opCantidadPlan    = (int)($this->request->getPost('op_cantidadPlan'));
-        $opFechaInicioPlan = (string)($this->request->getPost('op_fechaInicioPlan'));
-        $opFechaFinPlan    = (string)($this->request->getPost('op_fechaFinPlan'));
-        $opStatus          = (string)($this->request->getPost('op_status') ?? 'Planeada');
+        $opFolio = trim((string) $this->request->getPost('op_folio'));
+        $opCantidadPlan = (int) ($this->request->getPost('op_cantidadPlan'));
+        $opFechaInicioPlan = (string) ($this->request->getPost('op_fechaInicioPlan'));
+        $opFechaFinPlan = (string) ($this->request->getPost('op_fechaFinPlan'));
+        $opStatus = (string) ($this->request->getPost('op_status') ?? 'Planeada');
 
         // Diseño
-        $disenoVersionId   = (int)($this->request->getPost('disenoVersionId') ?? $this->request->getPost('pa_dis_version_id') ?? 0);
-        $disenoId          = (int)($this->request->getPost('disenoId') ?? 0);
+        $disenoVersionId = (int) ($this->request->getPost('disenoVersionId') ?? $this->request->getPost('pa_dis_version_id') ?? 0);
+        $disenoId = (int) ($this->request->getPost('disenoId') ?? 0);
 
         if ($clienteId <= 0) {
-            return $this->response->setStatusCode(422)->setJSON(['ok'=>false,'message'=>'Cliente requerido']);
+            return $this->response->setStatusCode(422)->setJSON(['ok' => false, 'message' => 'Cliente requerido']);
         }
         if ($opCantidadPlan <= 0) {
-            return $this->response->setStatusCode(422)->setJSON(['ok'=>false,'message'=>'Cantidad plan debe ser mayor que 0']);
+            return $this->response->setStatusCode(422)->setJSON(['ok' => false, 'message' => 'Cantidad plan debe ser mayor que 0']);
         }
-        if ($ocFecha === '') { $ocFecha = date('Y-m-d'); }
-        if ($opFechaInicioPlan === '') { $opFechaInicioPlan = date('Y-m-d'); }
+        if ($ocFecha === '') {
+            $ocFecha = date('Y-m-d');
+        }
+        if ($opFechaInicioPlan === '') {
+            $opFechaInicioPlan = date('Y-m-d');
+        }
 
         $db = \Config\Database::connect();
 
@@ -3995,19 +4729,24 @@ public function m11_usuarios()
                     'SELECT dv.id FROM diseno_version dv WHERE dv.disenoId = ? ORDER BY dv.fecha DESC, dv.id DESC LIMIT 1',
                     [$disenoId]
                 )->getRowArray();
-                if ($row && isset($row['id'])) { $disenoVersionId = (int)$row['id']; }
+                if ($row && isset($row['id'])) {
+                    $disenoVersionId = (int) $row['id'];
+                }
             } catch (\Throwable $e) {
                 try {
                     $row = $db->query(
                         'SELECT dv.id FROM disenoversion dv WHERE dv.disenoId = ? ORDER BY dv.fecha DESC, dv.id DESC LIMIT 1',
                         [$disenoId]
                     )->getRowArray();
-                    if ($row && isset($row['id'])) { $disenoVersionId = (int)$row['id']; }
-                } catch (\Throwable $e2) { /* ignore */ }
+                    if ($row && isset($row['id'])) {
+                        $disenoVersionId = (int) $row['id'];
+                    }
+                } catch (\Throwable $e2) { /* ignore */
+                }
             }
         }
         if ($disenoVersionId <= 0) {
-            return $this->response->setStatusCode(422)->setJSON(['ok'=>false,'message'=>'Versión de diseño requerida']);
+            return $this->response->setStatusCode(422)->setJSON(['ok' => false, 'message' => 'Versión de diseño requerida']);
         }
 
         try {
@@ -4016,103 +4755,126 @@ public function m11_usuarios()
             // Insertar orden_compra (nombres exactos)
             $rowOC = [
                 'clienteId' => $clienteId,
-                'folio'     => $ocFolio !== '' ? $ocFolio : ('OC-'.date('Y').'-'.$clienteId),
-                'fecha'     => $ocFecha,
-                'estatus'   => $ocEstatus ?: 'Pendiente',
-                'moneda'    => $ocMoneda,
-                'total'     => $ocTotal,
+                'folio' => $ocFolio !== '' ? $ocFolio : ('OC-' . date('Y') . '-' . $clienteId),
+                'fecha' => $ocFecha,
+                'estatus' => $ocEstatus ?: 'Pendiente',
+                'moneda' => $ocMoneda,
+                'total' => $ocTotal,
             ];
             if ($maquiladoraId) {
-                $rowOC['maquiladoraID'] = (int)$maquiladoraId;
+                $rowOC['maquiladoraID'] = (int) $maquiladoraId;
             }
             $db->table('orden_compra')->insert($rowOC);
-            $ocId = (int)$db->insertID();
+            $ocId = (int) $db->insertID();
             if ($ocId === 0) {
                 // fallback por mayúsculas
                 $db->table('OrdenCompra')->insert($rowOC);
-                $ocId = (int)$db->insertID();
+                $ocId = (int) $db->insertID();
             }
-            if (!$ocId) { throw new \Exception('No se pudo crear la Orden de Compra'); }
+            if (!$ocId) {
+                throw new \Exception('No se pudo crear la Orden de Compra');
+            }
 
             // Forzar folio único de OC: OC-YYYY-<ocId>
-            $nuevoOCFolio = 'OC-'.date('Y').'-'.$ocId;
+            $nuevoOCFolio = 'OC-' . date('Y') . '-' . $ocId;
             $okUpdOCFolio = false;
-            try { $okUpdOCFolio = (bool)$db->table('orden_compra')->where('id', $ocId)->update(['folio' => $nuevoOCFolio]); } catch (\Throwable $e) { $okUpdOCFolio = false; }
+            try {
+                $okUpdOCFolio = (bool) $db->table('orden_compra')->where('id', $ocId)->update(['folio' => $nuevoOCFolio]);
+            } catch (\Throwable $e) {
+                $okUpdOCFolio = false;
+            }
             if (!$okUpdOCFolio) {
-                try { $okUpdOCFolio = (bool)$db->table('OrdenCompra')->where('id', $ocId)->update(['folio' => $nuevoOCFolio]); } catch (\Throwable $e2) { /* ignore */ }
+                try {
+                    $okUpdOCFolio = (bool) $db->table('OrdenCompra')->where('id', $ocId)->update(['folio' => $nuevoOCFolio]);
+                } catch (\Throwable $e2) { /* ignore */
+                }
             }
 
             // Insertar orden_produccion (nombres exactos)
             $rowOP = [
-                'ordenCompraId'   => $ocId,
+                'ordenCompraId' => $ocId,
                 'disenoVersionId' => $disenoVersionId,
-                'folio'           => $opFolio !== '' ? $opFolio : ('OP-'.date('Y').'-'.$clienteId),
-                'cantidadPlan'    => $opCantidadPlan,
+                'folio' => $opFolio !== '' ? $opFolio : ('OP-' . date('Y') . '-' . $clienteId),
+                'cantidadPlan' => $opCantidadPlan,
                 'fechaInicioPlan' => $opFechaInicioPlan,
-                'fechaFinPlan'    => ($opFechaFinPlan ?: null),
-                'status'          => $opStatus ?: 'Planeada',
+                'fechaFinPlan' => ($opFechaFinPlan ?: null),
+                'status' => $opStatus ?: 'Planeada',
             ];
             if ($maquiladoraId) {
-                $rowOP['maquiladoraID'] = (int)$maquiladoraId;
+                $rowOP['maquiladoraID'] = (int) $maquiladoraId;
             }
             $db->table('orden_produccion')->insert($rowOP);
-            $opId = (int)$db->insertID();
+            $opId = (int) $db->insertID();
             if ($opId === 0) {
                 $db->table('OrdenProduccion')->insert($rowOP);
-                $opId = (int)$db->insertID();
+                $opId = (int) $db->insertID();
             }
-            if (!$opId) { throw new \Exception('No se pudo crear la Orden de Producción'); }
+            if (!$opId) {
+                throw new \Exception('No se pudo crear la Orden de Producción');
+            }
 
             // Forzar folio único de OP: OP-YYYY-<opId>
-            $nuevoFolio = 'OP-'.date('Y').'-'.$opId;
+            $nuevoFolio = 'OP-' . date('Y') . '-' . $opId;
             $okUpdFolio = false;
             try {
-                $okUpdFolio = (bool)$db->table('orden_produccion')->where('id', $opId)->update(['folio' => $nuevoFolio]);
-            } catch (\Throwable $e) { $okUpdFolio = false; }
+                $okUpdFolio = (bool) $db->table('orden_produccion')->where('id', $opId)->update(['folio' => $nuevoFolio]);
+            } catch (\Throwable $e) {
+                $okUpdFolio = false;
+            }
             if (!$okUpdFolio) {
-                try { $okUpdFolio = (bool)$db->table('OrdenProduccion')->where('id', $opId)->update(['folio' => $nuevoFolio]); } catch (\Throwable $e2) { /* ignore */ }
+                try {
+                    $okUpdFolio = (bool) $db->table('OrdenProduccion')->where('id', $opId)->update(['folio' => $nuevoFolio]);
+                } catch (\Throwable $e2) { /* ignore */
+                }
             }
 
             // Crear registro inicial en inspeccion vinculado a la OP (otros campos en NULL)
             $rowIns = [
                 'ordenProduccionId' => $opId,
                 'puntoInspeccionId' => null,
-                'inspectorId'       => null,
-                'fecha'             => null,
-                'resultado'         => null,
-                'observaciones'     => null,
+                'inspectorId' => null,
+                'fecha' => null,
+                'resultado' => null,
+                'observaciones' => null,
             ];
             $db->table('inspeccion')->insert($rowIns);
-            $insId = (int)$db->insertID();
+            $insId = (int) $db->insertID();
             if ($insId === 0) {
                 // Fallback por mayúsculas
                 $db->table('Inspeccion')->insert($rowIns);
-                $insId = (int)$db->insertID();
+                $insId = (int) $db->insertID();
             }
-            if (!$insId) { throw new \Exception('No se pudo crear la inspeccion inicial'); }
+            if (!$insId) {
+                throw new \Exception('No se pudo crear la inspeccion inicial');
+            }
 
             // Crear registro inicial en reproceso vinculado a la inspeccion (otros campos en NULL)
             $rowRep = [
                 'inspeccionId' => $insId,
-                'accion'       => null,
-                'cantidad'     => null,
-                'fecha'        => null,
+                'accion' => null,
+                'cantidad' => null,
+                'fecha' => null,
             ];
             $db->table('reproceso')->insert($rowRep);
-            $repId = (int)$db->insertID();
+            $repId = (int) $db->insertID();
             if ($repId === 0) {
                 // Fallback por mayúsculas
                 $db->table('Reproceso')->insert($rowRep);
-                $repId = (int)$db->insertID();
+                $repId = (int) $db->insertID();
             }
 
             $db->transComplete();
-            if ($db->transStatus() === false) { throw new \Exception('Error en la transacción'); }
+            if ($db->transStatus() === false) {
+                throw new \Exception('Error en la transacción');
+            }
 
-            return $this->response->setJSON(['ok'=>true, 'ocId'=>$ocId, 'opId'=>$opId, 'message'=>'Pedido creado']);
+            return $this->response->setJSON(['ok' => true, 'ocId' => $ocId, 'opId' => $opId, 'message' => 'Pedido creado']);
         } catch (\Throwable $e) {
-            try { $db->transRollback(); } catch (\Throwable $e2) {}
-            return $this->response->setStatusCode(500)->setJSON(['ok'=>false,'message'=>'Error al crear pedido: '.$e->getMessage()]);
+            try {
+                $db->transRollback();
+            } catch (\Throwable $e2) {
+            }
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => 'Error al crear pedido: ' . $e->getMessage()]);
         }
     }
 }

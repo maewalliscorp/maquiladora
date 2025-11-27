@@ -5,10 +5,10 @@ use CodeIgniter\Model;
 
 class TransportistaModel extends Model
 {
-    protected $table         = 'transportista';
-    protected $primaryKey    = 'id';
-    protected $returnType    = 'array';
-    public    $tableName     = 'transportista';
-    protected $allowedFields = ['nombre','rfc','contacto','telefono'];
-    public $useTimestamps    = false;
+    protected $table = 'transportista';
+    protected $primaryKey = 'id';
+    protected $returnType = 'array';
+    public $tableName = 'transportista';
+    protected $allowedFields = ['nombre', 'rfc', 'contacto', 'telefono', 'email', 'maquiladoraID', 'maquiladoraId'];
+    public $useTimestamps = false;
 }
