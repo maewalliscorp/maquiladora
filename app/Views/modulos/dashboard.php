@@ -542,16 +542,6 @@
                 <!-- /.card -->
 
             </section>
-            <!-- right col -->
-        </div>
-        <!-- /.row (main row) -->
-    </div><!-- /.container-fluid -->
-</section>
-<!-- /.content -->
-
-<?= $this->endSection() ?>
-
-<?= $this->section('scripts') ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -593,7 +583,7 @@
                 updateKPIs(data.kpis);
                 renderMainCharts(data);
                 renderInventoryChart(data.inventario);
-                renderNotifications(data.notifications || []); // Assuming API returns notifications here or fetch separately
+                renderNotifications(data.notifications || []);
 
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
@@ -620,12 +610,14 @@
 
             // Update Bounce Rate color
             const boxDefectos = document.getElementById('box-defectos');
-            if (kpis.tasa_defectos > 5) {
-                boxDefectos.classList.remove('bg-success');
-                boxDefectos.classList.add('bg-danger');
-            } else {
-                boxDefectos.classList.remove('bg-danger');
-                boxDefectos.classList.add('bg-success');
+            if (boxDefectos) {
+                if (kpis.tasa_defectos > 5) {
+                    boxDefectos.classList.remove('bg-success');
+                    boxDefectos.classList.add('bg-danger');
+                } else {
+                    boxDefectos.classList.remove('bg-danger');
+                    boxDefectos.classList.add('bg-success');
+                }
             }
         }
 
@@ -646,7 +638,7 @@
                             label: 'Completadas',
                             backgroundColor: 'rgba(60,141,188,0.9)',
                             borderColor: 'rgba(60,141,188,0.8)',
-                            data: data.produccion.datasets[0].data, // Assuming structure
+                            data: data.produccion.datasets[0].data,
                             fill: true
                         },
                         {
@@ -662,7 +654,6 @@
             });
 
             // 2. Donut Chart (Logística/Status)
-            // Using Logistica data for the donut
             const ctxSales = document.getElementById('sales-chart-canvas').getContext('2d');
             if (salesChart) salesChart.destroy();
 
@@ -685,6 +676,10 @@
             const ctx = document.getElementById('inventory-chart-canvas').getContext('2d');
             if (inventoryChart) inventoryChart.destroy();
 
+            if (!data || !data.datasets || !data.datasets[0]) {
+                return;
+            }
+
             inventoryChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -692,8 +687,8 @@
                     datasets: [{
                         label: 'Stock',
                         data: data.datasets[0].data,
-                        backgroundColor: 'rgba(255,255,255,0.9)',
-                        borderColor: 'rgba(255,255,255,1)',
+                        backgroundColor: 'rgba(60,141,188,0.9)', // Azul oscuro
+                        borderColor: 'rgba(60,141,188,1)',
                         borderWidth: 1
                     }]
                 },
@@ -702,8 +697,8 @@
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        x: { ticks: { color: '#fff' }, grid: { display: false } },
-                        y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.2)' } }
+                        x: { ticks: { color: '#495057' }, grid: { display: false } }, // Texto oscuro
+                        y: { ticks: { color: '#495057' }, grid: { color: 'rgba(0,0,0,0.1)' } } // Texto y grid oscuros
                     }
                 }
             });
@@ -714,18 +709,9 @@
             const container = document.getElementById('chat-messages');
             const badge = document.getElementById('notif-badge-count');
 
-            // If we have separate notification data in the API response, use it.
-            // Otherwise, we might need to fetch it or use what's embedded in PHP if available.
-            // For now, let's assume `notifs` is passed correctly or we fetch it.
+            if (!container || !badge) return;
 
-            // If empty, we can try to fetch from the notification API
             if (!notifs || notifs.length === 0) {
-                fetch('<?= base_url('modulo3/api/notifications/unread-count') ?>') // Or a list endpoint
-                    .then(r => r.json())
-                    .then(d => {
-                        // This endpoint only returns count usually, need a list endpoint
-                        // For demo purposes, we'll leave the static welcome message if no data
-                    });
                 return;
             }
 
@@ -750,7 +736,6 @@
             });
         }
 
-        // Initialize
         loadDashboardData();
     });
 </script>

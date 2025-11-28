@@ -48,6 +48,7 @@ class Dashboard extends BaseController
             'maquiladoraName' => $maquiladoraName
         ]);
     }
+
     public function api()
     {
         $service = new \App\Services\DashboardService();
