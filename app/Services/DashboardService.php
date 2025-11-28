@@ -15,22 +15,53 @@ class DashboardService
     public function getKPIs()
     {
         try {
+            // Obtener el ID de la maquiladora del usuario autenticado
+            $maquiladoraId = session()->get('maquiladora_id');
+            
             $builder = $this->db->table('orden_produccion');
 
             // 1. Órdenes Activas (No completadas/finalizadas/cerradas)
+            // Filtrar por maquiladora: propias o compartidas
+            if ($maquiladoraId) {
+                $builder->groupStart()
+                    ->where('maquiladoraID', (int) $maquiladoraId)
+                    ->orWhere('maquiladoraCompartidaID', (int) $maquiladoraId)
+                    ->groupEnd();
+            }
             $activas = $builder->whereNotIn('status', ['Completada', 'Finalizada', 'Cerrada'])->countAllResults(false); // false to not reset query
 
             // 2. WIP (Work In Process) - Suma de cantidadPlan
             $builder->resetQuery();
+            if ($maquiladoraId) {
+                $builder->groupStart()
+                    ->where('maquiladoraID', (int) $maquiladoraId)
+                    ->orWhere('maquiladoraCompartidaID', (int) $maquiladoraId)
+                    ->groupEnd();
+            }
             $wip = $builder->selectSum('cantidadPlan')
                 ->whereNotIn('status', ['Completada', 'Finalizada', 'Cerrada'])
                 ->get()->getRow()->cantidadPlan ?? 0;
 
             // 3. Tasa de Defectos (Últimos 30 días)
-            $defectosQuery = $this->db->table('inspeccion')
-                ->select('COUNT(*) as total, SUM(CASE WHEN resultado LIKE "%defecto%" OR resultado LIKE "%rechazo%" THEN 1 ELSE 0 END) as defectuosos')
-                ->where('fecha >=', date('Y-m-d', strtotime('-30 days')))
-                ->get()->getRow();
+            // Filtrar inspecciones por órdenes de la maquiladora
+            $defectosBuilder = $this->db->table('inspeccion i');
+            $defectosBuilder->select('
+                COUNT(*) as total, 
+                SUM(CASE WHEN i.resultado = "Rechazado" THEN 1 ELSE 0 END) as defectuosos
+            ');
+            // INNER JOIN para asegurar que solo contamos inspecciones con orden de producción válida
+            $defectosBuilder->join('orden_produccion op', 'op.id = i.ordenProduccionId', 'inner');
+            $defectosBuilder->where('i.fecha >=', date('Y-m-d', strtotime('-30 days')));
+            
+            // Filtrar por maquiladora usando el maquiladoraID de orden_produccion
+            if ($maquiladoraId) {
+                $defectosBuilder->groupStart()
+                    ->where('op.maquiladoraID', (int) $maquiladoraId)
+                    ->orWhere('op.maquiladoraCompartidaID', (int) $maquiladoraId)
+                    ->groupEnd();
+            }
+            
+            $defectosQuery = $defectosBuilder->get()->getRow();
 
             $tasaDefectos = 0;
             if ($defectosQuery && $defectosQuery->total > 0) {
@@ -70,6 +101,9 @@ class DashboardService
     public function getProduccionStats($weeks = 6)
     {
         try {
+            // Obtener el ID de la maquiladora del usuario autenticado
+            $maquiladoraId = session()->get('maquiladora_id');
+            
             $sql = "
                 SELECT 
                     YEARWEEK(fechaFinPlan, 1) as semana,
@@ -77,11 +111,26 @@ class DashboardService
                     COUNT(CASE WHEN status NOT IN ('Completada', 'Finalizada', 'Cerrada') THEN 1 END) as pendientes
                 FROM orden_produccion
                 WHERE fechaFinPlan >= DATE_SUB(NOW(), INTERVAL ? WEEK)
+            ";
+            
+            // Agregar filtro de maquiladora si existe
+            if ($maquiladoraId) {
+                $sql .= " AND (maquiladoraID = ? OR maquiladoraCompartidaID = ?)";
+            }
+            
+            $sql .= "
                 GROUP BY YEARWEEK(fechaFinPlan, 1)
                 ORDER BY semana ASC
             ";
 
-            $result = $this->db->query($sql, [$weeks])->getResultArray();
+            // Ejecutar query con parámetros
+            $params = [$weeks];
+            if ($maquiladoraId) {
+                $params[] = (int) $maquiladoraId;
+                $params[] = (int) $maquiladoraId;
+            }
+            
+            $result = $this->db->query($sql, $params)->getResultArray();
 
             $labels = [];
             $dataCompletadas = [];
@@ -118,18 +167,37 @@ class DashboardService
     public function getCalidadStats($days = 30)
     {
         try {
+            // Obtener el ID de la maquiladora del usuario autenticado
+            $maquiladoraId = session()->get('maquiladora_id');
+            
             $sql = "
                 SELECT 
-                    DATE(fecha) as fecha,
+                    DATE(i.fecha) as fecha,
                     COUNT(*) as total_inspecciones,
-                    SUM(CASE WHEN resultado LIKE '%defecto%' OR resultado LIKE '%rechazo%' THEN 1 ELSE 0 END) as defectuosas
-                FROM inspeccion
-                WHERE fecha >= DATE_SUB(NOW(), INTERVAL ? DAY)
-                GROUP BY DATE(fecha)
+                    SUM(CASE WHEN i.resultado = 'Rechazado' THEN 1 ELSE 0 END) as defectuosas
+                FROM inspeccion i
+                INNER JOIN orden_produccion op ON op.id = i.ordenProduccionId
+                WHERE i.fecha >= DATE_SUB(NOW(), INTERVAL ? DAY)
+            ";
+            
+            // Agregar filtro de maquiladora si existe (usando el maquiladoraID de orden_produccion)
+            if ($maquiladoraId) {
+                $sql .= " AND (op.maquiladoraID = ? OR op.maquiladoraCompartidaID = ?)";
+            }
+            
+            $sql .= "
+                GROUP BY DATE(i.fecha)
                 ORDER BY fecha ASC
             ";
 
-            $result = $this->db->query($sql, [$days])->getResultArray();
+            // Ejecutar query con parámetros
+            $params = [$days];
+            if ($maquiladoraId) {
+                $params[] = (int) $maquiladoraId;
+                $params[] = (int) $maquiladoraId;
+            }
+            
+            $result = $this->db->query($sql, $params)->getResultArray();
 
             $labels = [];
             $dataTasa = [];
@@ -231,6 +299,9 @@ class DashboardService
     public function getLogisticaStats()
     {
         try {
+            // Obtener el ID de la maquiladora del usuario autenticado
+            $maquiladoraId = session()->get('maquiladora_id');
+            
             // Órdenes de compra por estado
             // CORRECCIÓN: Usar 'estatus' en lugar de 'status' para orden_compra
 
@@ -239,10 +310,23 @@ class DashboardService
                     estatus, 
                     COUNT(*) as total
                 FROM orden_compra
-                GROUP BY estatus
+                WHERE 1=1
             ";
+            
+            // Filtrar por maquiladora si existe
+            if ($maquiladoraId) {
+                $sql .= " AND maquiladoraID = ?";
+            }
+            
+            $sql .= " GROUP BY estatus";
 
-            $result = $this->db->query($sql)->getResultArray();
+            // Ejecutar query con parámetros
+            $params = [];
+            if ($maquiladoraId) {
+                $params[] = (int) $maquiladoraId;
+            }
+            
+            $result = $this->db->query($sql, $params)->getResultArray();
 
             $labels = [];
             $data = [];
