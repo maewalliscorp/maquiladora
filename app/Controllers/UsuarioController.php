@@ -37,6 +37,22 @@ class UsuarioController extends Controller
         $user = $usuarioModel->where('correo', $correo)->first();
 
         if ($user && (int)($user['active'] ?? 0) === 1 && password_verify($password, $user['password'])) {
+            
+            // Verificar si el usuario tiene una maquiladora asignada y si está activa
+            if (!empty($user['maquiladoraIdFK'])) {
+                $maquiladoraModel = new MaquiladoraModel();
+                $maquiladora = $maquiladoraModel->find($user['maquiladoraIdFK']);
+                
+                // Si la maquiladora existe pero está inactiva (status = 0), denegar acceso
+                if ($maquiladora && (int)($maquiladora['status'] ?? 1) === 0) {
+                    return redirect()
+                        ->to('/login')
+                        ->withInput()
+                        ->with('login_attempted', true)
+                        ->with('error', 'La maquiladora asociada a tu cuenta está inactiva. Contacta al administrador.');
+                }
+            }
+            
             $roleIds = [];
             $roleNames = [];
             try {
@@ -113,6 +129,50 @@ class UsuarioController extends Controller
         $response->setHeader('Expires', '0');
         
         return redirect()->to('/login');
+    }
+
+    public function login_maquiladoras()
+    {
+        // Forzar re-login: si ya hay sesión abierta, destruirla
+        if (session()->get('logged_in')) {
+            session()->destroy();
+            // Regenerar ID y eliminar cookie previa para evitar sesiones pegajosas
+            try { session()->regenerate(true); } catch (\Throwable $e) {}
+        }
+
+        // Evitar caché de la página de login
+        $response = service('response');
+        $response->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        $response->setHeader('Pragma', 'no-cache');
+        $response->setHeader('Expires', '0');
+
+        return view('login_maquiladoras');
+    }
+
+    public function authenticate_maquiladoras()
+    {
+        // Recibir datos del formulario
+        $correo   = $this->request->getPost('correo');
+        $password = $this->request->getPost('password');
+
+        // Validar credenciales específicas
+        if ($correo === 'maewalliscorp@gmail.com' && $password === 'maewalliscorp2404') {
+            // Crear sesión simple
+            session()->set([
+                'user_id'     => 999,
+                'user_name'   => 'Maewallis Corp',
+                'logged_in'   => true,
+                'login_type'  => 'maquiladora_admin',
+            ]);
+
+            return redirect()->to('/gestion_maquilas');
+        }
+
+        // Si las credenciales no coinciden
+        return redirect()
+            ->to('/login_maquiladoras')
+            ->withInput()
+            ->with('error', 'Correo o contraseña incorrectos.');
     }
     
     public function index()

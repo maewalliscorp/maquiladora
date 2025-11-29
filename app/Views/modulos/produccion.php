@@ -86,24 +86,104 @@
 
 <!-- Modal Reporte OP -->
 <div class="modal fade" id="opReporteModal" tabindex="-1" aria-labelledby="opReporteLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content text-dark">
-            <div class="modal-header">
-                <h5 class="modal-title" id="opReporteLabel">Reporte de Orden <span id="rep-op-folio"></span></h5>
+            <div class="modal-header border-bottom-0">
+                <h5 class="modal-title fw-bold" id="opReporteLabel">
+                    <i class="bi bi-info-circle me-2 text-primary"></i>Información de Orden <span id="rep-op-folio" class="text-primary"></span>
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle me-2"></i> Detalles del reporte para esta orden.
+                <div id="rep-loading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Cargando información de la orden...</p>
                 </div>
-                <div class="text-center py-5 text-muted">
-                    <i class="bi bi-file-earmark-bar-graph display-1"></i>
-                    <p class="mt-3">Contenido del reporte en construcción...</p>
+                
+                <div id="rep-content" style="display: none;">
+                    <!-- Información General -->
+                    <div class="card mb-2 shadow-sm border-0">
+                        <div class="card-header bg-light text-primary fw-bold border-0">
+                            <i class="bi bi-clipboard-data me-2"></i>Información General
+                        </div>
+                        <div class="card-body py-2">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Folio:</strong> <span id="rep-folio">-</span></p>
+                                    <p class="mb-1"><strong>Cliente:</strong> <span id="rep-cliente">-</span></p>
+
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Fecha Inicio:</strong> <span id="rep-fecha-inicio">-</span></p>
+                                    <p class="mb-1"><strong>Fecha Fin:</strong> <span id="rep-fecha-fin">-</span></p>
+                                    <p class="mb-1"><strong>Estatus:</strong> <span id="rep-estatus" class="badge">-</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información del Diseño -->
+                    <div class="card mb-2 shadow-sm border-0">
+                        <div class="card-header bg-light text-success fw-bold border-0">
+                            <i class="bi bi-palette me-2"></i>Diseño
+                        </div>
+                        <div class="card-body py-2">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Código:</strong> <span id="rep-diseno-codigo">-</span></p>
+                                    <p class="mb-1"><strong>Nombre:</strong> <span id="rep-diseno-nombre">-</span></p>
+                                    <p class="mb-1"><strong>Versión:</strong> <span id="rep-diseno-version">-</span></p>
+
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Descripción:</strong></p>
+                                    <p id="rep-diseno-descripcion" class="text-muted fst-italic mb-1">-</p>
+                                </div>
+                            </div>
+                            <div class="row mt-2" id="rep-diseno-notas-container" style="display: none;">
+                                <div class="col-12">
+                                    <div class="alert alert-warning py-1 mb-0">
+                                        <strong><i class="bi bi-sticky me-2"></i>Notas del Diseño:</strong>
+                                        <p id="rep-diseno-notas" class="mb-0 mt-1">-</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Archivos del Diseño -->
+                    <div class="card mb-2 shadow-sm border-0">
+                        <div class="card-header bg-light text-warning fw-bold border-0">
+                            <i class="bi bi-images me-2"></i>Archivos del Diseño
+                        </div>
+                        <div class="card-body py-2">
+                            <div class="row">
+                                <div class="col-md-6 text-center">
+                                    <h6 class="mb-2 small text-muted text-uppercase">Foto del Diseño</h6>
+                                    <div id="rep-foto-container">
+                                        <p class="text-muted small">No disponible</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 text-center">
+                                    <h6 class="mb-2 small text-muted text-uppercase">Patrón</h6>
+                                    <div id="rep-patron-container">
+                                        <p class="text-muted small">No disponible</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="rep-error" style="display: none;" class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <span id="rep-error-msg">No se pudo cargar la información de la orden.</span>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                <button type="button" class="btn btn-primary"><i class="bi bi-printer"></i> Imprimir</button>
             </div>
         </div>
     </div>
@@ -294,6 +374,88 @@
             const folio = btn.getAttribute('data-folio');
             const el = document.getElementById('rep-op-folio');
             if(el) el.textContent = folio;
+            
+            // Mostrar loading y ocultar contenido/error
+            document.getElementById('rep-loading').style.display = 'block';
+            document.getElementById('rep-content').style.display = 'none';
+            document.getElementById('rep-error').style.display = 'none';
+            
+            // Cargar datos de la orden
+            fetch('<?= base_url('modulo1/ordenes/folio/') ?>' + encodeURIComponent(folio) + '/json', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => {
+                if (!r.ok) throw new Error('Error al cargar la orden');
+                return r.json();
+            })
+            .then(data => {
+                console.log('Datos de la orden:', data);
+                
+                // Ocultar loading y mostrar contenido
+                document.getElementById('rep-loading').style.display = 'none';
+                document.getElementById('rep-content').style.display = 'block';
+                
+                // Información General
+                document.getElementById('rep-folio').textContent = data.folio || '-';
+                document.getElementById('rep-cliente').textContent = data.cliente || '-';
+
+                document.getElementById('rep-fecha-inicio').textContent = data.fechaInicioPlan ? new Date(data.fechaInicioPlan).toLocaleDateString() : '-';
+                document.getElementById('rep-fecha-fin').textContent = data.fechaFinPlan ? new Date(data.fechaFinPlan).toLocaleDateString() : '-';
+                
+                // Estatus con badge
+                const estatusEl = document.getElementById('rep-estatus');
+                estatusEl.textContent = data.status || '-';
+                estatusEl.className = 'badge bg-info';
+                
+                // Información del Diseño
+                if (data.diseno) {
+                    document.getElementById('rep-diseno-codigo').textContent = data.diseno.codigo || '-';
+                    document.getElementById('rep-diseno-nombre').textContent = data.diseno.nombre || '-';
+                    document.getElementById('rep-diseno-version').textContent = data.diseno.version || '-';
+
+                    document.getElementById('rep-diseno-descripcion').textContent = data.diseno.descripcion || 'Sin descripción';
+                    
+                    // Notas (solo mostrar si existen)
+                    if (data.diseno.notas && data.diseno.notas.trim() !== '') {
+                        document.getElementById('rep-diseno-notas').textContent = data.diseno.notas;
+                        document.getElementById('rep-diseno-notas-container').style.display = 'block';
+                    } else {
+                        document.getElementById('rep-diseno-notas-container').style.display = 'none';
+                    }
+                    
+                    // Foto del diseño
+                    const fotoContainer = document.getElementById('rep-foto-container');
+                    if (data.diseno.archivoCadUrl) {
+                        fotoContainer.innerHTML = '<img src="' + data.diseno.archivoCadUrl + '" class="img-fluid rounded shadow" style="max-height: 400px;" alt="Foto del diseño">';
+                    } else {
+                        fotoContainer.innerHTML = '<p class="text-muted">No disponible</p>';
+                    }
+                    
+                    // Patrón
+                    const patronContainer = document.getElementById('rep-patron-container');
+                    if (data.diseno.archivoPatronUrl) {
+                        patronContainer.innerHTML = '<img src="' + data.diseno.archivoPatronUrl + '" class="img-fluid rounded shadow" style="max-height: 400px;" alt="Patrón del diseño">';
+                    } else {
+                        patronContainer.innerHTML = '<p class="text-muted">No disponible</p>';
+                    }
+                } else {
+                    // Si no hay diseño, mostrar valores por defecto
+                    document.getElementById('rep-diseno-codigo').textContent = '-';
+                    document.getElementById('rep-diseno-nombre').textContent = '-';
+                    document.getElementById('rep-diseno-version').textContent = '-';
+
+                    document.getElementById('rep-diseno-descripcion').textContent = 'Sin información';
+                    document.getElementById('rep-diseno-notas-container').style.display = 'none';
+                    document.getElementById('rep-foto-container').innerHTML = '<p class="text-muted">No disponible</p>';
+                    document.getElementById('rep-patron-container').innerHTML = '<p class="text-muted">No disponible</p>';
+                }
+            })
+            .catch(err => {
+                console.error('Error al cargar datos de la orden:', err);
+                document.getElementById('rep-loading').style.display = 'none';
+                document.getElementById('rep-error').style.display = 'block';
+                document.getElementById('rep-error-msg').textContent = 'No se pudo cargar la información de la orden. Por favor, intente nuevamente.';
+            });
         }
         
         const btnInc = ev.target.closest('.btn-incidencia-op');

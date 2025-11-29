@@ -30,10 +30,29 @@ $routes->get('/register', 'UsuarioController::index', ['as' => 'register']);
 $routes->post('/register/store', 'UsuarioController::store');
 $routes->get('/login', 'UsuarioController::login', ['as' => 'login']);
 $routes->post('/login', 'UsuarioController::authenticate');
+$routes->get('/login_maquiladoras', 'UsuarioController::login_maquiladoras', ['as' => 'login_maquiladoras']);
+$routes->post('/login_maquiladoras', 'UsuarioController::authenticate_maquiladoras');
 $routes->get('/logout', 'UsuarioController::logout');
 
 // API sueltos
 $routes->get('api/maquiladoras', 'UsuarioController::getMaquiladoras');
+
+// Gestión de Maquilas
+$routes->get('gestion_maquilas', function() {
+    return view('modulos/gestion_maquilas', [
+        'title' => 'Gestión de Maquilas',
+        'notifCount' => 0,
+    ]);
+}, ['filter' => 'auth']);
+
+// API para Gestión de Maquiladoras
+$routes->group('api/maquiladoras', ['filter' => 'auth'], function($routes) {
+    $routes->get('listar', 'MaquiladorasAPI::listar');
+    $routes->get('obtener/(:num)', 'MaquiladorasAPI::obtener/$1');
+    $routes->post('crear', 'MaquiladorasAPI::crear');
+    $routes->post('actualizar', 'MaquiladorasAPI::actualizar');
+    $routes->delete('eliminar/(:num)', 'MaquiladorasAPI::eliminar/$1');
+});
 
 // Maquiladora principal
 $routes->get('maquiladora', 'Maquiladora::index', ['as' => 'maquiladora']);

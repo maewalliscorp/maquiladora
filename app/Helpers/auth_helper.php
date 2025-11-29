@@ -59,6 +59,11 @@ if (!function_exists('can_menu')) {
             return true;
         }
 
+        // Bypass específico para Empleado (Producción e Incidencias)
+        if (($perm === 'menu.produccion' || $perm === 'menu.incidencias') && $roleNorm === 'empleado') {
+            return true;
+        }
+
         // Optimización: usar cache de permisos en sesión
         $cachedPermissions = session()->get('cached_permissions');
         if ($cachedPermissions !== null) {
