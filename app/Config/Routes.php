@@ -38,7 +38,7 @@ $routes->get('/logout', 'UsuarioController::logout');
 $routes->get('api/maquiladoras', 'UsuarioController::getMaquiladoras');
 
 // Gestión de Maquilas
-$routes->get('gestion_maquilas', function() {
+$routes->get('gestion_maquilas', function () {
     return view('modulos/gestion_maquilas', [
         'title' => 'Gestión de Maquilas',
         'notifCount' => 0,
@@ -46,7 +46,7 @@ $routes->get('gestion_maquilas', function() {
 }, ['filter' => 'auth']);
 
 // API para Gestión de Maquiladoras
-$routes->group('api/maquiladoras', ['filter' => 'auth'], function($routes) {
+$routes->group('api/maquiladoras', ['filter' => 'auth'], function ($routes) {
     $routes->get('listar', 'MaquiladorasAPI::listar');
     $routes->get('obtener/(:num)', 'MaquiladorasAPI::obtener/$1');
     $routes->post('crear', 'MaquiladorasAPI::crear');
@@ -437,6 +437,33 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
         // Evidencia fotográfica
         $routes->get('evidencia/(:num)', 'Inspeccion::evidencia/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
     });
+
+    // Grupo Control de Bultos
+    $routes->group('control-bultos', function ($routes) {
+        $routes->get('/', 'ControlBultosController::index', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->get('(:num)', 'ControlBultosController::detalle/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+    });
+
+    // API Control de Bultos
+    $routes->group('api/control-bultos', function ($routes) {
+        $routes->get('/', 'ControlBultosController::listar', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->get('(:num)', 'ControlBultosController::detalle/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->get('(:num)/progreso', 'ControlBultosController::progreso/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->post('crear', 'ControlBultosController::crear', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->post('(:num)/editar', 'ControlBultosController::editar/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->delete('(:num)/eliminar', 'ControlBultosController::eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->post('registrar-produccion', 'ControlBultosController::registrarProduccion', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->get('(:num)/registros-produccion', 'ControlBultosController::registrosProduccion/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->get('(:num)/export-excel', 'ControlBultosController::exportExcel/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+    });
+
+    // API Plantillas de Operaciones
+    $routes->group('api/plantillas-operaciones', function ($routes) {
+        $routes->get('/', 'ControlBultosController::listarPlantillas', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->post('crear', 'ControlBultosController::crearPlantilla', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->post('(:num)/editar', 'ControlBultosController::editarPlantilla/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+    });
+
 
     // Inventario / Mantenimiento (modulo3)
     $routes->get('mantenimiento_inventario', 'Maquinaria::index', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
