@@ -1,47 +1,113 @@
-<?= $this->extend('layouts/main') ?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Maquiladoras</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    
+    <style>
+        body {
+            background: #f4f6f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, #2c5364 0%, #0f2027 100%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-brand {
+            font-weight: 600;
+            color: white !important;
+        }
+        
+        .container-main {
+            padding: 30px 15px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .card-header {
+            border-bottom: 2px solid rgba(0,0,0,0.05);
+        }
+        
+        .btn-logout {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-logout:hover {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
 
-<?= $this->section('head') ?>
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
-<?= $this->endSection() ?>
-
-<?= $this->section('content') ?>
-<div class="d-flex align-items-center justify-content-between mb-4">
-    <div>
-        <h1 class="mb-0"><i class="bi bi-building me-2"></i>Gestión de Maquiladoras</h1>
-        <p class="text-muted mb-0">Administra todas las maquiladoras del sistema</p>
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">
+            <i class="bi bi-building me-2"></i>Sistema de Maquiladoras
+        </a>
+        <button class="btn btn-logout" onclick="cerrarSesion()">
+            <i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión
+        </button>
     </div>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalMaquiladora" onclick="limpiarFormulario()">
-        <i class="bi bi-plus-circle me-2"></i>Nueva Maquiladora
-    </button>
-</div>
+</nav>
 
-<div class="card shadow-sm">
-    <div class="card-header bg-primary text-white">
-        <strong><i class="bi bi-table me-2"></i>Lista de Maquiladoras</strong>
+<div class="container-main">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="mb-0"><i class="bi bi-building me-2"></i>Gestión de Maquiladoras</h1>
+            <p class="text-muted mb-0">Administra todas las maquiladoras del sistema</p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalMaquiladora" onclick="limpiarFormulario()">
+            <i class="bi bi-plus-circle me-2"></i>Nueva Maquiladora
+        </button>
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table id="tablaMaquiladoras" class="table table-striped table-hover">
-                <thead class="table-dark">
-                    <tr>
-                        <th>ID</th>
-                        <th>Nombre</th>
-                        <th>Dueño</th>
-                        <th>Teléfono</th>
-                        <th>Correo</th>
-                        <th>Domicilio</th>
-                        <th>Tipo</th>
-                        <th>Status</th>
-                        <th>Logo</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Los datos se cargarán dinámicamente -->
-                </tbody>
-            </table>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <strong><i class="bi bi-table me-2"></i>Lista de Maquiladoras</strong>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table id="tablaMaquiladoras" class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Dueño</th>
+                            <th>Teléfono</th>
+                            <th>Correo</th>
+                            <th>Domicilio</th>
+                            <th>Tipo</th>
+                            <th>Status</th>
+                            <th>Logo</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Los datos se cargarán dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -145,10 +211,9 @@
     </div>
 </div>
 
-<?= $this->endSection() ?>
-
-<?= $this->section('scripts') ?>
+<!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -159,6 +224,31 @@ let tabla;
 $(document).ready(function() {
     cargarMaquiladoras();
 });
+
+function cerrarSesion() {
+    Swal.fire({
+        title: '¿Cerrar sesión?',
+        text: "¿Estás seguro de que deseas salir?",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#2c5364',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, salir',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Hacer petición AJAX para destruir la sesión
+            $.ajax({
+                url: '<?= base_url('logout') ?>',
+                type: 'GET',
+                complete: function() {
+                    // Redirigir al login de maquiladoras después de cerrar sesión
+                    window.location.href = '<?= base_url('login_maquiladoras') ?>';
+                }
+            });
+        }
+    });
+}
 
 function cargarMaquiladoras() {
     if (tabla) {
@@ -393,4 +483,6 @@ function eliminarMaquiladora(id) {
     });
 }
 </script>
-<?= $this->endSection() ?>
+
+</body>
+</html>

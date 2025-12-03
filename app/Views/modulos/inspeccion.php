@@ -562,6 +562,9 @@
                 lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Todos"]]
             });
 
+            // Obtener maquiladoraId de la sesión
+            const maquiladoraId = <?= json_encode(session()->get('maquiladora_id') ?? null) ?>;
+
             // Botón Puntos de Inspección (CRUD)
             $(document).on('click', '#btnPuntosInspeccion', function(){
                 const cargarYMostrar = () => {
@@ -571,11 +574,27 @@
                             return;
                         }
                         const rows = resp.data || [];
-                        const lista = rows.map(r => `
-                            <tr data-id="${r.id}">
+                        
+                        // DEBUG: Ver datos recibidos
+                        console.log('maquiladoraId de sesión:', maquiladoraId);
+                        console.log('Puntos recibidos del backend:', rows);
+                        
+                        // Filtrar para mostrar SOLO puntos de la maquiladora actual (sin generales)
+                        const rowsFiltrados = rows.filter(r => {
+                            const puntoMaqId = r.maquiladoraID;
+                            const mostrar = puntoMaqId && puntoMaqId == maquiladoraId;
+                            console.log(`Punto #${r.id}: maquiladoraID=${puntoMaqId}, ¿Mostrar? ${mostrar}`);
+                            return mostrar;
+                        });
+                        
+                        console.log('Puntos después de filtrar:', rowsFiltrados);
+                        
+                        const lista = rowsFiltrados.map(r => `
+                            <tr data-id="${r.id}" data-maquiladora="${r.maquiladoraID||''}">
                                 <td style="width:70px" class="text-muted">#${r.id}</td>
                                 <td><input type="text" class="form-control form-control-sm ip-tipo" value="${(r.tipo||'').replace(/"/g,'&quot;')}"/></td>
                                 <td><input type="text" class="form-control form-control-sm ip-criterio" value="${(r.criterio||'').replace(/"/g,'&quot;')}"/></td>
+                                <td class="text-muted small">${r.maquiladoraNombre||'General'}</td>
                                 <td class="text-nowrap" style="width:140px">
                                     <button class="btn btn-sm btn-success me-1 btn-pi-guardar" title="Guardar"><i class="fas fa-save"></i></button>
                                     <button class="btn btn-sm btn-danger btn-pi-eliminar" title="Eliminar"><i class="fas fa-trash"></i></button>
@@ -605,7 +624,7 @@
                           </div>
                           <div class="table-responsive" style="max-height:50vh;">
                             <table class="table table-sm table-hover align-middle mb-0">
-                              <thead class="table-secondary"><tr><th>ID</th><th>Tipo</th><th>Criterio</th><th>Acciones</th></tr></thead>
+                              <thead class="table-secondary"><tr><th>ID</th><th>Tipo</th><th>Criterio</th><th>Maquiladora</th><th>Acciones</th></tr></thead>
                               <tbody id="pi-tbody">${lista}</tbody>
                             </table>
                           </div>
@@ -614,7 +633,7 @@
                         Swal.fire({
                             title: 'Puntos de Inspección',
                             html: html,
-                            width: 800,
+                            width: 900,
                             showConfirmButton: false,
                             showCloseButton: true,
                             didOpen: () => {
@@ -631,17 +650,23 @@
                                     $.ajax({
                                         url: '<?= base_url('modulo3/inspeccion/puntos/crear') ?>',
                                         method: 'POST',
-                                        data: { tipo, criterio, <?= csrf_token()?>: '<?= csrf_hash()?>' },
+                                        data: { 
+                                            tipo, 
+                                            criterio, 
+                                            maquiladoraID: maquiladoraId,
+                                            <?= csrf_token()?> : '<?= csrf_hash()?>' 
+                                        },
                                         dataType: 'json'
                                     }).done(function(r){
                                         if (r && r.success && r.data) {
                                             // Agregar la nueva fila sin cerrar el Swal
                                             const d = r.data;
                                             const rowHtml = `
-                                              <tr data-id="${d.id}">
+                                              <tr data-id="${d.id}" data-maquiladora="${d.maquiladoraID||''}">
                                                 <td style="width:70px" class="text-muted">#${d.id}</td>
                                                 <td><input type="text" class="form-control form-control-sm ip-tipo" value="${(d.tipo||'').replace(/"/g,'&quot;')}"/></td>
                                                 <td><input type="text" class="form-control form-control-sm ip-criterio" value="${(d.criterio||'').replace(/"/g,'&quot;')}"/></td>
+                                                <td class="text-muted small">${d.maquiladoraNombre||'General'}</td>
                                                 <td class="text-nowrap" style="width:140px">
                                                   <button class="btn btn-sm btn-success me-1 btn-pi-guardar" title="Guardar"><i class="fas fa-save"></i></button>
                                                   <button class="btn btn-sm btn-danger btn-pi-eliminar" title="Eliminar"><i class="fas fa-trash"></i></button>
@@ -670,13 +695,20 @@
                                     const id = parseInt($tr.data('id'),10)||0;
                                     const tipo = ($tr.find('.ip-tipo').val()||'').trim();
                                     const criterio = ($tr.find('.ip-criterio').val()||'').trim();
+                                    const maqID = $tr.data('maquiladora') || null;
                                     if (!id || !tipo) { Swal.fire({icon:'warning',title:'Datos inválidos'}); return; }
                                     const originalHtml = $btn.html();
                                     $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
                                     $.ajax({
                                         url: '<?= base_url('modulo3/inspeccion/puntos/editar') ?>',
                                         method: 'POST',
-                                        data: { id, tipo, criterio, <?= csrf_token()?>: '<?= csrf_hash()?>' },
+                                        data: { 
+                                            id, 
+                                            tipo, 
+                                            criterio, 
+                                            maquiladoraID: maqID,
+                                            <?= csrf_token()?> : '<?= csrf_hash()?>' 
+                                        },
                                         dataType: 'json'
                                     }).done(function(r){
                                         if (r && r.success) { Toast.fire({icon:'success',title:'Guardado'}); }
@@ -715,7 +747,7 @@
                                         $.ajax({
                                             url: '<?= base_url('modulo3/inspeccion/puntos/eliminar') ?>',
                                             method: 'POST',
-                                            data: { id, <?= csrf_token()?>: '<?= csrf_hash()?>' },
+                                            data: { id, <?= csrf_token()?> : '<?= csrf_hash()?>' },
                                             dataType: 'json'
                                         }).done(function(r){
                                             if (r && r.success) { $tr.remove(); Toast.fire({icon:'success',title:'Eliminado'}); }

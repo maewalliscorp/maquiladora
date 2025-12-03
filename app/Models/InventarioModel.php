@@ -296,6 +296,14 @@ class InventarioModel extends Model
                 'stockMax'     => is_numeric($stockMax) ? (float)$stockMax : null,
                 'activo'       => 1,
             ];
+
+            // Si la tabla articulo tiene maquiladoraID y hay maquiladora en sesión, asociarla al artículo
+            try {
+                $maquiladoraId = session()->get('maquiladora_id');
+                if ($maquiladoraId && $this->tableHas('articulo', 'maquiladoraID')) {
+                    $set['maquiladoraID'] = (int) $maquiladoraId;
+                }
+            } catch (\Throwable $e) {}
             try {
                 $db->table('articulo')->insert($set);
             } catch (\Throwable $e) {

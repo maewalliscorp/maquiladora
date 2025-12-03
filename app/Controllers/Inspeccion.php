@@ -73,12 +73,17 @@ class Inspeccion extends BaseController
             $processedIds[] = $row['inspeccionId'];
         }
 
-        // Obtener la lista de puntos de inspección para el dropdown
-        $puntosInspeccion = $db->table('punto_inspeccion')
+        // Obtener la lista de puntos de inspección para el dropdown (filtrado por maquiladora)
+        $puntosBuilder = $db->table('punto_inspeccion')
             ->select('id, tipo')
-            ->orderBy('tipo', 'ASC')
-            ->get()
-            ->getResultArray();
+            ->orderBy('tipo', 'ASC');
+        
+        // Filtrar solo puntos de la maquiladora actual
+        if ($maquiladoraId) {
+            $puntosBuilder->where('maquiladoraID', (int)$maquiladoraId);
+        }
+        
+        $puntosInspeccion = $puntosBuilder->get()->getResultArray();
 
         return view('modulos/inspeccion', [
             'title' => 'Inspecciones',
@@ -194,7 +199,12 @@ class Inspeccion extends BaseController
     {
         $db = \Config\Database::connect();
         try {
-            $rows = $db->table('punto_inspeccion')->select('id, tipo, criterio')->orderBy('id','ASC')->get()->getResultArray();
+            $rows = $db->table('punto_inspeccion pi')
+                ->select('pi.id, pi.tipo, pi.criterio, pi.maquiladoraID, m.Nombre_Maquila as maquiladoraNombre')
+                ->join('maquiladora m', 'pi.maquiladoraID = m.idmaquiladora', 'left')
+                ->orderBy('pi.id','ASC')
+                ->get()
+                ->getResultArray();
             return $this->response->setJSON(['success'=>true, 'data'=>$rows]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['success'=>false, 'message'=>$e->getMessage()]);
@@ -206,13 +216,38 @@ class Inspeccion extends BaseController
         if (!$this->request->isAJAX()) { return $this->response->setStatusCode(405)->setJSON(['success'=>false,'message'=>'Método no permitido']); }
         $tipo = trim((string)($this->request->getPost('tipo') ?? ''));
         $criterio = trim((string)($this->request->getPost('criterio') ?? '')) ?: null;
+        $maquiladoraID = $this->request->getPost('maquiladoraID') ? (int)$this->request->getPost('maquiladoraID') : null;
+        
         if ($tipo === '') { return $this->response->setStatusCode(422)->setJSON(['success'=>false,'message'=>'El campo tipo es requerido']); }
+        
         $db = \Config\Database::connect();
         try {
-            $ok = $db->table('punto_inspeccion')->insert(['tipo'=>$tipo, 'criterio'=>$criterio]);
+            $data = [
+                'tipo' => $tipo, 
+                'criterio' => $criterio,
+                'maquiladoraID' => $maquiladoraID
+            ];
+            $ok = $db->table('punto_inspeccion')->insert($data);
             if (!$ok) { $err = $db->error(); throw new \Exception($err['message'] ?? 'No se pudo crear'); }
             $id = (int)$db->insertID();
-            return $this->response->setJSON(['success'=>true, 'data'=>['id'=>$id,'tipo'=>$tipo,'criterio'=>$criterio]]);
+            
+            // Obtener nombre de maquiladora si existe
+            $maquiladoraNombre = null;
+            if ($maquiladoraID) {
+                $maq = $db->table('maquiladora')->select('Nombre_Maquila')->where('idmaquiladora', $maquiladoraID)->get()->getRowArray();
+                $maquiladoraNombre = $maq['Nombre_Maquila'] ?? null;
+            }
+            
+            return $this->response->setJSON([
+                'success'=>true, 
+                'data'=>[
+                    'id'=>$id,
+                    'tipo'=>$tipo,
+                    'criterio'=>$criterio,
+                    'maquiladoraID'=>$maquiladoraID,
+                    'maquiladoraNombre'=>$maquiladoraNombre
+                ]
+            ]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['success'=>false, 'message'=>$e->getMessage()]);
         }
@@ -224,10 +259,18 @@ class Inspeccion extends BaseController
         $id = (int)($this->request->getPost('id') ?? 0);
         $tipo = trim((string)($this->request->getPost('tipo') ?? ''));
         $criterio = trim((string)($this->request->getPost('criterio') ?? '')) ?: null;
+        $maquiladoraID = $this->request->getPost('maquiladoraID') ? (int)$this->request->getPost('maquiladoraID') : null;
+        
         if ($id<=0 || $tipo==='') { return $this->response->setStatusCode(422)->setJSON(['success'=>false,'message'=>'Datos inválidos']); }
+        
         $db = \Config\Database::connect();
         try {
-            $ok = $db->table('punto_inspeccion')->where('id',$id)->update(['tipo'=>$tipo,'criterio'=>$criterio]);
+            $data = [
+                'tipo' => $tipo,
+                'criterio' => $criterio,
+                'maquiladoraID' => $maquiladoraID
+            ];
+            $ok = $db->table('punto_inspeccion')->where('id',$id)->update($data);
             if (!$ok) { $err = $db->error(); throw new \Exception($err['message'] ?? 'No se pudo actualizar'); }
             return $this->response->setJSON(['success'=>true]);
         } catch (\Throwable $e) {

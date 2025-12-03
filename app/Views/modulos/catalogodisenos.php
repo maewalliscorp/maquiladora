@@ -1185,10 +1185,10 @@
     }
     function initCatalogos(){
         // Cargar catálogos en paralelo con cache-busting
-        cargarCatalogo('<?= base_url('modulo2/catalogos/sexo') ?>' + '?_=' + Date.now(), '#selSexo');
-        cargarCatalogo('<?= base_url('modulo2/catalogos/tallas') ?>' + '?_=' + Date.now(), '#selTalla');
-        cargarCatalogo('<?= base_url('modulo2/catalogos/tipo-corte') ?>' + '?_=' + Date.now(), '#selTipoCorte');
-        cargarCatalogo('<?= base_url('modulo2/catalogos/tipo-ropa') ?>' + '?_=' + Date.now(), '#selTipoRopa');
+        cargarCatalogo('<?= base_url('modulo2/catalogos/sexo') ?>' + '?solo_maquiladora=1&_=' + Date.now(), '#selSexo');
+        cargarCatalogo('<?= base_url('modulo2/catalogos/tallas') ?>' + '?solo_maquiladora=1&_=' + Date.now(), '#selTalla');
+        cargarCatalogo('<?= base_url('modulo2/catalogos/tipo-corte') ?>' + '?solo_maquiladora=1&_=' + Date.now(), '#selTipoCorte');
+        cargarCatalogo('<?= base_url('modulo2/catalogos/tipo-ropa') ?>' + '?solo_maquiladora=1&_=' + Date.now(), '#selTipoRopa');
     }
     // Clientes (opcional) para nuevo diseño
     let clientesCacheNuevo = null;
