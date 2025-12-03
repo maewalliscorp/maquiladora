@@ -157,94 +157,6 @@
                         </li>
                     <?php endif; ?>
                     <?php if (can('menu.ordenes')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo1/ordenes')) ?>">
-                                <i class="bi bi-card-checklist me-2"></i>Órdenes en proceso
-                            </a>
-                        </li>
-                    <?php endif; ?>
-                    <?php if (can('menu.produccion')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo1/produccion')) ?>">
-                                <i class="bi bi-gear-wide-connected me-2"></i>Producción
-                            </a>
-                        </li>
-                    <?php endif; ?>
-                    <?php if (can('menu.produccion')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/cortes')) ?>">
-                                <i class="bi bi-scissors me-2"></i>Gestión de Cortes
-                            </a>
-                        </li>
-                    <?php endif; ?>
-                    <?php if (can('menu.ordenes_clientes')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('clientes')) ?>">
-                                <i class="bi bi-people me-2"></i>Clientes
-                            </a>
-                        </li>
-                    <?php endif; ?>
-
-                    <?php if ($secGestion && $secMuestrasInspeccion): ?>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.muestras')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('muestras')) ?>">
-                                <i class="bi bi-palette2 me-2"></i>Muestras
-                            </a>
-                        </li>
-                    <?php endif; ?>
-                    <?php if (can('menu.inspeccion')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/inspeccion')) ?>">
-                                <i class="bi bi-search me-2"></i>Inspección
-                            </a>
-                        </li>
-                    <?php endif; ?>
-
-                    <?php if ($secMuestrasInspeccion && $secIncidencias): ?>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.incidencias')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/incidencias')) ?>">
-                                <i class="bi bi-exclamation-triangle me-2"></i>Incidencias
-                            </a>
-                        </li>
-                    <?php endif; ?>
-
-                    <?php if ($secIncidencias && $secPlanificacion): ?>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.planificacion_materiales')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/mrp')) ?>">
-                                <i class="bi bi-diagram-2 me-2"></i>Planificación Materiales
-                            </a>
-                        </li>
-                    <?php endif; ?>
-
-                    <!-- NUEVO: Proveedores (móvil) -->
-                    <?php if (can('menu.proveedores')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('proveedores')) ?>">
-                                <i class="bi bi-truck-front me-2"></i>Proveedores
-                            </a>
-                        </li>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.desperdicios')): ?>
-                        <li class="nav-item">
                             <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/desperdicios')) ?>">
                                 <i class="bi bi-recycle me-2"></i>Desperdicios
                             </a>
@@ -451,13 +363,13 @@
                                 <?php endif; ?>
 
                                 <?php if (can('menu.inspeccion')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo3/inspeccion')) ?>">
-                                        <i class="bi bi-search me-2"></i>Inspección
+                                    
+                                    <a class="dropdown-item" href="<?= esc(base_url('modulo3/control-bultos')) ?>">
+                                        <i class="bi bi-box me-2"></i>Inspección Bultos
                                     </a>
-                                <?php endif; ?>
-
-                                <?php if ($secMuestrasInspeccion && $secIncidencias): ?>
-                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item" href="<?= esc(base_url('modulo3/inspeccion')) ?>">
+                                        <i class="bi bi-search me-2"></i>Inspección de producto
+                                    </a>
                                 <?php endif; ?>
 
                                 <?php if (can('menu.incidencias')): ?>
