@@ -403,4 +403,55 @@ class ControlBultosController extends BaseController
             'message' => 'No se pudo actualizar la plantilla'
         ]);
     }
+    /**
+     * Vista: Editor de Plantilla (Nueva)
+     */
+    public function nuevaPlantilla()
+    {
+        return view('modulos/plantilla_editor', ['plantilla' => []]);
+    }
+
+    /**
+     * Vista: Editor de Plantilla (Existente)
+     */
+    public function editorPlantilla($id)
+    {
+        $plantillaModel = new PlantillaOperacionModel();
+        $plantilla = $plantillaModel->find($id);
+
+        if (!$plantilla) {
+            return redirect()->back()->with('error', 'Plantilla no encontrada');
+        }
+
+        // Decodificar operaciones si es string
+        if (is_string($plantilla['operaciones'])) {
+            $plantilla['operaciones'] = json_decode($plantilla['operaciones'], true);
+        }
+
+        return view('modulos/plantilla_editor', ['plantilla' => $plantilla]);
+    }
+
+    /**
+     * API: Guardar Plantilla Completa
+     */
+    public function guardarPlantillaCompleta()
+    {
+        $plantillaModel = new PlantillaOperacionModel();
+
+        $id = $this->request->getPost('id');
+        $data = [
+            'nombre_plantilla' => $this->request->getPost('nombre_plantilla'),
+            'tipo_prenda' => $this->request->getPost('tipo_prenda'),
+            'operaciones' => $this->request->getPost('operaciones'), // Ya viene como JSON string del frontend o array
+            'maquiladora_id' => session()->get('maquiladora_id') ?? session()->get('maquiladoraID')
+        ];
+
+        if (empty($id)) {
+            $plantillaModel->insert($data);
+        } else {
+            $plantillaModel->update($id, $data);
+        }
+
+        return $this->response->setJSON(['ok' => true, 'message' => 'Plantilla guardada correctamente']);
+    }
 }
