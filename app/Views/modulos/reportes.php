@@ -20,12 +20,15 @@
         height: 400px;
         width: 100%;
     }
-    
+
     /* Estilos para los botones de la lista de reportes */
     .list-group-item-action {
-        font-size: 1.25rem; /* Letra más grande */
-        color: #000 !important; /* Texto negro */
-        padding: 1.2rem 1.5rem; /* Botones más grandes */
+        font-size: 1.25rem;
+        /* Letra más grande */
+        color: #000 !important;
+        /* Texto negro */
+        padding: 1.2rem 1.5rem;
+        /* Botones más grandes */
         font-weight: 500;
     }
 
@@ -37,18 +40,21 @@
     .list-group-item-action.active {
         background-color: #667eea;
         border-color: #667eea;
-        color: #000 !important; /* Texto negro al estar activo */
+        color: #000 !important;
+        /* Texto negro al estar activo */
         font-weight: 600;
     }
 
     @media print {
+
         /* Ocultar todo lo que no sea el contenido principal */
         body * {
             visibility: hidden;
         }
-        
+
         /* Hacer visible solo el área del reporte y sus hijos */
-        #reportContent, #reportContent * {
+        #reportContent,
+        #reportContent * {
             visibility: visible;
         }
 
@@ -68,6 +74,7 @@
             margin: 0 auto !important;
             height: auto !important;
         }
+
         canvas {
             max-width: 100% !important;
             height: auto !important;
@@ -78,14 +85,15 @@
         .d-print-block {
             display: block !important;
         }
-        
+
         /* Ocultar elementos de UI explícitamente */
         .d-print-none {
             display: none !important;
         }
-        
+
         /* Quitar bordes y sombras de tarjetas */
-        .card, .shadow-sm {
+        .card,
+        .shadow-sm {
             box-shadow: none !important;
             border: none !important;
         }
@@ -135,6 +143,21 @@
                 </div>
             </div>
         </div>
+
+        <!-- Reportes de Costos -->
+        <div class="card shadow-sm mt-3">
+            <div class="card-header bg-warning text-dark">
+                <strong><i class="bi bi-currency-dollar me-2"></i>Costos y Balanceo</strong>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    <a href="<?= base_url('modulo3/reportes/costos') ?>" class="list-group-item list-group-item-action">
+                        <i class="bi bi-calculator me-2"></i>
+                        Gestor de Hojas de Costos
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Columna Derecha: Preview del Reporte -->
@@ -161,17 +184,19 @@
 
                 <!-- Contenido del reporte (oculto inicialmente) -->
                 <div id="reportPreview" style="display: none;">
-                    
+
                     <!-- Membrete SOLO para impresión -->
                     <div class="d-none d-print-block mb-4 text-center">
                         <?php if (!empty($maquiladora['logo_base64'])): ?>
-                            <img src="data:image/jpeg;base64,<?= $maquiladora['logo_base64'] ?>" alt="Logo" style="max-height: 80px; margin-bottom: 15px;">
+                            <img src="data:image/jpeg;base64,<?= $maquiladora['logo_base64'] ?>" alt="Logo"
+                                style="max-height: 80px; margin-bottom: 15px;">
                         <?php endif; ?>
                         <h2 class="fw-bold mb-1"><?= strtoupper($maquiladora['Nombre_Maquila'] ?? 'MAQUILADORA') ?></h2>
                         <p class="mb-0 text-muted"><?= $maquiladora['Domicilio'] ?? 'Dirección no especificada' ?></p>
                         <div class="small text-muted mb-3">
                             <?php if (!empty($maquiladora['Telefono'])): ?>
-                                <span class="me-3"><i class="bi bi-telephone-fill"></i> <?= $maquiladora['Telefono'] ?></span>
+                                <span class="me-3"><i class="bi bi-telephone-fill"></i>
+                                    <?= $maquiladora['Telefono'] ?></span>
                             <?php endif; ?>
                             <?php if (!empty($maquiladora['Correo'])): ?>
                                 <span><i class="bi bi-envelope-fill"></i> <?= $maquiladora['Correo'] ?></span>
@@ -182,7 +207,7 @@
 
                     <!-- Título del reporte -->
                     <div class="report-title" id="reportTitle">TÍTULO DEL REPORTE</div>
-                    
+
                     <!-- Fecha y Usuario (Visible en impresión para contexto) -->
                     <div class="d-flex justify-content-between text-muted small mb-3 d-none d-print-flex">
                         <span><?= date('d/m/Y H:i') ?></span>
@@ -220,12 +245,12 @@
         reportLinks.forEach(link => {
             link.addEventListener('click', function (e) {
                 e.preventDefault();
-                
+
                 // Remover clase active de todos los links
                 reportLinks.forEach(l => l.classList.remove('active'));
                 // Agregar clase active al link clickeado
                 this.classList.add('active');
-                
+
                 const reportType = this.getAttribute('data-report');
                 const reportTitle = this.textContent.trim();
 
@@ -235,7 +260,7 @@
                 // Mostrar preview y ocultar empty state
                 emptyState.style.display = 'none';
                 reportPreview.style.display = 'block';
-                
+
                 // Habilitar botones
                 btnImprimir.disabled = false;
                 btnExportar.disabled = false;

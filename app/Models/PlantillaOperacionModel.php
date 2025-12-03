@@ -117,4 +117,36 @@ class PlantillaOperacionModel extends Model
 
         return $this->insert($nuevaPlantilla);
     }
+    /**
+     * Obtener lista única de operaciones con sus detalles (último uso)
+     */
+    public function getOperacionesUnicas($maquiladoraId)
+    {
+        $plantillas = $this->where('idmaquiladora', $maquiladoraId)->orderBy('updated_at', 'DESC')->findAll();
+        $operacionesUnicas = [];
+
+        foreach ($plantillas as $p) {
+            $ops = is_string($p['operaciones']) ? json_decode($p['operaciones'], true) : $p['operaciones'];
+            if (is_array($ops)) {
+                foreach ($ops as $op) {
+                    if (!empty($op['nombre'])) {
+                        $nombre = trim($op['nombre']);
+                        // Si no existe, lo agregamos (al ser orden DESC, será el más reciente)
+                        if (!isset($operacionesUnicas[$nombre])) {
+                            $operacionesUnicas[$nombre] = [
+                                'nombre' => $nombre,
+                                'tiempo_segundos' => $op['tiempo_segundos'] ?? 0,
+                                'precio_operacion' => $op['precio_operacion'] ?? 0,
+                                'seccion' => $op['seccion'] ?? '',
+                                'departamento' => $op['departamento'] ?? ''
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+
+        ksort($operacionesUnicas);
+        return array_values($operacionesUnicas);
+    }
 }

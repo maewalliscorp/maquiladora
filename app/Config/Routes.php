@@ -447,8 +447,17 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
         $routes->get('plantillas/nueva', 'ControlBultosController::nuevaPlantilla', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
     });
 
+    // Reportes
+    $routes->get('reportes', 'ReportesController::index', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+    $routes->get('reportes/api/(:segment)', 'ReportesController::$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+    $routes->get('reportes/exportar/(:segment)', 'ReportesController::exportar/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+    $routes->get('reportes/costos', 'ReportesController::costos', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+    $routes->get('reportes/costos/ver/(:num)', 'ReportesController::verCosto/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+    $routes->get('reportes/costos/descargar/(:num)', 'ReportesController::descargarCosto/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+
     // API Control de Bultos
     $routes->group('api/control-bultos', function ($routes) {
+
         $routes->get('/', 'ControlBultosController::listar', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
         $routes->get('(:num)', 'ControlBultosController::detalle/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
         $routes->get('(:num)/progreso', 'ControlBultosController::progreso/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);

@@ -51,7 +51,7 @@
             <small class="text-muted">Editor de Plantilla de Operaciones</small>
         </div>
         <div>
-            <button class="btn btn-secondary me-2" onclick="window.history.back()">Cancelar</button>
+            <a href="<?= base_url('modulo3/reportes/costos') ?>" class="btn btn-secondary me-2">Cancelar</a>
             <button class="btn btn-primary" id="btnGuardar">
                 <i class="fas fa-save me-1"></i> Guardar Plantilla
             </button>
@@ -198,7 +198,17 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     // Datos iniciales (si es edición)
-    const operacionesIniciales = <?= isset($plantilla['operaciones']) ? $plantilla['operaciones'] : '[]' ?>;
+    const operacionesIniciales = <?= isset($plantilla['operaciones']) ? json_encode($plantilla['operaciones']) : '[]' ?>;
+
+    // Catálogo de operaciones (Nombre -> Detalles)
+    const catalogoOperaciones = {};
+    <?php if (!empty($operacionesUnicas)): ?>
+        <?php foreach ($operacionesUnicas as $op): ?>
+            catalogoOperaciones[<?= json_encode($op['nombre']) ?>] = <?= json_encode($op) ?>;
+        <?php endforeach; ?>
+    <?php endif; ?>
+
+    console.log('Catálogo de operaciones cargado:', Object.keys(catalogoOperaciones).length, 'operaciones');
 
     $(document).ready(function () {
         // Cargar operaciones iniciales o una fila vacía
@@ -217,6 +227,37 @@
             const row = $(this).closest('tr');
             calcularFila(row);
             calcularTotales();
+        });
+
+        // Auto-completado de operaciones
+        $('#gridOperaciones').on('input', '.op-nombre', function () {
+            const input = $(this);
+            const nombre = input.val().trim();
+            const row = input.closest('tr');
+            const spinner = row.find('.op-spinner');
+
+            if (catalogoOperaciones[nombre]) {
+                // Mostrar spinner
+                spinner.show();
+
+                // Simular pequeña carga para UX (opcional, pero solicitado)
+                setTimeout(() => {
+                    const op = catalogoOperaciones[nombre];
+
+                    // Rellenar campos si están vacíos o si el usuario lo confirma (aquí lo hacemos directo)
+                    row.find('.op-tiempo').val(op.tiempo_segundos);
+                    row.find('.op-precio').val(op.precio_operacion);
+                    row.find('.op-seccion').val(op.seccion);
+                    row.find('.op-depto').val(op.departamento);
+
+                    // Recalcular
+                    calcularFila(row);
+                    calcularTotales();
+
+                    // Ocultar spinner
+                    spinner.hide();
+                }, 300);
+            }
         });
 
         $('#gridOperaciones').on('click', '.btn-remove', function () {
@@ -249,7 +290,14 @@
         const row = `
             <tr>
                 <td class="text-center align-middle row-index">${index}</td>
-                <td><input type="text" class="op-nombre" value="${nombre}" placeholder="Descripción"></td>
+                <td>
+                    <div class="position-relative">
+                        <input type="text" class="op-nombre" value="${nombre}" placeholder="Descripción" list="operacionesList">
+                        <div class="op-spinner position-absolute top-50 end-0 translate-middle-y me-2" style="display: none;">
+                            <i class="fas fa-spinner fa-spin text-primary"></i>
+                        </div>
+                    </div>
+                </td>
                 <td><input type="number" class="op-tiempo calc-trigger text-center" value="${tiempo}" placeholder="0"></td>
                 <td class="readonly text-end op-cuota-diaria">0</td>
                 <td class="readonly text-end op-cuota-bi">0</td>
@@ -383,7 +431,7 @@
                         text: 'Plantilla guardada correctamente',
                         icon: 'success'
                     }).then(() => {
-                        window.location.href = '<?= base_url('modulo3/control-bultos') ?>';
+                        window.location.href = '<?= base_url('modulo3/reportes/costos') ?>';
                     });
                 } else {
                     Swal.fire('Error', response.message, 'error');
@@ -406,5 +454,12 @@
     <option value="LINEA 1">
     <option value="LINEA 2">
     <option value="EMPAQUE">
+</datalist>
+<datalist id="operacionesList">
+    <?php if (!empty($operacionesUnicas)): ?>
+        <?php foreach ($operacionesUnicas as $op): ?>
+            <option value="<?= esc($op['nombre']) ?>">
+            <?php endforeach; ?>
+        <?php endif; ?>
 </datalist>
 <?= $this->endSection() ?>

@@ -408,7 +408,14 @@ class ControlBultosController extends BaseController
      */
     public function nuevaPlantilla()
     {
-        return view('modulos/plantilla_editor', ['plantilla' => []]);
+        $plantillaModel = new PlantillaOperacionModel();
+        $maquiladoraId = session()->get('maquiladora_id') ?? session()->get('maquiladoraID');
+        $operacionesUnicas = $plantillaModel->getOperacionesUnicas($maquiladoraId);
+
+        return view('modulos/plantilla_editor', [
+            'plantilla' => [],
+            'operacionesUnicas' => $operacionesUnicas
+        ]);
     }
 
     /**
@@ -428,7 +435,13 @@ class ControlBultosController extends BaseController
             $plantilla['operaciones'] = json_decode($plantilla['operaciones'], true);
         }
 
-        return view('modulos/plantilla_editor', ['plantilla' => $plantilla]);
+        $maquiladoraId = session()->get('maquiladora_id') ?? session()->get('maquiladoraID');
+        $operacionesUnicas = $plantillaModel->getOperacionesUnicas($maquiladoraId);
+
+        return view('modulos/plantilla_editor', [
+            'plantilla' => $plantilla,
+            'operacionesUnicas' => $operacionesUnicas
+        ]);
     }
 
     /**
@@ -443,7 +456,7 @@ class ControlBultosController extends BaseController
             'nombre_plantilla' => $this->request->getPost('nombre_plantilla'),
             'tipo_prenda' => $this->request->getPost('tipo_prenda'),
             'operaciones' => $this->request->getPost('operaciones'), // Ya viene como JSON string del frontend o array
-            'maquiladora_id' => session()->get('maquiladora_id') ?? session()->get('maquiladoraID')
+            'idmaquiladora' => session()->get('maquiladora_id') ?? session()->get('maquiladoraID')
         ];
 
         if (empty($id)) {

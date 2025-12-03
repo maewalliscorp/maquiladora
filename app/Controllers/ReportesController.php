@@ -287,4 +287,42 @@ class ReportesController extends BaseController
         fclose($out);
         exit;
     }
+    /**
+     * Vista: Gestor de Hojas de Costos
+     */
+    public function costos()
+    {
+        $plantillaModel = new \App\Models\PlantillaOperacionModel();
+        $maquiladoraId = session()->get('maquiladora_id');
+
+        $plantillas = $plantillaModel->where('idmaquiladora', $maquiladoraId)->findAll();
+
+        return view('modulos/reportes_costos', [
+            'title' => 'Gestor de Costos',
+            'plantillas' => $plantillas
+        ]);
+    }
+
+    /**
+     * Ver hoja de costos (Redirecciona al editor por ahora)
+     */
+    public function verCosto($id)
+    {
+        return redirect()->to(base_url("modulo3/control-bultos/plantillas/editor/$id"));
+    }
+
+    /**
+     * Descargar / Imprimir hoja de costos
+     */
+    public function descargarCosto($id)
+    {
+        $plantillaModel = new \App\Models\PlantillaOperacionModel();
+        $plantilla = $plantillaModel->find($id);
+
+        if (!$plantilla) {
+            return redirect()->back()->with('error', 'Hoja de costos no encontrada');
+        }
+
+        return view('modulos/reportes_costos_print', ['plantilla' => $plantilla]);
+    }
 }

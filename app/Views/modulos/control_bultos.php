@@ -307,20 +307,86 @@
                     </div>
                     <!-- Tab Nueva Plantilla -->
                     <div class="tab-pane fade" id="nueva-plantilla" role="tabpanel">
-                        <!-- Hidden input to store JSON -->
-                        <input type="hidden" name="operaciones" id="inputOperacionesJson">
+                        <form id="formNuevaPlantilla">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Nombre Plantilla</label>
+                                    <input type="text" class="form-control" name="nombre_plantilla" required
+                                        placeholder="Ej. Camisa Estándar">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Tipo de Prenda</label>
+                                    <input type="text" class="form-control" name="tipo_prenda" required
+                                        placeholder="Ej. CAMISA">
+                                </div>
 
-                        <div class="col-12 text-end mt-3">
-                            <button type="button" class="btn btn-primary" id="btnGuardarPlantilla">Guardar
-                                Plantilla</button>
-                        </div>
+                                <div class="col-12">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6>Agregar Operaciones</h6>
+                                            <p class="text-muted small">Agregue las operaciones en el orden que deben
+                                                realizarse.</p>
+
+                                            <div class="row g-2 align-items-end mb-3">
+                                                <div class="col-md-5">
+                                                    <label class="form-label small">Nombre Operación</label>
+                                                    <input type="text" class="form-control form-control-sm"
+                                                        id="opNombre" placeholder="Ej. Corte, Armado de Cuello">
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label small">Tipo</label>
+                                                    <select class="form-select form-select-sm" id="opTipo">
+                                                        <option value="1">Componente (Pieza)</option>
+                                                        <option value="0">Armado (Ensamble)</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label small">Piezas</label>
+                                                    <input type="number" class="form-control form-control-sm"
+                                                        id="opPiezas" value="1" min="1">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <button type="button" class="btn btn-sm btn-success w-100"
+                                                        id="btnAgregarOp">
+                                                        <i class="fas fa-plus"></i> Agregar
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="table-responsive bg-white border rounded"
+                                                style="max-height: 200px; overflow-y: auto;">
+                                                <table class="table table-sm table-striped mb-0"
+                                                    id="tablaBuilderOperaciones">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th style="width: 50px;">#</th>
+                                                            <th>Operación</th>
+                                                            <th>Tipo</th>
+                                                            <th>Piezas</th>
+                                                            <th style="width: 50px;"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="tbodyOpsPlantilla">
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Hidden input to store JSON -->
+                                <input type="hidden" name="operaciones" id="inputOperacionesJson">
+
+                                <div class="col-12 text-end">
+                                    <button type="submit" class="btn btn-primary">Guardar Plantilla</button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
-                    </form>
                 </div>
             </div>
         </div>
     </div>
-</div>
 </div>
 
 <?= $this->endSection() ?>
@@ -763,7 +829,7 @@
                                     <td>${p.tipo_prenda}</td>
                                     <td>${opsCount} operaciones</td>
                                     <td>
-                                        <a href="<?= base_url('modulo3/control-bultos/plantillas/editor') ?>/${p.id}" class="btn btn-sm btn-warning me-1"><i class="fas fa-edit"></i></a>
+                                     <button class="btn btn-sm btn-outline-primary btn-editar-plantilla" data-id="${p.id}"><i class="fas fa-edit"></i></button>
                                     </td>
                                 </tr>
                             `);
