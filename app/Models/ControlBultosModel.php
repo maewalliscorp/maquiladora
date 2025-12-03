@@ -196,6 +196,16 @@ class ControlBultosModel extends Model
 
             $this->update($controlId, ['estado' => $nuevoEstado]);
 
+            // Si se completó, actualizar también la Orden de Producción
+            if ($nuevoEstado === 'completado') {
+                $control = $this->find($controlId);
+                if ($control && !empty($control['ordenProduccionId'])) {
+                    $this->db->table('orden_produccion')
+                        ->where('id', $control['ordenProduccionId'])
+                        ->update(['status' => 'Completada', 'updated_at' => date('Y-m-d H:i:s')]);
+                }
+            }
+
             return $nuevoEstado;
         }
 

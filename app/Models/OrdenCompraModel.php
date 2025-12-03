@@ -7,9 +7,9 @@ use Config\Database;
 
 class OrdenCompraModel extends Model
 {
-    protected $table         = 'orden_compra';
-    protected $primaryKey    = 'id';
-    protected $returnType    = 'array';
+    protected $table = 'orden_compra';
+    protected $primaryKey = 'id';
+    protected $returnType = 'array';
 
     // Ajusta la lista según las columnas reales de tu tabla
     protected $allowedFields = [
@@ -66,6 +66,7 @@ class OrdenCompraModel extends Model
             oc.clienteId,
             c.nombre                               AS clienteNombre,
             op.folio                               AS op,
+            op.status                              AS op_estatus,
             COALESCE(SUM(oci.cantidad), 0)        AS cajas
         ";
 
@@ -137,7 +138,9 @@ class OrdenCompraModel extends Model
             oc.total,
             oc.clienteId,
             c.nombre,
-            op.folio
+            c.nombre,
+            op.folio,
+            op.status
         ";
         if (isset($colsOc['peso'])) {
             $groupBy .= ", oc.peso";

@@ -329,6 +329,7 @@ $ordenes = $ordenes ?? [];
                 <tr>
                     <th class="text-center">Pedido</th>
                     <th class="text-center">OP</th>
+                    <th class="text-center">Estatus Producción</th>
                     <th class="text-center">Cajas</th>
                     <th class="text-center">Peso</th>
                     <th class="text-center">Destino</th>
@@ -345,6 +346,15 @@ $ordenes = $ordenes ?? [];
                         <tr>
                             <td><?= esc($r['pedido']) ?></td>
                             <td><?= esc($r['op'] ?? '') ?></td>
+                            <td class="text-center">
+                                <?php if (($r['op_estatus'] ?? '') === 'Completada'): ?>
+                                    <span class="badge bg-success">✅ Listo para envío</span>
+                                <?php elseif (!empty($r['op_estatus'])): ?>
+                                    <span class="badge bg-warning text-dark"><?= esc($r['op_estatus']) ?></span>
+                                <?php else: ?>
+                                    <span class="badge bg-secondary">-</span>
+                                <?php endif; ?>
+                            </td>
                             <td><?= esc($r['cajas'] ?? '') ?></td>
                             <td><?= esc($r['peso'] ?? '') ?></td>
                             <td><?= esc($r['clienteNombre'] ?? '-') ?></td>
