@@ -74,7 +74,7 @@ class CreateControlBultosTables extends Migration
         $this->forge->addKey('maquiladoraId');
         $this->forge->addKey('ordenProduccionId');
         $this->forge->addKey('inspeccionId');
-        $this->forge->createTable('control_bultos');
+        $this->forge->createTable('control_bultos', true);
 
         // Tabla 2: bultos
         $this->forge->addField([
@@ -117,7 +117,7 @@ class CreateControlBultosTables extends Migration
         $this->forge->addKey('id', true);
         $this->forge->addKey('controlBultoId');
         $this->forge->addForeignKey('controlBultoId', 'control_bultos', 'id', 'CASCADE', 'CASCADE');
-        $this->forge->createTable('bultos');
+        $this->forge->createTable('bultos', true);
 
         // Tabla 3: operaciones_control
         $this->forge->addField([
@@ -177,7 +177,7 @@ class CreateControlBultosTables extends Migration
         $this->forge->addKey('id', true);
         $this->forge->addKey('controlBultoId');
         $this->forge->addForeignKey('controlBultoId', 'control_bultos', 'id', 'CASCADE', 'CASCADE');
-        $this->forge->createTable('operaciones_control');
+        $this->forge->createTable('operaciones_control', true);
 
         // Tabla 4: registros_produccion
         $this->forge->addField([
@@ -239,7 +239,7 @@ class CreateControlBultosTables extends Migration
         $this->forge->addKey('empleadoId');
         $this->forge->addKey('fecha_registro');
         $this->forge->addForeignKey('operacionControlId', 'operaciones_control', 'id', 'CASCADE', 'CASCADE');
-        $this->forge->createTable('registros_produccion');
+        $this->forge->createTable('registros_produccion', true);
 
         // Tabla 5: plantillas_operaciones
         $this->forge->addField([
@@ -284,7 +284,7 @@ class CreateControlBultosTables extends Migration
         $this->forge->addKey('id', true);
         $this->forge->addKey('maquiladoraId');
         $this->forge->addKey('tipo_prenda');
-        $this->forge->createTable('plantillas_operaciones');
+        $this->forge->createTable('plantillas_operaciones', true);
     }
 
     public function down()

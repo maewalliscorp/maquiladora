@@ -170,6 +170,13 @@
                             </a>
                         </li>
                     <?php endif; ?>
+                    <?php if (can('menu.produccion')): ?>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/cortes')) ?>">
+                                <i class="bi bi-scissors me-2"></i>Gestión de Cortes
+                            </a>
+                        </li>
+                    <?php endif; ?>
                     <?php if (can('menu.ordenes_clientes')): ?>
                         <li class="nav-item">
                             <a class="nav-link text-dark" href="<?= esc(base_url('clientes')) ?>">
@@ -424,6 +431,12 @@
                                 <?php if (can('menu.produccion')): ?>
                                     <a class="dropdown-item" href="<?= esc(base_url('modulo1/produccion')) ?>">
                                         <i class="bi bi-gear-wide-connected me-2"></i>Producción
+                                    </a>
+                                <?php endif; ?>
+
+                                <?php if (can('menu.produccion')): ?>
+                                    <a class="dropdown-item" href="<?= esc(base_url('modulo3/cortes')) ?>">
+                                        <i class="bi bi-scissors me-2"></i>Gestión de Cortes
                                     </a>
                                 <?php endif; ?>
 

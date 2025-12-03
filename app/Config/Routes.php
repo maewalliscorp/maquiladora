@@ -455,6 +455,14 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->get('reportes/costos/ver/(:num)', 'ReportesController::verCosto/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
     $routes->get('reportes/costos/descargar/(:num)', 'ReportesController::descargarCosto/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
 
+    // Gestión de Cortes
+    $routes->group('cortes', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad'], function ($routes) {
+        $routes->get('/', 'CorteController::index');
+        $routes->get('nuevo', 'CorteController::nuevo');
+        $routes->get('editar/(:num)', 'CorteController::editar/$1');
+        $routes->post('guardar', 'CorteController::guardar');
+    });
+
     // API Control de Bultos
     $routes->group('api/control-bultos', function ($routes) {
 
