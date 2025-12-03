@@ -214,29 +214,26 @@
 
                 <hr>
 
-                <!-- Paso 5: Orden de Compra -->
+                <!-- Paso 5: Detalle por tallas -->
                 <div class="mb-2">
-                    <h6 class="mb-2">Orden de Compra</h6>
-                    <div class="row g-3">
-                        <input type="hidden" id="oc-clienteId" name="oc_clienteId" value="">
-                        <input type="hidden" id="oc-estatus" name="oc_estatus" value="Pendiente">
-                        <input type="hidden" id="oc-folio" name="oc_folio" value="">
-                        <div class="col-md-4">
-                            <label class="form-label">Fecha</label>
-                            <input type="date" class="form-control" id="oc-fecha" name="oc_fecha" value="<?= date('Y-m-d') ?>">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Moneda</label>
-                            <select class="form-select" id="oc-moneda" name="oc_moneda">
-                                <option value="MXN">MXN</option>
-                                <option value="USD">USD</option>
-                                <option value="EUR">EUR</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Total</label>
-                            <input type="number" step="0.01" min="0" class="form-control" id="oc-total" name="oc_total" placeholder="0.00">
-                        </div>
+                    <h6 class="mb-2">Detalle por tallas</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted">Captura las cantidades por sexo y talla para esta orden de producción.</small>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="op-tallas-add-row">Agregar línea</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered align-middle mb-0" id="op-tallas-tabla">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 35%;">Sexo</th>
+                                    <th style="width: 35%;">Talla</th>
+                                    <th style="width: 20%;">Cantidad</th>
+                                    <th style="width: 10%;">&nbsp;</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -259,6 +256,34 @@
                         <div class="col-md-4">
                             <label class="form-label">Fin plan</label>
                             <input type="date" class="form-control" id="op-fechaFinPlan" name="op_fechaFinPlan">
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Paso 7: Orden de Compra -->
+                <div class="mb-2">
+                    <h6 class="mb-2">Orden de Compra</h6>
+                    <div class="row g-3">
+                        <input type="hidden" id="oc-clienteId" name="oc_clienteId" value="">
+                        <input type="hidden" id="oc-estatus" name="oc_estatus" value="Pendiente">
+                        <input type="hidden" id="oc-folio" name="oc_folio" value="">
+                        <div class="col-md-4">
+                            <label class="form-label">Fecha</label>
+                            <input type="date" class="form-control" id="oc-fecha" name="oc_fecha" value="<?= date('Y-m-d') ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Moneda</label>
+                            <select class="form-select" id="oc-moneda" name="oc_moneda">
+                                <option value="MXN">MXN</option>
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Total</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="oc-total" name="oc_total" placeholder="0.00">
                         </div>
                     </div>
                 </div>
@@ -671,6 +696,65 @@
             if ($('#oc-total').length) { $('#oc-total').val(total.toFixed(2)); }
             if ($('#pe-total').length) { $('#pe-total').val(total.toFixed(2)); }
         }
+
+        let paSexoCache = null;
+        let paTallasCache = null;
+
+        function paFillSexoOptions($sel){
+            if (!$sel || !$sel.length) return;
+            $sel.empty().append('<option value="">Seleccionar...</option>');
+            if (!Array.isArray(paSexoCache)) return;
+            paSexoCache.forEach(function(it){
+                const id = it.id ?? it.id_sexo ?? '';
+                const nombre = (it.nombre || '').toString();
+                if (!id) return;
+                $sel.append('<option value="'+ id +'">'+ nombre +'</option>');
+            });
+        }
+
+        function paFillTallaOptions($sel){
+            if (!$sel || !$sel.length) return;
+            $sel.empty().append('<option value="">Seleccionar...</option>');
+            if (!Array.isArray(paTallasCache)) return;
+            paTallasCache.forEach(function(it){
+                const id = it.id ?? it.id_talla ?? '';
+                const nombre = (it.nombre || '').toString();
+                if (!id) return;
+                $sel.append('<option value="'+ id +'">'+ nombre +'</option>');
+            });
+        }
+
+        function opAddTallaRow(){
+            const $tbody = $('#op-tallas-tabla tbody');
+            if (!$tbody.length) { return; }
+            const rowHtml =
+                '<tr class="op-talla-row">' +
+                '  <td>' +
+                '    <select class="form-select form-select-sm op-talla-sexo" name="op_tallas[][id_sexo]"></select>' +
+                '  </td>' +
+                '  <td>' +
+                '    <select class="form-select form-select-sm op-talla-talla" name="op_tallas[][id_talla]"></select>' +
+                '  </td>' +
+                '  <td>' +
+                '    <input type="number" min="1" step="1" class="form-control form-control-sm op-talla-cantidad" name="op_tallas[][cantidad]" value="">' +
+                '  </td>' +
+                '  <td class="text-center">' +
+                '    <button type="button" class="btn btn-sm btn-outline-danger op-talla-del">&times;</button>' +
+                '  </td>' +
+                '</tr>';
+            const $row = $(rowHtml).appendTo($tbody);
+            paFillSexoOptions($row.find('.op-talla-sexo'));
+            paFillTallaOptions($row.find('.op-talla-talla'));
+        }
+
+        $(document).on('click', '#op-tallas-add-row', function(){
+            opAddTallaRow();
+        });
+
+        $(document).on('click', '.op-talla-del', function(){
+            const $row = $(this).closest('tr');
+            $row.remove();
+        });
         const langES = {
             "sProcessing":     "Procesando...",
             "sLengthMenu":     "Mostrar _MENU_ registros",
@@ -768,6 +852,16 @@
                 disenoVersionId:   ($('#pa-dis-version-id').val() || $('#pe-dis-version-id').val()),
                 disenoId:          disIdSel
             };
+
+            payload.tallas = [];
+            $('#op-tallas-tabla tbody tr.op-talla-row').each(function(){
+                const id_sexo = $(this).find('.op-talla-sexo').val();
+                const id_talla = $(this).find('.op-talla-talla').val();
+                const cantidad = parseInt($(this).find('.op-talla-cantidad').val() || '0', 10);
+                if (id_sexo && id_talla && cantidad > 0){
+                    payload.tallas.push({ id_sexo: id_sexo, id_talla: id_talla, cantidad: cantidad });
+                }
+            });
 
             // Validaciones rápidas
             if (!payload.oc_clienteId) { 
@@ -1134,6 +1228,40 @@
             $('#pa-nuevo-cliente').prop('checked', false);
             paToggleNuevoCliente(false);
             paClientesCache = null;
+
+            const $tbodyTallas = $('#op-tallas-tabla tbody');
+            if ($tbodyTallas.length){
+                $tbodyTallas.empty();
+                opAddTallaRow();
+            }
+
+            if (paSexoCache === null){
+                $.getJSON('<?= base_url('modulo2/catalogos/sexo') ?>' + '?t=' + Date.now())
+                    .done(function(resp){
+                        paSexoCache = Array.isArray(resp?.items) ? resp.items : [];
+                        $('#op-tallas-tabla .op-talla-sexo').each(function(){
+                            paFillSexoOptions($(this));
+                        });
+                    }).fail(function(){ paSexoCache = []; });
+            } else {
+                $('#op-tallas-tabla .op-talla-sexo').each(function(){
+                    paFillSexoOptions($(this));
+                });
+            }
+
+            if (paTallasCache === null){
+                $.getJSON('<?= base_url('modulo2/catalogos/tallas') ?>' + '?t=' + Date.now())
+                    .done(function(resp){
+                        paTallasCache = Array.isArray(resp?.items) ? resp.items : [];
+                        $('#op-tallas-tabla .op-talla-talla').each(function(){
+                            paFillTallaOptions($(this));
+                        });
+                    }).fail(function(){ paTallasCache = []; });
+            } else {
+                $('#op-tallas-tabla .op-talla-talla').each(function(){
+                    paFillTallaOptions($(this));
+                });
+            }
 
             // Diseños
             const $selDis = $('#pa-dis-select');

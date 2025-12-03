@@ -189,10 +189,6 @@
                                     data-fecha-reproceso="<?= $item['fechaReproceso'] ?? '' ?>">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <a href="<?= base_url('modulo3/control-bultos') ?>" class="btn btn-accion btn-control-bultos"
-                                    title="Control de Bultos">
-                                    <i class="fas fa-box-open"></i>
-                                </a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
