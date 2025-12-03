@@ -442,6 +442,9 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->group('control-bultos', function ($routes) {
         $routes->get('/', 'ControlBultosController::index', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
         $routes->get('(:num)', 'ControlBultosController::detalle/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        // Editor de Plantillas
+        $routes->get('plantillas/editor/(:num)', 'ControlBultosController::editorPlantilla/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->get('plantillas/nueva', 'ControlBultosController::nuevaPlantilla', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
     });
 
     // API Control de Bultos
@@ -461,6 +464,7 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->group('api/plantillas-operaciones', function ($routes) {
         $routes->get('/', 'ControlBultosController::listarPlantillas', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
         $routes->post('crear', 'ControlBultosController::crearPlantilla', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
+        $routes->post('guardar-completo', 'ControlBultosController::guardarPlantillaCompleta', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
         $routes->post('(:num)/editar', 'ControlBultosController::editarPlantilla/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Calidad']);
     });
 
