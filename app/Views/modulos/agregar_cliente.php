@@ -17,9 +17,14 @@
 <?= $this->section('content') ?>
     <div class="d-flex align-items-center mb-4">
         <h1 class="me-auto">Clientes</h1>
-        <button type="button" class="btn btn-success" id="btnAgregarCliente" data-bs-toggle="modal" data-bs-target="#modalCliente">
-            <i class="bi bi-person-plus"></i> Agregar Cliente
-        </button>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-info" id="btnVerClasificaciones" data-bs-toggle="modal" data-bs-target="#modalClasificaciones">
+                <i class="bi bi-tags"></i> Clasificaciones
+            </button>
+            <button type="button" class="btn btn-success" id="btnAgregarCliente" data-bs-toggle="modal" data-bs-target="#modalCliente">
+                <i class="bi bi-person-plus"></i> Agregar Cliente
+            </button>
+        </div>
     </div>
     <div class="modal fade" id="modalClienteDel" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -52,7 +57,8 @@
                         <th>Email</th>
                         <th>Teléfono</th>
                         <th>Tipo Persona</th>
-                        <th style="width: 160px;">Fecha Registro</th>
+                        <th>Clasificación</th>
+                        <th style="width: 120px;">Fecha Registro</th>
                         <th style="width: 140px;">Acciones</th>
                     </tr>
                     </thead>
@@ -133,6 +139,86 @@
         </div>
     </div>
 
+    <!-- Modal de Clasificaciones -->
+    <div class="modal fade" id="modalClasificaciones" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title">Clasificaciones de Clientes</h5>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-success" id="btnAgregarClasificacion">
+                            <i class="bi bi-plus-circle"></i> Agregar
+                        </button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="tablaClasificaciones">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Descripción</th>
+                                    <th>Maquiladora ID</th>
+                                    <th style="width: 120px;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clasificaciones-body">
+                                <tr>
+                                    <td colspan="5" class="text-center">
+                                        <div class="spinner-border spinner-border-sm" role="status">
+                                            <span class="visually-hidden">Cargando...</span>
+                                        </div>
+                                        Cargando clasificaciones...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Agregar/Editar Clasificación -->
+    <div class="modal fade" id="modalClasificacionForm" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalClasificacionTitle">Agregar Clasificación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="formClasificacion">
+                    <?= csrf_field() ?>
+                    <div class="modal-body">
+                        <input type="hidden" name="id" id="clasificacion_id">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="nombre" id="clasificacion_nombre" required maxlength="255">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <textarea class="form-control" name="descripcion" id="clasificacion_descripcion" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Maquiladora ID</label>
+                            <input type="number" class="form-control" name="maquiladoraID" id="clasificacion_maquiladoraID" readonly>
+                            <small class="form-text text-muted">Se asigna automáticamente desde tu sesión</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -199,6 +285,7 @@
 
             // Cargar datos en la tabla
             function cargarClientes() {
+                console.log('Cargando clientes...');
                 const tbody = document.getElementById('clientes-body');
                 const fmt = (v) => v == null ? '' : String(v);
                 const toDate = (v) => {
@@ -206,29 +293,46 @@
                     try { const d = new Date(v); return isNaN(d) ? fmt(v) : d.toISOString().slice(0,10); } catch(e){ return fmt(v); }
                 };
 
-                fetch('<?= base_url('modulo1/clientes/json') ?>' + '?_=' + Date.now(), { headers: { 'Accept': 'application/json' }})
-                    .then(r => r.json())
-                    .then(data => {
-                        const items = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
+                fetch('<?= base_url('modulo1/clientes/json') ?>' + '?_=' + Date.now(), { 
+                    headers: { 'Accept': 'application/json' }
+                })
+                .then(response => {
+                    console.log('Respuesta del servidor:', response);
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Datos recibidos:', data);
+                    const items = Array.isArray(data) ? data : [];
+                
+                // Limpiar tabla
+                tabla.clear().draw();
 
-                        // Limpiar tabla
-                        tabla.clear();
+                if (items.length === 0) {
+                    console.warn('No se encontraron clientes');
+                    return;
+                }
 
-                        // Agregar datos
-                        items.forEach(row => {
-                            const id = row.id ?? row.ID ?? row.clienteId ?? '';
-                            const nombre = row.nombre ?? row.name ?? '';
-                            const email = row.email ?? row.correo ?? '';
-                            const tel = row.telefono ?? row.tel ?? '';
-                            const rfc = row.rfc ?? '';
-                            const tipoPersona = row.tipo_persona ?? '';
-                            const fecha = row.fechaRegistro ?? row.fecha ?? row.created_at ?? '';
+                // Agregar datos
+                items.forEach(row => {
+                        const id = row.id ?? row.ID ?? row.clienteId ?? '';
+                        const nombre = row.nombre ?? row.name ?? '';
+                        const email = row.email ?? row.correo ?? '';
+                        const tel = row.telefono ?? row.tel ?? '';
+                        const rfc = row.rfc ?? '';
+                        const tipoPersona = row.tipo_persona ?? '';
+                        const fecha = row.fechaRegistro ?? row.fecha ?? row.created_at ?? '';
+                        // Obtener clasificación del objeto clasificacion
+                        const clasificacion = row.clasificacion?.nombre ?? row.nombre_cla ?? '';
 
                             tabla.row.add([
                                 fmt(nombre),
                                 fmt(email),
                                 fmt(tel),
                                 fmt(tipoPersona === 'FISICA' ? 'Física' : (tipoPersona === 'MORAL' ? 'Moral' : tipoPersona)),
+                                fmt(clasificacion),
                                 toDate(fecha),
                                 `
                         <div class="d-flex gap-2">
@@ -247,10 +351,16 @@
                         });
 
                         tabla.draw();
+                        console.log('Tabla actualizada con', items.length, 'clientes');
                     })
-                    .catch(() => {
+                    .catch(error => {
+                        console.error('Error al cargar clientes:', error);
                         tabla.clear().draw();
-                        console.error('No fue posible cargar los clientes.');
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'No fue posible cargar los clientes. ' + (error.message || '')
+                        });
                     });
             }
 
@@ -297,32 +407,130 @@
             let addLocked = false;
             const btnAdd = $('#btnAgregarCliente');
 
+            // Función para formatear fechas
+            function toDate(v) {
+                if (!v) return '';
+                try {
+                    const d = new Date(v);
+                    return isNaN(d) ? '' : d.toISOString().split('T')[0];
+                } catch(e) { 
+                    console.error('Error al formatear fecha:', e, v);
+                    return ''; 
+                }
+            }
+
+            // Manejador del botón Ver
+            $(document).on('click', '.btn-view', async function(){
+                const id = $(this).data('id');
+                if (!id) return;
+                $(this).prop('disabled', true);
+                
+                try {
+                    const res = await fetch('<?= site_url('api/clientes') ?>/' + encodeURIComponent(id), { 
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    
+                    if (!res.ok) {
+                        throw new Error(`Error HTTP: ${res.status}`);
+                    }
+                    
+                    const data = await res.json();
+                    console.log('Datos del cliente:', data);
+                    
+                    // Llenar datos básicos
+                    $('#modalClienteVer [name="v_nombre"]').val(data.nombre || '');
+                    $('#modalClienteVer [name="v_email"]').val(data.email || '');
+                    $('#modalClienteVer [name="v_telefono"]').val(data.telefono || '');
+                    $('#modalClienteVer [name="v_rfc"]').val(data.rfc || '');
+                    $('#modalClienteVer [name="v_tipo_persona"]').val(
+                        data.tipo_persona === 'FISICA' ? 'Física' : 
+                        (data.tipo_persona === 'MORAL' ? 'Moral' : data.tipo_persona || '')
+                    );
+                    $('#modalClienteVer [name="v_fechaRegistro"]').val(toDate(data.fechaRegistro) || '');
+                    
+                    // Llenar dirección (usando direccion_detalle)
+                    const direccion = data.direccion_detalle || {};
+                    console.log('Datos de dirección:', direccion);
+                    
+                    $('#modalClienteVer [name="v_calle"]').val(direccion.calle || '');
+                    $('#modalClienteVer [name="v_numExt"]').val(direccion.numExt || '');
+                    $('#modalClienteVer [name="v_numInt"]').val(direccion.numInt || '');
+                    $('#modalClienteVer [name="v_ciudad"]').val(direccion.ciudad || '');
+                    $('#modalClienteVer [name="v_estado"]').val(direccion.estado || '');
+                    $('#modalClienteVer [name="v_cp"]').val(direccion.cp || '');
+                    $('#modalClienteVer [name="v_pais"]').val(direccion.pais || '');
+                    
+                    $('#modalClienteVer').modal('show');
+                } catch (error) {
+                    console.error('Error al cargar los datos del cliente:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No se pudieron cargar los datos del cliente: ' + (error.message || '')
+                    });
+                } finally {
+                    $(this).prop('disabled', false);
+                }
+            });
+
+            // Manejador del botón Editar
             $(document).on('click', '.btn-edit', async function(){
                 const id = $(this).data('id');
                 if (!id) return;
                 $(this).prop('disabled', true);
                 lastEditBtn = $(this);
 
-                const res = await fetch('<?= site_url('api/clientes') ?>/' + encodeURIComponent(id), { headers: { 'Accept': 'application/json' }});
-                const data = await res.json();
-                const m = $('#modalCliente');
-                m.find('[name="id"]').val(data.id || '');
-                m.find('[name="nombre"]').val(data.nombre || '');
-                m.find('[name="email"]').val(data.email || '');
-                m.find('[name="telefono"]').val(data.telefono || '');
-                m.find('[name="rfc"]').val(data.rfc || '');
-                m.find('[name="tipo_persona"]').val(data.tipo_persona || '');
-                m.find('[name="fechaRegistro"]').val(toDate(data.fechaRegistro) || '');
-                const d = data.direccion || {};
-                m.find('[name="calle"]').val(d.calle || '');
-                m.find('[name="numExt"]').val(d.numExt || '');
-                m.find('[name="numInt"]').val(d.numInt || '');
-                m.find('[name="ciudad"]').val(d.ciudad || '');
-                m.find('[name="estado"]').val(d.estado || '');
-                m.find('[name="cp"]').val(d.cp || '');
-                m.find('[name="pais"]').val(d.pais || '');
-                m.find('.modal-title').text('Editar cliente');
-                m.modal('show');
+                try {
+                    const res = await fetch('<?= site_url('api/clientes') ?>/' + encodeURIComponent(id), { 
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    
+                    if (!res.ok) {
+                        throw new Error(`Error HTTP: ${res.status}`);
+                    }
+                    
+                    const data = await res.json();
+                    console.log('Datos del cliente para editar:', data);
+                    
+                    const m = $('#modalCliente');
+                    m.find('[name="id"]').val(data.id || '');
+                    m.find('[name="nombre"]').val(data.nombre || '');
+                    m.find('[name="email"]').val(data.email || '');
+                    m.find('[name="telefono"]').val(data.telefono || '');
+                    m.find('[name="rfc"]').val(data.rfc || '');
+                    m.find('[name="tipo_persona"]').val(data.tipo_persona || '');
+                    m.find('[name="fechaRegistro"]').val(toDate(data.fechaRegistro) || '');
+                    
+                    // Usar direccion_detalle en lugar de direccion
+                    const direccion = data.direccion_detalle || {};
+                    console.log('Datos de dirección para editar:', direccion);
+                    
+                    m.find('[name="calle"]').val(direccion.calle || '');
+                    m.find('[name="numExt"]').val(direccion.numExt || '');
+                    m.find('[name="numInt"]').val(direccion.numInt || '');
+                    m.find('[name="ciudad"]').val(direccion.ciudad || '');
+                    m.find('[name="estado"]').val(direccion.estado || '');
+                    m.find('[name="cp"]').val(direccion.cp || '');
+                    m.find('[name="pais"]').val(direccion.pais || '');
+                    
+                    m.find('.modal-title').text('Editar cliente');
+                    
+                    // Cargar clasificaciones ANTES de mostrar el modal, con el ID de clasificación
+                    const clasificacionId = data.clasificacionId || (data.clasificacion && data.clasificacion.id ? data.clasificacion.id : '');
+                    console.log('Clasificación ID a seleccionar:', clasificacionId);
+                    await cargarClasificaciones(clasificacionId);
+                    
+                    m.modal('show');
+                } catch (error) {
+                    console.error('Error al cargar los datos del cliente:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No se pudieron cargar los datos del cliente: ' + (error.message || '')
+                    });
+                } finally {
+                    $(this).prop('disabled', false);
+                }
             });
 
             $('#formCliente').on('submit', async function(e){
@@ -330,29 +538,114 @@
                 const fd = new FormData(this);
                 const id = fd.get('id');
                 const btnSave = $(this).find('button[type="submit"]');
+                
+                // Get clasificacionId directly from the select element
+                const clasificacionId = $('#selectClasificacion').val();
+                if (!clasificacionId || clasificacionId === '') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Campo requerido',
+                        text: 'Por favor seleccione una clasificación',
+                        confirmButtonText: 'Aceptar'
+                    });
+                    if (btnSave) btnSave.prop('disabled', false);
+                    return;
+                }
+                
+                // Make sure clasificacionId is included in form data as integer
+                fd.set('clasificacionId', parseInt(clasificacionId, 10));
+                
                 if (btnSave) btnSave.prop('disabled', true);
                 if (btnAdd) btnAdd.prop('disabled', true);
+                
                 try {
-                    const url = id ? '<?= site_url('api/clientes') ?>/' + encodeURIComponent(id) + '/editar' : '<?= site_url('api/clientes/crear') ?>';
-                    const res = await fetch(url, { method: 'POST', body: fd, headers: { 'Accept': 'application/json' }});
+                    const url = id 
+                        ? '<?= site_url('api/clientes') ?>/' + encodeURIComponent(id) + '/editar' 
+                        : '<?= site_url('api/clientes/crear') ?>';
+                        
+                    console.log('Enviando datos a:', url);
+                    console.log('Datos del formulario:', Object.fromEntries(fd));
+                    
+                    const res = await fetch(url, { 
+                        method: 'POST', 
+                        body: fd, 
+                        headers: { 
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
                     if (res.ok) {
-                        try { await res.json(); } catch(e) {}
+                        try { 
+                            await res.json(); 
+                        } catch(e) {
+                            console.error('Error al procesar la respuesta:', e);
+                        }
+                        
                         $('#modalCliente').modal('hide');
+                        
                         await Swal.fire({
                             icon: 'success',
                             title: id ? '¡Cambios guardados!' : '¡Cliente agregado!',
-                            confirmButtonText: 'Aceptar'
+                            confirmButtonText: 'Aceptar',
+                            timer: 1500,
+                            timerProgressBar: true,
+                            showConfirmButton: false
                         });
+                        
                         cargarClientes(); // Recargar datos
                         return;
                     }
-                    let msg = 'No se pudo guardar';
-                    try { const js = await res.json(); if (js && js.error) msg = js.error; } catch(e) {}
-                    Swal.fire({ icon: 'error', title: 'Error', text: msg });
-                } catch(err) { Swal.fire({ icon: 'error', title: 'Error de red', text: 'No se pudo guardar.' }); }
-                if (btnSave) btnSave.prop('disabled', false);
-                if (lastEditBtn) lastEditBtn.prop('disabled', false);
-                if (btnAdd) btnAdd.prop('disabled', false);
+                    
+                    // Manejo de errores
+                    let msg = 'No se pudo guardar el cliente';
+                    let errors = [];
+                    
+                    try { 
+                        const js = await res.json(); 
+                        console.log('Respuesta de error:', js);
+                        
+                        if (js && js.errors) {
+                            // Mostrar errores de validación si los hay
+                            errors = Object.values(js.errors).flat();
+                            if (errors.length > 0) {
+                                msg = 'Por favor, corrige los siguientes errores:';
+                            }
+                        }
+                        
+                        if (js && js.error && errors.length === 0) {
+                            msg = js.error;
+                        }
+                        
+                        if (js && js.message) {
+                            msg = js.message;
+                        }
+                    } catch(e) {
+                        console.error('Error al procesar el error:', e);
+                    }
+                    
+                    await Swal.fire({ 
+                        icon: 'error', 
+                        title: 'Error', 
+                        html: errors.length > 0 
+                            ? `<p>${msg}</p><ul class="text-start mt-2">${errors.map(e => `<li>${e}</li>`).join('')}</ul>`
+                            : `<p>${msg}</p>`,
+                        confirmButtonText: 'Aceptar'
+                    });
+                    
+                } catch(err) { 
+                    console.error('Error en la solicitud:', err);
+                    await Swal.fire({ 
+                        icon: 'error', 
+                        title: 'Error de red', 
+                        text: 'No se pudo guardar. Intente nuevamente.',
+                        confirmButtonText: 'Aceptar'
+                    }); 
+                } finally {
+                    if (btnSave) btnSave.prop('disabled', false);
+                    if (lastEditBtn) lastEditBtn.prop('disabled', false);
+                    if (btnAdd) btnAdd.prop('disabled', false);
+                }
             });
 
             $('#modalCliente').on('hidden.bs.modal', function(){
@@ -380,36 +673,18 @@
                 m.find('[name="cp"]').val('');
                 m.find('[name="pais"]').val('');
                 m.find('.modal-title').text('Agregar cliente');
-                m.modal('show');
-                setTimeout(()=>{ addLocked = false; }, 300);
-            });
-
-            // Ver detalle (solo lectura)
-            $(document).on('click', '.btn-view', async function(){
-                const id = $(this).data('id');
-                if (!id) return;
-                try {
-                    const res = await fetch('<?= site_url('api/clientes') ?>/' + encodeURIComponent(id), { headers: { 'Accept': 'application/json' }});
-                    const data = await res.json();
-                    const m = $('#modalClienteVer');
-                    m.find('[name="v_nombre"]').val(data.nombre || '');
-                    m.find('[name="v_email"]').val(data.email || '');
-                    m.find('[name="v_telefono"]').val(data.telefono || '');
-                    m.find('[name="v_rfc"]').val(data.rfc || '');
-                    m.find('[name="v_tipo_persona"]').val(data.tipo_persona === 'FISICA' ? 'Física' : (data.tipo_persona === 'MORAL' ? 'Moral' : data.tipo_persona));
-                    m.find('[name="v_fechaRegistro"]').val(toDate(data.fechaRegistro) || '');
-                    const d = data.direccion || {};
-                    m.find('[name="v_calle"]').val(d.calle || '');
-                    m.find('[name="v_numExt"]').val(d.numExt || '');
-                    m.find('[name="v_numInt"]').val(d.numInt || '');
-                    m.find('[name="v_ciudad"]').val(d.ciudad || '');
-                    m.find('[name="v_estado"]').val(d.estado || '');
-                    m.find('[name="v_cp"]').val(d.cp || '');
-                    m.find('[name="v_pais"]').val(d.pais || '');
+                
+                // Limpiar el ID de clasificación guardado
+                m.removeData('clasificacionId');
+                
+                // Cargar clasificaciones antes de mostrar el modal
+                cargarClasificaciones().then(() => {
                     m.modal('show');
-                } catch (err) {
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'No fue posible cargar el detalle.' });
-                }
+                    setTimeout(()=>{ addLocked = false; }, 300);
+                }).catch(() => {
+                    m.modal('show');
+                    setTimeout(()=>{ addLocked = false; }, 300);
+                });
             });
 
             // Función auxiliar para formatear fechas
@@ -422,6 +697,301 @@
                     return String(v);
                 }
             }
+            
+            // Función para cargar las clasificaciones en el select
+            async function cargarClasificaciones(selectedId = '') {
+                try {
+                    const response = await fetch('<?= site_url('api/clientes/clasificaciones') ?>', {
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Error al cargar las clasificaciones');
+                    }
+                    
+                    const data = await response.json();
+                    const select = $('#selectClasificacion');
+                    
+                    // Limpiar opciones actuales
+                    select.empty();
+                    select.append($('<option>', {
+                        value: '',
+                        text: 'Seleccionar...',
+                        selected: !selectedId
+                    }));
+                    
+                    // Agregar opciones
+                    if (data.success && data.data) {
+                        data.data.forEach(clasificacion => {
+                            select.append($('<option>', {
+                                value: clasificacion.id,
+                                text: clasificacion.nombre,
+                                selected: clasificacion.id == selectedId
+                            }));
+                        });
+                    } else {
+                        select.append($('<option>', {
+                            value: '',
+                            text: 'No hay clasificaciones disponibles'
+                        }));
+                    }
+                    
+                    return data;
+                } catch (error) {
+                    console.error('Error al cargar clasificaciones:', error);
+                    const select = $('#selectClasificacion');
+                    select.empty().append($('<option>', {
+                        value: '',
+                        text: 'Error al cargar clasificaciones'
+                    }));
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            // Cargar clasificaciones cuando se muestre el modal (solo para agregar nuevo)
+            $('#modalCliente').on('show.bs.modal', async function() {
+                // Solo cargar si NO estamos editando (no hay ID de cliente)
+                const clienteId = $('#formCliente [name="id"]').val();
+                if (!clienteId || clienteId === '') {
+                    // Es un nuevo cliente, cargar sin selección
+                    await cargarClasificaciones();
+                }
+                // Si hay clienteId, significa que ya se cargaron las clasificaciones antes de abrir el modal
+            });
+
+            // Función para cargar todas las clasificaciones en el modal
+            async function cargarTodasClasificaciones() {
+                const tbody = $('#clasificaciones-body');
+                tbody.html('<tr><td colspan="5" class="text-center"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Cargando...</span></div> Cargando clasificaciones...</td></tr>');
+                
+                try {
+                    const response = await fetch('<?= site_url('api/clientes/clasificaciones') ?>', {
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Error al cargar las clasificaciones');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success && data.data && data.data.length > 0) {
+                        tbody.empty();
+                        data.data.forEach(clasificacion => {
+                            const row = $('<tr>');
+                            row.append($('<td>').text(clasificacion.id || ''));
+                            row.append($('<td>').text(clasificacion.nombre || ''));
+                            row.append($('<td>').text(clasificacion.descripcion || ''));
+                            row.append($('<td>').text(clasificacion.maquiladoraID || ''));
+                            
+                            // Botones de acción
+                            const acciones = $('<td>');
+                            const btnGroup = $('<div>').addClass('d-flex gap-2');
+                            
+                            const btnEdit = $('<button>')
+                                .addClass('btn btn-sm btn-outline-primary btn-edit-clasificacion')
+                                .attr('data-id', clasificacion.id)
+                                .attr('aria-label', 'Editar')
+                                .html('<i class="bi bi-pencil-square"></i>');
+                            
+                            const btnDel = $('<button>')
+                                .addClass('btn btn-sm btn-outline-danger btn-del-clasificacion')
+                                .attr('data-id', clasificacion.id)
+                                .attr('aria-label', 'Eliminar')
+                                .html('<i class="bi bi-trash"></i>');
+                            
+                            btnGroup.append(btnEdit).append(btnDel);
+                            acciones.append(btnGroup);
+                            row.append(acciones);
+                            
+                            tbody.append(row);
+                        });
+                    } else {
+                        tbody.html('<tr><td colspan="5" class="text-center text-muted">No hay clasificaciones disponibles</td></tr>');
+                    }
+                } catch (error) {
+                    console.error('Error al cargar clasificaciones:', error);
+                    tbody.html('<tr><td colspan="5" class="text-center text-danger">Error al cargar las clasificaciones: ' + (error.message || 'Error desconocido') + '</td></tr>');
+                }
+            }
+
+            // Cargar clasificaciones cuando se muestre el modal de clasificaciones
+            $('#modalClasificaciones').on('show.bs.modal', function() {
+                cargarTodasClasificaciones();
+            });
+
+            // Obtener maquiladora_id de la sesión (pasado desde PHP)
+            const maquiladoraId = <?= session()->get('maquiladora_id') ? (int)session()->get('maquiladora_id') : 'null' ?>;
+
+            // Botón agregar clasificación
+            $('#btnAgregarClasificacion').on('click', function() {
+                $('#formClasificacion')[0].reset();
+                $('#clasificacion_id').val('');
+                // Llenar automáticamente el maquiladoraID desde la sesión
+                if (maquiladoraId) {
+                    $('#clasificacion_maquiladoraID').val(maquiladoraId);
+                }
+                // Hacer readonly al agregar (se asigna automáticamente)
+                $('#clasificacion_maquiladoraID').prop('readonly', true);
+                $('#modalClasificacionTitle').text('Agregar Clasificación');
+                $('#modalClasificacionForm').modal('show');
+            });
+
+            // Botón editar clasificación
+            $(document).on('click', '.btn-edit-clasificacion', async function() {
+                const id = $(this).data('id');
+                if (!id) return;
+                
+                try {
+                    const response = await fetch('<?= site_url('api/clientes/clasificaciones') ?>', {
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    
+                    if (!response.ok) throw new Error('Error al cargar clasificaciones');
+                    
+                    const data = await response.json();
+                    const clasificacion = data.data?.find(c => c.id == id);
+                    
+                    if (clasificacion) {
+                        $('#clasificacion_id').val(clasificacion.id);
+                        $('#clasificacion_nombre').val(clasificacion.nombre || '');
+                        $('#clasificacion_descripcion').val(clasificacion.descripcion || '');
+                        $('#clasificacion_maquiladoraID').val(clasificacion.maquiladoraID || '');
+                        // Permitir editar el campo al editar
+                        $('#clasificacion_maquiladoraID').prop('readonly', false);
+                        $('#modalClasificacionTitle').text('Editar Clasificación');
+                        $('#modalClasificacionForm').modal('show');
+                    }
+                } catch (error) {
+                    console.error('Error al cargar clasificación:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No se pudo cargar la clasificación'
+                    });
+                }
+            });
+
+            // Botón eliminar clasificación
+            $(document).on('click', '.btn-del-clasificacion', async function() {
+                const id = $(this).data('id');
+                if (!id) return;
+                
+                const result = await Swal.fire({
+                    title: '¿Estás seguro?',
+                    text: 'No podrás revertir esta acción',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
+                });
+                
+                if (result.isConfirmed) {
+                    try {
+                        const response = await fetch('<?= site_url('api/clientes/clasificaciones') ?>/' + encodeURIComponent(id) + '/eliminar', {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                '<?= csrf_header() ?>': '<?= csrf_hash() ?>'
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            await Swal.fire({
+                                icon: 'success',
+                                title: '¡Eliminado!',
+                                text: 'La clasificación ha sido eliminada.'
+                            });
+                            cargarTodasClasificaciones();
+                            // Recargar también el select de clasificaciones en el modal de cliente
+                            if ($('#modalCliente').hasClass('show')) {
+                                const selectedId = $('#selectClasificacion').val();
+                                await cargarClasificaciones(selectedId);
+                            }
+                        } else {
+                            const error = await response.json();
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: error.message || 'No se pudo eliminar la clasificación'
+                            });
+                        }
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de red',
+                            text: 'No se pudo eliminar la clasificación'
+                        });
+                    }
+                }
+            });
+
+            // Formulario de clasificación
+            $('#formClasificacion').on('submit', async function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const id = formData.get('id');
+                const btnSubmit = $(this).find('button[type="submit"]');
+                
+                if (btnSubmit) btnSubmit.prop('disabled', true);
+                
+                try {
+                    const url = id 
+                        ? '<?= site_url('api/clientes/clasificaciones') ?>/' + encodeURIComponent(id) + '/editar'
+                        : '<?= site_url('api/clientes/clasificaciones/crear') ?>';
+                    
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        await Swal.fire({
+                            icon: 'success',
+                            title: id ? '¡Actualizado!' : '¡Agregado!',
+                            text: id ? 'La clasificación ha sido actualizada.' : 'La clasificación ha sido agregada.',
+                            timer: 1500,
+                            timerProgressBar: true,
+                            showConfirmButton: false
+                        });
+                        
+                        $('#modalClasificacionForm').modal('hide');
+                        cargarTodasClasificaciones();
+                        
+                        // Recargar también el select de clasificaciones en el modal de cliente
+                        if ($('#modalCliente').hasClass('show')) {
+                            const selectedId = $('#selectClasificacion').val();
+                            await cargarClasificaciones(selectedId);
+                        }
+                    } else {
+                        const error = await response.json();
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: error.message || 'No se pudo guardar la clasificación'
+                        });
+                    }
+                } catch (error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de red',
+                        text: 'No se pudo guardar la clasificación'
+                    });
+                } finally {
+                    if (btnSubmit) btnSubmit.prop('disabled', false);
+                }
+            });
         });
     </script>
 
@@ -464,6 +1034,12 @@
                             <div class="col-md-6">
                                 <label class="form-label">Fecha registro</label>
                                 <input type="date" class="form-control" name="fechaRegistro" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Clasificación</label>
+                                <select class="form-control" name="clasificacionId" id="selectClasificacion" required>
+                                    <option value="">Cargando clasificaciones...</option>
+                                </select>
                             </div>
                             <div class="col-12"><hr class="my-2"></div>
                             <div class="col-md-6">

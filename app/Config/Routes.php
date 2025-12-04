@@ -185,6 +185,12 @@ $routes->group('api', static function ($routes) {
 
     // Lectura/detalle
     $routes->get('clientes/(:num)', 'Clientes::json_detalle/$1');
+    
+    // Obtener clasificaciones de clientes
+    $routes->get('clientes/clasificaciones', 'Clientes::getClasificaciones');
+    $routes->match(['post', 'options'], 'clientes/clasificaciones/crear', 'Clientes::crearClasificacion');
+    $routes->match(['post', 'options'], 'clientes/clasificaciones/(:num)/editar', 'Clientes::editarClasificacion/$1');
+    $routes->match(['post', 'options'], 'clientes/clasificaciones/(:num)/eliminar', 'Clientes::eliminarClasificacion/$1');
 });
 
 /* --------------------------------------------------------------------
