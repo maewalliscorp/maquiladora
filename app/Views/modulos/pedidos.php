@@ -115,19 +115,6 @@
                 <!-- Paso 3: Clasificación -->
                 <div class="mb-2">
                     <h6 class="mb-2">Clasificación</h6>
-                    <div class="row g-2 align-items-end mb-2">
-                        <div class="col-md-6">
-                            <label class="form-label">Seleccionar clasificación</label>
-                            <select class="form-select" id="pa-cla-select">
-                                <option value="">Cargando catálogo....</option>
-                            </select>
-                        </div>
-                        <div class="col-auto">
-                            <div id="pa-cla-loading" class="spinner-border spinner-border-sm text-primary" role="status" style="display:none;">
-                                <span class="visually-hidden">Cargando...</span>
-                            </div>
-                        </div>
-                    </div>
                     <div class="row g-3">
                         <input type="hidden" id="pa-cla-id" name="cla_id" value="">
                         <div class="col-md-6">
@@ -1320,7 +1307,10 @@
         $(document).on('change', '#pa-cliente-select', function(){
             const val = $(this).val();
             if (!paClientesCache) return;
-            if (!val) { paFillFromCliente(null); return; }
+            if (!val) { 
+                paFillFromCliente(null); 
+                return; 
+            }
             let cli = (val && paClientesMap && paClientesMap[val]) ? paClientesMap[val] : null;
             if (!cli && val) {
                 cli = paClientesCache.find(function(c){
@@ -1329,7 +1319,14 @@
                     return idMatch || codMatch;
                 }) || null;
             }
-            paFillFromCliente(cli);
+            if (cli) {
+                paFillFromCliente(cli);
+                // Marcar campos como solo lectura
+                $('#pa-cli-nombre, #pa-cli-email, #pa-cli-telefono, #pa-dir-calle, #pa-dir-numext, #pa-dir-numint, #pa-dir-ciudad, #pa-dir-estado, #pa-dir-pais, #pa-dir-cp, #pa-dir-resumen')
+                    .prop('readonly', true);
+            } else {
+                paFillFromCliente(null);
+            }
         });
 
         $(document).on('change', '#pa-nuevo-cliente', function(){
@@ -2056,44 +2053,39 @@
 
         $(document).on('change', '#pa-cliente-select', function(){
             const id = $(this).val();
-            if (!id || id === 'null' || id === 'undefined') { return; }
+            if (!id || id === 'null' || id === 'undefined') { 
+                paFillFromCliente(null);
+                return; 
+            }
             $('#pa-cliente-id').val(id||'');
             $('#oc-clienteId').val(id||'');
             actualizarFolios(id);
-            $('#pa-cli-nombre, #pa-cli-email, #pa-cli-telefono').val('');
-            $('#pa-dir-calle, #pa-dir-numext, #pa-dir-numint, #pa-dir-ciudad, #pa-dir-estado, #pa-dir-pais, #pa-dir-cp, #pa-dir-resumen').val('');
             fetchClienteDetalle(id)
                 .then(function(cli){
-                    if (!cli) return;
-                    $('#pa-cli-nombre').val(cli.nombre||'');
-                    $('#pa-cli-email').val(cli.email||'');
-                    $('#pa-cli-telefono').val(cli.telefono||'');
-                    // Normalizar dirección: puede venir en cli.direccion o en cli.direcciones[]
-                    let d = null;
-                    if (cli.direccion) {
-                        d = cli.direccion;
-                    } else if (Array.isArray(cli.direcciones) && cli.direcciones.length > 0) {
-                        d = cli.direcciones.find(x => String(x.esPrincipal||x.es_principal||'') === '1') || cli.direcciones[0];
+                    if (!cli) {
+                        paFillFromCliente(null);
+                        return;
                     }
-                    if (d) {
-                        const numExt = d.numExt !== undefined ? d.numExt : d.numext;
-                        const numInt = d.numInt !== undefined ? d.numInt : d.numint;
-                        $('#pa-dir-calle').val(d.calle||'');
-                        $('#pa-dir-numext').val(numExt||'');
-                        $('#pa-dir-numint').val(numInt||'');
-                        $('#pa-dir-ciudad').val(d.ciudad||'');
-                        $('#pa-dir-estado').val(d.estado||'');
-                        $('#pa-dir-pais').val(d.pais||'');
-                        $('#pa-dir-cp').val(d.cp||'');
-                        const resumen = [d.calle, numExt, numInt, d.ciudad, d.estado, d.cp, d.pais].filter(Boolean).join(', ');
-                        $('#pa-dir-resumen').val(resumen);
-                    }
-                    // Solo corroboración: marcar como solo lectura al traer datos
+                    // Usar la función paFillFromCliente que ya maneja correctamente direccion_detalle
+                    paFillFromCliente(cli);
+                    // Marcar campos como solo lectura
                     $('#pa-cli-nombre, #pa-cli-email, #pa-cli-telefono, #pa-dir-calle, #pa-dir-numext, #pa-dir-numint, #pa-dir-ciudad, #pa-dir-estado, #pa-dir-pais, #pa-dir-cp, #pa-dir-resumen')
                         .prop('readonly', true);
                 })
                 .catch(function(){
-                    // Fallback: usar data-* del option seleccionado
+                    // Fallback: intentar obtener desde el cache de clientes
+                    if (paClientesCache && Array.isArray(paClientesCache)) {
+                        const cli = paClientesCache.find(function(c){
+                            return String(c.id ?? '') === String(id);
+                        });
+                        if (cli) {
+                            paFillFromCliente(cli);
+                            $('#pa-cli-nombre, #pa-cli-email, #pa-cli-telefono, #pa-dir-calle, #pa-dir-numext, #pa-dir-numint, #pa-dir-ciudad, #pa-dir-estado, #pa-dir-pais, #pa-dir-cp, #pa-dir-resumen')
+                                .prop('readonly', true);
+                            return;
+                        }
+                    }
+                    // Último fallback: usar data-* del option seleccionado
                     const $opt = $('#pa-cliente-select option:selected');
                     const nombre = $opt.text().split(' — ')[0] || '';
                     $('#pa-cli-nombre').val(nombre);
@@ -2111,6 +2103,16 @@
                         $opt.data('ciudad'), $opt.data('estado'), $opt.data('cp'), $opt.data('pais')
                     ].filter(Boolean).join(', ');
                     $('#pa-dir-resumen').val(resumen);
+                    // Cargar clasificación si está disponible en el cache
+                    if (paClientesCache && Array.isArray(paClientesCache)) {
+                        const cli = paClientesCache.find(function(c){
+                            return String(c.id ?? '') === String(id);
+                        });
+                        if (cli && cli.clasificacion) {
+                            $('#pa-cla-nombre').val(cli.clasificacion.nombre || '');
+                            $('#pa-cla-descripcion').val(cli.clasificacion.descripcion || '');
+                        }
+                    }
                     $('#pa-cli-nombre, #pa-cli-email, #pa-cli-telefono, #pa-dir-calle, #pa-dir-numext, #pa-dir-numint, #pa-dir-ciudad, #pa-dir-estado, #pa-dir-pais, #pa-dir-cp, #pa-dir-resumen')
                         .prop('readonly', true);
                 });
