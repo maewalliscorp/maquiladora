@@ -91,6 +91,14 @@ class Modals extends BaseController
                 }
             }
 
+            // Obtener las tallas de la orden de producción si existe
+            $tallas = [];
+            if (!empty($detalle['op_id'])) {
+                $pedidoModel = new \App\Models\PedidoModel();
+                $tallas = $pedidoModel->getTallasPorOP($detalle['op_id']);
+                log_message('debug', 'Tallas cargadas para OP ' . $detalle['op_id'] . ': ' . json_encode($tallas));
+            }
+
             $out = [
                 'id' => (int) ($detalle['id'] ?? $id),
                 'folio' => $detalle['folio'] ?? '',
@@ -111,7 +119,7 @@ class Modals extends BaseController
                 'op_fechaInicioPlan' => $detalle['op_fechaInicioPlan'] ?? null,
                 'op_fechaFinPlan' => $detalle['op_fechaFinPlan'] ?? null,
                 'op_status' => $detalle['op_status'] ?? null,
-                'tallas' => $detalle['tallas'] ?? [],
+                'tallas' => $tallas,
             ];
 
             if (isset($out['diseno']) && is_array($out['diseno'])) {

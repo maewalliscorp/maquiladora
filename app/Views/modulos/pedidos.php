@@ -524,7 +524,35 @@
                                 </div>
                             </div>
                         </div>
-                        
+                         <!-- Sección de Detalle por Tallas -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="bi bi-grid-3x3 me-2"></i>Detalle por Tallas</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="form-text">Agrega o modifica las cantidades por talla</div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="pe-tallas-add-row">
+                                    <i class="bi bi-plus-circle me-1"></i>Agregar Talla
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered" id="pe-tallas-tabla">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Sexo</th>
+                                            <th>Talla</th>
+                                            <th class="text-end">Cantidad</th>
+                                            <th width="50px"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Las filas se generarán dinámicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
 
                         <div class="col-md-6">
                             <label for="pe-cantidad" class="form-label">Cantidad Planeada</label>
@@ -553,6 +581,8 @@
                             <div class="form-text">Calculado basado en el precio del diseño y la cantidad.</div>
                         </div>
                     </div>
+
+                   
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -682,7 +712,278 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-    $(document).ready(function () {
+    // Variables globales para los catálogos
+let sexos = [];
+let tallas = [];
+
+// Función para cargar los catálogos de sexos y tallas
+function cargarCatalogosTallas() {
+    return new Promise((resolve) => {
+        let sexosLoaded = false;
+        let tallasLoaded = false;
+
+        const checkIfLoaded = () => {
+            if (sexosLoaded && tallasLoaded) {
+                resolve();
+            }
+        };
+
+        // Cargar sexos
+        if (sexos.length === 0) {
+            $.getJSON('<?= base_url('api/sexos') ?>')
+                .done(function(data) {
+                    sexos = Array.isArray(data) ? data : [];
+                    console.log('Catálogo de sexos cargado:', sexos);
+                    
+                    if (sexos.length === 0) {
+                        sexos = [
+                            { id_sexo: 'H', nombre: 'Hombre' },
+                            { id_sexo: 'M', nombre: 'Mujer' },
+                            { id_sexo: 'U', nombre: 'Unisex' }
+                        ];
+                    }
+                    sexosLoaded = true;
+                    checkIfLoaded();
+                })
+                .fail(function() {
+                    console.error('Error al cargar el catálogo de sexos');
+                    sexos = [
+                        { id_sexo: 'H', nombre: 'Hombre' },
+                        { id_sexo: 'M', nombre: 'Mujer' },
+                        { id_sexo: 'U', nombre: 'Unisex' }
+                    ];
+                    sexosLoaded = true;
+                    checkIfLoaded();
+                });
+        } else {
+            sexosLoaded = true;
+            checkIfLoaded();
+        }
+
+        // Cargar tallas
+        if (tallas.length === 0) {
+            $.getJSON('<?= base_url('api/tallas') ?>')
+                .done(function(data) {
+                    tallas = Array.isArray(data) ? data : [];
+                    console.log('Catálogo de tallas cargado:', tallas);
+                    
+                    if (tallas.length === 0) {
+                        tallas = [
+                            { id_talla: 'CH', nombre: 'CH' },
+                            { id_talla: 'M', nombre: 'M' },
+                            { id_talla: 'G', nombre: 'G' },
+                            { id_talla: 'XG', nombre: 'XG' },
+                            { id_talla: 'XXG', nombre: 'XXG' },
+                            { id_talla: '3XG', nombre: '3XG' }
+                        ];
+                    }
+                    tallasLoaded = true;
+                    checkIfLoaded();
+                })
+                .fail(function() {
+                    console.error('Error al cargar el catálogo de tallas');
+                    tallas = [
+                        { id_talla: 'CH', nombre: 'CH' },
+                        { id_talla: 'M', nombre: 'M' },
+                        { id_talla: 'G', nombre: 'G' },
+                        { id_talla: 'XG', nombre: 'XG' },
+                        { id_talla: 'XXG', nombre: 'XXG' },
+                        { id_talla: '3XG', nombre: '3XG' }
+                    ];
+                    tallasLoaded = true;
+                    checkIfLoaded();
+                });
+        } else {
+            tallasLoaded = true;
+            checkIfLoaded();
+        }
+    });
+}
+
+// Función para agregar una nueva fila de talla
+function agregarFilaTallaEditar(sexoId = '', tallaId = '', cantidad = '', nombreSexo = '', nombreTalla = '') {
+    // Crear opciones de sexo
+    let opcionesSexo = '<option value="">Seleccionar...</option>';
+    let selectedSexo = null;
+    
+    sexos.forEach(function(sexo) {
+        const selected = (sexoId && sexoId == sexo.id_sexo) ? 'selected' : '';
+        opcionesSexo += `<option value="${sexo.id_sexo}" ${selected}>${sexo.nombre}</option>`;
+        if (selected) selectedSexo = sexo.nombre;
+    });
+
+    // Si no se encontró el sexo en los catálogos pero tenemos el nombre, lo agregamos
+    if (sexoId && !selectedSexo && nombreSexo) {
+        opcionesSexo = `<option value="${sexoId}" selected>${nombreSexo}</option>` + opcionesSexo;
+    }
+
+    // Crear opciones de talla
+    let opcionesTalla = '<option value="">Seleccionar...</option>';
+    let selectedTalla = null;
+    
+    tallas.forEach(function(talla) {
+        const selected = (tallaId && tallaId == talla.id_talla) ? 'selected' : '';
+        opcionesTalla += `<option value="${talla.id_talla}" ${selected}>${talla.nombre}</option>`;
+        if (selected) selectedTalla = talla.nombre;
+    });
+
+    // Si no se encontró la talla en los catálogos pero tenemos el nombre, lo agregamos
+    if (tallaId && !selectedTalla && nombreTalla) {
+        opcionesTalla = `<option value="${tallaId}" selected>${nombreTalla}</option>` + opcionesTalla;
+    }
+
+    const fila = `
+        <tr class="pe-talla-row">
+            <td>
+                <select class="form-select form-select-sm pe-talla-sexo" name="tallas[][id_sexo]" required>
+                    ${opcionesSexo}
+                </select>
+                ${sexoId && nombreSexo && !selectedSexo ? `<input type="hidden" name="tallas[][nombre_sexo]" value="${nombreSexo}">` : ''}
+            </td>
+            <td>
+                <select class="form-select form-select-sm pe-talla-talla" name="tallas[][id_talla]" required>
+                    ${opcionesTalla}
+                </select>
+                ${tallaId && nombreTalla && !selectedTalla ? `<input type="hidden" name="tallas[][nombre_talla]" value="${nombreTalla}">` : ''}
+            </td>
+            <td>
+                <input type="number" min="0" class="form-control form-control-sm text-end pe-talla-cantidad" 
+                       name="tallas[][cantidad]" value="${cantidad || ''}" required>
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-danger pe-talla-del">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `;
+    $('#pe-tallas-tabla tbody').append(fila);
+}
+
+// Función para cargar las tallas en el formulario de edición
+function cargarTallasEnEdicion(tallas) {
+    const $tbody = $('#pe-tallas-tabla tbody');
+    $tbody.empty();
+    
+    // Función para agregar filas una vez que los catálogos estén listos
+    const agregarFilas = () => {
+        if (tallas && tallas.length > 0) {
+            console.log('Cargando tallas en el modal:', tallas);
+            tallas.forEach(talla => {
+                // Verificar si ya tenemos los nombres en los datos
+                if (talla.nombre_sexo && talla.nombre_talla) {
+                    // Si ya vienen los nombres, usarlos directamente
+                    agregarFilaTallaEditar(
+                        talla.id_sexo,
+                        talla.id_talla,
+                        talla.cantidad,
+                        talla.nombre_sexo,
+                        talla.nombre_talla
+                    );
+                } else {
+                    // Si no vienen los nombres, buscar en los catálogos
+                    const sexo = sexos.find(s => s.id_sexo == talla.id_sexo);
+                    const tallaItem = tallas.find(t => t.id_talla == talla.id_talla);
+                    
+                    agregarFilaTallaEditar(
+                        talla.id_sexo,
+                        talla.id_talla,
+                        talla.cantidad,
+                        sexo ? sexo.nombre : '',
+                        tallaItem ? tallaItem.nombre : ''
+                    );
+                }
+            });
+        } else {
+            console.log('No hay tallas, agregando fila vacía');
+            // Agregar una fila vacía por defecto
+            agregarFilaTallaEditar();
+        }
+    };
+
+    // Verificar si los catálogos ya están cargados
+    if (sexos.length > 0 && tallas.length > 0) {
+        agregarFilas();
+    } else {
+        // Si no están cargados, cargarlos primero
+        console.log('Cargando catálogos antes de mostrar tallas...');
+        cargarCatalogosTallas().then(agregarFilas).catch(error => {
+            console.error('Error al cargar catálogos:', error);
+            // Intentar de todos modos con lo que tengamos
+            agregarFilas();
+        });
+    }
+}
+
+// Modificar el manejador del formulario para incluir las tallas
+$('#formPedidoEditar').on('submit', function(e) {
+    e.preventDefault();
+    
+    const form = this;
+    const formData = new FormData(form);
+    
+    // Recolectar datos de las tallas
+    const tallasData = [];
+    $('.pe-talla-row').each(function() {
+        const $row = $(this);
+        tallasData.push({
+            id_sexo: $row.find('.pe-talla-sexo').val(),
+            id_talla: $row.find('.pe-talla-talla').val(),
+            cantidad: $row.find('.pe-talla-cantidad').val()
+        });
+    });
+    
+    // Agregar las tallas al FormData
+    formData.append('tallas', JSON.stringify(tallasData));
+    
+    // Mostrar indicador de carga
+    const $submitBtn = $(form).find('button[type="submit"]');
+    const originalBtnText = $submitBtn.html();
+    $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...');
+    
+    // Enviar el formulario
+    $.ajax({
+        url: form.action,
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            Swal.fire({
+                title: '¡Éxito!',
+                text: 'El pedido se ha actualizado correctamente',
+                icon: 'success'
+            }).then(() => {
+                $('#pedidoEditModal').modal('hide');
+                // Recargar la página o actualizar la tabla
+                if (typeof tablePedidos !== 'undefined') {
+                    tablePedidos.ajax.reload(null, false);
+                } else {
+                    location.reload();
+                }
+            });
+        },
+        error: function(xhr) {
+            let errorMessage = 'No se pudo actualizar el pedido. Por favor, inténtalo de nuevo.';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMessage = xhr.responseJSON.message;
+            }
+            Swal.fire('Error', errorMessage, 'error');
+        },
+        complete: function() {
+            $submitBtn.prop('disabled', false).html(originalBtnText);
+        }
+    });
+});
+
+// Cargar los catálogos cuando el documento esté listo
+    cargarCatalogosTallas();
+    
+    // También cargar catálogos cuando se muestre el modal de edición
+    $('#pedidoEditModal').on('show.bs.modal', function() {
+        cargarCatalogosTallas();
+    });
+$(document).ready(function () {
         function toNum(v, def=0){
             if (v === undefined || v === null) return def;
             const s = String(v).replace(/,/g,'').trim();
@@ -1049,9 +1350,26 @@
             confirmAndPost();
         });
 
+        // Manejar clic en el botón de agregar fila de talla
+        $(document).on('click', '#pe-tallas-add-row', function() {
+            agregarFilaTallaEditar();
+        });
+
+        // Manejar eliminación de fila de talla
+        $(document).on('click', '.pe-talla-del', function() {
+            $(this).closest('tr').remove();
+            // Recalcular total si es necesario
+            if (typeof recalcTotal === 'function') {
+                recalcTotal();
+            }
+        });
+
         // Recalcular total cuando cambie cantidad plan o si manualmente cambian el precio (aunque es de solo lectura)
         $(document).on('input change keyup mouseup blur', '#op-cantidadPlan', recalcTotal);
         $(document).on('input change keyup mouseup blur', '#pe-op-cantidadPlan', recalcTotal);
+        
+        // Cargar los catálogos de tallas y sexos al iniciar
+        cargarCatalogosTallas();
         $(document).on('input change keyup mouseup blur', '#pa-dis-precio', recalcTotal);
         $(document).on('input change keyup mouseup blur', '#pe-dis-precio', recalcTotal);
 
@@ -1578,7 +1896,14 @@
             const url = '<?= base_url('modulo1/pedido') ?>/' + id + '/json';
             $('#pe-id').val(id);
             $('#pe-folio, #pe-fecha, #pe-estatus, #pe-moneda, #pe-total, #pe-progreso, #pe-descripcion, #pe-cantidad, #pe-fechaentrega, #pe-modelo, #pe-tallas, #pe-color, #pe-materiales, #pe-especificaciones').val('');
-            $('#pe-empresa, #pe-dir, #pe-dis').text('-');
+            $('#pe-empresa, #pe-dir, #pe-dis').text('');
+            
+            // Limpiar la tabla de tallas
+            $('#pe-tallas-tabla tbody').empty();
+            
+            // Mostrar indicador de carga
+            const $modal = $('#pedidoEditModal');
+            $modal.find('.modal-body').addClass('loading');
             $('#pe-cli-nombre, #pe-cli-email, #pe-cli-telefono').val('');
             $('#pe-dir-calle, #pe-dir-numext, #pe-dir-numint, #pe-dir-ciudad, #pe-dir-estado, #pe-dir-cp, #pe-dir-pais, #pe-dir-resumen').val('');
             $('#pe-dis-codigo, #pe-dis-nombre, #pe-dis-descripcion, #pe-dis-version, #pe-dis-version-fecha').val('');
@@ -1654,6 +1979,16 @@
                     });
                 }
 
+                // Cargar las tallas si existen
+                if (data.tallas && data.tallas.length > 0) {
+                    console.log('Cargando tallas en el modal:', data.tallas);
+                    cargarTallasEnEdicion(data.tallas);
+                } else {
+                    console.log('No se encontraron tallas para este pedido');
+                    // Agregar una fila vacía
+                    agregarFilaTallaEditar();
+                }
+                
                 if ($selDis.length && (!lista || lista.length <= 1)) {
                     $('#pe-dis-loading').show();
                     $.getJSON('<?= base_url('modulo2/disenos/json') ?>')
@@ -1777,8 +2112,17 @@
                 }
 
                 $('#pe-dis-loading').hide();
-            }).fail(function(){
+            }).fail(function(xhr, status, error){
+                console.error('Error al cargar el pedido:', status, error);
+                $modal.find('.modal-body').removeClass('loading');
                 $('#pe-dis-loading').hide();
+                
+                // Mostrar mensaje de error
+                Swal.fire({
+                    title: 'Error',
+                    text: 'No se pudieron cargar los datos del pedido. Por favor, inténtalo de nuevo.',
+                    icon: 'error'
+                });
             });
         }
 
@@ -1874,6 +2218,9 @@
             e.preventDefault();
             const id = $(this).data('id');
             if (!id) return;
+            
+            // Cargar los catálogos antes de abrir el modal
+            cargarCatalogosTallas();
 
             // Mostrar loading
             Swal.fire({title:'Cargando datos...', didOpen:()=>Swal.showLoading()});
@@ -2298,6 +2645,38 @@
             $('#pedido-documento-download-excel').prop('disabled', false).html('<i class="bi bi-file-earmark-excel"></i> Descargar Excel');
         });
     });
+    
+    // Estilos para el indicador de carga
+    $('<style>')
+        .appendTo('head')
+        .text(`
+            .loading {
+                position: relative;
+                min-height: 200px;
+            }
+            .loading:after {
+                content: "Cargando...";
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: #666;
+                font-weight: bold;
+            }
+            .pe-talla-row td {
+                vertical-align: middle;
+            }
+            #pe-tallas-tabla th {
+                white-space: nowrap;
+            }
+            #pe-tallas-tabla .form-select-sm {
+                min-width: 100px;
+            }
+            #pe-tallas-tabla .pe-talla-cantidad {
+                max-width: 100px;
+                margin-left: auto;
+            }
+        `);
 </script>
 
 <?= $this->endSection() ?>
