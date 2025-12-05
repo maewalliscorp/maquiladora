@@ -351,6 +351,34 @@
                     </div>
                 </div>
 
+                <!-- Detalle por Tallas -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-grid-3x3 me-2"></i>Detalle por Tallas</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="p-sin-tallas" class="alert alert-info mb-0">
+                            No se han registrado tallas para este pedido.
+                        </div>
+                        <div id="p-con-tallas" style="display: none;">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered" id="p-tallas-detalle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Sexo</th>
+                                            <th>Talla</th>
+                                            <th class="text-end">Cantidad</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Las filas se generarán dinámicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Información del Diseño y Producción -->
                 <div class="card mb-3">
                     <div class="card-header bg-light">
@@ -423,7 +451,6 @@
     </div>
 </div>
 
-<!-- Modal Bootstrap: Editar pedido (incluido dentro del content para evitar redirección) -->
 <!-- Modal Bootstrap: Editar pedido (Simplificado) -->
 <div class="modal fade" id="pedidoEditModal" tabindex="-1" aria-labelledby="pedidoEditModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -497,6 +524,7 @@
                                 </div>
                             </div>
                         </div>
+                        
 
                         <div class="col-md-6">
                             <label for="pe-cantidad" class="form-label">Cantidad Planeada</label>
@@ -711,6 +739,23 @@
             });
         }
 
+        // Función para calcular y actualizar cantidad plan desde las tallas
+        function actualizarCantidadPlanDesdeTallas(){
+            let suma = 0;
+            $('#op-tallas-tabla tbody tr.op-talla-row').each(function(){
+                const cantidad = parseInt($(this).find('.op-talla-cantidad').val() || '0', 10);
+                if (!isNaN(cantidad) && cantidad > 0) {
+                    suma += cantidad;
+                }
+            });
+            const $cantidadPlan = $('#op-cantidadPlan');
+            if ($cantidadPlan.length) {
+                $cantidadPlan.val(suma || '');
+                // Disparar evento para recalcular total
+                $cantidadPlan.trigger('input');
+            }
+        }
+
         function opAddTallaRow(){
             const $tbody = $('#op-tallas-tabla tbody');
             if (!$tbody.length) { return; }
@@ -732,6 +777,8 @@
             const $row = $(rowHtml).appendTo($tbody);
             paFillSexoOptions($row.find('.op-talla-sexo'));
             paFillTallaOptions($row.find('.op-talla-talla'));
+            // Actualizar cantidad plan después de agregar fila
+            actualizarCantidadPlanDesdeTallas();
         }
 
         $(document).on('click', '#op-tallas-add-row', function(){
@@ -741,6 +788,13 @@
         $(document).on('click', '.op-talla-del', function(){
             const $row = $(this).closest('tr');
             $row.remove();
+            // Actualizar cantidad plan después de eliminar fila
+            actualizarCantidadPlanDesdeTallas();
+        });
+
+        // Actualizar cantidad plan cuando cambie cualquier cantidad de talla
+        $(document).on('input change blur', '.op-talla-cantidad', function(){
+            actualizarCantidadPlanDesdeTallas();
         });
         const langES = {
             "sProcessing":     "Procesando...",
@@ -1220,6 +1274,8 @@
             if ($tbodyTallas.length){
                 $tbodyTallas.empty();
                 opAddTallaRow();
+                // Resetear cantidad plan al limpiar tabla
+                $('#op-cantidadPlan').val('');
             }
 
             if (paSexoCache === null){
@@ -1392,6 +1448,46 @@
                     $('#p-dis-codigo').text(dis?.codigo || '-');
                     $('#p-dis-nombre').text(dis?.nombre || '-');
                     $('#p-dis-descripcion').text(dis?.descripcion || '-');
+
+                    // Procesar tallas si existen
+                    if (data.tallas && data.tallas.length > 0) {
+                        const $tallasTbody = $('#p-tallas-detalle tbody');
+                        $tallasTbody.empty(); // Limpiar filas existentes
+                        
+                        // Ordenar por sexo y talla para mejor presentación
+                        data.tallas.sort((a, b) => {
+                            const sexoA = (a.sexo_nombre || '').toLowerCase();
+                            const sexoB = (b.sexo_nombre || '').toLowerCase();
+                            const tallaA = (a.talla_nombre || '').toLowerCase();
+                            const tallaB = (b.talla_nombre || '').toLowerCase();
+                            
+                            if (sexoA < sexoB) return -1;
+                            if (sexoA > sexoB) return 1;
+                            if (tallaA < tallaB) return -1;
+                            if (tallaA > tallaB) return 1;
+                            return 0;
+                        });
+
+                        // Agregar filas para cada talla
+                        data.tallas.forEach(talla => {
+                            const row = `
+                                <tr>
+                                    <td>${talla.sexo_nombre || '-'}</td>
+                                    <td>${talla.talla_nombre || '-'}</td>
+                                    <td class="text-end">${parseInt(talla.cantidad) || 0}</td>
+                                </tr>
+                            `;
+                            $tallasTbody.append(row);
+                        });
+
+                        // Mostrar la tabla y ocultar el mensaje de "sin tallas"
+                        $('#p-con-tallas').show();
+                        $('#p-sin-tallas').hide();
+                    } else {
+                        // No hay tallas, mostrar mensaje
+                        $('#p-con-tallas').hide();
+                        $('#p-sin-tallas').show();
+                    }
                     let ver = dis && (dis.version && typeof dis.version === 'object' ? dis.version : null);
                     const vNum = ver?.version ?? dis?.version ?? null;
                     const vFechaRaw = ver?.fecha ?? dis?.fecha ?? null;

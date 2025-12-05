@@ -2592,6 +2592,54 @@ class Modulos extends BaseController
                         }
                     }
                 }
+                    // Actualizar tallas si se envían
+                    $tallas = $this->request->getPost('tallas');
+                    if ($tallas !== null) {
+                        if (is_array($tallas) && !empty($tallas)) {
+                        // Obtener ID de OP (reutilizar lógica de búsqueda)
+                         $opForTallas = null;
+                         try {
+                             $opForTallas = $db->query('SELECT id FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
+                         } catch (\Throwable $e) {}
+                         if (!$opForTallas) {
+                             try {
+                                 $opForTallas = $db->query('SELECT id FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
+                             } catch (\Throwable $e) {}
+                         }
+                         
+                         if ($opForTallas && isset($opForTallas['id'])) {
+                             $opId = (int) $opForTallas['id'];
+                             // Borrar anteriores
+                             try {
+                                 $db->table('pedido_tallas_detalle')->where('ordenProduccionId', $opId)->delete();
+                             } catch (\Throwable $e) {
+                                 try {
+                                     $db->table('OrdenProduccionTalla')->where('ordenProduccionId', $opId)->delete();
+                                 } catch (\Throwable $e2) {}
+                             }
+                             
+                             // Insertar nuevas
+                             foreach ($tallas as $t) {
+                                if (isset($t['id_sexo'], $t['id_talla'], $t['cantidad']) && $t['cantidad'] > 0) {
+                                    $rowTalla = [
+                                        'ordenProduccionId' => $opId,
+                                        'id_sexo' => (int) $t['id_sexo'],
+                                        'id_talla' => (int) $t['id_talla'],
+                                        'cantidad' => (int) $t['cantidad']
+                                    ];
+                                    try {
+                                        $db->table('pedido_tallas_detalle')->insert($rowTalla);
+                                    } catch (\Throwable $eT1) {
+                                        try {
+                                            $db->table('OrdenProduccionTalla')->insert($rowTalla);
+                                        } catch (\Throwable $eT2) {}
+                                    }
+                                }
+                            }
+                         }
+                        }
+                    }
+
                 // Si la petición viene por AJAX o Accept JSON, responder JSON con estado actual
                 if ($this->request->isAJAX() || $acceptsJson) {
                     $db = \Config\Database::connect();
@@ -2640,12 +2688,26 @@ class Modulos extends BaseController
         }
 
         $pedido = $pedidoModel->getPedidoPorId((int) $id);
+        
+        // Cargar tallas existentes
+        $tallas = [];
+        if (isset($pedido['op_id'])) {
+            $tallas = $pedidoModel->getTallasPorOP($pedido['op_id']);
+        }
+        $pedido['tallas'] = $tallas;
+
+        // Cargar catálogos de tallas y sexos
+        $db = \Config\Database::connect();
+        $catalogoTallas = $db->table('tallas')->get()->getResultArray();
+        $catalogoSexos = $db->table('sexo')->get()->getResultArray();
 
         return view('modulos/editarpedido', $this->payload([
             'title' => 'Módulo 1 · Editar Pedido',
             'pedido' => $pedido,
             'id' => $id,
             'notifCount' => 0,
+            'catalogoTallas' => $catalogoTallas,
+            'catalogoSexos' => $catalogoSexos,
         ]));
     }
 
@@ -2653,8 +2715,33 @@ class Modulos extends BaseController
     public function m1_detalles($id = null)
     {
         $pedidoModel = new \App\Models\PedidoModel();
+        
         // Traer detalle completo para incluir cliente, direcciones, y diseño asignado
         $pedido = $pedidoModel->getPedidoDetalle((int) $id);
+        
+        // Para depuración: registrar datos del pedido
+        log_message('debug', 'Datos del pedido: ' . print_r([
+            'id' => $id,
+            'op_id' => $pedido['op_id'] ?? 'No definido',
+            'tallas' => $pedido['tallas'] ?? 'No definido'
+        ], true));
+
+        // Cargar las tallas si existe el ID de la orden de producción
+        $pedido['tallas_detalle'] = [];
+        if (isset($pedido['op_id']) && $pedido['op_id']) {
+            $tallas = $pedidoModel->getTallasPorOP($pedido['op_id']);
+            if (!empty($tallas)) {
+                $pedido['tallas_detalle'] = $tallas;
+            }
+            
+            // Si no hay tallas en tallas_detalle pero sí en el array de tallas
+            if (empty($pedido['tallas_detalle']) && !empty($pedido['tallas'])) {
+                $pedido['tallas_detalle'] = $pedido['tallas'];
+            }
+            
+            // Para depuración
+            log_message('debug', 'Tallas cargadas: ' . print_r($pedido['tallas_detalle'], true));
+        }
 
         // Normalizar campos esperados por la vista
         if (is_array($pedido)) {
@@ -2663,11 +2750,22 @@ class Modulos extends BaseController
             }
         }
 
+        // Cargar catálogos para los selectores
+        $db = \Config\Database::connect();
+        $catalogoTallas = $db->table('tallas')->get()->getResultArray();
+        $catalogoSexos = $db->table('sexo')->get()->getResultArray();
+
         return view('modulos/detalle_pedido', $this->payload([
             'title' => 'Módulo 1 · Detalle del Pedido',
             'pedido' => $pedido,
             'id' => $id,
             'notifCount' => 0,
+            'catalogoTallas' => $catalogoTallas,
+            'catalogoSexos' => $catalogoSexos,
+            'debug_data' => [
+                'tallas_detalle' => $pedido['tallas_detalle'] ?? [],
+                'op_id' => $pedido['op_id'] ?? null
+            ]
         ]));
     }
 
@@ -4255,6 +4353,30 @@ class Modulos extends BaseController
             }
 
             // Crear registro inicial en inspeccion vinculado a la OP (otros campos en NULL)
+            // Guardar Tallas (si existen)
+            $tallas = $this->request->getPost('tallas');
+            if (!empty($tallas) && is_array($tallas)) {
+                foreach ($tallas as $t) {
+                    if (isset($t['id_sexo'], $t['id_talla'], $t['cantidad']) && $t['cantidad'] > 0) {
+                        $rowTalla = [
+                            'ordenProduccionId' => $opId,
+                            'id_sexo' => (int) $t['id_sexo'],
+                            'id_talla' => (int) $t['id_talla'],
+                            'cantidad' => (int) $t['cantidad']
+                        ];
+                        try {
+                            $db->table('pedido_tallas_detalle')->insert($rowTalla);
+                        } catch (\Throwable $eT1) {
+                            try {
+                                $db->table('OrdenProduccionTalla')->insert($rowTalla);
+                            } catch (\Throwable $eT2) {
+                                // Ignorar error individual de talla
+                            }
+                        }
+                    }
+                }
+            }
+
             $rowIns = [
                 'ordenProduccionId' => $opId,
                 'puntoInspeccionId' => null,

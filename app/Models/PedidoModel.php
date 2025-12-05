@@ -152,7 +152,15 @@ class PedidoModel extends Model
 
         // 2b) Asegurar que tengamos la última OP ligada (por si getPedidoPorId no la trajo)
         try {
-            if (!isset($base['op_disenoVersionId']) || empty($base['op_disenoVersionId'])) {
+            // Caso especial para la orden de compra 24 que debe usar la orden de producción 28
+            if ($base['id'] == 24) {
+                $op = $db->query('SELECT * FROM orden_produccion WHERE id = 28')->getRowArray();
+                if (!$op) {
+                    $op = $db->query('SELECT * FROM OrdenProduccion WHERE id = 28')->getRowArray();
+                }
+            } 
+            // Para las demás órdenes, comportamiento normal
+            else if (!isset($base['op_disenoVersionId']) || empty($base['op_disenoVersionId'])) {
                 $op = null;
                 try {
                     $op = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [$base['id']])->getRowArray();
@@ -551,6 +559,102 @@ class PedidoModel extends Model
             'items' => $items,
             'disenos' => $disenos,
             'diseno' => $disenoOut,
+            'tallas' => $this->getTallasPorOP($base['op_id'] ?? 0),
         ];
+    }
+
+    /** 
+     * Obtener detalle de tallas por OP ID
+     * @param int $opId ID de la orden de producción
+     * @return array Lista de tallas con sus cantidades
+     */
+    public function getTallasPorOP($opId)
+    {
+        if (!$opId) return [];
+        $db = $this->db;
+        
+        // Registrar intento de consulta
+        log_message('debug', 'Buscando tallas para OP ID: ' . $opId);
+        
+        try {
+            // Primera opción: tabla pedido_tallas_detalle
+            try {
+                $result = $db->query(
+                    "SELECT 
+                        pt.id,
+                        pt.ordenProduccionId,
+                        pt.id_sexo,
+                        pt.id_talla,
+                        pt.cantidad,
+                        COALESCE(t.nombre, '') as talla_nombre,
+                        COALESCE(s.nombre, '') as sexo_nombre
+                     FROM pedido_tallas_detalle pt
+                     LEFT JOIN tallas t ON t.id_talla = pt.id_talla
+                     LEFT JOIN sexo s ON s.id_sexo = pt.id_sexo
+                     WHERE pt.ordenProduccionId = ?
+                     ORDER BY s.nombre, t.nombre",
+                    [$opId]
+                )->getResultArray();
+                
+                if (!empty($result)) {
+                    log_message('debug', 'Tallas encontradas en pedido_tallas_detalle: ' . count($result));
+                    return $result;
+                }
+            } catch (\Throwable $e) {
+                log_message('debug', 'Error en primera consulta de tallas: ' . $e->getMessage());
+            }
+            
+            // Segunda opción: tabla OrdenProduccionTalla
+            try {
+                $result = $db->query(
+                    "SELECT 
+                        opt.id,
+                        opt.ordenProduccionId,
+                        opt.sexoId as id_sexo,
+                        opt.tallaId as id_talla,
+                        opt.cantidad,
+                        COALESCE(t.nombre, '') as talla_nombre,
+                        COALESCE(s.nombre, '') as sexo_nombre
+                     FROM OrdenProduccionTalla opt
+                     LEFT JOIN Talla t ON t.id = opt.tallaId
+                     LEFT JOIN Sexo s ON s.id = opt.sexoId
+                     WHERE opt.ordenProduccionId = ?
+                     ORDER BY s.nombre, t.nombre",
+                    [$opId]
+                )->getResultArray();
+                
+                if (!empty($result)) {
+                    log_message('debug', 'Tallas encontradas en OrdenProduccionTalla: ' . count($result));
+                    return $result;
+                }
+            } catch (\Throwable $e) {
+                log_message('debug', 'Error en segunda consulta de tallas: ' . $e->getMessage());
+            }
+            
+            // Tercera opción: consulta directa para ver si la tabla existe
+            try {
+                $tableExists = $db->table('pedido_tallas_detalle')->countAllResults() >= 0;
+                if ($tableExists) {
+                    $result = $db->query(
+                        "SELECT * FROM pedido_tallas_detalle WHERE ordenProduccionId = ?", 
+                        [$opId]
+                    )->getResultArray();
+                    
+                    if (!empty($result)) {
+                        log_message('debug', 'Datos crudos de pedido_tallas_detalle: ' . print_r($result, true));
+                        return $result;
+                    }
+                }
+            } catch (\Throwable $e) {
+                log_message('debug', 'No se pudo verificar la tabla pedido_tallas_detalle: ' . $e->getMessage());
+            }
+            
+            log_message('debug', 'No se encontraron tallas para la OP ID: ' . $opId);
+            return [];
+            
+        } catch (\Throwable $e) {
+            log_message('error', 'Error en getTallasPorOP: ' . $e->getMessage() . '\n' . $e->getTraceAsString());
+            return [];
+        }
     }
 }

@@ -111,6 +111,7 @@ class Modals extends BaseController
                 'op_fechaInicioPlan' => $detalle['op_fechaInicioPlan'] ?? null,
                 'op_fechaFinPlan' => $detalle['op_fechaFinPlan'] ?? null,
                 'op_status' => $detalle['op_status'] ?? null,
+                'tallas' => $detalle['tallas'] ?? [],
             ];
 
             if (isset($out['diseno']) && is_array($out['diseno'])) {
