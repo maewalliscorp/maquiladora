@@ -81,32 +81,79 @@
             <i class="bi bi-plus-circle me-2"></i>Nueva Maquiladora
         </button>
     </div>
+    <ul class="nav nav-pills mb-3" id="gestionTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-maq" type="button" role="tab" onclick="mostrarPanel('maquiladoras')">
+                <i class="bi bi-table me-1"></i> Maquiladoras
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-backup" type="button" role="tab" onclick="mostrarPanel('backup')">
+                <i class="bi bi-hdd-network me-1"></i> Respaldo
+            </button>
+        </li>
+    </ul>
 
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <strong><i class="bi bi-table me-2"></i>Lista de Maquiladoras</strong>
+    <div id="panel-maquiladoras">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <strong><i class="bi bi-table me-2"></i>Lista de Maquiladoras</strong>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="tablaMaquiladoras" class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Dueño</th>
+                                <th>Teléfono</th>
+                                <th>Correo</th>
+                                <th>Domicilio</th>
+                                <th>Tipo</th>
+                                <th>Status</th>
+                                <th>Logo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Los datos se cargarán dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table id="tablaMaquiladoras" class="table table-striped table-hover">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>ID</th>
-                            <th>Nombre</th>
-                            <th>Dueño</th>
-                            <th>Teléfono</th>
-                            <th>Correo</th>
-                            <th>Domicilio</th>
-                            <th>Tipo</th>
-                            <th>Status</th>
-                            <th>Logo</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Los datos se cargarán dinámicamente -->
-                    </tbody>
-                </table>
+    </div>
+
+    <div id="panel-backup" class="d-none">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <div>
+                    <strong><i class="bi bi-hdd-network me-2"></i>Copias de Seguridad</strong>
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Genera un respaldo manual de la información más importante del sistema.</p>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <h6 class="fw-bold mb-2"><i class="bi bi-database me-2"></i>Base de Datos</h6>
+                            <p class="small text-muted mb-3">Descarga un archivo .sql con todas las tablas de la base de datos actual.</p>
+                            <button type="button" class="btn btn-outline-primary" onclick="backupDb()">
+                                <i class="bi bi-cloud-download me-2"></i>Respaldar Base de Datos
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <h6 class="fw-bold mb-2"><i class="bi bi-folder-symlink me-2"></i>Archivos (uploads)</h6>
+                            <p class="small text-muted mb-3">Comprime y descarga todo el contenido de la carpeta <code>uploads</code> (imágenes, CAD, patrones, etc.).</p>
+                            <button type="button" class="btn btn-outline-secondary" onclick="backupFiles()">
+                                <i class="bi bi-archive me-2"></i>Respaldar Archivos
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -481,6 +528,69 @@ function eliminarMaquiladora(id) {
             });
         }
     });
+}
+
+function backupDb() {
+    Swal.fire({
+        title: 'Generando respaldo...',
+        text: 'Espere mientras se genera el respaldo de la base de datos.',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+            const url = '<?= base_url('api/backup/db') ?>';
+            const a = document.createElement('a');
+            a.href = url;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                Swal.close();
+            }, 2000);
+        }
+    });
+}
+
+function backupFiles() {
+    Swal.fire({
+        title: 'Generando respaldo de archivos...',
+        text: 'Espere mientras se comprimen los archivos de uploads.',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+            const url = '<?= base_url('api/backup/files') ?>';
+            const a = document.createElement('a');
+            a.href = url;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                Swal.close();
+            }, 3000);
+        }
+    });
+}
+
+function mostrarPanel(tipo) {
+    const panelMaq = document.getElementById('panel-maquiladoras');
+    const panelBackup = document.getElementById('panel-backup');
+    const tabMaq = document.getElementById('tab-maq');
+    const tabBackup = document.getElementById('tab-backup');
+
+    if (!panelMaq || !panelBackup || !tabMaq || !tabBackup) {
+        return;
+    }
+
+    if (tipo === 'backup') {
+        panelMaq.classList.add('d-none');
+        panelBackup.classList.remove('d-none');
+        tabMaq.classList.remove('active');
+        tabBackup.classList.add('active');
+    } else {
+        panelMaq.classList.remove('d-none');
+        panelBackup.classList.add('d-none');
+        tabMaq.classList.add('active');
+        tabBackup.classList.remove('active');
+    }
 }
 </script>
 

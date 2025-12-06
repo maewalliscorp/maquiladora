@@ -54,6 +54,12 @@ $routes->group('api/maquiladoras', ['filter' => 'auth'], function ($routes) {
     $routes->delete('eliminar/(:num)', 'MaquiladorasAPI::eliminar/$1');
 });
 
+// Backup (BD y archivos uploads) - requiere estar autenticado
+$routes->group('api/backup', ['filter' => 'auth'], function ($routes) {
+    $routes->get('db', 'Backup::db');
+    $routes->get('files', 'Backup::files');
+});
+
 // Maquiladora principal
 $routes->get('maquiladora', 'Maquiladora::index', ['as' => 'maquiladora']);
 $routes->post('maquiladora/update', 'Maquiladora::update');
