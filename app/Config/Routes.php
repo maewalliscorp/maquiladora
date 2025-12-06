@@ -256,6 +256,8 @@ $routes->group('modulo1', [], function ($routes) {
     // Crear/Eliminar pedido (OC + OP)
     $routes->post('pedidos/crear', 'Modulos::m1_pedidos_crear', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
     $routes->post('pedidos/eliminar', 'Modulos::m1_pedido_eliminar', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
+    // Cargar datos de pedido desde PDF
+    $routes->post('pedidos/cargar-pdf', 'Modulos::m1_pedidos_cargar_pdf', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
 
     // Endpoints para modales
     $routes->get('ordenes/folio/(:segment)/json', 'Produccion::orden_json_folio/$1');

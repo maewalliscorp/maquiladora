@@ -4108,22 +4108,22 @@ class Modulos extends BaseController
         // Obtener maquiladoraId desde la sesión
         $maquiladoraId = session()->get('maquiladora_id');
 
-        $clienteId = (int) ($this->request->getPost('oc_clienteId'));
-        $ocEstatus = (string) ($this->request->getPost('oc_estatus') ?? 'Pendiente');
-        $ocFolio = trim((string) $this->request->getPost('oc_folio'));
-        $ocFecha = (string) $this->request->getPost('oc_fecha');
-        $ocMoneda = trim((string) $this->request->getPost('oc_moneda')) ?: 'MXN';
-        $ocTotal = (float) ($this->request->getPost('oc_total'));
+        $clienteId        = (int) ($this->request->getPost('oc_clienteId'));
+        $ocEstatus        = (string) ($this->request->getPost('oc_estatus') ?? 'Pendiente');
+        $ocFolio          = trim((string) $this->request->getPost('oc_folio'));
+        $ocFecha          = (string) $this->request->getPost('oc_fecha');
+        $ocMoneda         = trim((string) $this->request->getPost('oc_moneda')) ?: 'MXN';
+        $ocTotal          = (float) ($this->request->getPost('oc_total'));
 
-        $opFolio = trim((string) $this->request->getPost('op_folio'));
-        $opCantidadPlan = (int) ($this->request->getPost('op_cantidadPlan'));
-        $opFechaInicioPlan = (string) ($this->request->getPost('op_fechaInicioPlan'));
-        $opFechaFinPlan = (string) ($this->request->getPost('op_fechaFinPlan'));
-        $opStatus = (string) ($this->request->getPost('op_status') ?? 'Planeada');
+        $opFolio          = trim((string) $this->request->getPost('op_folio'));
+        $opCantidadPlan   = (int) ($this->request->getPost('op_cantidadPlan'));
+        $opFechaInicioPlan= (string) ($this->request->getPost('op_fechaInicioPlan'));
+        $opFechaFinPlan   = (string) ($this->request->getPost('op_fechaFinPlan'));
+        $opStatus         = (string) ($this->request->getPost('op_status') ?? 'Planeada');
 
         // Diseño
         $disenoVersionId = (int) ($this->request->getPost('disenoVersionId') ?? $this->request->getPost('pa_dis_version_id') ?? 0);
-        $disenoId = (int) ($this->request->getPost('disenoId') ?? 0);
+        $disenoId        = (int) ($this->request->getPost('disenoId') ?? 0);
 
         if ($clienteId <= 0) {
             return $this->response->setStatusCode(422)->setJSON(['ok' => false, 'message' => 'Cliente requerido']);
@@ -4159,7 +4159,8 @@ class Modulos extends BaseController
                     if ($row && isset($row['id'])) {
                         $disenoVersionId = (int) $row['id'];
                     }
-                } catch (\Throwable $e2) { /* ignore */
+                } catch (\Throwable $e2) {
+                    // ignore
                 }
             }
         }
@@ -4173,11 +4174,11 @@ class Modulos extends BaseController
             // Insertar orden_compra (nombres exactos)
             $rowOC = [
                 'clienteId' => $clienteId,
-                'folio' => $ocFolio !== '' ? $ocFolio : ('OC-' . date('Y') . '-' . $clienteId),
-                'fecha' => $ocFecha,
-                'estatus' => $ocEstatus ?: 'Pendiente',
-                'moneda' => $ocMoneda,
-                'total' => $ocTotal,
+                'folio'     => $ocFolio !== '' ? $ocFolio : ('OC-' . date('Y') . '-' . $clienteId),
+                'fecha'     => $ocFecha,
+                'estatus'   => $ocEstatus ?: 'Pendiente',
+                'moneda'    => $ocMoneda,
+                'total'     => $ocTotal,
             ];
             if ($maquiladoraId) {
                 $rowOC['maquiladoraID'] = (int) $maquiladoraId;
@@ -4204,19 +4205,20 @@ class Modulos extends BaseController
             if (!$okUpdOCFolio) {
                 try {
                     $okUpdOCFolio = (bool) $db->table('OrdenCompra')->where('id', $ocId)->update(['folio' => $nuevoOCFolio]);
-                } catch (\Throwable $e2) { /* ignore */
+                } catch (\Throwable $e2) {
+                    // ignore
                 }
             }
 
             // Insertar orden_produccion (nombres exactos)
             $rowOP = [
-                'ordenCompraId' => $ocId,
-                'disenoVersionId' => $disenoVersionId,
-                'folio' => $opFolio !== '' ? $opFolio : ('OP-' . date('Y') . '-' . $clienteId),
-                'cantidadPlan' => $opCantidadPlan,
-                'fechaInicioPlan' => $opFechaInicioPlan,
-                'fechaFinPlan' => ($opFechaFinPlan ?: null),
-                'status' => $opStatus ?: 'Planeada',
+                'ordenCompraId'    => $ocId,
+                'disenoVersionId'  => $disenoVersionId,
+                'folio'            => $opFolio !== '' ? $opFolio : ('OP-' . date('Y') . '-' . $clienteId),
+                'cantidadPlan'     => $opCantidadPlan,
+                'fechaInicioPlan'  => $opFechaInicioPlan,
+                'fechaFinPlan'     => ($opFechaFinPlan ?: null),
+                'status'           => $opStatus ?: 'Planeada',
             ];
             if ($maquiladoraId) {
                 $rowOP['maquiladoraID'] = (int) $maquiladoraId;
@@ -4242,7 +4244,8 @@ class Modulos extends BaseController
             if (!$okUpdFolio) {
                 try {
                     $okUpdFolio = (bool) $db->table('OrdenProduccion')->where('id', $opId)->update(['folio' => $nuevoFolio]);
-                } catch (\Throwable $e2) { /* ignore */
+                } catch (\Throwable $e2) {
+                    // ignore
                 }
             }
 
@@ -4254,9 +4257,9 @@ class Modulos extends BaseController
                     if (isset($t['id_sexo'], $t['id_talla'], $t['cantidad']) && $t['cantidad'] > 0) {
                         $rowTalla = [
                             'ordenProduccionId' => $opId,
-                            'id_sexo' => (int) $t['id_sexo'],
-                            'id_talla' => (int) $t['id_talla'],
-                            'cantidad' => (int) $t['cantidad']
+                            'id_sexo'           => (int) $t['id_sexo'],
+                            'id_talla'          => (int) $t['id_talla'],
+                            'cantidad'          => (int) $t['cantidad'],
                         ];
                         try {
                             $db->table('pedido_tallas_detalle')->insert($rowTalla);
@@ -4274,10 +4277,10 @@ class Modulos extends BaseController
             $rowIns = [
                 'ordenProduccionId' => $opId,
                 'puntoInspeccionId' => null,
-                'inspectorId' => null,
-                'fecha' => null,
-                'resultado' => null,
-                'observaciones' => null,
+                'inspectorId'       => null,
+                'fecha'             => null,
+                'resultado'         => null,
+                'observaciones'     => null,
             ];
             $db->table('inspeccion')->insert($rowIns);
             $insId = (int) $db->insertID();
@@ -4293,30 +4296,241 @@ class Modulos extends BaseController
             // Crear registro inicial en reproceso vinculado a la inspeccion (otros campos en NULL)
             $rowRep = [
                 'inspeccionId' => $insId,
-                'accion' => null,
-                'cantidad' => null,
-                'fecha' => null,
+                'accion'       => null,
+                'cantidad'     => null,
+                'fecha'        => null,
             ];
             $db->table('reproceso')->insert($rowRep);
-            $repId = (int) $db->insertID();
-            if ($repId === 0) {
-                // Fallback por mayúsculas
-                $db->table('Reproceso')->insert($rowRep);
-                $repId = (int) $db->insertID();
-            }
 
             $db->transComplete();
             if ($db->transStatus() === false) {
                 throw new \Exception('Error en la transacción');
             }
 
-            return $this->response->setJSON(['ok' => true, 'ocId' => $ocId, 'opId' => $opId, 'message' => 'Pedido creado']);
+            return $this->response->setJSON([
+                'ok'      => true,
+                'ocId'    => $ocId,
+                'opId'    => $opId,
+                'message' => 'Pedido creado',
+            ]);
         } catch (\Throwable $e) {
             try {
                 $db->transRollback();
             } catch (\Throwable $e2) {
+                // ignorar fallo en rollback
             }
-            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => 'Error al crear pedido: ' . $e->getMessage()]);
+
+            return $this->response->setStatusCode(500)->setJSON([
+                'ok'      => false,
+                'message' => 'Error al crear pedido: ' . $e->getMessage(),
+            ]);
         }
+    }
+
+    public function m1_pedidos_cargar_pdf()
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method !== 'post') {
+            return $this->response->setStatusCode(405)->setJSON([
+                'ok'      => false,
+                'message' => 'Método no permitido',
+            ]);
+        }
+
+        if (!$this->request->isAJAX()) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'ok'      => false,
+                'message' => 'Solicitud inválida',
+            ]);
+        }
+
+        $file = $this->request->getFile('pdf');
+        if (!$file || !$file->isValid()) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'ok'      => false,
+                'message' => 'Archivo PDF no recibido o inválido',
+            ]);
+        }
+
+        if (strtolower($file->getClientExtension()) !== 'pdf') {
+            return $this->response->setStatusCode(400)->setJSON([
+                'ok'      => false,
+                'message' => 'El archivo debe ser un PDF',
+            ]);
+        }
+
+        $targetDir = WRITEPATH . 'uploads/pedidos_pdf';
+        if (!is_dir($targetDir)) {
+            @mkdir($targetDir, 0775, true);
+        }
+
+        $newName  = uniqid('pedido_', true) . '.pdf';
+        $filePath = rtrim($targetDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $newName;
+        try {
+            $file->move($targetDir, $newName, true);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'ok'      => false,
+                'message' => 'No se pudo guardar el PDF: ' . $e->getMessage(),
+            ]);
+        }
+
+        // Intentar generar imágenes de las primeras páginas del PDF (opcional)
+        $paginasImg = [];
+        if (class_exists('Imagick')) {
+            try {
+                $imgDir = WRITEPATH . 'uploads/pedidos_pdf_imgs';
+                if (!is_dir($imgDir)) {
+                    @mkdir($imgDir, 0775, true);
+                }
+
+                // Configuración básica
+                $imagick = new \Imagick();
+                $imagick->setResolution(150, 150);
+                // Cargar solo las primeras 2 páginas (si existen)
+                $imagick->readImage($filePath . '[0-1]');
+                $imagick->setImageFormat('jpeg');
+
+                $index = 1;
+                foreach ($imagick as $page) {
+                    $page->setImageFormat('jpeg');
+                    $page->setImageCompressionQuality(85);
+                    $imgName = pathinfo($newName, PATHINFO_FILENAME) . '_p' . $index . '.jpg';
+                    $imgPath = rtrim($imgDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $imgName;
+                    $page->writeImage($imgPath);
+
+                    // Construir URL relativa para servir desde public (asumiendo symlink o configuración)
+                    $paginasImg[] = base_url('writable/uploads/pedidos_pdf_imgs/' . $imgName);
+                    $index++;
+                }
+
+                $imagick->clear();
+                $imagick->destroy();
+            } catch (\Throwable $e) {
+                // Si falla Imagick, simplemente no devolvemos imágenes
+            }
+        }
+
+        if (!class_exists(\Smalot\PdfParser\Parser::class)) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'ok'      => false,
+                'message' => 'No está instalado el parser de PDF (smalot/pdfparser).',
+            ]);
+        }
+
+        try {
+            $parser = new \Smalot\PdfParser\Parser();
+            $pdf    = $parser->parseFile($filePath);
+            $text   = (string) $pdf->getText();
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'ok'      => false,
+                'message' => 'Error al leer el PDF: ' . $e->getMessage(),
+            ]);
+        }
+
+        $clienteNombre     = null;
+        $modelo            = null;
+        $modeloCliente     = null;
+        $fecha             = null;
+        $disenoNombre      = null;
+        $disenoDescripcion = null;
+        $disenoNotas       = null;
+        $tallasTexto       = null;
+        $cantidadPlan      = null;
+
+        if ($text !== '') {
+            // CLIENTE: solo por etiqueta explícita al inicio de línea
+            if (preg_match('/^\s*CLIENTE\s*:\s*(.+)$/imu', $text, $m)) {
+                $line = trim($m[1]);
+                // Si en la misma línea vienen otras columnas (MODELO, MODELO CLIENTE, etc.), cortarlas
+                $line = preg_split('/\s{2,}(?=MODELO)/iu', $line)[0] ?? $line;
+                $clienteNombre = trim($line);
+            }
+
+            // MODELO CLIENTE: línea específica
+            if (preg_match('/MODELO\s+CLIENTE\s*:\s*"?([0-9A-Z\-]+)"?/iu', $text, $m)) {
+                $modeloCliente = trim($m[1]);
+            }
+
+            // MODELO: cabecera MODELO: 40759 (evitar MODELO CLIENTE)
+            if (preg_match('/^\s*MODELO\s*:\s*([0-9A-Z\-]+)/imu', $text, $m)) {
+                $modelo = trim($m[1]);
+            } elseif (!$modelo && $modeloCliente) {
+                // fallback: si solo tenemos modelo cliente, usarlo
+                $modelo = $modeloCliente;
+            }
+
+            // FECHA: primer dd/mm/yyyy que aparezca
+            if (preg_match('/([0-9]{1,2}\/[0-9]{1,2}\/[0-9]{2,4})/u', $text, $m)) {
+                $fechaRaw = trim($m[1]);
+                $parts    = preg_split('/[\/]/', $fechaRaw);
+
+                if (count($parts) === 3) {
+                    $d  = (int) $parts[0];
+                    $m2 = (int) $parts[1];
+                    $y  = (int) $parts[2];
+                    if ($y < 100) {
+                        $y += 2000;
+                    }
+                    if ($d > 0 && $m2 > 0 && $y > 0) {
+                        $fecha = sprintf('%04d-%02d-%02d', $y, $m2, $d);
+                    }
+                }
+            }
+
+            // NOMBRE DE DISEÑO: usar línea de DESCRIPCION: si existe
+            if (preg_match('/DESCRIPCION\s*:\s*(.+)/iu', $text, $m)) {
+                $line = trim($m[1]);
+                $disenoNombre = preg_split('/\r?\n/', $line)[0] ?? $line;
+            }
+
+            // DESCRIPCION LARGA: tomar varias líneas después del encabezado "DESCRIPCION" de la tabla
+            if (preg_match('/DESCRIPCION\s*\n(.+?)(?:\n\s*\*\*\*|$)/isu', $text, $m)) {
+                $block = trim($m[1]);
+                $lines = preg_split('/\r?\n/', $block);
+                if (is_array($lines) && !empty($lines)) {
+                    $lines = array_slice($lines, 0, 15);
+                    $disenoDescripcion = trim(implode("\n", $lines));
+                }
+            }
+
+            // NOTAS: recopilar líneas que contengan ETIQUETA
+            $notas = [];
+            if (preg_match_all('/ETIQUETA[^\n]*/iu', $text, $matches) && !empty($matches[0])) {
+                foreach ($matches[0] as $ln) {
+                    $ln = trim($ln);
+                    if ($ln !== '') { $notas[] = $ln; }
+                }
+            }
+            if (!empty($notas)) {
+                $disenoNotas = implode("\n", array_unique($notas));
+            }
+
+            // TALLAS: capturar bloque a partir de palabra TALLAS hasta línea que contenga Total
+            if (preg_match('/TALLAS[\s\S]+?Total[\s\S]*$/iu', $text, $m)) {
+                $tallasBlock = trim($m[0]);
+                $tallasTexto = $tallasBlock;
+                // Intentar extraer cantidad plan del Total
+                if (preg_match('/Total\s+([0-9]{1,4})/iu', $tallasBlock, $mt)) {
+                    $cantidadPlan = (int) $mt[1];
+                }
+            }
+        }
+
+        return $this->response->setJSON([
+            'ok'                  => true,
+            'cliente_nombre'      => $clienteNombre,
+            'modelo'              => $modelo,
+            'modelo_cliente'      => $modeloCliente,
+            'fecha'               => $fecha,
+            'texto_crudo'         => $text,
+            'diseno_nombre'       => $disenoNombre,
+            'diseno_descripcion'  => $disenoDescripcion,
+            'diseno_notas'        => $disenoNotas,
+            'tallas_texto'        => $tallasTexto,
+            'cantidad_plan'       => $cantidadPlan,
+            'paginas_img'         => $paginasImg,
+        ]);
     }
 }

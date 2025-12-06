@@ -20,7 +20,10 @@
 <div class="d-flex align-items-center mb-4">
     <h1 class="me-3">Pedidos</h1>
     <span class="badge bg-primary">Módulo 1</span>
-    <div class="ms-auto">
+    <div class="ms-auto d-flex gap-2">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#pedidoPdfModal">
+            <i class="bi bi-file-arrow-up"></i> Cargar desde PDF
+        </button>
         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#pedidoAddModal">
             <i class="bi bi-person-plus"></i> Agregar Pedido
         </button>
@@ -623,6 +626,74 @@
     </div>
 </div>
 
+<!-- Modal: Cargar pedido desde PDF -->
+<div class="modal fade" id="pedidoPdfModal" tabindex="-1" aria-labelledby="pedidoPdfModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pedidoPdfModalLabel">Cargar pedido desde PDF</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">Selecciona el PDF del pedido (ficha técnica). El sistema leerá el archivo y mostrará aquí los datos detectados (sin guardar nada todavía).</p>
+                <input type="file" class="form-control mb-3" id="pedido-pdf-input" accept="application/pdf">
+
+                <div id="pedido-pdf-result" style="display:none;">
+                    <hr>
+                    <div class="mb-3" id="pedido-pdf-img-wrap" style="display:none;">
+                        <label class="form-label">Imágenes del PDF</label>
+                        <div class="d-flex flex-wrap gap-2" id="pedido-pdf-imgs"></div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-4">
+                            <label class="form-label">Cliente (PDF)</label>
+                            <input type="text" class="form-control" id="pdf-cli-nombre">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Modelo (PDF)</label>
+                            <input type="text" class="form-control" id="pdf-modelo">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Fecha (PDF)</label>
+                            <input type="text" class="form-control" id="pdf-fecha">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label">Modelo cliente (PDF)</label>
+                            <input type="text" class="form-control" id="pdf-modelo-cliente">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Cantidad plan (Total tallas, PDF)</label>
+                            <input type="text" class="form-control" id="pdf-cantidad-plan">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Nombre de diseño (PDF)</label>
+                        <input type="text" class="form-control" id="pdf-diseno-nombre">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Descripción (PDF)</label>
+                        <textarea class="form-control" id="pdf-diseno-descripcion" rows="4"></textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Notas / Etiquetas (PDF)</label>
+                        <textarea class="form-control" id="pdf-diseno-notas" rows="3"></textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Tallas (bloque de texto PDF)</label>
+                        <textarea class="form-control" id="pdf-tallas-texto" rows="4"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="pedido-pdf-usar">Usar estos datos en el pedido</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card shadow-sm">
     <div class="card-header">
         <strong>Lista de Pedidos</strong>
@@ -715,6 +786,8 @@
     // Variables globales para los catálogos
 let sexos = [];
 let tallas = [];
+// Prefill desde PDF (se usa al abrir el modal Agregar pedido)
+let paPdfPrefill = null;
 
 // Función para cargar los catálogos de sexos y tallas (filtrados por maquiladora)
 function cargarCatalogosTallas() {
@@ -1717,6 +1790,33 @@ $(document).ready(function () {
                     cargar(paClientesCache);
                 })
                 .always(function(){ $('#pa-cli-loading').hide(); });
+
+            // Si venimos de un PDF, aplicar prefill suave (solo en campos vacíos)
+            if (paPdfPrefill && typeof paPdfPrefill === 'object') {
+                if (paPdfPrefill.cliente_nombre && !($('#pa-cli-nombre').val()||'').trim()) {
+                    $('#pa-cli-nombre').val(paPdfPrefill.cliente_nombre);
+                }
+                if (paPdfPrefill.fecha) {
+                    if (!($('#oc-fecha').val()||'').trim()) {
+                        $('#oc-fecha').val(paPdfPrefill.fecha);
+                    }
+                    if (!($('#op-fechaInicioPlan').val()||'').trim()) {
+                        $('#op-fechaInicioPlan').val(paPdfPrefill.fecha);
+                    }
+                }
+                if (paPdfPrefill.diseno_nombre && !($('#pa-dis-nombre').val()||'').trim()) {
+                    $('#pa-dis-nombre').val(paPdfPrefill.diseno_nombre);
+                }
+                if (paPdfPrefill.diseno_descripcion && !($('#pa-dis-descripcion').val()||'').trim()) {
+                    $('#pa-dis-descripcion').val(paPdfPrefill.diseno_descripcion);
+                }
+                if (paPdfPrefill.diseno_notas && !($('#pa-dis-notas').val()||'').trim()) {
+                    $('#pa-dis-notas').val(paPdfPrefill.diseno_notas);
+                }
+                if (paPdfPrefill.cantidad_plan && !($('#op-cantidadPlan').val()||'').trim()) {
+                    $('#op-cantidadPlan').val(paPdfPrefill.cantidad_plan);
+                }
+            }
         });
 
         $(document).on('change', '#pa-cliente-select', function(){
@@ -1750,6 +1850,111 @@ $(document).ready(function () {
 
         $(document).on('click', '#pa-continuar', function(){
             $('#pedidoAddModal').modal('hide');
+        });
+
+        // Carga de pedido desde PDF
+        $(document).on('change', '#pedido-pdf-input', function(){
+            const file = this.files && this.files[0] ? this.files[0] : null;
+            if (!file) { return; }
+            if (!/pdf$/i.test(file.name)) {
+                Swal.fire('Archivo no válido', 'Selecciona un archivo PDF.', 'warning');
+                $(this).val('');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('pdf', file);
+
+            Swal.fire({
+                title: 'Leyendo PDF...',
+                text: 'Por favor espera mientras se extrae la información del pedido.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            $.ajax({
+                url: '<?= base_url('modulo1/pedidos/cargar-pdf') ?>',
+                method: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).done(function(resp){
+                if (!resp || resp.ok !== true) {
+                    const msg = resp && resp.message ? resp.message : 'No se pudo interpretar el PDF.';
+                    Swal.fire('Aviso', msg, 'warning');
+                    return;
+                }
+
+                Swal.close();
+
+                // Guardar respuesta en variable global
+                paPdfPrefill = resp;
+
+                // Mostrar los datos en el propio modal PDF
+                $('#pedido-pdf-result').show();
+                $('#pdf-cli-nombre').val(resp.cliente_nombre || '');
+                $('#pdf-modelo').val(resp.modelo || '');
+                $('#pdf-fecha').val(resp.fecha || '');
+                $('#pdf-modelo-cliente').val(resp.modelo_cliente || '');
+                $('#pdf-cantidad-plan').val(resp.cantidad_plan != null ? resp.cantidad_plan : '');
+                $('#pdf-diseno-nombre').val(resp.diseno_nombre || '');
+                $('#pdf-diseno-descripcion').val(resp.diseno_descripcion || '');
+                $('#pdf-diseno-notas').val(resp.diseno_notas || '');
+                $('#pdf-tallas-texto').val(resp.tallas_texto || '');
+
+                // Imágenes de páginas del PDF
+                const $imgWrap = $('#pedido-pdf-img-wrap');
+                const $imgContainer = $('#pedido-pdf-imgs');
+                $imgContainer.empty();
+                if (Array.isArray(resp.paginas_img) && resp.paginas_img.length > 0) {
+                    resp.paginas_img.forEach(function(url, idx){
+                        if (!url) return;
+                        const imgHtml = `
+                            <div class="border rounded p-1 bg-light">
+                                <img src="${url}" alt="Página ${idx+1} del PDF" class="img-fluid" style="max-height:220px;">
+                            </div>`;
+                        $imgContainer.append(imgHtml);
+                    });
+                    $imgWrap.show();
+                } else {
+                    $imgWrap.hide();
+                }
+
+                if (resp.texto_crudo) {
+                    console.log('Texto PDF:', resp.texto_crudo.substring(0, 500));
+                }
+            }).fail(function(xhr){
+                let msg = 'Error al procesar el PDF.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    msg = xhr.responseJSON.message;
+                }
+                Swal.fire('Error', msg, 'error');
+            }).always(() => {
+                $('#pedido-pdf-input').val('');
+            });
+        });
+
+        // Usar datos del modal PDF para prellenar el modal Agregar pedido
+        $(document).on('click', '#pedido-pdf-usar', function(){
+            // Asegurar que exista el objeto
+            paPdfPrefill = paPdfPrefill && typeof paPdfPrefill === 'object' ? paPdfPrefill : {};
+
+            // Tomar los valores actuales (incluyendo ediciones del usuario)
+            paPdfPrefill.cliente_nombre      = $('#pdf-cli-nombre').val() || '';
+            paPdfPrefill.modelo              = $('#pdf-modelo').val() || '';
+            paPdfPrefill.modelo_cliente      = $('#pdf-modelo-cliente').val() || '';
+            paPdfPrefill.fecha               = $('#pdf-fecha').val() || '';
+            paPdfPrefill.diseno_nombre       = $('#pdf-diseno-nombre').val() || '';
+            paPdfPrefill.diseno_descripcion  = $('#pdf-diseno-descripcion').val() || '';
+            paPdfPrefill.diseno_notas        = $('#pdf-diseno-notas').val() || '';
+            paPdfPrefill.cantidad_plan       = $('#pdf-cantidad-plan').val() || '';
+            paPdfPrefill.tallas_texto        = $('#pdf-tallas-texto').val() || '';
+
+            // Cerrar el modal de PDF y abrir el modal Agregar pedido
+            $('#pedidoPdfModal').modal('hide');
+            $('#pedidoAddModal').modal('show');
         });
 
         // Abrir y poblar el modal de pedido (AJAX JSON)
