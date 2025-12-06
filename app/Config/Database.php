@@ -26,9 +26,9 @@ class Database extends Config
      ***/
     public array $default = [
         'DSN'          => '',
-        'hostname'     => 'hopper.proxy.rlwy.net',
+        'hostname'     => 'caboose.proxy.rlwy.net',
         'username'     => 'root',
-        'password'     => 'xzngqhYhZCmOBuJShGgoNwJpdVSPbnzP',
+        'password'     => 'MjzYXSJazySjDynlpQUvUdPkVpDsWKeE',
         'database'     => 'railway',
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
@@ -41,7 +41,7 @@ class Database extends Config
         'compress'     => false,
         'strictOn'     => false,
         'failover'     => [],
-        'port'         => 55848,
+        'port'         => 52737,
         'numberNative' => false,
         'foundRows'    => false,
         'dateFormat'   => [
