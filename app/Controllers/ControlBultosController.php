@@ -19,17 +19,31 @@ class ControlBultosController extends BaseController
     {
         $session = session();
         $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID');
+        // Usar el mismo key que auth_helper (user_id) como prioridad, con compatibilidad hacia atrás
+        $usuarioId = $session->get('usuario_id')
+            ?? $session->get('user_id')
+            ?? $session->get('id');
 
         $controlModel = new ControlBultosModel();
         $plantillaModel = new PlantillaOperacionModel();
         $ordenModel = new OrdenProduccionModel();
         $empleadoModel = new EmpleadoModel();
 
+        $empleadoActual = null;
+        if ($usuarioId) {
+            $empleadoActual = $empleadoModel
+                ->where('idusuario', (int) $usuarioId)
+                ->where('activo', 1)
+                ->first();
+        }
+
         $data = [
             'controles' => $controlModel->getConMaquiladora($maquiladoraId),
             'plantillas' => $plantillaModel->getPlantillasPorMaquiladora($maquiladoraId),
-            'ordenes' => $ordenModel->getListado($maquiladoraId),
+            // Solo órdenes de producción que aún no tienen control de bultos
+            'ordenes' => $ordenModel->getListadoSinControl($maquiladoraId),
             'empleados' => $empleadoModel->getEmpleadosActivos(),
+            'empleadoActual' => $empleadoActual,
         ];
 
         return view('modulos/control_bultos', $data);

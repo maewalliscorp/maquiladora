@@ -124,6 +124,30 @@
                         </div>
                     </div>
 
+                    <!-- Tallas del Pedido -->
+                    <div class="card mb-2 shadow-sm border-0">
+                        <div class="card-header bg-light text-secondary fw-bold border-0">
+                            <i class="bi bi-grid-3x3-gap me-2"></i>Tallas del Pedido
+                        </div>
+                        <div class="card-body py-2">
+                            <div id="rep-tallas-wrapper">
+                                <p class="text-muted mb-0" id="rep-tallas-empty">No hay tallas registradas para esta orden.</p>
+                                <div class="table-responsive" id="rep-tallas-table-container" style="display:none;">
+                                    <table class="table table-sm table-striped align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Sexo</th>
+                                                <th>Talla</th>
+                                                <th class="text-end">Cantidad</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="rep-tallas-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Información del Diseño -->
                     <div class="card mb-2 shadow-sm border-0">
                         <div class="card-header bg-light text-success fw-bold border-0">
@@ -261,6 +285,7 @@
 <script>
     const __isRolCorte = <?= json_encode(strcasecmp(trim($__roleName), 'corte') === 0) ?>;
     const __isRolEmpleado = <?= json_encode(strcasecmp(trim($__roleName), 'empleado') === 0) ?>;
+    const __isRolAdminJefe = <?= json_encode(in_array(mb_strtolower(trim($__roleName)), ['administrador','jefe','superadmin'])) ?>;
     const empId = <?= json_encode($empleadoId ?? null) ?>;
     const maquiladoraId = <?= json_encode(session()->get('maquiladora_id') ?? null) ?>;
     
@@ -269,7 +294,11 @@
         const base = '<?= base_url('modulo1/produccion/tareas') ?>';
         // Agregar timestamp para evitar caché
         const timestamp = Date.now();
-        const url = base + (empId ? ('?empleadoId=' + encodeURIComponent(empId)) : '') + (empId ? '&' : '?') + 't=' + timestamp + '&_nocache=' + timestamp;
+        const sendEmp = empId && !__isRolAdminJefe; // Solo filtrar por empleado si NO es admin/jefe
+        const url = base
+            + (sendEmp ? ('?empleadoId=' + encodeURIComponent(empId)) : '')
+            + (sendEmp ? '&' : '?')
+            + 't=' + timestamp + '&_nocache=' + timestamp;
         const $pendList = document.getElementById('pendingOrdersList');
         const $pendCount = document.getElementById('pendingCount');
         const $doneList = document.getElementById('completedOrdersList');
@@ -448,6 +477,32 @@
                     document.getElementById('rep-diseno-notas-container').style.display = 'none';
                     document.getElementById('rep-foto-container').innerHTML = '<p class="text-muted">No disponible</p>';
                     document.getElementById('rep-patron-container').innerHTML = '<p class="text-muted">No disponible</p>';
+                }
+
+                // Tallas del pedido (pedido_tallas_detalle)
+                const tallas = Array.isArray(data.tallas) ? data.tallas : [];
+                const tallasEmpty = document.getElementById('rep-tallas-empty');
+                const tallasTableContainer = document.getElementById('rep-tallas-table-container');
+                const tallasBody = document.getElementById('rep-tallas-body');
+                if (tallasBody && tallasEmpty && tallasTableContainer) {
+                    if (tallas.length === 0) {
+                        tallasEmpty.style.display = 'block';
+                        tallasTableContainer.style.display = 'none';
+                        tallasBody.innerHTML = '';
+                    } else {
+                        tallasEmpty.style.display = 'none';
+                        tallasTableContainer.style.display = 'block';
+                        tallasBody.innerHTML = tallas.map(t => {
+                            const sexo = t.nombre_sexo || '-';
+                            const talla = t.nombre_talla || '-';
+                            const cant = typeof t.cantidad !== 'undefined' ? t.cantidad : '';
+                            return '<tr>'
+                                + '<td>' + sexo + '</td>'
+                                + '<td>' + talla + '</td>'
+                                + '<td class="text-end">' + cant + '</td>'
+                                + '</tr>';
+                        }).join('');
+                    }
                 }
             })
             .catch(err => {

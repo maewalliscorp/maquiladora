@@ -162,6 +162,7 @@
                                     <th>Requeridas</th>
                                     <th>Completadas</th>
                                     <th style="width: 30%;">Progreso</th>
+                                    <th style="width: 80px;">Acción</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -229,7 +230,6 @@
         </div>
     </div>
 </div>
-</div>
 
 <!-- Modal Editar Control -->
 <div class="modal fade" id="modalEditarControl" tabindex="-1" aria-hidden="true">
@@ -263,8 +263,6 @@
             </div>
         </div>
     </div>
-</div>
-</div>
 </div>
 
 <!-- Modal Plantillas -->
@@ -378,7 +376,7 @@
                                 <input type="hidden" name="operaciones" id="inputOperacionesJson">
 
                                 <div class="col-12 text-end">
-                                    <button type="submit" class="btn btn-primary">Guardar Plantilla</button>
+                                    <button type="submit" class="btn btn-primary" id="btnGuardarPlantilla">Guardar Plantilla</button>
                                 </div>
                             </div>
                         </form>
@@ -401,6 +399,7 @@
     const ordenes = <?= json_encode($ordenes ?? []) ?>;
     const plantillas = <?= json_encode($plantillas ?? []) ?>;
     const empleados = <?= json_encode($empleados ?? []) ?>;
+    const empleadoActual = <?= json_encode($empleadoActual ?? null) ?>;
 
     $(document).ready(function () {
         // Inicializar DataTable
@@ -477,7 +476,21 @@
         // Poblar selects
         const selectOrden = $('select[name="ordenProduccionId"]');
         ordenes.forEach(o => {
-            selectOrden.append(`<option value="${o.opId || o.id}">${o.op || o.folio} - ${o.diseno || o.estilo || ''}</option>`);
+            selectOrden.append(`<option value="${o.opId || o.id}" data-cantidad="${o.cantidadPlan || ''}" data-diseno="${o.diseno || ''}">${o.op || o.folio} - ${o.diseno || o.estilo || ''}</option>`);
+        });
+
+        // Autocompletar estilo y cantidad_total al seleccionar una orden
+        selectOrden.on('change', function () {
+            const selected = $(this).find(':selected');
+            const diseno = selected.data('diseno');
+            const cantidad = selected.data('cantidad');
+
+            if (diseno) {
+                $('input[name="estilo"]').val(diseno);
+            }
+            if (cantidad) {
+                $('input[name="cantidad_total"]').val(cantidad);
+            }
         });
 
         const selectPlantilla = $('select[name="tipo_prenda"]');
@@ -634,6 +647,9 @@
 
                                 data.operaciones.forEach(op => {
                                     const progreso = op.porcentaje_completado;
+                                    const completado = parseFloat(progreso) >= 100;
+                                    const disabledAttr = completado ? 'disabled' : '';
+
                                     const row = `
                                         <tr>
                                             <td>${op.nombre_operacion}</td>
@@ -645,12 +661,17 @@
                                                     <div class="progress-bar" role="progressbar" style="width: ${progreso}%" aria-valuenow="${progreso}" aria-valuemin="0" aria-valuemax="100">${progreso}%</div>
                                                 </div>
                                             </td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-sm btn-outline-success btn-op-registrar" data-id="${op.id}" ${disabledAttr} title="Registrar producción para esta operación">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </td>
                                         </tr>
                                     `;
                                     tbody.append(row);
 
                                     // Agregar a select de registro si no está completa
-                                    if (parseFloat(progreso) < 100) {
+                                    if (!completado) {
                                         selectOperacion.append(`<option value="${op.id}">${op.nombre_operacion}</option>`);
                                     }
                                 });
@@ -665,6 +686,7 @@
 
         // Abrir modal de registro desde detalle
         $('#btnRegistrarProduccion').click(function () {
+
             // Poblar empleados
             const selectEmpleado = $('#regEmpleado');
             selectEmpleado.empty().append('<option value="">Seleccione empleado...</option>');
@@ -672,7 +694,61 @@
                 selectEmpleado.append(`<option value="${e.id}">${e.nombre} ${e.apellido}</option>`);
             });
 
+            // Si hay empleadoActual en sesión, preseleccionarlo
+            if (empleadoActual && empleadoActual.id) {
+                selectEmpleado.val(empleadoActual.id);
+            }
+
+            // Establecer hora de inicio y fin automáticamente al abrir el modal
+            const inputHoraInicio = $('input[name="hora_inicio"]');
+            const inputHoraFin = $('input[name="hora_fin"]');
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            const currentTime = `${hh}:${mm}`;
+            inputHoraInicio.val(currentTime);
+            inputHoraFin.val(currentTime);
+
             $('#modalDetalleControl').modal('hide');
+            $('#modalRegistroProduccion').modal('show');
+        });
+
+        // Registrar producción desde el botón por operación en la tabla de detalle
+        $('#tablaOperaciones').on('click', '.btn-op-registrar', function () {
+            const opId = $(this).data('id');
+
+            // Asegurar que la operación exista en el select y seleccionarla
+            const selectOperacion = $('#regOperacion');
+
+            if (!selectOperacion.find(`option[value="${opId}"]`).length) {
+                // Como respaldo, agregamos la opción con el texto "Operación seleccionada"
+                selectOperacion.append(`<option value="${opId}">Operación seleccionada</option>`);
+            }
+            selectOperacion.val(opId);
+
+            // Poblar empleados y aplicar empleadoActual si existe
+            const selectEmpleado = $('#regEmpleado');
+
+            selectEmpleado.empty().append('<option value="">Seleccione empleado...</option>');
+            empleados.forEach(e => {
+                selectEmpleado.append(`<option value="${e.id}">${e.nombre} ${e.apellido}</option>`);
+            });
+
+            if (empleadoActual && empleadoActual.id) {
+                selectEmpleado.val(empleadoActual.id);
+            }
+
+            // Establecer hora de inicio y fin automáticamente al abrir el modal
+            const inputHoraInicio = $('input[name="hora_inicio"]');
+            const inputHoraFin = $('input[name="hora_fin"]');
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            const currentTime = `${hh}:${mm}`;
+            inputHoraInicio.val(currentTime);
+            inputHoraFin.val(currentTime);
+
+            // Mostrar modal de registro (dejamos abierto el de detalle para que el usuario vea el contexto)
             $('#modalRegistroProduccion').modal('show');
         });
 
@@ -715,6 +791,8 @@
         });
         // --- Lógica de Plantillas (Builder) ---
         let operacionesBuilder = [];
+        let plantillaEditId = null; // null = nueva, número = editando existente
+        let plantillasCache = [];
 
         // Cargar plantillas al abrir el modal o tab
         $('#modalPlantillas').on('shown.bs.modal', function () {
@@ -726,12 +804,12 @@
             cargarPlantillas();
         });
 
-        $('#nueva-tab').on('shown.bs.tab', function () {
-            resetBuilder();
-        });
+        // Nota: No reseteamos automáticamente al entrar a la pestaña "Nueva Plantilla"
+        // para no borrar los datos cuando venimos desde "Editar".
 
         function resetBuilder() {
             operacionesBuilder = [];
+            plantillaEditId = null;
             renderBuilder();
             $('#formNuevaPlantilla')[0].reset();
             $('#opPiezas').val(1);
@@ -777,7 +855,7 @@
             }
 
             operacionesBuilder.forEach((op, index) => {
-                // Actualizar orden
+                // Asegurar orden consecutivo
                 op.orden = index + 1;
 
                 const tipoBadge = op.es_componente == 1
@@ -815,12 +893,16 @@
                     if (response.ok) {
                         const tbody = $('#tbodyPlantillas');
                         tbody.empty();
-                        response.data.forEach(p => {
+                        plantillasCache = response.data || [];
+
+                        plantillasCache.forEach(p => {
                             // Parsear operaciones para contar o mostrar resumen
                             let opsCount = 0;
                             try {
                                 const ops = JSON.parse(p.operaciones);
-                                opsCount = ops.length;
+                                if (Array.isArray(ops)) {
+                                    opsCount = ops.length;
+                                }
                             } catch (e) { }
 
                             tbody.append(`
@@ -839,8 +921,51 @@
             });
         }
 
-        // Guardar Nueva Plantilla
-        $('#btnGuardarPlantilla').click(function () {
+        // Cargar una plantilla existente en el builder para editar
+        $(document).on('click', '.btn-editar-plantilla', function () {
+            const id = $(this).data('id');
+            console.log('Editar plantilla clicada, id =', id);
+            console.log('plantillasCache actuales:', plantillasCache);
+            const plantilla = plantillasCache.find(p => String(p.id) === String(id));
+
+            if (!plantilla) {
+                console.warn('No se encontró plantilla en cache para id', id);
+                Swal.fire('Error', 'No se encontró la plantilla seleccionada', 'error');
+                return;
+            }
+
+            plantillaEditId = plantilla.id;
+
+            console.log('Plantilla encontrada para edición:', plantilla);
+
+            // Llenar datos básicos
+            $('input[name="nombre_plantilla"]').val(plantilla.nombre_plantilla);
+            $('input[name="tipo_prenda"]').val(plantilla.tipo_prenda);
+
+            // Cargar operaciones al builder
+            let ops = [];
+            if (typeof plantilla.operaciones === 'string') {
+                try {
+                    ops = JSON.parse(plantilla.operaciones) || [];
+                } catch (e) {
+                    console.error('Error parseando plantilla.operaciones como JSON', e, 'valor:', plantilla.operaciones);
+                    ops = [];
+                }
+            } else if (Array.isArray(plantilla.operaciones)) {
+                ops = plantilla.operaciones;
+            }
+
+            operacionesBuilder = Array.isArray(ops) ? ops : [];
+            console.log('Operaciones cargadas al builder:', operacionesBuilder);
+            renderBuilder();
+
+            // Cambiar a la pestaña de Nueva Plantilla para editar
+            $('#nueva-tab').tab('show');
+        });
+
+        // Guardar Plantilla (nueva o existente)
+        $('#btnGuardarPlantilla').click(function (e) {
+            e.preventDefault();
             if (operacionesBuilder.length === 0) {
                 Swal.fire('Error', 'Debe agregar al menos una operación a la plantilla', 'error');
                 return;
@@ -851,15 +976,21 @@
 
             const formData = new FormData(document.getElementById('formNuevaPlantilla'));
 
+            let url = '<?= base_url('modulo3/api/plantillas-operaciones/crear') ?>';
+            if (plantillaEditId) {
+                url = '<?= base_url('modulo3/api/plantillas-operaciones') ?>/' + plantillaEditId + '/editar';
+            }
+
             $.ajax({
-                url: '<?= base_url('modulo3/api/plantillas-operaciones/crear') ?>',
+                url: url,
                 type: 'POST',
                 data: formData,
                 processData: false,
                 contentType: false,
                 success: function (response) {
                     if (response.ok) {
-                        Swal.fire('Éxito', 'Plantilla creada correctamente', 'success');
+                        const msg = plantillaEditId ? 'Plantilla actualizada correctamente' : 'Plantilla creada correctamente';
+                        Swal.fire('Éxito', msg, 'success');
                         resetBuilder();
                         cargarPlantillas();
                         // Cambiar a tab de lista
@@ -871,7 +1002,7 @@
                     }
                 },
                 error: function () {
-                    Swal.fire('Error', 'No se pudo crear la plantilla', 'error');
+                    Swal.fire('Error', 'No se pudo guardar la plantilla', 'error');
                 }
             });
         });

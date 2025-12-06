@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use CodeIgniter\Model;
+use App\Models\PedidoModel;
 
 class OrdenProduccionModel extends Model
 {
@@ -15,6 +16,7 @@ class OrdenProduccionModel extends Model
         $builder->select('
             op.id              AS opId,
             op.folio           AS op,
+            op.cantidadPlan    AS cantidadPlan,
             op.fechaInicioPlan AS ini,
             op.fechaFinPlan    AS fin,
             op.status          AS estatus,
@@ -43,6 +45,51 @@ class OrdenProduccionModel extends Model
         foreach ($rows as &$r) {
             $r['cliente'] = $r['cliente'] ?? 'N/D';
         }
+        return $rows;
+    }
+
+    /**
+     * Lista de órdenes de producción que aún NO tienen control de bultos.
+     */
+    public function getListadoSinControl($maquiladoraId = null)
+    {
+        $builder = $this->db->table($this->table . ' op');
+        $builder->select('
+            op.id              AS opId,
+            op.folio           AS op,
+            op.cantidadPlan    AS cantidadPlan,
+            op.fechaInicioPlan AS ini,
+            op.fechaFinPlan    AS fin,
+            op.status          AS estatus,
+            op.maquiladoraID,
+            op.maquiladoraCompartidaID,
+            d.nombre           AS diseno,
+            c.nombre           AS cliente
+        ');
+        $builder->join('diseno_version dv', 'dv.id = op.disenoVersionId', 'left');
+        $builder->join('diseno d', 'd.id = dv.disenoId', 'left');
+        $builder->join('orden_compra oc', 'oc.id = op.ordenCompraId', 'left');
+        $builder->join('cliente c', 'c.id = oc.clienteId', 'left');
+
+        // Excluir órdenes que ya tienen al menos un control de bultos
+        $builder->join('control_bultos cb', 'cb.ordenProduccionId = op.id', 'left');
+        $builder->where('cb.id IS NULL');
+
+        if ($maquiladoraId) {
+            $builder->groupStart()
+                ->where('op.maquiladoraID', (int) $maquiladoraId)
+                ->orWhere('op.maquiladoraCompartidaID', (int) $maquiladoraId)
+                ->groupEnd();
+        }
+
+        $builder->orderBy('op.fechaInicioPlan', 'DESC');
+
+        $rows = $builder->get()->getResultArray();
+
+        foreach ($rows as &$r) {
+            $r['cliente'] = $r['cliente'] ?? 'N/D';
+        }
+
         return $rows;
     }
 
@@ -112,6 +159,16 @@ class OrdenProduccionModel extends Model
             $patronBase64 = 'data:image/jpeg;base64,' . base64_encode($row['disenoPatron']);
         }
 
+        // Obtener tallas del pedido ligadas a esta OP (si existen)
+        $tallas = [];
+        try {
+            $pedidoModel = new PedidoModel();
+            $tallas = $pedidoModel->getTallasPorOP((int) $row['id']);
+        } catch (\Throwable $e) {
+            // Silencioso: si falla, simplemente no devolvemos tallas
+            $tallas = [];
+        }
+
         return [
             'id' => (int) $row['id'],
             'ordenCompraId' => $row['ordenCompraId'] ?? null,
@@ -123,6 +180,8 @@ class OrdenProduccionModel extends Model
             'status' => $row['status'] ?? '',
             'cliente' => $row['clienteNombre'] ?? '',
             'total' => $row['pedidoTotal'] ?? null,
+            'tallas' => $tallas,
+
             'diseno' => [
                 'codigo' => $row['disenoCodigo'] ?? '',
                 'nombre' => $row['disenoNombre'] ?? '',
