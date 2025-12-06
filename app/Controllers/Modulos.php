@@ -1169,6 +1169,20 @@ class Modulos extends BaseController
                 'op_fechaFinPlan' => isset($detalle['op_fechaFinPlan']) ? date('d/m/Y', strtotime($detalle['op_fechaFinPlan'])) : null,
             ];
 
+            // Cargar detalle por tallas para el PDF
+            $tallas = [];
+            if (!empty($detalle['op_id'])) {
+                try {
+                    $tallas = $pedidoModel->getTallasPorOP($detalle['op_id']);
+                } catch (\Throwable $eT) {
+                    $tallas = [];
+                }
+            } elseif (!empty($detalle['tallas']) && is_array($detalle['tallas'])) {
+                // Fallback si getPedidoDetalle ya devolvió tallas
+                $tallas = $detalle['tallas'];
+            }
+            $data['tallas'] = $tallas;
+
             // Renderizar HTML de la vista
             $html = view('modulos/pedido_pdf', $data);
 
@@ -2296,64 +2310,39 @@ class Modulos extends BaseController
                 $id = $idPost;
             }
 
-            // Si no hay ID en POST/URL, responder apropiadamente (JSON si XHR o Accept JSON)
             $acceptsJson = stripos((string) $this->request->getHeaderLine('accept'), 'application/json') !== false;
             if (!$id) {
                 if ($this->request->isAJAX() || $acceptsJson) {
                     return $this->response->setStatusCode(400)->setJSON([
                         'success' => false,
-                        'message' => 'ID de pedido ausente'
+                        'message' => 'ID de pedido ausente',
                     ]);
                 }
             }
 
-            // Procesar formulario: actualizar campos del pedido
-            // Normalizar total a número
+            // Normalizar total
             $totalPost = $this->request->getPost('total');
             if (is_string($totalPost)) {
                 $totalPost = str_replace(',', '', $totalPost);
             }
             $totalPost = ($totalPost === '' || $totalPost === null) ? null : (float) $totalPost;
 
-            $data = [
-                'descripcion' => $this->request->getPost('descripcion') ?? null,
-                'cantidad' => $this->request->getPost('cantidad') ?? null,
-                'especificaciones' => $this->request->getPost('especificaciones') ?? null,
-                'materiales' => $this->request->getPost('materiales') ?? null,
-                'modelo' => $this->request->getPost('modelo') ?? null,
-                'tallas' => $this->request->getPost('tallas') ?? null,
-                'color' => $this->request->getPost('color') ?? null,
-                'fecha_entrega' => $this->request->getPost('fecha_entrega') ?? null,
-                // Solo actualizar estatus si viene en POST; no establecer valor por defecto aquí
-                'estatus' => $this->request->getPost('estatus'),
-                'fecha' => $this->request->getPost('fecha') ?? null,
-                'folio' => $this->request->getPost('folio') ?? null,
-                'moneda' => $this->request->getPost('moneda') ?? null,
-                'total' => $totalPost,
-                'progreso' => $this->request->getPost('progreso') ?? null,
-            ];
-
-            // Solo columnas válidas de orden_compra (normalizar y filtrar)
             $ocData = [
-                'folio' => $data['folio'],
-                'fecha' => $data['fecha'],
-                'estatus' => $data['estatus'],
-                'moneda' => $data['moneda'],
-                'total' => $data['total'],
+                'folio'   => $this->request->getPost('folio') ?? null,
+                'fecha'   => $this->request->getPost('fecha') ?? null,
+                'estatus' => $this->request->getPost('estatus'),
+                'moneda'  => $this->request->getPost('moneda') ?? null,
+                'total'   => $totalPost,
             ];
 
-            // Si no viene fecha o está vacía, establecer fecha actual
             if (empty($ocData['fecha'])) {
                 $ocData['fecha'] = date('Y-m-d');
             }
-
-            // Normalizar fecha: aceptar dd/mm/yyyy -> yyyy-mm-dd
             if (!empty($ocData['fecha']) && is_string($ocData['fecha'])) {
                 $f = trim($ocData['fecha']);
                 if (strpos($f, '/') !== false) {
                     $parts = preg_split('/[\/]/', $f);
                     if (count($parts) === 3) {
-                        // asume dd/mm/yyyy
                         $dd = (int) $parts[0];
                         $mm = (int) $parts[1];
                         $yy = (int) $parts[2];
@@ -2362,32 +2351,29 @@ class Modulos extends BaseController
                         }
                     }
                 }
-                // Si tras normalizar queda inválida, establecer fecha actual
                 if ($ocData['fecha'] === '' || strtolower($ocData['fecha']) === 'invalid date') {
                     $ocData['fecha'] = date('Y-m-d');
                 }
             }
-            // Filtrar cadenas vacías para no sobreescribir con ""
             foreach (['folio', 'estatus', 'moneda'] as $k) {
                 if (!isset($ocData[$k]) || $ocData[$k] === '') {
                     unset($ocData[$k]);
                 }
             }
-            // Si total es null, no lo enviamos; si es numérico, mantener
             if ($ocData['total'] === null || $ocData['total'] === '') {
                 unset($ocData['total']);
             }
 
-            // Guardar
             try {
                 $rowsOC = 0;
                 $rowsOP = 0;
-                if ($id) {
-                    // Actualizar orden_compra con Query Builder (evita restricciones de allowedFields)
-                    $db = \Config\Database::connect();
-                    $updated = false;
 
+                if ($id) {
+                    $db = \Config\Database::connect();
+
+                    // Actualizar OC
                     if (!empty($ocData)) {
+                        $updated = false;
                         try {
                             $updated = $db->table('orden_compra')->where('id', (int) $id)->update($ocData);
                             $rowsOC = $db->affectedRows();
@@ -2398,19 +2384,17 @@ class Modulos extends BaseController
                             try {
                                 $db->table('OrdenCompra')->where('id', (int) $id)->update($ocData);
                                 $rowsOC = $db->affectedRows();
-                            } catch (\Throwable $eQB2) {
-                            }
+                            } catch (\Throwable $eQB2) {}
                         }
                     }
-                    // Actualizar OP ligada (última por ordenCompraId) si llegaron campos
-                    $opCantidadPlan = $this->request->getPost('op_cantidadPlan');
-                    $disenoVersionId = $this->request->getPost('disenoVersionId');
-                    $disenoId = $this->request->getPost('disenoId');
 
-                    // Si viene disenoId pero no disenoVersionId, buscar la última versión del diseño
+                    // Actualizar/crear OP
+                    $opCantidadPlan  = $this->request->getPost('op_cantidadPlan');
+                    $disenoVersionId = $this->request->getPost('disenoVersionId');
+                    $disenoId        = $this->request->getPost('disenoId');
+
                     if ((!$disenoVersionId || $disenoVersionId == '') && $disenoId) {
                         try {
-                            // Buscar última versión del diseño
                             $verRow = $db->query('SELECT id FROM diseno_version WHERE disenoId = ? ORDER BY id DESC LIMIT 1', [(int) $disenoId])->getRowArray();
                             if (!$verRow) {
                                 $verRow = $db->query('SELECT id FROM DisenoVersion WHERE disenoId = ? ORDER BY id DESC LIMIT 1', [(int) $disenoId])->getRowArray();
@@ -2418,13 +2402,11 @@ class Modulos extends BaseController
                             if ($verRow && isset($verRow['id'])) {
                                 $disenoVersionId = $verRow['id'];
                             }
-                        } catch (\Throwable $eVer) {
-                            // Ignorar error, se quedará null
-                        }
+                        } catch (\Throwable $eVer) {}
                     }
+
                     $opFechaFinPlanRaw = $this->request->getPost('op_fechaFinPlan');
-                    // Normalizar fecha fin plan si viene como dd/mm/yyyy
-                    $opFechaFinPlan = null;
+                    $opFechaFinPlan    = null;
                     if ($opFechaFinPlanRaw !== null && $opFechaFinPlanRaw !== '') {
                         $ff = trim((string) $opFechaFinPlanRaw);
                         if (strpos($ff, '/') !== false) {
@@ -2438,24 +2420,21 @@ class Modulos extends BaseController
                                 }
                             }
                         } else {
-                            $opFechaFinPlan = $ff; // ya en yyyy-mm-dd
+                            $opFechaFinPlan = $ff;
                         }
                     }
+
                     if ($opCantidadPlan !== null || $disenoVersionId !== null || $opFechaFinPlan !== null) {
-                        // $db ya definido
                         $op = null;
                         try {
                             $op = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
-                        } catch (\Throwable $e1) {
-                            $op = null;
-                        }
+                        } catch (\Throwable $e1) {}
                         if (!$op) {
                             try {
                                 $op = $db->query('SELECT * FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
-                            } catch (\Throwable $e2) {
-                                $op = null;
-                            }
+                            } catch (\Throwable $e2) {}
                         }
+
                         if ($op) {
                             $set = [];
                             if ($opCantidadPlan !== null && $opCantidadPlan !== '') {
@@ -2468,227 +2447,142 @@ class Modulos extends BaseController
                                 $set['fechaFinPlan'] = $opFechaFinPlan;
                             }
                             if (!empty($set)) {
-                                // Intentar con variantes de columna para fecha fin plan
-                                $variants = [$set];
-                                if (isset($set['fechaFinPlan'])) {
-                                    $alt1 = $set;
-                                    $alt1['FechaFinPlan'] = $alt1['fechaFinPlan'];
-                                    unset($alt1['fechaFinPlan']);
-                                    $alt2 = $set;
-                                    $alt2['fecha_fin_plan'] = $alt2['fechaFinPlan'];
-                                    unset($alt2['fechaFinPlan']);
-                                    $variants = [$set, $alt1, $alt2];
-                                }
-                                foreach ($variants as $trySet) {
-                                    try {
-                                        $db->table('orden_produccion')->where('id', (int) $op['id'])->update($trySet);
-                                        $rowsOP = max($rowsOP, $db->affectedRows());
-                                    } catch (\Throwable $e3) {
-                                        try {
-                                            $db->table('OrdenProduccion')->where('id', (int) $op['id'])->update($trySet);
-                                            $rowsOP = max($rowsOP, $db->affectedRows());
-                                        } catch (\Throwable $e4) { /* siguiente variante */
-                                        }
-                                    }
-                                }
+                                $db->table('orden_produccion')->where('id', (int) $op['id'])->update($set);
+                                $rowsOP = max($rowsOP, $db->affectedRows());
                             }
                         } else {
-                            // No hay OP, crearla
                             $newOp = [
-                                'ordenCompraId' => (int) $id,
+                                'ordenCompraId'   => (int) $id,
                                 'disenoVersionId' => ($disenoVersionId !== null && (int) $disenoVersionId > 0) ? (int) $disenoVersionId : null,
-                                'folio' => null,
-                                'cantidadPlan' => ($opCantidadPlan !== null && $opCantidadPlan !== '') ? (int) $opCantidadPlan : null,
+                                'folio'           => null,
+                                'cantidadPlan'    => ($opCantidadPlan !== null && $opCantidadPlan !== '') ? (int) $opCantidadPlan : null,
                                 'fechaInicioPlan' => null,
-                                'fechaFinPlan' => ($opFechaFinPlan !== null && $opFechaFinPlan !== '') ? $opFechaFinPlan : null,
-                                'status' => 'Planeada',
+                                'fechaFinPlan'    => ($opFechaFinPlan !== null && $opFechaFinPlan !== '') ? $opFechaFinPlan : null,
+                                'status'          => 'Planeada',
                             ];
-                            try {
-                                $db->table('orden_produccion')->insert($newOp);
-                                $rowsOP = $db->affectedRows();
-                            } catch (\Throwable $e5) {
-                                // Reintentar con variantes de columna para fecha fin plan
-                                $tryNew = $newOp;
-                                if (array_key_exists('fechaFinPlan', $tryNew)) {
-                                    $alt1 = $tryNew;
-                                    $alt1['FechaFinPlan'] = $alt1['fechaFinPlan'];
-                                    unset($alt1['fechaFinPlan']);
-                                    $alt2 = $tryNew;
-                                    $alt2['fecha_fin_plan'] = $alt2['FechaFinPlan'] ?? ($tryNew['fechaFinPlan'] ?? null);
-                                    unset($alt2['fechaFinPlan']);
-                                    unset($alt2['FechaFinPlan']);
-                                    try {
-                                        $db->table('OrdenProduccion')->insert($alt1);
-                                        $rowsOP = $db->affectedRows();
-                                    } catch (\Throwable $e6) {
-                                        try {
-                                            $db->table('OrdenProduccion')->insert($alt2);
-                                            $rowsOP = $db->affectedRows();
-                                        } catch (\Throwable $e7) {
-                                        }
-                                    }
-                                } else {
-                                    try {
-                                        $db->table('OrdenProduccion')->insert($tryNew);
-                                        $rowsOP = $db->affectedRows();
-                                    } catch (\Throwable $e6) {
-                                    }
-                                }
-                            }
+                            $db->table('orden_produccion')->insert($newOp);
+                            $rowsOP = $db->affectedRows();
                         }
 
-                        // Recalcular total desde OP y Diseño si tenemos datos suficientes
+                        // Recalcular total desde diseño
                         try {
-                            // Obtener OP actualizada (última)
-                            $opNow = null;
-                            try {
-                                $opNow = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
-                            } catch (\Throwable $eR1) {
-                                $opNow = null;
-                            }
-                            if (!$opNow) {
-                                try {
-                                    $opNow = $db->query('SELECT * FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
-                                } catch (\Throwable $eR2) {
-                                    $opNow = null;
-                                }
-                            }
+                            $opNow = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
                             if ($opNow) {
                                 $dvId = $opNow['disenoVersionId'] ?? null;
                                 $cant = $opNow['cantidadPlan'] ?? null;
                                 if ($dvId && $cant) {
-                                    // Precio desde diseño
                                     $precio = null;
                                     try {
-                                        $rowP = $db->query('SELECT d.precio_unidad FROM diseno_version dv LEFT JOIN diseno d ON d.id = dv.disenoId WHERE dv.id = ?', [(int) $dvId])->getRowArray();
+                                        $rowP  = $db->query('SELECT d.precio_unidad FROM diseno_version dv LEFT JOIN diseno d ON d.id = dv.disenoId WHERE dv.id = ?', [(int) $dvId])->getRowArray();
                                         $precio = $rowP['precio_unidad'] ?? null;
-                                    } catch (\Throwable $eP1) {
-                                        $precio = null;
-                                    }
-                                    if ($precio === null) {
-                                        try {
-                                            $rowP = $db->query('SELECT d.precio_unidad FROM DisenoVersion dv LEFT JOIN Diseno d ON d.id = dv.disenoId WHERE dv.id = ?', [(int) $dvId])->getRowArray();
-                                            $precio = $rowP['precio_unidad'] ?? null;
-                                        } catch (\Throwable $eP2) {
-                                            $precio = null;
-                                        }
-                                    }
+                                    } catch (\Throwable $eP1) {}
                                     if ($precio !== null) {
                                         $calcTotal = (float) $precio * (float) $cant;
+                                        $db->table('orden_compra')->where('id', (int) $id)->update(['total' => $calcTotal]);
+                                        $rowsOC = max($rowsOC, $db->affectedRows());
+                                    }
+                                }
+                            }
+                        } catch (\Throwable $eR) {}
+
+                        // ===== Detalle por tallas =====
+                        $tallasRaw = $this->request->getPost('tallas');
+                        $tallas    = null;
+
+                        if (is_array($tallasRaw) && !empty($tallasRaw)) {
+                            $tallas = $tallasRaw;
+                        } elseif (is_string($tallasRaw)) {
+                            $trimmed = trim($tallasRaw);
+                            if ($trimmed !== '' && ($trimmed[0] === '[' || $trimmed[0] === '{')) {
+                                $decoded = json_decode($tallasRaw, true);
+                                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded) && !empty($decoded)) {
+                                    $tallas = $decoded;
+                                }
+                            }
+                        }
+
+                        if (is_array($tallas) && !empty($tallas)) {
+                            $rowsValid = [];
+                            foreach ($tallas as $t) {
+                                if (!is_array($t)) { continue; }
+                                $idSexo  = $t['id_sexo']  ?? $t['sexo_id']  ?? null;
+                                $idTalla = $t['id_talla'] ?? $t['talla_id'] ?? null;
+                                $cant    = $t['cantidad'] ?? $t['cant']     ?? null;
+                                $cantInt = (int) $cant;
+                                if ($idSexo !== null && $idTalla !== null && $cantInt > 0) {
+                                    $rowsValid[] = [
+                                        'id_sexo'  => (int) $idSexo,
+                                        'id_talla' => (int) $idTalla,
+                                        'cantidad' => $cantInt,
+                                    ];
+                                }
+                            }
+
+                            if (!empty($rowsValid)) {
+                                $opForTallas = $db->query('SELECT id FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
+                                if ($opForTallas && isset($opForTallas['id'])) {
+                                    $opId = (int) $opForTallas['id'];
+
+                                    // Borrar anteriores
+                                    try {
+                                        $db->table('pedido_tallas_detalle')->where('ordenProduccionId', $opId)->delete();
+                                    } catch (\Throwable $e) {
                                         try {
-                                            $db->table('orden_compra')->where('id', (int) $id)->update(['total' => $calcTotal]);
-                                            $rowsOC = max($rowsOC, $db->affectedRows());
-                                        } catch (\Throwable $eUT1) {
+                                            $db->table('OrdenProduccionTalla')->where('ordenProduccionId', $opId)->delete();
+                                        } catch (\Throwable $e2) {}
+                                    }
+
+                                    foreach ($rowsValid as $rv) {
+                                        $rowTalla = [
+                                            'ordenProduccionId' => $opId,
+                                            'id_sexo'           => $rv['id_sexo'],
+                                            'id_talla'          => $rv['id_talla'],
+                                            'cantidad'          => $rv['cantidad'],
+                                        ];
+                                        try {
+                                            $db->table('pedido_tallas_detalle')->insert($rowTalla);
+                                        } catch (\Throwable $eT1) {
                                             try {
-                                                $db->table('OrdenCompra')->where('id', (int) $id)->update(['total' => $calcTotal]);
-                                                $rowsOC = max($rowsOC, $db->affectedRows());
-                                            } catch (\Throwable $eUT2) {
-                                            }
+                                                $db->table('OrdenProduccionTalla')->insert($rowTalla);
+                                            } catch (\Throwable $eT2) {}
                                         }
                                     }
                                 }
                             }
-                        } catch (\Throwable $eR) {
                         }
                     }
                 }
-                    // Actualizar tallas si se envían
-                    $tallas = $this->request->getPost('tallas');
-                    if ($tallas !== null) {
-                        if (is_array($tallas) && !empty($tallas)) {
-                        // Obtener ID de OP (reutilizar lógica de búsqueda)
-                         $opForTallas = null;
-                         try {
-                             $opForTallas = $db->query('SELECT id FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
-                         } catch (\Throwable $e) {}
-                         if (!$opForTallas) {
-                             try {
-                                 $opForTallas = $db->query('SELECT id FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
-                             } catch (\Throwable $e) {}
-                         }
-                         
-                         if ($opForTallas && isset($opForTallas['id'])) {
-                             $opId = (int) $opForTallas['id'];
-                             // Borrar anteriores
-                             try {
-                                 $db->table('pedido_tallas_detalle')->where('ordenProduccionId', $opId)->delete();
-                             } catch (\Throwable $e) {
-                                 try {
-                                     $db->table('OrdenProduccionTalla')->where('ordenProduccionId', $opId)->delete();
-                                 } catch (\Throwable $e2) {}
-                             }
-                             
-                             // Insertar nuevas
-                             foreach ($tallas as $t) {
-                                if (isset($t['id_sexo'], $t['id_talla'], $t['cantidad']) && $t['cantidad'] > 0) {
-                                    $rowTalla = [
-                                        'ordenProduccionId' => $opId,
-                                        'id_sexo' => (int) $t['id_sexo'],
-                                        'id_talla' => (int) $t['id_talla'],
-                                        'cantidad' => (int) $t['cantidad']
-                                    ];
-                                    try {
-                                        $db->table('pedido_tallas_detalle')->insert($rowTalla);
-                                    } catch (\Throwable $eT1) {
-                                        try {
-                                            $db->table('OrdenProduccionTalla')->insert($rowTalla);
-                                        } catch (\Throwable $eT2) {}
-                                    }
-                                }
-                            }
-                         }
-                        }
-                    }
 
-                // Si la petición viene por AJAX o Accept JSON, responder JSON con estado actual
                 if ($this->request->isAJAX() || $acceptsJson) {
-                    $db = \Config\Database::connect();
-                    $ocRow = null;
-                    $opRow = null;
-                    try {
-                        $ocRow = $db->query('SELECT id, folio, fecha, estatus, moneda, total FROM orden_compra WHERE id = ?', [(int) $id])->getRowArray();
-                    } catch (\Throwable $eO1) {
-                        $ocRow = null;
-                    }
-                    if (!$ocRow) {
-                        try {
-                            $ocRow = $db->query('SELECT id, folio, fecha, estatus, moneda, total FROM OrdenCompra WHERE id = ?', [(int) $id])->getRowArray();
-                        } catch (\Throwable $eO2) {
-                            $ocRow = null;
-                        }
-                    }
-                    try {
-                        $opRow = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
-                    } catch (\Throwable $ePR1) {
-                        $opRow = null;
-                    }
-                    if (!$opRow) {
-                        try {
-                            $opRow = $db->query('SELECT * FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
-                        } catch (\Throwable $ePR2) {
-                            $opRow = null;
-                        }
-                    }
+                    $db    = \Config\Database::connect();
+                    $ocRow = $db->query('SELECT id, folio, fecha, estatus, moneda, total FROM orden_compra WHERE id = ?', [(int) $id])->getRowArray();
+                    $opRow = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
                     return $this->response->setJSON([
                         'success' => true,
                         'message' => 'Pedido actualizado correctamente',
-                        'rowsOC' => $rowsOC,
-                        'rowsOP' => $rowsOP,
-                        'oc' => $ocRow,
-                        'op' => $opRow,
+                        'rowsOC'  => $rowsOC,
+                        'rowsOP'  => $rowsOP,
+                        'oc'      => $ocRow,
+                        'op'      => $opRow,
                     ]);
                 }
+
                 return redirect()->to('/modulo1/pedidos')->with('success', 'Pedido actualizado correctamente');
             } catch (\Throwable $e) {
+                $acceptsJson = stripos((string) $this->request->getHeaderLine('accept'), 'application/json') !== false;
                 if ($this->request->isAJAX() || $acceptsJson) {
-                    return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => $e->getMessage()]);
+                    return $this->response->setStatusCode(500)->setJSON([
+                        'success' => false,
+                        'message' => $e->getMessage(),
+                    ]);
                 }
                 return redirect()->to('/modulo1/pedidos')->with('error', 'Error al actualizar: ' . $e->getMessage());
             }
         }
 
+        // GET: cargar datos del pedido para la vista de edición
         $pedido = $pedidoModel->getPedidoPorId((int) $id);
-        
+
         // Cargar tallas existentes
         $tallas = [];
         if (isset($pedido['op_id'])) {
@@ -2699,15 +2593,15 @@ class Modulos extends BaseController
         // Cargar catálogos de tallas y sexos
         $db = \Config\Database::connect();
         $catalogoTallas = $db->table('tallas')->get()->getResultArray();
-        $catalogoSexos = $db->table('sexo')->get()->getResultArray();
+        $catalogoSexos  = $db->table('sexo')->get()->getResultArray();
 
         return view('modulos/editarpedido', $this->payload([
-            'title' => 'Módulo 1 · Editar Pedido',
-            'pedido' => $pedido,
-            'id' => $id,
-            'notifCount' => 0,
+            'title'          => 'Módulo 1 · Editar Pedido',
+            'pedido'         => $pedido,
+            'id'             => $id,
+            'notifCount'     => 0,
             'catalogoTallas' => $catalogoTallas,
-            'catalogoSexos' => $catalogoSexos,
+            'catalogoSexos'  => $catalogoSexos,
         ]));
     }
 

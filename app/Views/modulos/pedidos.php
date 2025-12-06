@@ -716,7 +716,7 @@
 let sexos = [];
 let tallas = [];
 
-// Función para cargar los catálogos de sexos y tallas
+// Función para cargar los catálogos de sexos y tallas (filtrados por maquiladora)
 function cargarCatalogosTallas() {
     return new Promise((resolve) => {
         let sexosLoaded = false;
@@ -728,13 +728,18 @@ function cargarCatalogosTallas() {
             }
         };
 
-        // Cargar sexos
+        // Cargar sexos desde CatalogoDisenos::catalogoSexo (solo de la maquiladora)
         if (sexos.length === 0) {
-            $.getJSON('<?= base_url('api/sexos') ?>')
+            $.getJSON('<?= base_url('modulo2/catalogos/sexo') ?>', { solo_maquiladora: 1 })
                 .done(function(data) {
-                    sexos = Array.isArray(data) ? data : [];
+                    const items = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : []);
+                    sexos = items.map(it => ({
+                        id_sexo: it.id_sexo ?? it.id,
+                        nombre: it.nombre ?? '',
+                        descripcion: it.descripcion ?? ''
+                    })).filter(it => it.id_sexo);
                     console.log('Catálogo de sexos cargado:', sexos);
-                    
+
                     if (sexos.length === 0) {
                         sexos = [
                             { id_sexo: 'H', nombre: 'Hombre' },
@@ -760,13 +765,18 @@ function cargarCatalogosTallas() {
             checkIfLoaded();
         }
 
-        // Cargar tallas
+        // Cargar tallas desde CatalogoDisenos::catalogoTallas (solo de la maquiladora)
         if (tallas.length === 0) {
-            $.getJSON('<?= base_url('api/tallas') ?>')
+            $.getJSON('<?= base_url('modulo2/catalogos/tallas') ?>', { solo_maquiladora: 1 })
                 .done(function(data) {
-                    tallas = Array.isArray(data) ? data : [];
+                    const items = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : []);
+                    tallas = items.map(it => ({
+                        id_talla: it.id_talla ?? it.id,
+                        nombre: it.nombre ?? '',
+                        descripcion: it.descripcion ?? ''
+                    })).filter(it => it.id_talla);
                     console.log('Catálogo de tallas cargado:', tallas);
-                    
+
                     if (tallas.length === 0) {
                         tallas = [
                             { id_talla: 'CH', nombre: 'CH' },
@@ -858,6 +868,11 @@ function agregarFilaTallaEditar(sexoId = '', tallaId = '', cantidad = '', nombre
         </tr>
     `;
     $('#pe-tallas-tabla tbody').append(fila);
+
+    // Actualizar cantidad planeada al agregar una fila nueva
+    if (typeof actualizarCantidadPlanEditarDesdeTallas === 'function') {
+        actualizarCantidadPlanEditarDesdeTallas();
+    }
 }
 
 // Función para cargar las tallas en el formulario de edición
@@ -870,21 +885,24 @@ function cargarTallasEnEdicion(tallas) {
         if (tallas && tallas.length > 0) {
             console.log('Cargando tallas en el modal:', tallas);
             tallas.forEach(talla => {
-                // Verificar si ya tenemos los nombres en los datos
-                if (talla.nombre_sexo && talla.nombre_talla) {
+                // Aceptar tanto nombre_sexo/nombre_talla como sexo_nombre/talla_nombre
+                const nombreSexo  = talla.nombre_sexo || talla.sexo_nombre || '';
+                const nombreTalla = talla.nombre_talla || talla.talla_nombre || '';
+
+                if (nombreSexo && nombreTalla) {
                     // Si ya vienen los nombres, usarlos directamente
                     agregarFilaTallaEditar(
                         talla.id_sexo,
                         talla.id_talla,
                         talla.cantidad,
-                        talla.nombre_sexo,
-                        talla.nombre_talla
+                        nombreSexo,
+                        nombreTalla
                     );
                 } else {
                     // Si no vienen los nombres, buscar en los catálogos
                     const sexo = sexos.find(s => s.id_sexo == talla.id_sexo);
-                    const tallaItem = tallas.find(t => t.id_talla == talla.id_talla);
-                    
+                    const tallaItem = window.tallas.find(t => t.id_talla == talla.id_talla);
+
                     agregarFilaTallaEditar(
                         talla.id_sexo,
                         talla.id_talla,
@@ -912,6 +930,23 @@ function cargarTallasEnEdicion(tallas) {
             // Intentar de todos modos con lo que tengamos
             agregarFilas();
         });
+    }
+}
+
+// Actualizar "Cantidad Planeada" (pe-cantidad) a partir de las cantidades por talla en edición
+function actualizarCantidadPlanEditarDesdeTallas(){
+    let suma = 0;
+    $('#pe-tallas-tabla tbody tr.pe-talla-row').each(function(){
+        const cantidad = parseInt($(this).find('.pe-talla-cantidad').val() || '0', 10);
+        if (!isNaN(cantidad) && cantidad > 0) {
+            suma += cantidad;
+        }
+    });
+    const $cantidadPlan = $('#pe-cantidad');
+    if ($cantidadPlan.length) {
+        $cantidadPlan.val(suma || '');
+        // Disparar evento para que se recalcule el total estimado
+        $cantidadPlan.trigger('input');
     }
 }
 
@@ -1350,17 +1385,23 @@ $(document).ready(function () {
             confirmAndPost();
         });
 
-        // Manejar clic en el botón de agregar fila de talla
+        // Manejar clic en el botón de agregar fila de talla (editar)
         $(document).on('click', '#pe-tallas-add-row', function() {
             agregarFilaTallaEditar();
         });
 
-        // Manejar eliminación de fila de talla
+        // Manejar eliminación de fila de talla (editar)
         $(document).on('click', '.pe-talla-del', function() {
             $(this).closest('tr').remove();
-            // Recalcular total si es necesario
-            if (typeof recalcTotal === 'function') {
-                recalcTotal();
+            if (typeof actualizarCantidadPlanEditarDesdeTallas === 'function') {
+                actualizarCantidadPlanEditarDesdeTallas();
+            }
+        });
+
+        // Cuando cambie cualquier cantidad por talla en edición, actualizar la suma
+        $(document).on('input change keyup mouseup blur', '.pe-talla-cantidad', function(){
+            if (typeof actualizarCantidadPlanEditarDesdeTallas === 'function') {
+                actualizarCantidadPlanEditarDesdeTallas();
             }
         });
 
@@ -1771,14 +1812,14 @@ $(document).ready(function () {
                     if (data.tallas && data.tallas.length > 0) {
                         const $tallasTbody = $('#p-tallas-detalle tbody');
                         $tallasTbody.empty(); // Limpiar filas existentes
-                        
+
                         // Ordenar por sexo y talla para mejor presentación
                         data.tallas.sort((a, b) => {
-                            const sexoA = (a.sexo_nombre || '').toLowerCase();
-                            const sexoB = (b.sexo_nombre || '').toLowerCase();
-                            const tallaA = (a.talla_nombre || '').toLowerCase();
-                            const tallaB = (b.talla_nombre || '').toLowerCase();
-                            
+                            const sexoA  = (a.nombre_sexo || a.sexo_nombre  || '').toLowerCase();
+                            const sexoB  = (b.nombre_sexo || b.sexo_nombre  || '').toLowerCase();
+                            const tallaA = (a.nombre_talla || a.talla_nombre || '').toLowerCase();
+                            const tallaB = (b.nombre_talla || b.talla_nombre || '').toLowerCase();
+
                             if (sexoA < sexoB) return -1;
                             if (sexoA > sexoB) return 1;
                             if (tallaA < tallaB) return -1;
@@ -1788,10 +1829,12 @@ $(document).ready(function () {
 
                         // Agregar filas para cada talla
                         data.tallas.forEach(talla => {
+                            const nombreSexo  = talla.nombre_sexo  || talla.sexo_nombre  || '-';
+                            const nombreTalla = talla.nombre_talla || talla.talla_nombre || '-';
                             const row = `
                                 <tr>
-                                    <td>${talla.sexo_nombre || '-'}</td>
-                                    <td>${talla.talla_nombre || '-'}</td>
+                                    <td>${nombreSexo}</td>
+                                    <td>${nombreTalla}</td>
                                     <td class="text-end">${parseInt(talla.cantidad) || 0}</td>
                                 </tr>
                             `;
@@ -2305,6 +2348,17 @@ $(document).ready(function () {
                 
                 // Recalcular total inicial
                 recalcularTotalEditar();
+
+                // Cargar detalle de tallas en el modal de edición
+                const tallasPedido = Array.isArray(pedido.tallas) ? pedido.tallas : [];
+                cargarCatalogosTallas()
+                    .then(() => {
+                        cargarTallasEnEdicion(tallasPedido);
+                    })
+                    .catch(() => {
+                        // Si falla el catálogo, al menos intentar mostrar las tallas con lo que haya
+                        cargarTallasEnEdicion(tallasPedido);
+                    });
 
                 // Mostrar modal
                 $('#pedidoEditModal').modal('show');

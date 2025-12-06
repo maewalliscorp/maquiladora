@@ -350,6 +350,39 @@
         </div>
         <?php endif; ?>
 
+        <!-- Detalle de Tallas -->
+        <?php if (!empty($tallas) && is_array($tallas)): ?>
+        <div class="info-section">
+            <h2>Detalle por Tallas</h2>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Sexo</th>
+                        <th>Talla</th>
+                        <th>Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php 
+                    $totalUnidades = 0;
+                    foreach ($tallas as $talla): 
+                        $totalUnidades += (int)$talla['cantidad'];
+                    ?>
+                    <tr>
+                        <td><?= esc($talla['nombre_sexo'] ?? $talla['id_sexo'] ?? 'N/A') ?></td>
+                        <td><?= esc($talla['nombre_talla'] ?? $talla['id_talla'] ?? 'N/A') ?></td>
+                        <td class="text-right"><?= number_format((int)$talla['cantidad'], 0) ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <tr>
+                        <td colspan="2" class="text-right"><strong>Total Unidades:</strong></td>
+                        <td class="text-right"><strong><?= number_format($totalUnidades, 0) ?></strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+
         <!-- Detalles de Producción -->
         <div class="info-section">
             <h2>Plan</h2>
@@ -392,39 +425,6 @@
                 </tbody>
             </table>
         </div>
-
-        <!-- Detalle de Tallas -->
-        <?php if (!empty($tallas) && is_array($tallas)): ?>
-        <div class="info-section">
-            <h2>Detalle por Tallas</h2>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Sexo</th>
-                        <th>Talla</th>
-                        <th>Cantidad</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php 
-                    $totalUnidades = 0;
-                    foreach ($tallas as $talla): 
-                        $totalUnidades += (int)$talla['cantidad'];
-                    ?>
-                    <tr>
-                        <td><?= esc($talla['nombre_sexo'] ?? $talla['id_sexo'] ?? 'N/A') ?></td>
-                        <td><?= esc($talla['nombre_talla'] ?? $talla['id_talla'] ?? 'N/A') ?></td>
-                        <td class="text-right"><?= number_format((int)$talla['cantidad'], 0) ?></td>
-                    </tr>
-                    <?php endforeach; ?>
-                    <tr>
-                        <td colspan="2" class="text-right"><strong>Total Unidades:</strong></td>
-                        <td class="text-right"><strong><?= number_format($totalUnidades, 0) ?></strong></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <?php endif; ?>
 
         <!-- Total -->
         <div class="total-section">
