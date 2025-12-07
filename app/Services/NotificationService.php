@@ -334,6 +334,31 @@ class NotificationService
         );
     }
 
+    public function notifyOrdenEstatusActualizado(int $maquiladoraId, string $ordenFolio, string $nuevoEstatus, string $clienteNombre): int|false
+    {
+        // Determinar el nivel y color según el estatus
+        $nivel = 'info';
+        $estatusLower = strtolower($nuevoEstatus);
+        
+        if (strpos($estatusLower, 'completada') !== false || strpos($estatusLower, 'finalizada') !== false) {
+            $nivel = 'success';
+        } elseif (strpos($estatusLower, 'en proceso') !== false || strpos($estatusLower, 'corte') !== false) {
+            $nivel = 'primary';
+        } elseif (strpos($estatusLower, 'pausada') !== false || strpos($estatusLower, 'detenida') !== false) {
+            $nivel = 'warning';
+        } elseif (strpos($estatusLower, 'cancelada') !== false) {
+            $nivel = 'danger';
+        }
+
+        return $this->createNotification(
+            $maquiladoraId,
+            'Estatus de Orden Actualizado',
+            "La orden {$ordenFolio} ha cambiado a estatus: {$nuevoEstatus}",
+            "Cliente: {$clienteNombre}",
+            $nivel
+        );
+    }
+
     /**
      * Notificación cuando se actualiza el estado de un pedido
      */

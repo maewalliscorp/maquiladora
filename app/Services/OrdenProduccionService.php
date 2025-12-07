@@ -30,6 +30,15 @@ class OrdenProduccionService
         }
 
         try {
+            // Obtener información de la orden antes de actualizar para la notificación
+            $ordenInfo = $this->db->table('orden_produccion op')
+                                  ->select('op.folio, op.ordenCompraId, oc.folio as oc_folio, c.nombre as cliente_nombre, op.maquiladoraID')
+                                  ->join('orden_compra oc', 'oc.id = op.ordenCompraId', 'left')
+                                  ->join('cliente c', 'c.id = oc.clienteId', 'left')
+                                  ->where('op.id', $id)
+                                  ->get()
+                                  ->getRowArray();
+
             $this->db->transStart();
 
             // 1. Actualizar estatus de la OP
@@ -55,6 +64,26 @@ class OrdenProduccionService
 
             if ($this->db->transStatus() === false) {
                 return ['ok' => false, 'error' => 'Error en la transacción'];
+            }
+
+            // 4. Enviar notificación del cambio de estatus
+            try {
+                $notificationService = new \App\Services\NotificationService();
+                
+                $folioOP = $ordenInfo['folio'] ?? 'OP-' . $id;
+                $clienteNombre = $ordenInfo['cliente_nombre'] ?? 'Cliente desconocido';
+                $maquiladoraId = $ordenInfo['maquiladoraID'] ?? session()->get('maquiladora_id') ?? 1;
+                
+                $notificationService->notifyOrdenEstatusActualizado(
+                    $maquiladoraId,
+                    $folioOP,
+                    $estatus,
+                    $clienteNombre
+                );
+                
+                log_message('debug', "Notificación enviada para cambio de estatus de OP {$folioOP} a {$estatus}");
+            } catch (\Exception $e) {
+                log_message('error', 'Error al enviar notificación de cambio de estatus: ' . $e->getMessage());
             }
 
             return [
