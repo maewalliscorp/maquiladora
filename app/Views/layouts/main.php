@@ -167,11 +167,6 @@
                                 <i class="bi bi-people me-2"></i>Clientes
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo1/pedidos_clientes')) ?>">
-                                <i class="bi bi-people-fill me-2"></i>Pedidos Clientes
-                            </a>
-                        </li>
                     <?php endif; ?>
                     <?php if (can('menu.ordenes')): ?>
                         <li class="nav-item">
@@ -400,9 +395,6 @@
                                 <?php if (can('menu.ordenes_clientes')): ?>
                                     <a class="dropdown-item" href="<?= esc(base_url('clientes')) ?>">
                                         <i class="bi bi-people me-2"></i>Clientes
-                                    </a>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo1/pedidos_clientes')) ?>">
-                                        <i class="bi bi-people-fill me-2"></i>Pedidos Clientes
                                     </a>
                                 <?php endif; ?>
 

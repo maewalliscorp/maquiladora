@@ -218,7 +218,8 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->get('/', 'Modulos::m1_index');
     $routes->get('pedidos', 'Modulos::m1_pedidos');
     $routes->get('pedidos_clientes', 'Modulos::m1_pedidos_clientes');
-    $routes->get('pagos', 'Modulos::m1_pagos');
+    // Pagos de empleados: se maneja en PagosController
+    $routes->get('pagos', 'PagosController::index');
     $routes->get('produccion', 'Modulos::m1_produccion');
     $routes->get('agregar', 'Modulos::m1_agregar');
     $routes->get('agregar_pedido', 'Modulos::m1_agregar');
@@ -775,4 +776,20 @@ $routes->group('facturacion', ['filter' => 'auth:Administrador,Jefe,Envios,Almac
     // Espacio para futuras rutas POST
     // $r->post('demo/html', 'FacturaDemoController::html');
     // $r->post('demo/pdf',  'FacturaDemoController::pdfPost');
+});
+
+/* --------------------------------------------------------------------
+ * Pedidos de Clientes (Módulo Clientes)
+ * ------------------------------------------------------------------*/
+$routes->get('pedidos-clientes', 'PedidosClientesController::index', ['filter' => 'auth:Cliente']);
+$routes->get('pedidos-clientes/detalles/(:num)', 'PedidosClientesController::getOrdenDetalles/$1', ['filter' => 'auth:Cliente']);
+$routes->get('pedidos-clientes/descargar-pdf/(:num)', 'PedidosClientesController::descargarPDF/$1', ['filter' => 'auth:Cliente']);
+
+/* --------------------------------------------------------------------
+ * Pagos de Empleados (endpoints auxiliares)
+ * ------------------------------------------------------------------*/
+$routes->group('modulo1/pagos', ['filter' => 'auth:Administrador,Jefe,RH'], static function ($r) {
+    $r->get('empleado/(:num)', 'PagosController::getEmpleado/$1');
+    $r->post('actualizar-forma-pago', 'PagosController::actualizarFormaPago');
+    $r->get('exportar', 'PagosController::exportar');
 });

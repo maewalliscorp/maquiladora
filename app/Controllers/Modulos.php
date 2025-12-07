@@ -2781,7 +2781,7 @@ class Modulos extends BaseController
                     'SELECT 
                         e.noEmpleado, e.nombre, e.apellido, e.puesto,
                         e.email, e.telefono, e.domicilio,
-                        e.fecha_nac, e.curp, e.foto,
+                        e.fecha_nac, e.curp, e.foto, e.Forma_Pago AS Forma_pago,
                         TIMESTAMPDIFF(YEAR, e.fecha_nac, CURDATE()) AS edad,
                         u.username, u.correo, u.active AS usuario_activo,
                         u.maquiladoraIdFK AS maquiladoraID,
@@ -2802,7 +2802,7 @@ class Modulos extends BaseController
                         'SELECT 
                             e.noEmpleado, e.nombre, e.apellido, e.puesto,
                             e.email, e.telefono, e.domicilio,
-                            e.fecha_nac, e.curp, e.foto,
+                            e.fecha_nac, e.curp, e.foto, e.Forma_Pago AS Forma_pago,
                             TIMESTAMPDIFF(YEAR, e.fecha_nac, CURDATE()) AS edad,
                             u.username, u.correo, u.active AS usuario_activo,
                             u.maquiladoraIdFK AS maquiladoraID,
@@ -2897,6 +2897,7 @@ class Modulos extends BaseController
             'puesto' => $in('puesto'),
             'fecha_nac' => $in('fecha_nac', 'date'),
             'curp' => $in('curp'),
+            'Forma_pago' => $in('Forma_pago'),
             'activo' => 1,
         ];
 

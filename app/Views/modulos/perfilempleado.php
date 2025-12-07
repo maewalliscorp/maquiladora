@@ -359,6 +359,18 @@ $logged_in = session()->get('logged_in');
                                 </div>
                             </div>
                         </div>
+                        
+                        <div class="col-md-6">
+                            <div class="info-row">
+                                <div class="info-icon">
+                                    <i class="bi bi-credit-card"></i>
+                                </div>
+                                <div class="info-content">
+                                    <div class="info-label">Forma de Pago</div>
+                                    <div class="info-value"><?= esc($empleado['Forma_pago'] ?? 'No registrada') ?></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -596,6 +608,17 @@ $logged_in = session()->get('logged_in');
                   <i class="bi bi-card-text"></i> CURP
                 </label>
                 <input type="text" class="form-control" id="emp-curp" name="curp" maxlength="18" placeholder="18 caracteres">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">
+                  <i class="bi bi-credit-card"></i> Forma de Pago
+                </label>
+                <select class="form-control" id="emp-Forma_pago" name="Forma_pago">
+                  <option value="">Seleccionar...</option>
+                  <option value="Destajo">Destajo</option>
+                  <option value="Por dia">Por día</option>
+                  <option value="Por hora">Por hora</option>
+                </select>
               </div>
             </div>
           </div>
@@ -938,6 +961,7 @@ document.addEventListener('DOMContentLoaded', function() {
       try { const d = new Date(data.fecha_nac); set('emp-fecha_nac', isNaN(d) ? String(data.fecha_nac).slice(0,10) : d.toISOString().slice(0,10)); } catch(_){ set('emp-fecha_nac', String(data.fecha_nac).slice(0,10)); }
     }
     set('emp-curp', data.curp||'');
+    set('emp-Forma_pago', data.Forma_pago||'');
   }
 
   // Función para abrir el modal
