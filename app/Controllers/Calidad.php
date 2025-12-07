@@ -33,6 +33,10 @@ class Calidad extends BaseController
     /** ===================== LISTA ===================== */
     public function desperdicios()
     {
+        if (!can('menu.desperdicios')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $mR = new ReprocesoModel();
         $db = \Config\Database::connect();
 
@@ -68,6 +72,10 @@ class Calidad extends BaseController
 
     public function guardarDesecho()
     {
+        if (!can('menu.desperdicios')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
+        }
+        
         $post = $this->request->getPost();
         $db = \Config\Database::connect();
 
@@ -110,6 +118,10 @@ class Calidad extends BaseController
 
     public function guardarReproceso()
     {
+        if (!can('menu.desperdicios')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
+        }
+        
         $post = $this->request->getPost();
         $db = \Config\Database::connect();
 
@@ -148,6 +160,10 @@ class Calidad extends BaseController
 
     public function editarDesecho($id)
     {
+        if (!can('menu.desperdicios')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
+        }
+        
         $post = $this->request->getPost();
         $mR = new ReprocesoModel();
         $r = $mR->find($id);
@@ -187,6 +203,10 @@ class Calidad extends BaseController
 
     public function editarReproceso($id)
     {
+        if (!can('menu.desperdicios')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
+        }
+        
         $post = $this->request->getPost();
         $mR = new ReprocesoModel();
         $r = $mR->find($id);
@@ -316,6 +336,10 @@ class Calidad extends BaseController
 
     public function verDesecho($id)
     {
+        if (!can('menu.desperdicios')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $row = (new ReprocesoModel())
             ->select('reproceso.*, inspeccion.ordenProduccionId AS op, inspeccion.resultado, inspeccion.observaciones')
             ->join('inspeccion', 'inspeccion.id = reproceso.inspeccionId')
@@ -329,6 +353,10 @@ class Calidad extends BaseController
 
     public function verReproceso($id)
     {
+        if (!can('menu.desperdicios')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $row = (new ReprocesoModel())
             ->select('reproceso.*, inspeccion.ordenProduccionId AS op')
             ->join('inspeccion', 'inspeccion.id = reproceso.inspeccionId')

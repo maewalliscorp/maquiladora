@@ -183,6 +183,12 @@
                                     Clientes
                                 </label>
                             </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.pedidos_clientes" id="perm_pedidos_clientes">
+                                <label class="form-check-label" for="perm_pedidos_clientes">
+                                    Pedidos Clientes
+                                </label>
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <h6 class="text-success mb-3">Muestras e Inspección</h6>
@@ -245,13 +251,13 @@
                             <div class="form-check">
                                 <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.mant_correctivo" id="perm_mant_correctivo">
                                 <label class="form-check-label" for="perm_mant_correctivo">
-                                    Correctivo
+                                    Mant. Correctivo
                                 </label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.mant_preventivo" id="perm_mant_preventivo">
                                 <label class="form-check-label" for="perm_mant_preventivo">
-                                    Preventivo
+                                    Mant. Preventivo
                                 </label>
                             </div>
                         </div>
@@ -268,13 +274,13 @@
                             <div class="form-check">
                                 <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.logistica_gestion" id="perm_logistica_gestion">
                                 <label class="form-check-label" for="perm_logistica_gestion">
-                                    Gestión
+                                    Gestión Envíos
                                 </label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.logistica_documentos" id="perm_logistica_documentos">
                                 <label class="form-check-label" for="perm_logistica_documentos">
-                                    Documentos
+                                    Docs. Embarque
                                 </label>
                             </div>
                             <div class="form-check">
@@ -527,6 +533,21 @@
                 
                 // Limpiar checkboxes
                 $('.permiso-checkbox').prop('checked', false);
+                
+                // Si es el rol Cliente, mostrar solo Pedidos Clientes
+                if (nombre.toLowerCase() === 'cliente') {
+                    // Ocultar todos los permisos
+                    $('.permiso-checkbox').closest('.form-check').hide();
+                    // Mostrar solo Pedidos Clientes
+                    $('.permiso-checkbox[value="menu.pedidos_clientes"]').closest('.form-check').show();
+                    // Ocultar "Seleccionar todos"
+                    $('#perm_todos').closest('.form-check').hide();
+                } else {
+                    // Mostrar todos los permisos
+                    $('.permiso-checkbox').closest('.form-check').show();
+                    // Mostrar "Seleccionar todos"
+                    $('#perm_todos').closest('.form-check').show();
+                }
                 
                 // Cargar permisos del rol desde el servidor
                 $.ajax({

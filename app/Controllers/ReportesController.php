@@ -22,6 +22,10 @@ class ReportesController extends BaseController
 
     public function index()
     {
+        if (!can('menu.reportes')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         // Reuse the logic from Modulos::reportes but cleaner
         $maquiladoraId = session()->get('maquiladora_id');
         $maquiladora = [];

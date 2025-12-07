@@ -16,6 +16,10 @@ class AlmacenController extends BaseController
     /* ===== VISTA ===== */
     public function inventario()
     {
+        if (!can('menu.inventario_almacen')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $maquiladoraId = session()->get('maquiladora_id');
         $data = [
             'title' => 'Inventario de Almacenes',

@@ -9,6 +9,10 @@ class Incidencias extends BaseController
 {
     public function index()
     {
+        if (!can('menu.incidencias')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $maquiladoraId = session()->get('maquiladora_id');
 
         // Catálogos para el modal, filtrados por maquiladora si aplica
@@ -68,6 +72,10 @@ class Incidencias extends BaseController
 
     public function store()
     {
+        if (!can('menu.incidencias')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
+        }
+        
         $post = $this->request->getPost();
         $data = [
             'ordenProduccionFK' => (int)($post['ordenProduccionFK'] ?? 0),
@@ -87,12 +95,20 @@ class Incidencias extends BaseController
 
     public function delete($id)
     {
+        if (!can('menu.incidencias')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
+        }
+        
         (new IncidenciaModel())->delete((int)$id);
         return redirect()->back()->with('ok','Incidencia eliminada.');
     }
 
     public function modal()
     {
+        if (!can('menu.incidencias')) {
+            return $this->response->setStatusCode(403)->setJSON(['html' => 'Acceso denegado']);
+        }
+        
         // Catálogos mínimos para el modal de alta
         $empleados = (new EmpleadoModel())
             ->select('id,nombre,apellido')

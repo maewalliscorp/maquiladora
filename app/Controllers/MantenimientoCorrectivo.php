@@ -78,6 +78,10 @@ class MantenimientoCorrectivo extends BaseController
     /** Listado principal */
     public function index()
     {
+        if (!can('menu.mant_correctivo')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $mtto = new MttoModel();
         $maquiladoraId = session()->get('maquiladora_id');
         $rows = $mtto->getListado($maquiladoraId ? (int)$maquiladoraId : null);
@@ -100,6 +104,10 @@ class MantenimientoCorrectivo extends BaseController
     /** Inserta orden + detalle opcional */
     public function crear()
     {
+        if (!can('menu.mant_correctivo')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
+        }
+        
         $post = $this->request->getPost([
             'fechaApertura','maquinaId','responsableId','tipo','estatus','descripcion','fechaCierre',
             'd_accion','d_repuestos','d_horas'
@@ -139,6 +147,10 @@ class MantenimientoCorrectivo extends BaseController
     /** Actualiza orden (desde modal Editar) */
     public function actualizar($id)
     {
+        if (!can('menu.mant_correctivo')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
+        }
+        
         $id = (int)$id;
         $post = $this->request->getPost([
             'fechaApertura','maquinaId','responsableId','tipo','estatus','descripcion','fechaCierre'
@@ -166,6 +178,10 @@ class MantenimientoCorrectivo extends BaseController
     /** Elimina orden + su detalle (transacción) */
     public function eliminar($id)
     {
+        if (!can('menu.mant_correctivo')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
+        }
+        
         $id = (int)$id;
         if (!$id) {
             return redirect()->back()->with('error', 'ID inválido.');
@@ -233,6 +249,10 @@ class MantenimientoCorrectivo extends BaseController
      * ============================================================ */
     public function historialPorMaquina($maquinaId)
     {
+        if (!can('menu.mant_correctivo')) {
+            return $this->response->setStatusCode(403)->setJSON([]);
+        }
+        
         $maquinaId = (int)$maquinaId;
         if (!$maquinaId) {
             return $this->response->setJSON(['data' => []]);

@@ -17,6 +17,10 @@ class ControlBultosController extends BaseController
      */
     public function index()
     {
+        if (!can('menu.inspeccion')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $session = session();
         $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID');
         // Usar el mismo key que auth_helper (user_id) como prioridad, con compatibilidad hacia atrás
@@ -54,6 +58,10 @@ class ControlBultosController extends BaseController
      */
     public function listar()
     {
+        if (!can('menu.inspeccion')) {
+            return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
+        }
+        
         $session = session();
         $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID');
 
@@ -71,6 +79,10 @@ class ControlBultosController extends BaseController
      */
     public function detalle($id)
     {
+        if (!can('menu.inspeccion')) {
+            return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
+        }
+        
         $controlModel = new ControlBultosModel();
         $control = $controlModel->getDetallado($id);
 
@@ -92,6 +104,10 @@ class ControlBultosController extends BaseController
      */
     public function progreso($id)
     {
+        if (!can('menu.inspeccion')) {
+            return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
+        }
+        
         $controlModel = new ControlBultosModel();
         $operacionModel = new OperacionControlModel();
 
@@ -128,6 +144,10 @@ class ControlBultosController extends BaseController
      */
     public function crear()
     {
+        if (!can('menu.inspeccion')) {
+            return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
+        }
+        
         $session = session();
         $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID');
         $usuarioId = $session->get('usuario_id') ?? $session->get('id');
@@ -187,6 +207,10 @@ class ControlBultosController extends BaseController
      */
     public function editar($id)
     {
+        if (!can('menu.inspeccion')) {
+            return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
+        }
+        
         $controlModel = new ControlBultosModel();
 
         $data = [
@@ -213,6 +237,10 @@ class ControlBultosController extends BaseController
      */
     public function eliminar($id)
     {
+        if (!can('menu.inspeccion')) {
+            return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
+        }
+        
         $controlModel = new ControlBultosModel();
 
         if ($controlModel->delete($id)) {

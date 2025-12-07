@@ -15,6 +15,10 @@ class Muestras extends BaseController
 
     public function index()
     {
+        if (!can('menu.muestras')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $maquiladoraId = session()->get('maquiladora_id');
         $data = [
             'title' => 'Gestión de Muestras',
@@ -28,6 +32,10 @@ class Muestras extends BaseController
     // Método para la API de DataTables
     public function data()
     {
+        if (!can('menu.muestras')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Acceso denegado']);
+        }
+        
         $maquiladoraId = session()->get('maquiladora_id');
         $data = $this->muestraModel->getMuestrasConPrototipo($maquiladoraId);
 
@@ -40,6 +48,10 @@ class Muestras extends BaseController
     }
     public function evaluar($id = null)
     {
+        if (!can('menu.muestras')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         if (!$id) {
             return $this->response->setJSON(['error' => 'ID de muestra no proporcionado'])->setStatusCode(400);
         }
@@ -64,6 +76,10 @@ class Muestras extends BaseController
 
     public function guardar()
     {
+        if (!can('menu.muestras')) {
+            return $this->response->setStatusCode(403)->setJSON(['ok'=>false, 'message'=>'Acceso denegado']);
+        }
+        
         $db = \Config\Database::connect();
         $id = (int)($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
         if ($id <= 0) {
@@ -132,6 +148,10 @@ class Muestras extends BaseController
     // Devuelve archivos (blobs) del diseño asociado a la muestra (por su prototipo -> diseno_version)
     public function archivo($id = null)
     {
+        if (!can('menu.muestras')) {
+            return $this->response->setStatusCode(403)->setJSON(['ok'=>false, 'message'=>'Acceso denegado']);
+        }
+        
         $muestraId = (int)($id ?? 0);
         if ($muestraId <= 0) {
             return $this->response->setStatusCode(400)->setJSON(['ok'=>false, 'message'=>'ID inválido']);

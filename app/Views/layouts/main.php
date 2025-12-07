@@ -477,7 +477,6 @@
                                         </a>
                                     <?php endif; ?>
                                 <?php endif; ?>
-
                                 <?php if ($secIncidencias && $secPlanificacion): ?>
                                     <div class="dropdown-divider"></div>
                                 <?php endif; ?>

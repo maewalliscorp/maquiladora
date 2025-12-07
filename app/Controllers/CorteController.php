@@ -11,6 +11,10 @@ class CorteController extends BaseController
 {
     public function index()
     {
+        if (!can('menu.produccion')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $corteModel = new CorteModel();
         $maquiladoraId = session()->get('maquiladora_id');
 
@@ -24,6 +28,10 @@ class CorteController extends BaseController
 
     public function nuevo()
     {
+        if (!can('menu.produccion')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         return view('modulos/corte_editor', [
             'title' => 'Nuevo Corte',
             'corte' => [],

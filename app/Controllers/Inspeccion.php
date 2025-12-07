@@ -18,6 +18,10 @@ class Inspeccion extends BaseController
     }
     public function index()
     {
+        if (!can('menu.inspeccion')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $db = db_connect();
         $builder = $db->table('inspeccion i')
             ->select('i.id AS inspeccionId, i.ordenProduccionId, i.puntoInspeccionId, i.resultado, i.observaciones, i.inspectorId, i.fecha,')
