@@ -48,15 +48,15 @@ class Clientes extends BaseController
             log_message('debug', 'Número de filas encontradas: ' . count($rows));
 
             // Formatear la salida
-            $out = array_map(function($row) {
+            $out = array_map(function($row){
                 $direccion = [
-                    'calle'  => $row['calle'] ?? '',
-                    'numExt' => $row['numExt'] ?? '',
-                    'numInt' => $row['numInt'] ?? '',
-                    'ciudad' => $row['ciudad'] ?? '',
-                    'estado' => $row['estado'] ?? '',
-                    'cp'     => $row['cp'] ?? '',
-                    'pais'   => $row['pais'] ?? ''
+                    'calle'   => $row['calle'] ?? '',
+                    'numExt'  => $row['numExt'] ?? '',
+                    'numInt'  => $row['numInt'] ?? '',
+                    'ciudad'  => $row['ciudad'] ?? '',
+                    'estado'  => $row['estado'] ?? '',
+                    'cp'      => $row['cp'] ?? '',
+                    'pais'    => $row['pais'] ?? ''
                 ];
 
                 $clasificacion = [
@@ -66,25 +66,24 @@ class Clientes extends BaseController
                 ];
 
                 return [
-                    'id'               => $row['clienteId'] ?? null,
-                    'nombre'           => $row['nombre'] ?? '',
-                    'email'            => $row['email'] ?? '',
-                    'telefono'         => $row['telefono'] ?? '',
-                    'rfc'              => $row['rfc'] ?? '',
-                    'tipo_persona'     => $row['tipo_persona'] ?? '',
-                    'fechaRegistro'    => $row['fechaRegistro'] ?? null,
+                    'id'                => $row['clienteId'] ?? null,
+                    'nombre'            => $row['nombre'] ?? '',
+                    'email'             => $row['email'] ?? '',
+                    'telefono'          => $row['telefono'] ?? '',
+                    'rfc'               => $row['rfc'] ?? '',
+                    'tipo_persona'      => $row['tipo_persona'] ?? '',
+                    'fechaRegistro'     => $row['fechaRegistro'] ?? null,
                     'direccion_detalle' => $direccion,
-                    'clasificacion'    => $clasificacion
+                    'clasificacion'     => $clasificacion
                 ];
-            }, $rows);
-
-            log_message('debug', 'Datos a devolver: ' . print_r($out, true));
+            }, $rows ?: []);
+            
             return $this->response->setJSON($out);
-
+            
         } catch (\Throwable $e) {
-            log_message('error', 'Error al cargar clientes: ' . $e->getMessage());
-            return $this->response->setJSON([
-                'error' => 'Error al cargar los clientes',
+            log_message('error', 'Error en json_catalogo: ' . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON([
+                'error' => 'Error al cargar el catálogo de clientes',
                 'message' => $e->getMessage()
             ]);
         }
@@ -97,19 +96,36 @@ class Clientes extends BaseController
         $rows = [];
         
         try {
-            $sql = "SELECT 
-                       id,
-                       nombre_cla AS nombre,
-                       descripcion
-                FROM cliente_clasificacion
-                ORDER BY nombre_cla";
-                
+            $maquiladoraId = session()->get('maquiladora_id');
+            
+            $sql = "SELECT id, nombre_cla as nombre, descripcion 
+                    FROM cliente_clasificacion";
+            
+            // Filtrar por maquiladora si existe en la sesión
+            if ($maquiladoraId) {
+                $sql .= " WHERE maquiladoraID = " . (int)$maquiladoraId;
+            }
+            
+            $sql .= " ORDER BY nombre_cla";
+
             $rows = $db->query($sql)->getResultArray();
-            return $this->response->setJSON($rows);
+
+            $out = array_map(function($row){
+                return [
+                    'id'          => $row['id'] ?? null,
+                    'nombre'      => $row['nombre'] ?? '',
+                    'descripcion' => $row['descripcion'] ?? ''
+                ];
+            }, $rows ?: []);
+            
+            return $this->response->setJSON($out);
             
         } catch (\Throwable $e) {
-            log_message('error', 'Error al cargar clasificaciones: ' . $e->getMessage());
-            return $this->response->setJSON(['error' => 'Error al cargar las clasificaciones']);
+            log_message('error', 'Error en json_clasificaciones: ' . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON([
+                'error' => 'Error al cargar las clasificaciones',
+                'message' => $e->getMessage()
+            ]);
         }
     }
 
@@ -126,7 +142,6 @@ class Clientes extends BaseController
         try {
             $maquiladoraId = session()->get('maquiladora_id');
             
-            // Obtener datos del cliente
             $sql = "SELECT 
                        c.id AS clienteId,
                        c.nombre,
@@ -347,6 +362,17 @@ class Clientes extends BaseController
                 throw new \Exception($errorMsg);
             }
 
+            // Enviar notificación de cliente agregado
+            try {
+                $notificationService = new \App\Services\NotificationService();
+                $notificationService->notifyClienteAgregado(
+                    $maquiladoraId ?? 1,
+                    $this->request->getPost('nombre')
+                );
+            } catch (\Exception $e) {
+                log_message('error', 'Error al enviar notificación de cliente: ' . $e->getMessage());
+            }
+
             return $this->response->setJSON([
                 'success' => true,
                 'id' => $clienteId,
@@ -486,6 +512,18 @@ class Clientes extends BaseController
                 throw new \Exception('Error al actualizar el cliente');
             }
 
+            // Enviar notificación de cliente actualizado
+            try {
+                $maquiladoraId = session()->get('maquiladora_id');
+                $notificationService = new \App\Services\NotificationService();
+                $notificationService->notifyClienteActualizado(
+                    $maquiladoraId ?? 1,
+                    $this->request->getPost('nombre')
+                );
+            } catch (\Exception $e) {
+                log_message('error', 'Error al enviar notificación de cliente: ' . $e->getMessage());
+            }
+
             return $this->response->setJSON([
                 'success' => true,
                 'message' => 'Cliente actualizado correctamente'
@@ -531,6 +569,18 @@ class Clientes extends BaseController
 
             if ($db->transStatus() === false) {
                 throw new \Exception('Error al eliminar el cliente');
+            }
+
+            // Enviar notificación de cliente eliminado
+            try {
+                $maquiladoraId = session()->get('maquiladora_id');
+                $notificationService = new \App\Services\NotificationService();
+                $notificationService->notifyClienteEliminado(
+                    $maquiladoraId ?? 1,
+                    $cliente['nombre']
+                );
+            } catch (\Exception $e) {
+                log_message('error', 'Error al enviar notificación de cliente: ' . $e->getMessage());
             }
 
             return $this->response->setJSON([
@@ -611,20 +661,37 @@ class Clientes extends BaseController
         }
 
         try {
+            $maquiladoraId = session()->get('maquiladora_id');
+            
             $data = [
-                'nombre_cla' => $this->request->getPost('nombre'),
-                'descripcion' => $this->request->getPost('descripcion') ?: null,
-                'maquiladoraID' => $this->request->getPost('maquiladoraID') ? (int)$this->request->getPost('maquiladoraID') : null
+                'nombre_cla' => trim($this->request->getPost('nombre')),
+                'descripcion' => trim($this->request->getPost('descripcion')) ?: null,
+                'maquiladoraID' => $maquiladoraId ?: null
             ];
 
-            $db->table('cliente_clasificacion')->insert($data);
-            $id = $db->insertID();
-
-            return $this->response->setJSON([
-                'success' => true,
-                'id' => $id,
-                'message' => 'Clasificación creada correctamente'
-            ]);
+            if ($db->table('cliente_clasificacion')->insert($data)) {
+                $insertId = $db->insertID();
+                
+                // Enviar notificación de clasificación creada
+                try {
+                    $notificationService = new \App\Services\NotificationService();
+                    $notificationService->notifyDisenoAgregado(
+                        $maquiladoraId ?? 1,
+                        $data['nombre_cla'],
+                        'Clasificación de Cliente'
+                    );
+                } catch (\Exception $e) {
+                    log_message('error', 'Error al enviar notificación de clasificación: ' . $e->getMessage());
+                }
+                
+                return $this->response->setJSON([
+                    'success' => true,
+                    'id' => $insertId,
+                    'message' => 'Clasificación creada correctamente'
+                ]);
+            } else {
+                throw new \Exception('Error al insertar la clasificación');
+            }
 
         } catch (\Throwable $e) {
             log_message('error', 'Error al crear clasificación: ' . $e->getMessage());
@@ -637,7 +704,7 @@ class Clientes extends BaseController
     }
 
     /**
-     * Actualiza una clasificación existente
+     * Edita una clasificación existente
      */
     public function editarClasificacion($id = null)
     {
@@ -654,8 +721,7 @@ class Clientes extends BaseController
         $validation = \Config\Services::validation();
         $validation->setRules([
             'nombre' => 'required|min_length[1]|max_length[255]',
-            'descripcion' => 'permit_empty|max_length[500]',
-            'maquiladoraID' => 'permit_empty|integer'
+            'descripcion' => 'permit_empty|max_length[500]'
         ]);
 
         if (!$validation->withRequest($this->request)->run()) {
@@ -667,8 +733,18 @@ class Clientes extends BaseController
         }
 
         try {
-            // Verificar que existe
-            $clasificacion = $db->table('cliente_clasificacion')->where('id', $id)->get()->getRowArray();
+            $maquiladoraId = session()->get('maquiladora_id');
+            
+            // Verificar que la clasificación existe y pertenece a la maquiladora
+            $clasificacion = $db->table('cliente_clasificacion')
+                               ->where('id', $id);
+            
+            if ($maquiladoraId) {
+                $clasificacion->where('maquiladoraID', $maquiladoraId);
+            }
+            
+            $clasificacion = $clasificacion->get()->getRowArray();
+            
             if (!$clasificacion) {
                 return $this->response->setStatusCode(404)->setJSON([
                     'success' => false,
@@ -677,23 +753,37 @@ class Clientes extends BaseController
             }
 
             $data = [
-                'nombre_cla' => $this->request->getPost('nombre'),
-                'descripcion' => $this->request->getPost('descripcion') ?: null,
-                'maquiladoraID' => $this->request->getPost('maquiladoraID') ? (int)$this->request->getPost('maquiladoraID') : null
+                'nombre_cla' => trim($this->request->getPost('nombre')),
+                'descripcion' => trim($this->request->getPost('descripcion')) ?: null
             ];
 
-            $db->table('cliente_clasificacion')->where('id', $id)->update($data);
-
-            return $this->response->setJSON([
-                'success' => true,
-                'message' => 'Clasificación actualizada correctamente'
-            ]);
+            if ($db->table('cliente_clasificacion')->where('id', $id)->update($data)) {
+                
+                // Enviar notificación de clasificación actualizada
+                try {
+                    $notificationService = new \App\Services\NotificationService();
+                    $notificationService->notifyDisenoActualizado(
+                        $maquiladoraId ?? 1,
+                        $data['nombre_cla'],
+                        'Clasificación de Cliente'
+                    );
+                } catch (\Exception $e) {
+                    log_message('error', 'Error al enviar notificación de clasificación: ' . $e->getMessage());
+                }
+                
+                return $this->response->setJSON([
+                    'success' => true,
+                    'message' => 'Clasificación actualizada correctamente'
+                ]);
+            } else {
+                throw new \Exception('Error al actualizar la clasificación');
+            }
 
         } catch (\Throwable $e) {
-            log_message('error', 'Error al actualizar clasificación: ' . $e->getMessage());
+            log_message('error', 'Error al editar clasificación: ' . $e->getMessage());
             return $this->response->setStatusCode(500)->setJSON([
                 'success' => false,
-                'error' => 'Error al actualizar la clasificación',
+                'error' => 'Error al editar la clasificación',
                 'message' => $e->getMessage()
             ]);
         }
@@ -713,10 +803,20 @@ class Clientes extends BaseController
         }
 
         $db = \Config\Database::connect();
-        
+
         try {
-            // Verificar que existe
-            $clasificacion = $db->table('cliente_clasificacion')->where('id', $id)->get()->getRowArray();
+            $maquiladoraId = session()->get('maquiladora_id');
+            
+            // Verificar que la clasificación existe y pertenece a la maquiladora
+            $clasificacion = $db->table('cliente_clasificacion')
+                               ->where('id', $id);
+            
+            if ($maquiladoraId) {
+                $clasificacion->where('maquiladoraID', $maquiladoraId);
+            }
+            
+            $clasificacion = $clasificacion->get()->getRowArray();
+            
             if (!$clasificacion) {
                 return $this->response->setStatusCode(404)->setJSON([
                     'success' => false,
@@ -724,21 +824,39 @@ class Clientes extends BaseController
                 ]);
             }
 
-            // Verificar si hay clientes usando esta clasificación
-            $clientes = $db->table('cliente')->where('clasificacionId', $id)->countAllResults();
-            if ($clientes > 0) {
+            // Verificar que no hay clientes usando esta clasificación
+            $clientesCount = $db->table('cliente')
+                               ->where('clasificacionId', $id)
+                               ->countAllResults();
+            
+            if ($clientesCount > 0) {
                 return $this->response->setStatusCode(400)->setJSON([
                     'success' => false,
-                    'error' => 'No se puede eliminar la clasificación porque hay ' . $clientes . ' cliente(s) que la están usando'
+                    'error' => 'No se puede eliminar la clasificación porque está siendo utilizada por clientes'
                 ]);
             }
 
-            $db->table('cliente_clasificacion')->where('id', $id)->delete();
-
-            return $this->response->setJSON([
-                'success' => true,
-                'message' => 'Clasificación eliminada correctamente'
-            ]);
+            if ($db->table('cliente_clasificacion')->where('id', $id)->delete()) {
+                
+                // Enviar notificación de clasificación eliminada
+                try {
+                    $notificationService = new \App\Services\NotificationService();
+                    $notificationService->notifyDisenoEliminado(
+                        $maquiladoraId ?? 1,
+                        $clasificacion['nombre_cla'],
+                        'Clasificación de Cliente'
+                    );
+                } catch (\Exception $e) {
+                    log_message('error', 'Error al enviar notificación de clasificación: ' . $e->getMessage());
+                }
+                
+                return $this->response->setJSON([
+                    'success' => true,
+                    'message' => 'Clasificación eliminada correctamente'
+                ]);
+            } else {
+                throw new \Exception('Error al eliminar la clasificación');
+            }
 
         } catch (\Throwable $e) {
             log_message('error', 'Error al eliminar clasificación: ' . $e->getMessage());

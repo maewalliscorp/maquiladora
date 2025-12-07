@@ -35,16 +35,57 @@ class NotificationService
         string $nivel = 'info',
         ?string $color = null
     ) {
-        $data = [
-            'maquiladoraID' => $maquiladoraId,
-            'titulo' => $titulo,
-            'mensaje' => $mensaje,
-            'sub' => $sub,
-            'nivel' => $nivel,
-            'color' => $color ?? $this->getColorForLevel($nivel)
-        ];
+        $db = \Config\Database::connect();
+        $db->transStart();
+        
+        try {
+            // Insertar la notificación
+            $data = [
+                'maquiladoraID' => $maquiladoraId,
+                'titulo' => $titulo,
+                'mensaje' => $mensaje,
+                'sub' => $sub,
+                'nivel' => $nivel,
+                'color' => $color ?? $this->getColorForLevel($nivel)
+            ];
 
-        return $this->notificationModel->insert($data);
+            $notificationId = $this->notificationModel->insert($data);
+            
+            if (!$notificationId) {
+                throw new \Exception('No se pudo crear la notificación');
+            }
+
+            // Obtener todos los usuarios de la maquiladora
+            $usuarios = $db->table('users')
+                           ->where('maquiladoraIdFK', $maquiladoraId)
+                           ->get()
+                           ->getResultArray();
+
+            // Asignar la notificación a cada usuario
+            foreach ($usuarios as $usuario) {
+                $userNotificationData = [
+                    'maquiladoraID' => $maquiladoraId,
+                    'idNotificacionFK' => $notificationId,
+                    'idUserFK' => $usuario['id'],
+                    'is_leida' => 0
+                ];
+                
+                $this->userNotificationModel->insert($userNotificationData);
+            }
+
+            $db->transComplete();
+            
+            if ($db->transStatus() === false) {
+                throw new \Exception('Error en la transacción de notificación');
+            }
+
+            return $notificationId;
+            
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            log_message('error', 'Error al crear notificación: ' . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -192,6 +233,160 @@ class NotificationService
             "Se generó la OC #{$ocId} para '{$material}'",
             'Ver detalles en MRP',
             'success'
+        );
+    }
+
+    /**
+     * Notificación cuando se agrega un cliente
+     */
+    public function notifyClienteAgregado(int $maquiladoraId, string $clienteNombre): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Nuevo Cliente Agregado',
+            "Se ha registrado el cliente: {$clienteNombre}",
+            null,
+            'success'
+        );
+    }
+
+    /**
+     * Notificación cuando se actualiza un cliente
+     */
+    public function notifyClienteActualizado(int $maquiladoraId, string $clienteNombre): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Cliente Actualizado',
+            "Se han actualizado los datos del cliente: {$clienteNombre}",
+            null,
+            'info'
+        );
+    }
+
+    /**
+     * Notificación cuando se elimina un cliente
+     */
+    public function notifyClienteEliminado(int $maquiladoraId, string $clienteNombre): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Cliente Eliminado',
+            "Se ha eliminado el cliente: {$clienteNombre}",
+            null,
+            'warning'
+        );
+    }
+
+    /**
+     * Notificación cuando se agrega un diseño
+     */
+    public function notifyDisenoAgregado(int $maquiladoraId, string $disenoNombre, string $codigo): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Nuevo Diseño Agregado',
+            "Se ha creado el diseño: {$codigo} - {$disenoNombre}",
+            null,
+            'success'
+        );
+    }
+
+    /**
+     * Notificación cuando se actualiza un diseño
+     */
+    public function notifyDisenoActualizado(int $maquiladoraId, string $disenoNombre, string $codigo): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Diseño Actualizado',
+            "Se ha actualizado el diseño: {$codigo} - {$disenoNombre}",
+            null,
+            'info'
+        );
+    }
+
+    /**
+     * Notificación cuando se elimina un diseño
+     */
+    public function notifyDisenoEliminado(int $maquiladoraId, string $disenoNombre, string $codigo): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Diseño Eliminado',
+            "Se ha eliminado el diseño: {$codigo} - {$disenoNombre}",
+            null,
+            'warning'
+        );
+    }
+
+    /**
+     * Notificación cuando se agrega un pedido
+     */
+    public function notifyPedidoAgregado(int $maquiladoraId, string $pedidoCodigo, string $clienteNombre): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Nuevo Pedido Creado',
+            "Se ha creado el pedido {$pedidoCodigo} para el cliente {$clienteNombre}",
+            null,
+            'info'
+        );
+    }
+
+    /**
+     * Notificación cuando se actualiza el estado de un pedido
+     */
+    public function notifyPedidoEstadoActualizado(int $maquiladoraId, string $pedidoCodigo, string $estado): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Estado de Pedido Actualizado',
+            "El pedido {$pedidoCodigo} ha cambiado a estado: {$estado}",
+            null,
+            'info'
+        );
+    }
+
+    /**
+     * Notificación cuando se agrega una orden de producción
+     */
+    public function notifyOrdenProduccionAgregada(int $maquiladoraId, string $ordenCodigo): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Nueva Orden de Producción',
+            "Se ha creado la orden de producción: {$ordenCodigo}",
+            null,
+            'info'
+        );
+    }
+
+    /**
+     * Notificación de mantenimiento programado
+     */
+    public function notifyMantenimientoProgramado(int $maquiladoraId, string $maquinaNombre, string $fecha): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Mantenimiento Programado',
+            "Se ha programado mantenimiento para {$maquinaNombre} el {$fecha}",
+            null,
+            'warning'
+        );
+    }
+
+    /**
+     * Notificación de incidencia reportada
+     */
+    public function notifyIncidenciaReportada(int $maquiladoraId, string $tipoIncidencia, string $descripcion): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Incidencia Reportada',
+            "Se ha reportado una incidencia: {$tipoIncidencia} - {$descripcion}",
+            null,
+            'danger'
         );
     }
 }

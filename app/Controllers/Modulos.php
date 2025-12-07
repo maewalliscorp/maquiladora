@@ -4233,6 +4233,25 @@ public function m11_roles_guardar_permisos()
                 throw new \Exception('Error en la transacción');
             }
 
+            // Enviar notificación de pedido creado
+            try {
+                $notificationService = new \App\Services\NotificationService();
+                
+                // Obtener nombre del cliente para la notificación
+                $cliente = $db->table('cliente')->where('id', $clienteId)->get()->getRowArray();
+                $clienteNombre = $cliente['nombre'] ?? 'Cliente desconocido';
+                
+                $notificationId = $notificationService->notifyPedidoAgregado(
+                    $maquiladoraId ?? 1,
+                    $opFolio ?: $opId,
+                    $clienteNombre
+                );
+                
+                log_message('debug', 'Notificación de pedido creada con ID: ' . ($notificationId ?? 'FALSE'));
+            } catch (\Exception $e) {
+                log_message('error', 'Error al enviar notificación de pedido: ' . $e->getMessage());
+            }
+
             return $this->response->setJSON([
                 'ok'      => true,
                 'ocId'    => $ocId,

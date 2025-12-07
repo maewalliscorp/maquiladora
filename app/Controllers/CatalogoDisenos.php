@@ -84,6 +84,19 @@ class CatalogoDisenos extends BaseController
 
                 $db->table($t)->insert($data);
                 $insertId = $db->insertID();
+                
+                // Enviar notificación de catálogo actualizado
+                try {
+                    $notificationService = new \App\Services\NotificationService();
+                    $notificationService->notifyDisenoAgregado(
+                        $maquiladoraId ?? 1,
+                        $nombre,
+                        'Sexo'
+                    );
+                } catch (\Exception $e) {
+                    log_message('error', 'Error al enviar notificación de sexo: ' . $e->getMessage());
+                }
+                
                 return $this->response->setJSON([
                     'ok' => true,
                     'id' => $insertId,
@@ -260,6 +273,19 @@ class CatalogoDisenos extends BaseController
 
                 $db->table($t)->insert($data);
                 $insertId = $db->insertID();
+                
+                // Enviar notificación de catálogo actualizado
+                try {
+                    $notificationService = new \App\Services\NotificationService();
+                    $notificationService->notifyDisenoAgregado(
+                        $maquiladoraId ?? 1,
+                        $nombre,
+                        'Talla'
+                    );
+                } catch (\Exception $e) {
+                    log_message('error', 'Error al enviar notificación de talla: ' . $e->getMessage());
+                }
+                
                 return $this->response->setJSON([
                     'ok' => true,
                     'id' => $insertId,
@@ -438,6 +464,19 @@ class CatalogoDisenos extends BaseController
 
                 $db->table($t)->insert($data);
                 $insertId = $db->insertID();
+                
+                // Enviar notificación de catálogo actualizado
+                try {
+                    $notificationService = new \App\Services\NotificationService();
+                    $notificationService->notifyDisenoAgregado(
+                        $maquiladoraId ?? 1,
+                        $nombre,
+                        'Tipo de Corte'
+                    );
+                } catch (\Exception $e) {
+                    log_message('error', 'Error al enviar notificación de tipo de corte: ' . $e->getMessage());
+                }
+                
                 return $this->response->setJSON([
                     'ok' => true,
                     'id' => $insertId,
@@ -614,6 +653,19 @@ class CatalogoDisenos extends BaseController
 
                 $db->table($t)->insert($data);
                 $insertId = $db->insertID();
+                
+                // Enviar notificación de catálogo actualizado
+                try {
+                    $notificationService = new \App\Services\NotificationService();
+                    $notificationService->notifyDisenoAgregado(
+                        $maquiladoraId ?? 1,
+                        $nombre,
+                        'Tipo de Ropa'
+                    );
+                } catch (\Exception $e) {
+                    log_message('error', 'Error al enviar notificación de tipo de ropa: ' . $e->getMessage());
+                }
+                
                 return $this->response->setJSON([
                     'ok' => true,
                     'id' => $insertId,
