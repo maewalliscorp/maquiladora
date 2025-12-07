@@ -3368,76 +3368,88 @@ class Modulos extends BaseController
      * Guardar los permisos de un rol (POST): rol_id, permisos[]
      * Respuesta: JSON { success, message? }
      */
-    public function m11_roles_guardar_permisos()
-    {
-        if (!can('menu.roles')) {
-            return $this->response->setStatusCode(403)->setJSON([
-                'success' => false,
-                'message' => 'Acceso denegado',
-            ]);
-        }
-
-        $rolId = (int) ($this->request->getPost('rol_id') ?? $this->request->getVar('rol_id') ?? 0);
-        $permisos = $this->request->getPost('permisos') ?? [];
-
-        // Depuración
-        log_message('debug', 'Guardando permisos - rol_id: ' . $rolId . ', permisos: ' . json_encode($permisos));
-
-        if ($rolId <= 0) {
-            return $this->response->setStatusCode(400)->setJSON([
-                'success' => false,
-                'message' => 'ID de rol inválido: ' . $rolId
-            ]);
-        }
-
-        $db = \Config\Database::connect();
-
-        // Verificar si existe la tabla rol_permiso
-        $this->crearTablaRolPermisoSiNoExiste($db);
-
-        try {
-            // Iniciar transacción
-            $db->transStart();
-
-            // Eliminar todos los permisos actuales del rol
-            $db->table('rol_permiso')->where('rol_id', $rolId)->delete();
-
-            // Insertar los nuevos permisos
-            if (!empty($permisos)) {
-                $data = [];
-                foreach ($permisos as $permiso) {
-                    $data[] = [
-                        'rol_id' => $rolId,
-                        'permiso' => trim($permiso)
-                    ];
-                }
-                log_message('debug', 'Datos a insertar: ' . json_encode($data));
-                $db->table('rol_permiso')->insertBatch($data);
-            }
-
-            // Completar transacción
-            $db->transComplete();
-
-            if ($db->transStatus() === false) {
-                // Obtener el error de la base de datos
-                $error = $db->error();
-                throw new \Exception('Error en la transacción: ' . ($error['message'] ?? 'Error desconocido'));
-            }
-
-            log_message('debug', 'Permisos guardados exitosamente para rol_id: ' . $rolId);
-
-            return $this->response->setJSON([
-                'success' => true,
-                'message' => 'Permisos guardados correctamente'
-            ]);
-        } catch (\Throwable $e) {
-            log_message('error', 'Error al guardar permisos para rol_id ' . $rolId . ': ' . $e->getMessage());
-            return $this->response->setStatusCode(500)->setJSON([
-                'success' => false,
-                'message' => 'Error al guardar permisos: ' . $e->getMessage()
-            ]);
-        }
+    /**
+ * Guardar los permisos de un rol (POST): rol_id, permisos[]
+ * Respuesta: JSON { success, message? }
+ */
+public function m11_roles_guardar_permisos()
+{
+    if (!can('menu.roles')) {
+        return $this->response->setStatusCode(403)->setJSON([
+            'success' => false,
+            'message' => 'Acceso denegado',
+        ]);
     }
+
+    $rolId = (int) ($this->request->getPost('rol_id') ?? $this->request->getVar('rol_id') ?? 0);
+    $permisos = $this->request->getPost('permisos') ?? [];
+
+    log_message('debug', 'Guardando permisos - rol_id: ' . $rolId . ', permisos: ' . json_encode($permisos));
+
+    if ($rolId <= 0) {
+        return $this->response->setStatusCode(400)->setJSON([
+            'success' => false,
+            'message' => 'ID de rol inválido: ' . $rolId
+        ]);
+    }
+
+    $db = \Config\Database::connect();
+
+    try {
+        $db->transStart();
+
+        // Eliminar permisos actuales de ese rol
+        $db->table('rol_permiso')->where('rol_id', $rolId)->delete();
+
+        // Obtener maquiladoraID del rol para rellenar rol_permiso.maquiladoraID
+        $maquiladoraId = null;
+        try {
+            $rolRow = $db->table('rol')->select('maquiladoraID')->where('id', $rolId)->get()->getRowArray();
+            if ($rolRow && array_key_exists('maquiladoraID', $rolRow)) {
+                $maquiladoraId = $rolRow['maquiladoraID'] !== null ? (int) $rolRow['maquiladoraID'] : null;
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Error obteniendo maquiladoraID para rol ' . $rolId . ': ' . $e->getMessage());
+        }
+
+        // Insertar nuevos permisos
+        if (!empty($permisos)) {
+            $data = [];
+            foreach ($permisos as $permiso) {
+                $row = [
+                    'rol_id'  => $rolId,
+                    'permiso' => trim($permiso),
+                ];
+                if ($maquiladoraId !== null) {
+                    $row['maquiladoraID'] = $maquiladoraId;
+                }
+                $data[] = $row;
+            }
+            log_message('debug', 'Datos a insertar en rol_permiso: ' . json_encode($data));
+            $db->table('rol_permiso')->insertBatch($data);
+        }
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            $error = $db->error();
+            throw new \Exception('Error en la transacción: ' . ($error['message'] ?? 'Error desconocido'));
+        }
+
+        log_message('debug', 'Permisos guardados exitosamente para rol_id: ' . $rolId);
+
+        return $this->response->setJSON([
+            'success' => true,
+            'message' => 'Permisos guardados correctamente',
+        ]);
+    } catch (\Throwable $e) {
+        log_message('error', 'Error al guardar permisos para rol_id ' . $rolId . ': ' . $e->getMessage());
+        return $this->response->setStatusCode(500)->setJSON([
+            'success' => false,
+            'message' => 'Error al guardar permisos: ' . $e->getMessage(),
+        ]);
+    }
+}
 
     /**
      * Eliminar un rol (POST): id

@@ -13,6 +13,10 @@ class ProveedorController extends BaseController
      * ========================= */
     public function index()
     {
+        if (!can('menu.proveedores')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $proveedorModel = new ProveedorModel();
 
         // Listar proveedores (últimos primero)
@@ -82,6 +86,13 @@ class ProveedorController extends BaseController
      * ========================= */
     public function store()
     {
+        if (!can('menu.proveedores')) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'success' => false,
+                'message' => 'Acceso denegado'
+            ]);
+        }
+        
         $proveedorModel = new ProveedorModel();
         $id = (int)$this->request->getPost('id');
 
@@ -127,6 +138,10 @@ class ProveedorController extends BaseController
      * ========================= */
     public function eliminar($id = null)
     {
+        if (!can('menu.proveedores')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $id = (int)$id;
 
         if ($id <= 0) {
@@ -155,6 +170,10 @@ class ProveedorController extends BaseController
      * ========================= */
     public function crearOrden()
     {
+        if (!can('menu.proveedores')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $idProveedor = (int)$this->request->getPost('proveedor_id');
         $fecha       = $this->request->getPost('fecha') ?: date('Y-m-d');
         $prioridad   = trim((string)$this->request->getPost('prioridad')) ?: 'Normal';
@@ -202,6 +221,10 @@ class ProveedorController extends BaseController
      * ========================= */
     public function historial($idProveedor = null)
     {
+        if (!can('menu.proveedores')) {
+            return $this->response->setStatusCode(403)->setJSON([]);
+        }
+        
         $idProveedor = (int)$idProveedor;
         if ($idProveedor <= 0) {
             return $this->response->setJSON([]);
@@ -225,6 +248,10 @@ class ProveedorController extends BaseController
      * ========================= */
     public function verOrden($idOc = null)
     {
+        if (!can('menu.proveedores')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $idOc = (int)$idOc;
 
         if ($idOc <= 0) {
@@ -264,6 +291,10 @@ class ProveedorController extends BaseController
      * ========================= */
     public function completarOrden($idOc = null)
     {
+        if (!can('menu.proveedores')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $idOc = (int)$idOc;
 
         if ($idOc <= 0) {
@@ -296,6 +327,10 @@ class ProveedorController extends BaseController
      * ========================= */
     public function eliminarOrden($idOc = null)
     {
+        if (!can('menu.proveedores')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $idOc = (int)$idOc;
 
         if ($idOc <= 0) {

@@ -124,52 +124,44 @@ $routes->get('calidad/reprocesos/(:num)', 'Calidad::verReproceso/$1');
 // Vista principal de proveedores
 $routes->get(
     'proveedores',
-    'ProveedorController::index',
-    ['filter' => 'auth:Administrador,Jefe,Almacenista']
+    'ProveedorController::index'
 );
 // Crear / actualizar proveedor
 $routes->post(
     'proveedores/store',
-    'ProveedorController::store',
-    ['filter' => 'auth:Administrador,Jefe,Almacenista']
+    'ProveedorController::store'
 );
 // Eliminar proveedor
 $routes->post(
     'proveedores/eliminar/(:num)',
-    'ProveedorController::eliminar/$1',
-    ['filter' => 'auth:Administrador,Jefe,Almacenista']
+    'ProveedorController::eliminar/$1'
 );
 // Crear orden de pedido a proveedor (POST del modal)
 $routes->post(
     'proveedores/orden',
-    'ProveedorController::crearOrden',
-    ['filter' => 'auth:Administrador,Jefe,Almacenista']
+    'ProveedorController::crearOrden'
 );
 // Historial de órdenes de un proveedor (AJAX que devuelve JSON)
 $routes->get(
     'proveedores/historial/(:num)',
-    'ProveedorController::historial/$1',
-    ['filter' => 'auth:Administrador,Jefe,Almacenista']
+    'ProveedorController::historial/$1'
 );
 // Ver la orden en HTML
 $routes->get(
     'proveedores/orden/(:num)',
-    'ProveedorController::verOrden/$1',
-    ['filter' => 'auth:Administrador,Jefe,Almacenista']
+    'ProveedorController::verOrden/$1'
 );
 // Marcar orden como cumplida (acepta GET/POST)
 $routes->match(
     ['get', 'post'],
     'proveedores/orden/completar/(:num)',
-    'ProveedorController::completarOrden/$1',
-    ['filter' => 'auth:Administrador,Jefe,Almacenista']
+    'ProveedorController::completarOrden/$1'
 );
 // Eliminar orden de proveedor (acepta GET/POST)
 $routes->match(
     ['get', 'post'],
     'proveedores/orden/eliminar/(:num)',
-    'ProveedorController::eliminarOrden/$1',
-    ['filter' => 'auth:Administrador,Jefe,Almacenista']
+    'ProveedorController::eliminarOrden/$1'
 );
 
 /* --------------------------------------------------------------------
