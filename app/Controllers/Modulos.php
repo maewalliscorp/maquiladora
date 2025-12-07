@@ -3334,10 +3334,15 @@ class Modulos extends BaseController
 
         $db = \Config\Database::connect();
 
-        // Verificar si existe la tabla rol_permiso
-        $this->crearTablaRolPermisoSiNoExiste($db);
-
         try {
+            // Si la tabla de permisos no existe, devolvemos lista vacía
+            if (!$db->tableExists('rol_permiso')) {
+                return $this->response->setJSON([
+                    'success' => true,
+                    'permisos' => [],
+                ]);
+            }
+
             // Obtener permisos del rol desde la tabla rol_permiso
             $permisos = $db->table('rol_permiso')
                 ->select('permiso')
