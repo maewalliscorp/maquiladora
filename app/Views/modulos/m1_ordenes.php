@@ -23,7 +23,6 @@
 ?>
 <div class="d-flex align-items-center mb-4">
     <h1 class="me-3">Órdenes de Producción</h1>
-    {{ ... }}
     <span class="badge bg-primary">Módulo 1</span>
 </div>
 

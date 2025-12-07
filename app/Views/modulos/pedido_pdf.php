@@ -345,6 +345,45 @@
                         <div class="info-value"><?= esc(date('d/m/Y', strtotime($ver['fecha']))) ?></div>
                     </div>
                     <?php endif; ?>
+
+                    <?php
+                        $fotoSrc = null;
+                        $patronSrc = null;
+
+                        if (!empty($ver['foto_base64'])) {
+                            $mime = !empty($ver['foto_mime']) ? $ver['foto_mime'] : 'image/jpeg';
+                            $fotoSrc = 'data:' . $mime . ';base64,' . $ver['foto_base64'];
+                        } elseif (!empty($ver['foto'])) {
+                            $fotoSrc = 'data:image/jpeg;base64,' . base64_encode($ver['foto']);
+                        }
+
+                        if (!empty($ver['patron_base64'])) {
+                            $mimeP = !empty($ver['patron_mime']) ? $ver['patron_mime'] : 'image/jpeg';
+                            $patronSrc = 'data:' . $mimeP . ';base64,' . $ver['patron_base64'];
+                        } elseif (!empty($ver['patron'])) {
+                            $patronSrc = 'data:image/jpeg;base64,' . base64_encode($ver['patron']);
+                        }
+                    ?>
+
+                    <?php if ($fotoSrc || $patronSrc): ?>
+                    <div class="info-row">
+                        <div class="info-label">Archivos del diseño:</div>
+                        <div class="info-value">
+                            <?php if ($fotoSrc): ?>
+                                <div style="margin-bottom:8px;">
+                                    <strong>Foto:</strong><br>
+                                    <img src="<?= $fotoSrc ?>" alt="Foto del diseño" style="max-width:220px; max-height:160px; margin-top:4px; border:1px solid #ccc; padding:2px;">
+                                </div>
+                            <?php endif; ?>
+                            <?php if ($patronSrc): ?>
+                                <div>
+                                    <strong>Patrón:</strong><br>
+                                    <img src="<?= $patronSrc ?>" alt="Patrón del diseño" style="max-width:220px; max-height:160px; margin-top:4px; border:1px solid #ccc; padding:2px;">
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
         </div>

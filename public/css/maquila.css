@@ -37,6 +37,209 @@ body.bg-light{
     color: var(--color-text-on-bg);
 }
 
+/* ========== Modo oscuro (controlado por data-theme en <body>) ========== */
+body[data-theme="dark"]{
+    --color-bg: #121212;
+    --color-surface: #1e1e1e;
+    --color-surface-2: #2a2a2a;
+    --color-text: #f8f9fa;
+    --color-text-on-bg: #f8f9fa;
+
+    --color-primary: #212529;      /* navbar y acento más oscuro */
+    --color-primary-600: #343a40;
+    --color-primary-700: #495057;
+}
+
+body[data-theme="dark"]{
+    background-color: var(--color-bg) !important;
+    color: var(--color-text-on-bg) !important;
+}
+
+/* En modo oscuro, bloques con bg-light deben mantener texto oscuro para legibilidad (ej. Producción) */
+body[data-theme="dark"] .bg-light{
+    background-color: #f8f9fa !important;
+    color: #111111 !important;
+}
+
+/* Texto atenuado dentro de paneles claros (ej. fechas en Producción) */
+body[data-theme="dark"] .bg-light .text-muted,
+body[data-theme="dark"] .bg-light .small.text-muted{
+    color: #6c757d !important; /* gris medio legible */
+}
+
+/* Texto de rango de fechas en Producción (pendientes/finalizados) */
+body[data-theme="dark"] #pendingOrdersList .text-muted.small,
+body[data-theme="dark"] #completedOrdersList .text-muted.small{
+    color: #111111 !important;
+}
+
+body[data-theme="dark"] .navbar-custom{
+    background-color: var(--color-primary) !important;
+    --bs-navbar-bg: var(--color-primary);
+    --bs-navbar-color: #f8f9fa;
+    --bs-navbar-hover-color: #f8f9fa;
+    --bs-navbar-active-color: #f8f9fa;
+    --bs-navbar-brand-color: #f8f9fa;
+    --bs-navbar-brand-hover-color: #ffffff;
+}
+
+body[data-theme="dark"] .navbar-custom .nav-link,
+body[data-theme="dark"] .navbar-custom .navbar-brand{
+    color:#f8f9fa !important;
+}
+
+/* Texto principal del nombre del sistema en el navbar */
+body[data-theme="dark"] .navbar-custom .navbar-brand .text-dark{
+    color: #f8f9fa !important;
+}
+
+/* Icono del toggle de modo oscuro: buen contraste en ambos temas */
+.js-theme-toggle .js-theme-icon{
+    color: #111111 !important; /* tema claro: icono oscuro sobre navbar claro */
+}
+
+body[data-theme="dark"] .js-theme-toggle .js-theme-icon{
+    color: #f8f9fa !important; /* tema oscuro: icono blanco sobre navbar oscuro */
+}
+
+/* Ajustes específicos de componentes en modo oscuro */
+body[data-theme="dark"] .card{
+    background-color: var(--color-surface) !important;
+    color: var(--color-text) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,.6);
+}
+
+body[data-theme="dark"] .card-header{
+    background-color: var(--color-surface-2) !important;
+    border-bottom-color: #333 !important;
+}
+
+/* Tablas en modo oscuro */
+body[data-theme="dark"] .table{
+    color: #f8f9fa !important;
+}
+
+body[data-theme="dark"] .table thead{
+    background-color: #343a40 !important;
+}
+
+body[data-theme="dark"] .table thead th{
+    color: #f8f9fa !important;
+}
+
+/* Encabezados de DataTables en modo oscuro (más específico que el CSS por defecto) */
+body[data-theme="dark"] table.dataTable > thead > tr > th,
+body[data-theme="dark"] table.dataTable > thead > tr > td{
+    background-color: #343a40 !important;
+    color: #f8f9fa !important;
+}
+
+/* Encabezados que usan .table-light dentro de modales (sexo, tallas, etc.) */
+body[data-theme="dark"] .modal table thead.table-light,
+body[data-theme="dark"] .modal table thead.table-light th{
+    background-color: #343a40 !important;
+    color: #f8f9fa !important;
+}
+
+/* Encabezado específico de la tabla de pagos (tablaEmpleados) en modo oscuro */
+body[data-theme="dark"] #tablaEmpleados thead,
+body[data-theme="dark"] #tablaEmpleados thead th{
+    background-color: #343a40 !important;
+    color: #f8f9fa !important;
+}
+
+body[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd){
+    --bs-table-accent-bg: rgba(255,255,255,0.04);
+}
+
+body[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(even){
+    background-color: rgba(255,255,255,0.02);
+}
+
+body[data-theme="dark"] .table td,
+body[data-theme="dark"] .table th{
+    border-color: #444 !important;
+}
+
+/* Texto y enlaces dentro de las celdas en modo oscuro */
+body[data-theme="dark"] .table tbody td,
+body[data-theme="dark"] .table tbody td *{
+    color: #f8f9fa !important;
+}
+
+/* Excepción: tabla de operaciones en modal de plantillas (Control de Bultos) usa filas claras */
+body[data-theme="dark"] #tablaBuilderOperaciones tbody td,
+body[data-theme="dark"] #tablaBuilderOperaciones tbody td *{
+    color: #111111 !important;
+}
+
+/* Excepción: tabla de puntos de inspección (Swal) usa filas claras */
+body[data-theme="dark"] #pi-tbody td,
+body[data-theme="dark"] #pi-tbody td *{
+    color: #111111 !important;
+}
+
+/* SweetAlert2 (Puntos de Inspección) en modo oscuro */
+body[data-theme="dark"] .swal2-popup{
+    background-color: #2b2b2b !important;
+    color: #f8f9fa !important;
+}
+
+/* Encabezado de la tabla dentro del modal de Puntos de Inspección */
+body[data-theme="dark"] .swal2-popup .table thead.table-secondary,
+body[data-theme="dark"] .swal2-popup .table thead.table-secondary th{
+    background-color: #495057 !important;
+    color: #f8f9fa !important;
+}
+
+/* Controles de DataTables en modo oscuro */
+body[data-theme="dark"] .dataTables_wrapper .dataTables_filter input,
+body[data-theme="dark"] .dataTables_wrapper .dataTables_length select{
+    background-color: #1e1e1e !important;
+    color: #f8f9fa !important;
+    border-color: #444 !important;
+}
+
+/* Selects dentro de tablas (ej. columna Punto Inspección) en modo oscuro: fondo claro y texto oscuro */
+body[data-theme="dark"] table select.form-select,
+body[data-theme="dark"] table select.form-select-sm{
+    background-color: #ffffff !important;
+    color: #111111 !important;
+}
+
+body[data-theme="dark"] table select.form-select option,
+body[data-theme="dark"] table select.form-select-sm option{
+    background-color: #ffffff !important;
+    color: #111111 !important;
+}
+
+/* Menús desplegables del navbar en modo oscuro (usuario, accesos rápidos, etc.) */
+body[data-theme="dark"] .dropdown-menu{
+    background-color: #1f1f1f !important;
+    color: #f8f9fa !important;
+}
+
+body[data-theme="dark"] .dropdown-menu .dropdown-item{
+    color: #f8f9fa !important;
+}
+
+body[data-theme="dark"] .dropdown-menu .dropdown-item:hover,
+body[data-theme="dark"] .dropdown-menu .dropdown-item:focus{
+    background-color: #343a40 !important;
+    color: #ffffff !important;
+}
+
+/* Menú móvil colapsado (navbar-nav.d-lg-none) en modo oscuro */
+body[data-theme="dark"] .navbar-nav.d-lg-none .nav-link,
+body[data-theme="dark"] .navbar-nav.d-lg-none .dropdown-item{
+    color: #f8f9fa !important;
+}
+
+/* Botones de acción dentro de tablas (por ejemplo, iconos de ver/editar/eliminar) */
+body[data-theme="dark"] .table .btn{
+    color: inherit;
+}
+
 /* ========== Superficies (cards/tablas) ========== */
 .card{
     background: var(--color-surface);
@@ -206,16 +409,230 @@ h1, h2, h3, .card-title{ letter-spacing:.2px }
 }
 
 /* ========== Modals: texto oscuro legible ========== */
-/* Fuerza tipografía negra dentro de los modales (títulos, cuerpo, footer, labels, inputs, etc.) */
-.modal-content{
+/* Modo claro: tipografía negra dentro de los modales */
+body[data-theme="light"] .modal-content{
     color: #111 !important;
     background: var(--color-surface) !important; /* mantiene la estética del tema */
 }
-.modal-header, .modal-body, .modal-footer{ color:#111 !important; }
-.modal-title{ color:#111 !important; }
-.modal .form-label{ color:#111 !important; }
-.modal .form-control,
-.modal .form-select,
-.modal .form-check-label,
-.modal .input-group-text{ color:#111 !important; }
-.modal a{ color:#0d6efd; }
+body[data-theme="light"] .modal-header,
+body[data-theme="light"] .modal-body,
+body[data-theme="light"] .modal-footer{ color:#111 !important; }
+body[data-theme="light"] .modal-title{ color:#111 !important; }
+body[data-theme="light"] .modal .form-label{ color:#111 !important; }
+body[data-theme="light"] .modal .form-control,
+body[data-theme="light"] .modal .form-select,
+body[data-theme="light"] .modal .form-check-label,
+body[data-theme="light"] .modal .input-group-text{ color:#111 !important; }
+body[data-theme="light"] .modal a{ color:#0d6efd; }
+
+/* Modo oscuro: tipografía clara dentro de los modales */
+body[data-theme="dark"] .modal-content{
+    color: #f8f9fa !important;
+    background: #1e1e1e !important;
+}
+body[data-theme="dark"] .modal-header,
+body[data-theme="dark"] .modal-body,
+body[data-theme="dark"] .modal-footer{ color:#f8f9fa !important; }
+body[data-theme="dark"] .modal-title{ color:#f8f9fa !important; }
+body[data-theme="dark"] .modal .form-label{ color:#f8f9fa !important; }
+body[data-theme="dark"] .modal .form-control,
+body[data-theme="dark"] .modal .form-select,
+body[data-theme="dark"] .modal .form-check-label,
+body[data-theme="dark"] .modal .input-group-text{
+    color:#f8f9fa !important;
+    background-color: #2a2a2a;
+    border-color:#444;
+}
+/* Campos solo lectura (como Folio, Cliente, Email, Teléfono, Dirección) */
+body[data-theme="dark"] .modal .form-control-plaintext{
+    color:#f8f9fa !important;
+}
+body[data-theme="dark"] .modal a{ color:#0d6efd; }
+
+/* Secciones oscuras dentro de modales (por ejemplo, panel "Información del diseño") */
+body[data-theme="dark"] .modal .bg-dark,
+body[data-theme="dark"] .modal .card.bg-dark,
+body[data-theme="dark"] .modal .list-group-item.bg-dark{
+    background-color: #262626 !important;
+    color: #f8f9fa !important;
+}
+
+/* Textos atenuados dentro de modales en modo oscuro */
+body[data-theme="dark"] .modal .text-muted{
+    color: #ced4da !important;
+}
+
+/* Cualquier texto marcado como oscuro dentro de modales en modo oscuro */
+body[data-theme="dark"] .modal .text-dark{
+    color: #f8f9fa !important;
+}
+
+/* Detalles (definiciones) dentro de modales: IDs, nombres, etc. */
+body[data-theme="dark"] .modal dl,
+body[data-theme="dark"] .modal dt,
+body[data-theme="dark"] .modal dd{
+    color: #f8f9fa !important;
+}
+
+/* Textos de ayuda/descripción dentro de formularios en modales */
+body[data-theme="dark"] .modal .form-text,
+body[data-theme="dark"] .modal small,
+body[data-theme="dark"] .modal .small{
+    color: #ced4da !important;
+}
+
+/* ===== Modal de reporte de orden (Producción) ===== */
+body[data-theme="dark"] #opReporteModal .modal-content{
+    background-color: #1e1e1e !important;
+    color: #f8f9fa !important;
+}
+
+body[data-theme="dark"] #opReporteModal .card{
+    background-color: #2a2a2a !important;
+    color: #f8f9fa !important;
+}
+
+body[data-theme="dark"] #opReporteModal .card-header.bg-light{
+    background-color: #343a40 !important;
+    color: #f8f9fa !important;
+}
+
+/* Cualquier texto forzado a oscuro dentro del modal de reporte */
+body[data-theme="dark"] #opReporteModal .text-dark{
+    color: #f8f9fa !important;
+}
+
+/* Texto atenuado dentro del modal de reporte */
+body[data-theme="dark"] #opReporteModal .text-muted{
+    color: #ced4da !important;
+}
+
+/* Badges de forma de pago (vista pagos) en modo oscuro */
+body[data-theme="dark"] .destajo{
+    background-color: #0d47a1 !important;
+    color: #ffffff !important;
+}
+body[data-theme="dark"] .por-dia{
+    background-color: #1b5e20 !important;
+    color: #ffffff !important;
+}
+body[data-theme="dark"] .por-hora{
+    background-color: #ef6c00 !important;
+    color: #ffffff !important;
+}
+body[data-theme="dark"] .no-registrada{
+    background-color: #424242 !important;
+    color: #f5f5f5 !important;
+}
+
+/* Badges de estatus generales en modo oscuro (ej. "Ya finalizado", "En desarrollo") */
+body[data-theme="dark"] .badge.bg-secondary,
+body[data-theme="dark"] .badge.bg-dark,
+body[data-theme="dark"] .badge.bg-warning{
+    color: #ffffff !important;
+}
+
+/* Badge principal de estatus en Producción (clase status-badge) */
+body[data-theme="dark"] .status-badge{
+    background-color: #343a40 !important;
+    color: #ffffff !important;
+}
+
+/* Textos atenuados dentro de cards en modo oscuro (ej. tarjetas de resumen en Pagos) */
+body[data-theme="dark"] .card .text-muted,
+body[data-theme="dark"] .card .small.text-muted{
+    color: #ced4da !important;
+}
+
+/* ===== Perfil del Empleado (perfilempleado.php) en modo oscuro ===== */
+body[data-theme="dark"] .profile-header h1{
+    color: #f8f9fa !important;
+}
+
+/* Títulos principales (como h1 Dashboard) en modo oscuro dentro del contenido */
+body[data-theme="dark"] main h1{
+    color: #f8f9fa !important;
+}
+
+body[data-theme="dark"] .profile-photo-card,
+body[data-theme="dark"] .info-card{
+    background-color: #2a2a2a !important;
+    color: #f8f9fa !important;
+}
+
+body[data-theme="dark"] .info-card-header{
+    background-color: #343a40 !important;
+    color: #f8f9fa !important;
+}
+
+body[data-theme="dark"] .info-label{
+    color: #ced4da !important;
+}
+
+body[data-theme="dark"] .info-value{
+    color: #f8f9fa !important;
+}
+
+/* ===== Modal de edición de empleado (modal-empleado) en modo oscuro ===== */
+body[data-theme="dark"] .modal-empleado .modal-content{
+    background-color: #000000 !important;
+    color: #f8f9fa !important;
+}
+
+body[data-theme="dark"] .modal-empleado .modal-header,
+body[data-theme="dark"] .modal-empleado .modal-footer{
+    background-color: #000000 !important;
+    color: #f8f9fa !important;
+    border-color: #333333 !important;
+}
+
+body[data-theme="dark"] .modal-empleado .photo-upload-section,
+body[data-theme="dark"] .modal-empleado .form-section{
+    background-color: #111111 !important;
+    color: #f8f9fa !important;
+}
+
+body[data-theme="dark"] .modal-empleado .form-label{
+    color: #f8f9fa !important;
+}
+
+body[data-theme="dark"] .modal-empleado .form-control,
+body[data-theme="dark"] .modal-empleado .form-select{
+    background-color: #222222 !important;
+    color: #f8f9fa !important;
+    border-color: #444444 !important;
+}
+
+body[data-theme="dark"] .modal-empleado .photo-help-text{
+    color: #ced4da !important;
+}
+
+/* ===== Vista de reportes (reportes.php) en modo oscuro ===== */
+/* Menú izquierdo de reportes */
+body[data-theme="dark"] .list-group-item-action{
+    color: #f8f9fa !important;
+}
+
+body[data-theme="dark"] .list-group-item-action.active{
+    background-color: #667eea !important;
+    border-color: #667eea !important;
+    color: #ffffff !important;
+}
+
+/* Título de reporte y panel de vista previa */
+body[data-theme="dark"] #reportContent{
+    background-color: #1e1e1e !important;
+    color: #f8f9fa !important;
+}
+
+body[data-theme="dark"] #reportContent .report-title{
+    background-color: #343a40 !important;
+    color: #f8f9fa !important;
+}
+
+/* Encabezados de las cards de reportes (columna izquierda) en modo oscuro */
+body[data-theme="dark"] .card-header.bg-primary,
+body[data-theme="dark"] .card-header.bg-success,
+body[data-theme="dark"] .card-header.bg-warning{
+    color: #f8f9fa !important;
+}

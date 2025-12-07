@@ -54,6 +54,150 @@
         .navbar-nav.d-lg-none .dropdown-item + .dropdown-item {
             margin-top: 0.1rem;
         }
+
+        /* Mejorar visibilidad de botones e iconos */
+        .btn-outline-secondary {
+            border-color: #6c757d !important;
+            color: #6c757d !important;
+            background-color: transparent !important;
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: #6c757d !important;
+            color: #fff !important;
+        }
+
+        /* Forzar visibilidad de iconos */
+        .nav-link i,
+        .dropdown-item i,
+        .btn i,
+        .navbar-toggler i,
+        .fa,
+        .fas,
+        .far,
+        .fab,
+        .bi {
+            display: inline-block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            font-size: 1.1rem !important;
+            width: auto !important;
+            height: auto !important;
+        }
+
+        /* Iconos específicos del navbar */
+        .navbar .nav-link i {
+            font-size: 1.2rem !important;
+        }
+
+        .navbar .btn i {
+            font-size: 1rem !important;
+        }
+
+        /* Ajustar espaciado de iconos */
+        .navbar .nav-link i.me-2,
+        .navbar .dropdown-item i.me-2 {
+            margin-right: 0.5rem !important;
+        }
+
+        /* Mejorar contraste en modo claro */
+        .text-dark i {
+            color: #343a40 !important;
+        }
+
+        /* Forzar colores consistentes en modo claro */
+        .navbar .text-dark i,
+        .navbar .nav-link i,
+        .navbar .dropdown-item i {
+            color: #343a40 !important;
+        }
+
+        /* Forzar colores consistentes en modo oscuro */
+        body[data-theme="dark"] .navbar .text-dark i,
+        body[data-theme="dark"] .navbar .nav-link i,
+        body[data-theme="dark"] .navbar .dropdown-item i {
+            color: #f8f9fa !important;
+        }
+
+        /* Botón toggle de tema específico */
+        .js-theme-toggle {
+            padding: 0.375rem 0.5rem !important;
+            border-radius: 0.375rem !important;
+            transition: all 0.2s ease-in-out !important;
+            margin-left: 0.5rem !important;
+            margin-right: 0.5rem !important;
+        }
+
+        .js-theme-toggle:hover {
+            transform: scale(1.05) !important;
+        }
+
+        /* Iconos de usuario y notificaciones */
+        .fa-user-circle,
+        .bi-bell {
+            font-size: 1.3rem !important;
+        }
+
+        /* Navbar toggler icon */
+        .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%2833, 37, 41, 0.75%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+        }
+
+        /* Navbar toggler icon en modo oscuro */
+        body[data-theme="dark"] .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28248, 249, 250, 0.9%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+        }
+
+        /* Botón toggler en modo oscuro */
+        body[data-theme="dark"] .navbar-toggler {
+            border-color: rgba(248, 249, 250, 0.3) !important;
+        }
+
+        body[data-theme="dark"] .navbar-toggler:hover {
+            border-color: rgba(248, 249, 250, 0.6) !important;
+        }
+
+        /* Mejorar espaciado en navbar móvil */
+        .d-lg-none .nav-item {
+            margin-right: 0.25rem;
+        }
+
+        .d-lg-none .nav-link {
+            padding: 0.5rem !important;
+        }
+
+        /* Espaciado entre elementos del navbar */
+        .navbar-nav .nav-item {
+            margin-left: 0.25rem;
+        }
+
+        .navbar-nav .nav-item:first-child {
+            margin-left: 0;
+        }
+
+        /* Ajustar contenedor de elementos móviles */
+        .d-flex.align-items-center.d-lg-none > * {
+            margin-right: 0.75rem;
+        }
+
+        .d-flex.align-items-center.d-lg-none > *:last-child {
+            margin-right: 0;
+        }
+
+        /* Mejorar espaciado en menú escritorio */
+        .d-none.d-lg-flex .nav-item {
+            margin-left: 0.5rem;
+        }
+
+        .d-none.d-lg-flex .nav-item:first-child {
+            margin-left: 0;
+        }
+
+        /* Botones con mejor espaciado */
+        .btn-sm {
+            padding: 0.4rem 0.6rem !important;
+            margin: 0 0.25rem !important;
+        }
     </style>
 
     <?= $this->renderSection('head') ?>
@@ -78,9 +222,9 @@
     <nav class="navbar navbar-expand-lg navbar-custom px-3" role="navigation" aria-label="Menú principal">
         <div class="container-fluid">
             <a class="navbar-brand d-flex align-items-center" href="<?= esc(base_url('modulo3/dashboard')) ?>">
-                <img src="<?= esc(base_url('img/logo_Maquiladora.png')) ?>" alt="Logo" width="32"
+                <img src="<?= esc(base_url('img/logo_Maquiladora.png')) ?>" alt="Logo" width="85"
                     class="me-1 d-lg-none">
-                <img src="<?= esc(base_url('img/logo_Maquiladora.png')) ?>" alt="Logo" width="48"
+                <img src="<?= esc(base_url('img/logo_Maquiladora.png')) ?>" alt="Logo" width="85"
                     class="me-2 d-none d-lg-block">
                 <span class="fw-bold text-dark d-none d-md-inline">Sistema de Maquiladora</span>
             </a>
@@ -88,26 +232,14 @@
             <!-- Usuario y notificaciones (móvil) -->
             <?php if (session()->get('logged_in') || session()->get('user_id')): ?>
                 <div class="d-flex align-items-center d-lg-none">
-                    <a class="nav-link d-flex align-items-center text-dark text-decoration-none hover-color ms-lg-2"
-                        href="#" id="userMenuMobile" role="button" data-bs-toggle="dropdown" aria-expanded="false"
-                        aria-label="Usuario">
-                        <i class="fa-solid fa-user-circle me-2 fs-5" aria-hidden="true"></i>
-                        <?= esc(session()->get('user_name') ?? session()->get('username') ?? 'Usuario') ?>
-                    </a>
-
-                    <!-- ENLACE ACTUALIZADO: Notificaciones -> notificaciones2 -->
-                    <li class="nav-item">
-                        <a class="nav-link position-relative text-dark ms-lg-2"
-                            href="<?= esc(base_url('modulo3/notificaciones2')) ?>" aria-label="Notificaciones">
-                            <i class="bi bi-bell fs-5" aria-hidden="true"></i>
-                            <?php if ($notifCount > 0): ?>
-                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                    <?= esc($notifCount) ?>
-                                    <span class="visually-hidden">notificaciones</span>
-                                </span>
-                            <?php endif; ?>
+                    <!-- Usuario con dropdown integrado -->
+                    <div class="dropdown">
+                        <a class="nav-link d-flex align-items-center text-dark text-decoration-none hover-color ms-lg-3"
+                            href="#" id="userMenuMobile" role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                            aria-label="Usuario">
+                            <i class="fa-solid fa-user-circle me-2 fs-5" aria-hidden="true"></i>
+                            <?= esc(session()->get('user_name') ?? session()->get('username') ?? 'Usuario') ?>
                         </a>
-
                         <ul class="dropdown-menu shadow border-0 animate__animated animate__fadeIn"
                             aria-labelledby="userMenuMobile">
                             <li>
@@ -123,10 +255,31 @@
                                 </a>
                             </li>
                         </ul>
+                    </div>
 
-                        <!-- Botón toggler -->
-                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topnav"
-                            aria-controls="topnav" aria-expanded="false" aria-label="Abrir menú">
+                    <!-- ENLACE ACTUALIZADO: Notificaciones -> notificaciones2 -->
+                    <a class="nav-link position-relative text-dark ms-lg-2"
+                        href="<?= esc(base_url('modulo3/notificaciones2')) ?>" aria-label="Notificaciones">
+                        <i class="bi bi-bell fs-5" aria-hidden="true"></i>
+                        <?php if ($notifCount > 0): ?>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                <?= esc($notifCount) ?>
+                                <span class="visually-hidden">notificaciones</span>
+                            </span>
+                        <?php endif; ?>
+                    </a>
+
+                    <!-- Toggle modo claro/oscuro (móvil) -->
+                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1 js-theme-toggle d-lg-none"
+                            title="Cambiar tema">
+                        <i class="bi bi-moon-fill js-theme-icon"></i>
+                    </button>
+
+                    <!-- Botón toggler -->
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topnav"
+                        aria-controls="topnav" aria-expanded="false" aria-label="Abrir menú">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
                 </div>
             <?php endif; ?>
 
@@ -377,6 +530,14 @@
                             </a>
                         </li>
 
+                        <!-- Toggle modo claro/oscuro (escritorio) -->
+                        <li class="nav-item ms-lg-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center js-theme-toggle"
+                                    title="Cambiar tema">
+                                <i class="bi bi-moon-fill js-theme-icon"></i>
+                            </button>
+                        </li>
+
                         <!-- Accesos rápidos -->
                         <li class="nav-item dropdown ms-lg-2">
                             <a class="nav-link text-dark d-flex align-items-center hover-color" href="#" id="quickMenu"
@@ -587,6 +748,66 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js" defer></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js" defer></script>
+
+    <!-- Modo oscuro / claro -->
+    <script>
+        (function () {
+            const STORAGE_KEY = 'theme';
+
+            function getPreferredTheme() {
+                try {
+                    const stored = localStorage.getItem(STORAGE_KEY);
+                    if (stored === 'light' || stored === 'dark') return stored;
+                } catch (e) {
+                    // ignore storage errors
+                }
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    return 'dark';
+                }
+                return 'light';
+            }
+
+            function applyTheme(theme) {
+                const body = document.body;
+                if (!body) return;
+                body.setAttribute('data-theme', theme);
+                document.querySelectorAll('.js-theme-icon').forEach(function (icon) {
+                    icon.classList.toggle('bi-moon-fill', theme === 'light');
+                    icon.classList.toggle('bi-sun-fill', theme === 'dark');
+                });
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                const initial = getPreferredTheme();
+                applyTheme(initial);
+
+                // Soportar varios toggles (escritorio + móvil)
+                document.querySelectorAll('.js-theme-toggle').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        const current = document.body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+                        const next = current === 'dark' ? 'light' : 'dark';
+                        try { localStorage.setItem(STORAGE_KEY, next); } catch (e) {}
+                        applyTheme(next);
+                    });
+                });
+
+                if (window.matchMedia) {
+                    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+                    if (mq.addEventListener) {
+                        mq.addEventListener('change', function (e) {
+                            try {
+                                const stored = localStorage.getItem(STORAGE_KEY);
+                                if (stored === 'light' || stored === 'dark') return; // usuario ya eligió
+                            } catch (err) {
+                                // ignore
+                            }
+                            applyTheme(e.matches ? 'dark' : 'light');
+                        });
+                    }
+                }
+            });
+        })();
+    </script>
 
     <script>
         (function () {
