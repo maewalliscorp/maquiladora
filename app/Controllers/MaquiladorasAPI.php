@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use CodeIgniter\RESTful\ResourceController;
+use App\Models\UserModel;
 
 class MaquiladorasAPI extends ResourceController
 {
@@ -234,6 +235,202 @@ class MaquiladorasAPI extends ResourceController
             }
         } catch (\Exception $e) {
             return $this->failServerError('Error al eliminar la maquiladora: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Listar usuarios de una maquiladora (por maquiladoraIdFK)
+     */
+    public function usuarios($id = null)
+    {
+        try {
+            if (!$id) {
+                return $this->fail('ID de maquiladora no proporcionado', 400);
+            }
+
+            $db = \Config\Database::connect();
+
+            $usuarios = $db->table('users u')
+                ->select('u.*, r.id AS rol_id, r.nombre AS rol_nombre')
+                ->join('usuario_rol ur', 'ur.usuarioIdFK = u.id', 'left')
+                ->join('rol r', 'r.id = ur.rolIdFK', 'left')
+                ->where('u.maquiladoraIdFK', (int) $id)
+                ->get()
+                ->getResultArray();
+
+            return $this->respond($usuarios);
+        } catch (\Exception $e) {
+            return $this->failServerError('Error al obtener los usuarios de la maquiladora: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Listar roles de una maquiladora
+     */
+    public function roles($id = null)
+    {
+        try {
+            if (!$id) {
+                return $this->fail('ID de maquiladora no proporcionado', 400);
+            }
+
+            $db = \Config\Database::connect();
+
+            $roles = $db->table('rol')
+                ->where('maquiladoraID', (int) $id)
+                ->orderBy('nombre', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            return $this->respond($roles);
+        } catch (\Exception $e) {
+            return $this->failServerError('Error al obtener los roles de la maquiladora: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Crear un nuevo usuario para una maquiladora
+     */
+    public function crearUsuario($maquiladoraId = null)
+    {
+        try {
+            if (!$maquiladoraId) {
+                return $this->fail('ID de maquiladora no proporcionado', 400);
+            }
+
+            $username = trim((string) $this->request->getPost('username'));
+            $correo   = trim((string) $this->request->getPost('correo'));
+            $active   = $this->request->getPost('active');
+            $rolId    = $this->request->getPost('rolId');
+
+            if ($username === '' || $correo === '') {
+                return $this->fail('Nombre y correo son obligatorios', 400);
+            }
+
+            $active = (int) $active === 0 ? 0 : 1;
+
+            $userModel = new UserModel();
+
+            $userData = [
+                'username'        => $username,
+                'correo'          => $correo,
+                'maquiladoraIdFK' => (int) $maquiladoraId,
+                'active'          => $active,
+                'password'        => '123456',
+            ];
+
+            $userId = $userModel->insert($userData);
+
+            if (!$userId) {
+                return $this->fail('No se pudo crear el usuario', 400);
+            }
+
+            // Asignar rol si se proporcionó
+            if (!empty($rolId)) {
+                $db      = \Config\Database::connect();
+                $builder = $db->table('usuario_rol');
+
+                $builder->insert([
+                    'usuarioIdFK'   => (int) $userId,
+                    'rolIdFK'       => (int) $rolId,
+                    'maquiladoraID' => (int) $maquiladoraId,
+                ]);
+            }
+
+            return $this->respondCreated([
+                'success'        => true,
+                'message'        => 'Usuario creado correctamente',
+                'id'             => (int) $userId,
+                'maquiladoraId'  => (int) $maquiladoraId,
+            ]);
+        } catch (\Exception $e) {
+            return $this->failServerError('Error al crear el usuario: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Actualizar el status (active) de un usuario
+     */
+    public function actualizarUsuarioStatus($id = null)
+    {
+        try {
+            if (!$id) {
+                return $this->fail('ID de usuario no proporcionado', 400);
+            }
+
+            $active = $this->request->getPost('active');
+
+            if ($active === null) {
+                return $this->fail('Valor de status no proporcionado', 400);
+            }
+
+            $active = (int) $active === 1 ? 1 : 0;
+
+            $userModel = new UserModel();
+            $usuario   = $userModel->find($id);
+
+            if (!$usuario) {
+                return $this->failNotFound('Usuario no encontrado');
+            }
+
+            $updated = $userModel->update($id, ['active' => $active]);
+
+            if (!$updated) {
+                return $this->fail('No se pudo actualizar el status del usuario', 400);
+            }
+
+            return $this->respond([
+                'success' => true,
+                'message' => 'Status de usuario actualizado correctamente',
+                'id'      => (int) $id,
+                'active'  => $active,
+            ]);
+        } catch (\Exception $e) {
+            return $this->failServerError('Error al actualizar el status del usuario: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Actualizar el rol de un usuario (tabla usuario_rol)
+     */
+    public function actualizarUsuarioRol($id = null)
+    {
+        try {
+            if (!$id) {
+                return $this->fail('ID de usuario no proporcionado', 400);
+            }
+
+            $rolId         = $this->request->getPost('rolId');
+            $maquiladoraId = $this->request->getPost('maquiladoraId');
+
+            if (!$maquiladoraId) {
+                return $this->fail('Maquiladora no proporcionada', 400);
+            }
+
+            $db      = \Config\Database::connect();
+            $builder = $db->table('usuario_rol');
+
+            // Eliminar cualquier relación previa para este usuario y maquiladora
+            $builder
+                ->where('usuarioIdFK', (int) $id)
+                ->where('maquiladoraID', (int) $maquiladoraId)
+                ->delete();
+
+            // Si se envió un rolId válido, insertar la nueva relación
+            if (!empty($rolId)) {
+                $builder->insert([
+                    'usuarioIdFK'   => (int) $id,
+                    'rolIdFK'       => (int) $rolId,
+                    'maquiladoraID' => (int) $maquiladoraId,
+                ]);
+            }
+
+            return $this->respond([
+                'success' => true,
+                'message' => 'Rol de usuario actualizado correctamente',
+            ]);
+        } catch (\Exception $e) {
+            return $this->failServerError('Error al actualizar el rol del usuario: ' . $e->getMessage());
         }
     }
 }

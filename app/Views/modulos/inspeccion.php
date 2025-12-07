@@ -192,10 +192,6 @@
                             </td>
                         </tr>
                     <?php endforeach; ?>
-                <?php else: ?>
-                    <tr>
-                        <td colspan="8" class="text-center text-muted py-4">No hay inspecciones registradas.</td>
-                    </tr>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -483,7 +479,8 @@
             "sProcessing": "Procesando...",
             "sLengthMenu": "Mostrar _MENU_ registros",
             "sZeroRecords": "No se encontraron resultados",
-            "sEmptyTable": "Ningún dato disponible en esta tabla",
+            "sEmptyTable": "No hay inspecciones registradas.",
+
             "sInfo": "Mostrando _START_ a _END_ de _TOTAL_",
             "sInfoEmpty": "Mostrando 0 a 0 de 0",
             "sInfoFiltered": "(filtrado de _MAX_)",

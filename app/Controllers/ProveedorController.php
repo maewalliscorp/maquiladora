@@ -19,10 +19,18 @@ class ProveedorController extends BaseController
         
         $proveedorModel = new ProveedorModel();
 
-        // Listar proveedores (últimos primero)
-        $proveedores = $proveedorModel
-            ->orderBy('id_proveedor', 'DESC')
-            ->findAll();
+        // Filtrar por maquiladora de la sesión (si existe)
+        $maquiladoraId = session()->get('maquiladora_id');
+
+        $builder = $proveedorModel
+            ->orderBy('id_proveedor', 'DESC');
+
+        if ($maquiladoraId) {
+            $builder = $builder->where('maquiladoraID', (int)$maquiladoraId);
+        }
+
+        // Listar proveedores (últimos primero) solo de la maquiladora actual
+        $proveedores = $builder->findAll();
 
         if (!empty($proveedores)) {
             $idsProveedor = array_column($proveedores, 'id_proveedor');
@@ -96,6 +104,8 @@ class ProveedorController extends BaseController
         $proveedorModel = new ProveedorModel();
         $id = (int)$this->request->getPost('id');
 
+        $maquiladoraId = session()->get('maquiladora_id');
+
         $data = [
             'codigo'      => trim((string)$this->request->getPost('codigo')),
             'nombre'      => trim((string)$this->request->getPost('nombre')),
@@ -103,8 +113,12 @@ class ProveedorController extends BaseController
             'email'       => trim((string)$this->request->getPost('email')),
             'telefono'    => trim((string)$this->request->getPost('telefono')),
             'direccion'   => trim((string)$this->request->getPost('direccion')),
-            'tipo_alerta' => trim((string)$this->request->getPost('tipo_alerta')),
         ];
+
+        // Al crear, asociar automáticamente el proveedor a la maquiladora actual
+        if ($id <= 0 && $maquiladoraId) {
+            $data['maquiladoraID'] = (int)$maquiladoraId;
+        }
 
         if ($data['nombre'] === '') {
             return redirect()

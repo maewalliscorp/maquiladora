@@ -14,6 +14,6 @@ class ProveedorModel extends Model
         'email',
         'telefono',
         'direccion',
-        'tipo_alerta',
+        'maquiladoraID',
     ];
 }

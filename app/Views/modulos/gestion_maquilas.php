@@ -258,6 +258,43 @@
     </div>
 </div>
 
+<!-- Modal para Ver Usuarios de la Maquiladora -->
+<div class="modal fade" id="modalUsuariosMaquila" tabindex="-1" aria-labelledby="modalUsuariosMaquilaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="modalUsuariosMaquilaLabel">
+                    <i class="bi bi-people me-2"></i>Usuarios de la Maquiladora
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table id="tablaUsuariosMaquila" class="table table-striped table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Correo</th>
+                                <th>Rol</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Se llena dinámicamente por AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-2"></i>Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -267,6 +304,7 @@
 
 <script>
 let tabla;
+let maquilaActualUsuarios = null;
 
 $(document).ready(function() {
     cargarMaquiladoras();
@@ -292,6 +330,29 @@ function cerrarSesion() {
                     // Redirigir al login de maquiladoras después de cerrar sesión
                     window.location.href = '<?= base_url('login_maquiladoras') ?>';
                 }
+            });
+        }
+    });
+}
+
+function cambiarStatusUsuario(idUsuario, nuevoStatus) {
+    $.ajax({
+        url: `<?= base_url('api/maquiladoras/usuarios') ?>/${idUsuario}/status`,
+        type: 'POST',
+        data: { active: nuevoStatus },
+        success: function() {
+            Swal.fire({
+                icon: 'success',
+                title: 'Status actualizado',
+                timer: 1200,
+                showConfirmButton: false
+            });
+        },
+        error: function() {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo actualizar el status del usuario'
             });
         }
     });
@@ -339,6 +400,9 @@ function cargarMaquiladoras() {
                 data: null,
                 render: function(data, type, row) {
                     return `
+                        <button class="btn btn-sm btn-info" onclick="verUsuarios(${row.idmaquiladora})" title="Ver usuarios">
+                            <i class="bi bi-people"></i>
+                        </button>
                         <button class="btn btn-sm btn-warning" onclick="editarMaquiladora(${row.idmaquiladora})" title="Editar">
                             <i class="bi bi-pencil"></i>
                         </button>
@@ -350,7 +414,7 @@ function cargarMaquiladoras() {
             }
         ],
         language: {
-            url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+            url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
         },
         responsive: true,
         order: [[0, 'desc']]
@@ -488,6 +552,125 @@ function editarMaquiladora(id) {
                 icon: 'error',
                 title: 'Error',
                 text: 'No se pudo cargar la información de la maquiladora'
+            });
+        }
+    });
+}
+
+function verUsuarios(id) {
+    // Limpiar tabla antes de cargar
+    const tbody = $('#tablaUsuariosMaquila tbody');
+    tbody.empty();
+
+    // Opcional: cambiar título con el ID de la maquila
+    $('#modalUsuariosMaquilaLabel').text('Usuarios de la Maquiladora #' + id);
+
+    // Guardar maquila actual para posibles actualizaciones
+    maquilaActualUsuarios = id;
+
+    // Primero obtener los roles de la maquiladora
+    $.ajax({
+        url: `<?= base_url('api/maquiladoras/roles') ?>/${id}`,
+        type: 'GET',
+        success: function(roles) {
+            // Rellenar select de nuevo usuario
+            const selectNuevoRol = $('#nuevoUserRol');
+            selectNuevoRol.empty();
+            selectNuevoRol.append('<option value="">Sin rol</option>');
+            if (Array.isArray(roles)) {
+                roles.forEach(function(r) {
+                    selectNuevoRol.append(`<option value="${r.id}">${r.nombre}</option>`);
+                });
+            }
+
+            // Luego obtener los usuarios
+            $.ajax({
+                url: `<?= base_url('api/maquiladoras/usuarios') ?>/${id}`,
+                type: 'GET',
+                success: function(usuarios) {
+                    tbody.empty();
+
+                    if (Array.isArray(usuarios) && usuarios.length) {
+                        usuarios.forEach(function(u) {
+                            const opcionesRol = Array.isArray(roles) ? roles.map(function(r) {
+                                const selected = (u.rol_id && (parseInt(u.rol_id) === parseInt(r.id))) ? 'selected' : '';
+                                return `<option value="${r.id}" ${selected}>${r.nombre}</option>`;
+                            }).join('') : '';
+
+                            const fila = `
+                                <tr>
+                                    <td>${u.id ?? ''}</td>
+                                    <td>${u.username ?? ''}</td>
+                                    <td>${u.correo ?? ''}</td>
+                                    <td>
+                                        <select class="form-select form-select-sm" onchange="cambiarRolUsuario(${u.id}, this.value)">
+                                            <option value="">Sin rol</option>
+                                            ${opcionesRol}
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select class="form-select form-select-sm" onchange="cambiarStatusUsuario(${u.id}, this.value)">
+                                            <option value="1" ${u.active == 1 || u.active === '1' ? 'selected' : ''}>Activo</option>
+                                            <option value="0" ${u.active == 0 || u.active === '0' ? 'selected' : ''}>Inactivo</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            `;
+                            tbody.append(fila);
+                        });
+                    } else {
+                        const filaVacia = `
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No hay usuarios registrados para esta maquiladora.</td>
+                            </tr>
+                        `;
+                        tbody.append(filaVacia);
+                    }
+
+                    const modal = new bootstrap.Modal(document.getElementById('modalUsuariosMaquila'));
+                    modal.show();
+                },
+                error: function() {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No se pudieron cargar los usuarios de la maquiladora'
+                    });
+                }
+            });
+        },
+        error: function() {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudieron cargar los roles de la maquiladora'
+            });
+        }
+    });
+}
+
+function cambiarRolUsuario(idUsuario, nuevoRolId) {
+    $.ajax({
+        url: `<?= base_url('api/maquiladoras/usuarios') ?>/${idUsuario}/rol`,
+        type: 'POST',
+        data: {
+            rolId: nuevoRolId,
+            maquiladoraId: maquilaActualUsuarios
+        },
+        success: function() {
+            Swal.fire({
+                icon: 'success',
+                title: 'Rol actualizado',
+                timer: 1200,
+                showConfirmButton: false
+            });
+        },
+        error: function(xhr) {
+            const msg = xhr.responseJSON?.message || 'No se pudo actualizar el rol del usuario';
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: msg
             });
         }
     });

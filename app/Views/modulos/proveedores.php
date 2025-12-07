@@ -44,7 +44,6 @@
                     <th>Email</th>
                     <th>Teléfono</th>
                     <th>Dirección</th>
-                    <th>Tipo alerta</th>
                     <th>Objetos que maneja</th>
                     <th class="text-center">Acciones</th>
                 </tr>
@@ -59,7 +58,6 @@
                             <td><?= esc($p['email'] ?? '') ?></td>
                             <td><?= esc($p['telefono'] ?? '') ?></td>
                             <td><?= esc($p['direccion'] ?? '') ?></td>
-                            <td><?= esc($p['tipo_alerta'] ?? '') ?></td>
                             <td><?= esc($p['objetos'] ?? '—') ?></td>
                             <td class="text-center table-actions">
                                 <!-- Historial de órdenes -->
@@ -90,8 +88,7 @@
                                         data-rfc="<?= esc($p['rfc'] ?? '', 'attr') ?>"
                                         data-email="<?= esc($p['email'] ?? '', 'attr') ?>"
                                         data-telefono="<?= esc($p['telefono'] ?? '', 'attr') ?>"
-                                        data-direccion="<?= esc($p['direccion'] ?? '', 'attr') ?>"
-                                        data-tipo_alerta="<?= esc($p['tipo_alerta'] ?? '', 'attr') ?>">
+                                        data-direccion="<?= esc($p['direccion'] ?? '', 'attr') ?>">
                                     <i class="bi bi-pencil"></i>
                                 </button>
 
@@ -152,11 +149,6 @@
                         <div class="col-md-4">
                             <label for="prov_telefono" class="form-label">Teléfono</label>
                             <input type="text" class="form-control" id="prov_telefono" name="telefono">
-                        </div>
-
-                        <div class="col-md-4">
-                            <label for="prov_tipo_alerta" class="form-label">Tipo de alerta</label>
-                            <input type="text" class="form-control" id="prov_tipo_alerta" name="tipo_alerta">
                         </div>
 
                         <div class="col-12">
@@ -364,7 +356,6 @@
                 const email       = btn.getAttribute('data-email') || '';
                 const telefono    = btn.getAttribute('data-telefono') || '';
                 const direccion   = btn.getAttribute('data-direccion') || '';
-                const tipoAlerta  = btn.getAttribute('data-tipo_alerta') || '';
 
                 inputId.value = id;
                 document.getElementById('prov_codigo').value       = codigo;
@@ -372,7 +363,6 @@
                 document.getElementById('prov_rfc').value          = rfc;
                 document.getElementById('prov_email').value        = email;
                 document.getElementById('prov_telefono').value     = telefono;
-                document.getElementById('prov_tipo_alerta').value  = tipoAlerta;
                 document.getElementById('prov_direccion').value    = direccion;
 
                 tituloProv.textContent = 'Editar proveedor';

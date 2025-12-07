@@ -842,11 +842,11 @@
         if ($btn.data('version') !== undefined) $('#e-version').val($btn.data('version'));
         if (articulosCache === null) { cargarArticulos(); }
         e_pintarDisponibles();
-        // Cargar catálogos para edición
-        const q1 = cargarCatalogo('<?= base_url('modulo2/catalogos/sexo') ?>' + '?_=' + Date.now(), '#e-selSexo');
-        const q2 = cargarCatalogo('<?= base_url('modulo2/catalogos/tallas') ?>' + '?_=' + Date.now(), '#e-selTalla');
-        const q3 = cargarCatalogo('<?= base_url('modulo2/catalogos/tipo-corte') ?>' + '?_=' + Date.now(), '#e-selTipoCorte');
-        const q4 = cargarCatalogo('<?= base_url('modulo2/catalogos/tipo-ropa') ?>' + '?_=' + Date.now(), '#e-selTipoRopa');
+        // Cargar catálogos para edición (solo registros de la maquiladora actual)
+        const q1 = cargarCatalogo('<?= base_url('modulo2/catalogos/sexo') ?>' + '?solo_maquiladora=1&_=' + Date.now(), '#e-selSexo');
+        const q2 = cargarCatalogo('<?= base_url('modulo2/catalogos/tallas') ?>' + '?solo_maquiladora=1&_=' + Date.now(), '#e-selTalla');
+        const q3 = cargarCatalogo('<?= base_url('modulo2/catalogos/tipo-corte') ?>' + '?solo_maquiladora=1&_=' + Date.now(), '#e-selTipoCorte');
+        const q4 = cargarCatalogo('<?= base_url('modulo2/catalogos/tipo-ropa') ?>' + '?solo_maquiladora=1&_=' + Date.now(), '#e-selTipoRopa');
         // Cargar clientes (opcional)
         let preCli = null;
         const cargarClientesEditar = function(preselectId){
@@ -1546,8 +1546,12 @@
         function cargarCatalogoEnModal(config) {
             const $tbody = $(config.tabla + ' tbody');
             $tbody.html('<tr><td colspan="4" class="text-center text-muted">Cargando...</td></tr>');
-            
-            $.getJSON(config.url + '?t=' + Date.now())
+
+            // Siempre filtrar por maquiladora actual en estos catálogos
+            const sep = config.url.indexOf('?') !== -1 ? '&' : '?';
+            const url = config.url + sep + 'solo_maquiladora=1&t=' + Date.now();
+
+            $.getJSON(url)
                 .done(function(resp) {
                     const items = (resp && resp.items) ? resp.items : [];
                     $tbody.empty();

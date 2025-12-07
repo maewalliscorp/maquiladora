@@ -52,6 +52,11 @@ $routes->group('api/maquiladoras', ['filter' => 'auth'], function ($routes) {
     $routes->post('crear', 'MaquiladorasAPI::crear');
     $routes->post('actualizar', 'MaquiladorasAPI::actualizar');
     $routes->delete('eliminar/(:num)', 'MaquiladorasAPI::eliminar/$1');
+    $routes->get('roles/(:num)', 'MaquiladorasAPI::roles/$1');
+    $routes->get('usuarios/(:num)', 'MaquiladorasAPI::usuarios/$1');
+    $routes->post('usuarios/(:num)', 'MaquiladorasAPI::crearUsuario/$1');
+    $routes->post('usuarios/(:num)/status', 'MaquiladorasAPI::actualizarUsuarioStatus/$1');
+    $routes->post('usuarios/(:num)/rol', 'MaquiladorasAPI::actualizarUsuarioRol/$1');
 });
 
 // Backup (BD y archivos uploads) - requiere estar autenticado
