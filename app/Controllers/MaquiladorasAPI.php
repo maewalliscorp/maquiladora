@@ -92,8 +92,44 @@ class MaquiladorasAPI extends ResourceController
             }
 
             $id = $this->model->insert($data);
-            
+
             if ($id) {
+                // Crear roles fijos por defecto para esta maquiladora
+                try {
+                    $db = \Config\Database::connect();
+                    $rolesData = [
+                        [
+                            'maquiladoraID' => (int) $id,
+                            'nombre'        => 'Jefe',
+                            'descripcion'   => 'Acceso completo al sistema.',
+                            'es_fijo'       => 1,
+                        ],
+                        [
+                            'maquiladoraID' => (int) $id,
+                            'nombre'        => 'Administrador',
+                            'descripcion'   => 'Puede operar máquinas y registrar datos',
+                            'es_fijo'       => 1,
+                        ],
+                        [
+                            'maquiladoraID' => (int) $id,
+                            'nombre'        => 'Empleado',
+                            'descripcion'   => 'Trabajador',
+                            'es_fijo'       => 1,
+                        ],
+                        [
+                            'maquiladoraID' => (int) $id,
+                            'nombre'        => 'Corte',
+                            'descripcion'   => 'A recortar la tela para la costura',
+                            'es_fijo'       => 1,
+                        ],
+                    ];
+
+                    $db->table('rol')->insertBatch($rolesData);
+                } catch (\Throwable $e) {
+                    // Si falla la creación de roles, registramos el error pero no impedimos la creación de la maquiladora
+                    log_message('error', 'Error al crear roles por defecto para maquiladora ' . $id . ': ' . $e->getMessage());
+                }
+
                 return $this->respondCreated([
                     'success' => true,
                     'message' => 'Maquiladora creada exitosamente',

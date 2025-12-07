@@ -3181,7 +3181,8 @@ class Modulos extends BaseController
         $maquiladoraId = session()->get('maquiladora_id');
         $roles = [];
         try {
-            $builder = $db->table('rol')->select('id, nombre, descripcion');
+            $builder = $db->table('rol')->select('id, nombre, descripcion, es_fijo');
+
             if ($maquiladoraId) {
                 try {
                     $fields = $db->getFieldNames('rol');
