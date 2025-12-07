@@ -3173,6 +3173,10 @@ class Modulos extends BaseController
      * ========================================================= */
     public function m11_roles()
     {
+        if (!can('menu.roles')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+
         $db = \Config\Database::connect();
         $maquiladoraId = session()->get('maquiladora_id');
         $roles = [];
@@ -3208,6 +3212,13 @@ class Modulos extends BaseController
     }
     public function m11_roles_agregar()
     {
+        if (!can('menu.roles')) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'success' => false,
+                'message' => 'Acceso denegado',
+            ]);
+        }
+
         $nom = trim((string) ($this->request->getPost('nombre') ?? $this->request->getVar('nombre') ?? ''));
         $desc = trim((string) ($this->request->getPost('descripcion') ?? $this->request->getVar('descripcion') ?? ''));
 
@@ -3259,6 +3270,13 @@ class Modulos extends BaseController
      */
     public function m11_roles_actualizar()
     {
+        if (!can('menu.roles')) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'success' => false,
+                'message' => 'Acceso denegado',
+            ]);
+        }
+
         // Aceptar tanto POST normal como AJAX
         $id = (int) ($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
         $nom = trim((string) ($this->request->getPost('nombre') ?? $this->request->getVar('nombre') ?? ''));
@@ -3297,6 +3315,13 @@ class Modulos extends BaseController
      */
     public function m11_roles_permisos()
     {
+        if (!can('menu.roles')) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'success' => false,
+                'message' => 'Acceso denegado',
+            ]);
+        }
+
         $rolId = (int) ($this->request->getPost('rol_id') ?? $this->request->getVar('rol_id') ?? 0);
 
         if ($rolId <= 0) {
@@ -3339,6 +3364,13 @@ class Modulos extends BaseController
      */
     public function m11_roles_guardar_permisos()
     {
+        if (!can('menu.roles')) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'success' => false,
+                'message' => 'Acceso denegado',
+            ]);
+        }
+
         $rolId = (int) ($this->request->getPost('rol_id') ?? $this->request->getVar('rol_id') ?? 0);
         $permisos = $this->request->getPost('permisos') ?? [];
 
@@ -3402,169 +3434,18 @@ class Modulos extends BaseController
     }
 
     /**
-     * Verificar y crear la tabla rol_permiso si no existe
-     */
-    private function crearTablaRolPermisoSiNoExiste($db)
-    {
-        try {
-            // Verificar si la tabla existe
-            $query = $db->query("SHOW TABLES LIKE 'rol_permiso'");
-            if ($query->getNumRows() == 0) {
-                // La tabla no existe, crearla sin clave foránea para evitar conflictos
-                $sql = "
-                CREATE TABLE `rol_permiso` (
-                    `id` int(11) NOT NULL AUTO_INCREMENT,
-                    `rol_id` int(11) NOT NULL,
-                    `permiso` varchar(100) NOT NULL,
-                    `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-                    `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    PRIMARY KEY (`id`),
-                    KEY `idx_rol_permiso_rol_id` (`rol_id`),
-                    KEY `idx_rol_permiso_permiso` (`permiso`),
-                    UNIQUE KEY `unique_rol_permiso` (`rol_id`, `permiso`)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Permisos asignados a los roles';
-                ";
-                $db->query($sql);
-
-                // Insertar permisos predeterminados
-                $this->insertarPermisosPredeterminados($db);
-            }
-        } catch (\Throwable $e) {
-            // Si hay error, lo registramos pero continuamos
-            log_message('error', 'Error al verificar/crear tabla rol_permiso: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Insertar permisos predeterminados para todos los roles
-     */
-    private function insertarPermisosPredeterminados($db)
-    {
-        try {
-            // Obtener todos los roles
-            $roles = $db->table('rol')->get()->getResultArray();
-
-            // Definir permisos por rol
-            $permisosPorRol = [
-                'Administrador' => [
-                    'menu.catalogo_disenos',
-                    'menu.pedidos',
-                    'menu.ordenes',
-                    'menu.produccion',
-                    'menu.muestras',
-                    'menu.inspeccion',
-                    'menu.inventario_almacen',
-                    'menu.inv_maquinas',
-                    'menu.desperdicios',
-                    'menu.incidencias',
-                    'menu.logistica_preparacion',
-                    'menu.logistica_gestion',
-                    'menu.logistica_documentos',
-                    'menu.planificacion_materiales',
-                    'menu.mant_correctivo',
-                    'menu.mant_programacion',
-                    'menu.mrp',
-                    'menu.ordenes_clientes',
-                    'menu.usuarios',
-                    'menu.roles'
-                ],
-                'Jefe' => [
-                    'menu.catalogo_disenos',
-                    'menu.pedidos',
-                    'menu.ordenes',
-                    'menu.produccion',
-                    'menu.muestras',
-                    'menu.inspeccion',
-                    'menu.inventario_almacen',
-                    'menu.inv_maquinas',
-                    'menu.desperdicios',
-                    'menu.incidencias',
-                    'menu.logistica_preparacion',
-                    'menu.logistica_gestion',
-                    'menu.logistica_documentos',
-                    'menu.planificacion_materiales',
-                    'menu.mant_correctivo',
-                    'menu.mant_programacion',
-                    'menu.mrp',
-                    'menu.ordenes_clientes',
-                    'menu.usuarios',
-                    'menu.roles'
-                ],
-                'Empleado' => [
-                    'menu.produccion',
-                    'menu.incidencias'
-                ],
-                'Inspector' => [
-                    'menu.pedidos',
-                    'menu.ordenes',
-                    'menu.produccion',
-                    'menu.muestras',
-                    'menu.inspeccion'
-                ],
-                'Almacenista' => [
-                    'menu.inventario_almacen',
-                    'menu.inv_maquinas',
-                    'menu.desperdicios',
-                    'menu.incidencias',
-                    'menu.logistica_preparacion',
-                    'menu.logistica_gestion',
-                    'menu.logistica_documentos',
-                    'menu.planificacion_materiales',
-                    'menu.mant_correctivo'
-                ],
-                'Calidad' => [
-                    'menu.inspeccion',
-                    'menu.muestras',
-                    'menu.pedidos',
-                    'menu.logistica_preparacion',
-                    'menu.logistica_gestion',
-                    'menu.logistica_documentos',
-                    'menu.desperdicios'
-                ],
-                'Diseñador' => [
-                    'menu.catalogo_disenos',
-                    'menu.pedidos',
-                    'menu.produccion',
-                    'menu.muestras',
-                    'menu.desperdicios'
-                ],
-                'RH' => [
-                    'menu.ordenes_clientes',
-                    'menu.ordenes',
-                    'menu.usuarios',
-                    'menu.roles'
-                ]
-            ];
-
-            // Insertar permisos para cada rol
-            foreach ($roles as $rol) {
-                $rolNombre = $rol['nombre'];
-                if (isset($permisosPorRol[$rolNombre])) {
-                    $data = [];
-                    foreach ($permisosPorRol[$rolNombre] as $permiso) {
-                        $data[] = [
-                            'rol_id' => $rol['id'],
-                            'permiso' => $permiso
-                        ];
-                    }
-                    if (!empty($data)) {
-                        $db->table('rol_permiso')->insertBatch($data);
-                    }
-                }
-            }
-
-            log_message('info', 'Permisos predeterminados insertados correctamente');
-        } catch (\Throwable $e) {
-            log_message('error', 'Error al insertar permisos predeterminados: ' . $e->getMessage());
-        }
-    }
-
-    /**
      * Eliminar un rol (POST): id
      * Respuesta: JSON { success, message? }
      */
     public function m11_roles_eliminar()
     {
+        if (!can('menu.roles')) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'success' => false,
+                'message' => 'Acceso denegado',
+            ]);
+        }
+
         $id = (int) ($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
 
         if ($id <= 0) {
@@ -3619,6 +3500,13 @@ class Modulos extends BaseController
      */
     public function m11_roles_inicializar_permisos()
     {
+        if (!can('menu.roles')) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'success' => false,
+                'message' => 'Acceso denegado',
+            ]);
+        }
+
         try {
             $db = \Config\Database::connect();
 
@@ -3645,6 +3533,10 @@ class Modulos extends BaseController
 
     public function m11_usuarios()
     {
+        if (!can('menu.usuarios')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+
         $usuarioModel = new \App\Models\UsuarioModel();
         $maquiladoraId = session()->get('maquiladora_id');
 
@@ -3700,10 +3592,11 @@ class Modulos extends BaseController
 
     public function m11_agregar_usuario()
     {
-        if ($this->request->getMethod() === 'post') {
-            $usuarioModel = new \App\Models\UsuarioModel();
-            $empleadoModel = new \App\Models\EmpleadoModel();
+        if (!can('menu.usuarios')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
 
+        if ($this->request->getMethod() === 'post') {
             // Validar datos
             $validation = \Config\Services::validation();
             $validation->setRules([
@@ -3784,6 +3677,13 @@ class Modulos extends BaseController
      */
     public function obtener_usuario($id = null)
     {
+        if (!can('menu.usuarios')) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'success' => false,
+                'message' => 'Acceso denegado',
+            ]);
+        }
+
         try {
             // Verificar que sea una petición AJAX
             if (!$this->request->isAJAX()) {
@@ -3876,6 +3776,13 @@ class Modulos extends BaseController
      */
     public function actualizar_usuario()
     {
+        if (!can('menu.usuarios')) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'success' => false,
+                'message' => 'Acceso denegado',
+            ]);
+        }
+
         if (!$this->request->isAJAX()) {
             return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Método no permitido']);
         }

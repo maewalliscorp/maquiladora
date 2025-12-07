@@ -39,6 +39,21 @@
             border-radius: 50%;
             margin-right: .35rem
         }
+
+        /* Forzar mismo color y espaciado en todas las opciones del menú móvil */
+        .navbar-nav.d-lg-none .nav-link,
+        .navbar-nav.d-lg-none .dropdown-item {
+            color: #000 !important;
+            opacity: 1 !important;
+            display: block;
+            padding-top: 0.35rem;
+            padding-bottom: 0.35rem;
+        }
+
+        .navbar-nav.d-lg-none > li + li,
+        .navbar-nav.d-lg-none .dropdown-item + .dropdown-item {
+            margin-top: 0.1rem;
+        }
     </style>
 
     <?= $this->renderSection('head') ?>
@@ -112,29 +127,12 @@
                         <!-- Botón toggler -->
                         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topnav"
                             aria-controls="topnav" aria-expanded="false" aria-label="Abrir menú">
-                            <span class="navbar-toggler-icon"></span>
-                        </button>
                 </div>
             <?php endif; ?>
 
             <div class="collapse navbar-collapse" id="topnav">
                 <!-- Menú móvil (colapsado) -->
                 <ul class="navbar-nav d-lg-none">
-                    <!-- ENLACE ACTUALIZADO -->
-                    <li class="nav-item">
-                        <a class="nav-link position-relative text-dark ms-lg-2"
-                            href="<?= esc(base_url('modulo3/notificaciones2')) ?>">
-                            <i class="bi bi-bell fs-5" aria-hidden="true"></i>
-                            <?php if ($notifCount > 0): ?>
-                                <span
-                                    class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                    <?= esc($notifCount) ?>
-                                </span>
-                            <?php endif; ?>
-                            Notificaciones
-                        </a>
-                    </li>
-
                     <?php if (can('menu.maquiladora')): ?>
                         <li class="nav-item">
                             <a class="nav-link" href="<?= site_url('maquiladora') ?>">
@@ -156,11 +154,107 @@
                             </a>
                         </li>
                     <?php endif; ?>
-                    <?php if (can('menu.ordenes')): ?>
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/desperdicios')) ?>">
-                                <i class="bi bi-recycle me-2"></i>Desperdicios
+                    <?php if (can('menu.pagos')): ?>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo1/pagos')) ?>">
+                                <i class="bi bi-credit-card me-2"></i>Pagos
                             </a>
                         </li>
+                    <?php endif; ?>
+                    <?php if (can('menu.ordenes_clientes')): ?>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" href="<?= esc(base_url('clientes')) ?>">
+                                <i class="bi bi-people me-2"></i>Clientes
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo1/pedidos_clientes')) ?>">
+                                <i class="bi bi-people-fill me-2"></i>Pedidos Clientes
+                            </a>
+                        </li>
+                    <?php endif; ?>
+                    <?php if (can('menu.ordenes')): ?>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo1/ordenes')) ?>">
+                                <i class="bi bi-card-checklist me-2"></i>Órdenes en proceso
+                            </a>
+                        </li>
+                    <?php endif; ?>
+                    <?php if (can('menu.produccion')): ?>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo1/produccion')) ?>">
+                                <i class="bi bi-gear-wide-connected me-2"></i>Producción
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/cortes')) ?>">
+                                <i class="bi bi-scissors me-2"></i>Gestión de Cortes
+                            </a>
+                        </li>
+                    <?php endif; ?>
+                    <?php if ($secGestion && $secMuestrasInspeccion): ?>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                    <?php endif; ?>
+
+                    <?php if (can('menu.muestras')): ?>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" href="<?= esc(base_url('muestras')) ?>">
+                                <i class="bi bi-palette2 me-2"></i>Muestras
+                            </a>
+                        </li>
+                    <?php endif; ?>
+
+                    <?php if (can('menu.inspeccion')): ?>
+                        
+                        <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/control-bultos')) ?>">
+                            <i class="bi bi-box me-2"></i>Inspección Bultos
+                        </a>
+                        <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/inspeccion')) ?>">
+                            <i class="bi bi-search me-2"></i>Inspección de producto
+                        </a>
+                    <?php endif; ?>
+
+                    <?php if (can('menu.incidencias')): ?>
+                        <?php
+                        $roleName = current_role_name();
+                        $roleNorm = $roleName ? mb_strtolower(trim($roleName)) : '';
+                        ?>
+                        <?php if ($roleNorm === 'empleado'): ?>
+                            <a class="dropdown-item js-open-incidencia-modal" href="#">
+                                <i class="bi bi-exclamation-triangle me-2"></i>Incidencias
+                            </a>
+                        <?php else: ?>
+                            <a class="dropdown-item" href="<?= esc(base_url('modulo3/incidencias')) ?>">
+                                <i class="bi bi-exclamation-triangle me-2"></i>Incidencias
+                            </a>
+                        <?php endif; ?>
+                    <?php endif; ?>
+
+                    <?php if ($secIncidencias && $secPlanificacion): ?>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                    <?php endif; ?>
+
+                    <?php if (can('menu.planificacion_materiales')): ?>
+                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/mrp')) ?>">
+                            <i class="bi bi-diagram-2 me-2"></i>Planificación materiales
+                        </a>
+                    <?php endif; ?>
+
+                    <!-- NUEVO: Proveedores (escritorio - accesos rápidos) -->
+                    <?php if (can('menu.proveedores')): ?>
+                        <a class="dropdown-item" href="<?= esc(base_url('proveedores')) ?>">
+                            <i class="bi bi-truck-front me-2"></i>Proveedores
+                        </a>
+                    <?php endif; ?>
+
+                    <?php if (can('menu.desperdicios')): ?>
+                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/desperdicios')) ?>">
+                            <i class="bi bi-recycle me-2"></i>Desperdicios
+                        </a>
                     <?php endif; ?>
 
                     <?php if ($secPlanificacion && $secMantenimiento): ?>
@@ -170,26 +264,22 @@
                     <?php endif; ?>
 
                     <?php if (can('menu.inv_maquinas')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/mantenimiento_inventario')) ?>">
-                                <i class="bi bi-tools me-2"></i>Inventario Maq.
-                            </a>
-                        </li>
+                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/mantenimiento_inventario')) ?>">
+                            <i class="bi bi-tools me-2"></i>Inventario Maq.
+                        </a>
                     <?php endif; ?>
+
                     <?php if ($secMantenimiento): ?>
                         <!-- SOLO Calendario Mtto (Prog. Mtto eliminado) -->
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('mtto/calendario')) ?>">
-                                <i class="bi bi-calendar3 me-2"></i>Calendario Mtto
-                            </a>
-                        </li>
+                        <a class="dropdown-item" href="<?= esc(base_url('mtto/calendario')) ?>">
+                            <i class="bi bi-calendar3 me-2"></i>Calendario Mtto
+                        </a>
                     <?php endif; ?>
+
                     <?php if (can('menu.mant_correctivo')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/mantenimiento_correctivo')) ?>">
-                                <i class="bi bi-wrench-adjustable-circle me-2"></i>Correctivo
-                            </a>
-                        </li>
+                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/mantenimiento_correctivo')) ?>">
+                            <i class="bi bi-wrench-adjustable-circle me-2"></i>Mant. Correctivo
+                        </a>
                     <?php endif; ?>
 
                     <?php if ($secMantenimiento && $secLogistica): ?>
@@ -199,32 +289,27 @@
                     <?php endif; ?>
 
                     <?php if (can('menu.logistica_preparacion')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/logistica_preparacion')) ?>">
-                                <i class="bi bi-box-seam me-2"></i>Prep. Envíos
-                            </a>
-                        </li>
+                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/logistica_preparacion')) ?>">
+                            <i class="bi bi-box-seam me-2"></i>Prep. Envíos
+                        </a>
                     <?php endif; ?>
+
                     <?php if (can('menu.logistica_gestion')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/logistica_gestion')) ?>">
-                                <i class="bi bi-truck me-2"></i>Gestión
-                            </a>
-                        </li>
+                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/logistica_gestion')) ?>">
+                            <i class="bi bi-truck me-2"></i>Gestión Envíos
+                        </a>
                     <?php endif; ?>
+
                     <?php if (can('menu.logistica_documentos')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/logistica_documentos')) ?>">
-                                <i class="bi bi-file-text me-2"></i>Documentos
-                            </a>
-                        </li>
+                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/logistica_documentos')) ?>">
+                            <i class="bi bi-file-earmark-text me-2"></i>Docs. Embarque
+                        </a>
                     <?php endif; ?>
+
                     <?php if (can('menu.inventario_almacen')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('almacen/inventario')) ?>">
-                                <i class="bi bi-boxes me-2"></i>Inventario Almacén
-                            </a>
-                        </li>
+                        <a class="dropdown-item" href="<?= esc(base_url('almacen/inventario')) ?>">
+                            <i class="bi bi-boxes me-2"></i>Inventario Almacén
+                        </a>
                     <?php endif; ?>
 
                     <?php if ($secLogistica && $secAdmin): ?>
@@ -234,25 +319,21 @@
                     <?php endif; ?>
 
                     <?php if (can('menu.reportes')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/reportes')) ?>">
-                                <i class="bi bi-bar-chart-line me-2"></i>Reportes
-                            </a>
-                        </li>
+                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/reportes')) ?>">
+                            <i class="bi bi-bar-chart-line me-2"></i>Reportes
+                        </a>
                     <?php endif; ?>
+
                     <?php if (can('menu.roles')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo11/roles')) ?>">
-                                <i class="bi bi-person-gear me-2"></i>Roles
-                            </a>
-                        </li>
+                        <a class="dropdown-item" href="<?= esc(base_url('modulo11/roles')) ?>">
+                            <i class="bi bi-person-gear me-2"></i>Roles
+                        </a>
                     <?php endif; ?>
+
                     <?php if (can('menu.usuarios')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo11/usuarios')) ?>">
-                                <i class="bi bi-shield-lock me-2"></i>Gestión Usuarios
-                            </a>
-                        </li>
+                        <a class="dropdown-item" href="<?= esc(base_url('modulo11/usuarios')) ?>">
+                            <i class="bi bi-shield-lock me-2"></i>Gestión Usuarios
+                        </a>
                     <?php endif; ?>
                 </ul>
 
@@ -320,6 +401,9 @@
                                     <a class="dropdown-item" href="<?= esc(base_url('clientes')) ?>">
                                         <i class="bi bi-people me-2"></i>Clientes
                                     </a>
+                                    <a class="dropdown-item" href="<?= esc(base_url('modulo1/pedidos_clientes')) ?>">
+                                        <i class="bi bi-people-fill me-2"></i>Pedidos Clientes
+                                    </a>
                                 <?php endif; ?>
 
                                 <?php if (can('menu.catalogo_disenos')): ?>
@@ -331,6 +415,12 @@
                                 <?php if (can('menu.pedidos')): ?>
                                     <a class="dropdown-item" href="<?= esc(base_url('modulo1/pedidos')) ?>">
                                         <i class="bi bi-bag me-2"></i>Pedidos
+                                    </a>
+                                <?php endif; ?>
+
+                                <?php if (can('menu.pagos')): ?>
+                                    <a class="dropdown-item" href="<?= esc(base_url('modulo1/pagos')) ?>">
+                                        <i class="bi bi-credit-card me-2"></i>Pagos
                                     </a>
                                 <?php endif; ?>
 

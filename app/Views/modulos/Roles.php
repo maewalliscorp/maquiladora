@@ -28,26 +28,31 @@
                 </thead>
                 <tbody>
                 <?php if (!empty($roles)): foreach ($roles as $r): ?>
-                    <tr>
+                    <?php $esFijo = (int)($r['es_fijo'] ?? 0) === 1; ?>
+                    <tr data-es-fijo="<?= $esFijo ? 1 : 0 ?>">
                         <td><?= esc($r['id']) ?></td>
                         <td class="rol-nombre"><?= esc($r['nombre'] ?? '-') ?></td>
                         <td class="rol-descripcion"><?= esc($r['descripcion'] ?? '-') ?></td>
                         <td>
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-primary btn-rol-editar"
-                                    data-id="<?= (int)$r['id'] ?>"
-                                    data-nombre="<?= esc($r['nombre'] ?? '', 'attr') ?>"
-                                    data-descripcion="<?= esc($r['descripcion'] ?? '', 'attr') ?>"
-                                    title="Editar rol">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-danger btn-rol-eliminar ms-1"
-                                    data-id="<?= (int)$r['id'] ?>"
-                                    data-nombre="<?= esc($r['nombre'] ?? '', 'attr') ?>"
-                                    title="Eliminar rol">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                            <?php if (!$esFijo): ?>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary btn-rol-editar"
+                                        data-id="<?= (int)$r['id'] ?>"
+                                        data-nombre="<?= esc($r['nombre'] ?? '', 'attr') ?>"
+                                        data-descripcion="<?= esc($r['descripcion'] ?? '', 'attr') ?>"
+                                        title="Editar rol">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger btn-rol-eliminar ms-1"
+                                        data-id="<?= (int)$r['id'] ?>"
+                                        data-nombre="<?= esc($r['nombre'] ?? '', 'attr') ?>"
+                                        title="Eliminar rol">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            <?php else: ?>
+                                <span class="badge bg-secondary">Rol fijo</span>
+                            <?php endif; ?>
                             <button type="button"
                                     class="btn btn-sm btn-outline-info btn-rol-permisos ms-1"
                                     data-id="<?= (int)$r['id'] ?>"
@@ -125,9 +130,17 @@
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalPermisosRolLabel">
-                        Permisos del Rol: <span id="permisos-rol-nombre"></span>
-                    </h5>
+                    <div class="d-flex flex-column flex-md-row align-items-md-center w-100 justify-content-between">
+                        <h5 class="modal-title mb-2 mb-md-0" id="modalPermisosRolLabel">
+                            Permisos del Rol: <span id="permisos-rol-nombre"></span>
+                        </h5>
+                        <div class="form-check ms-md-3">
+                            <input class="form-check-input" type="checkbox" id="perm_todos">
+                            <label class="form-check-label" for="perm_todos">
+                                Seleccionar todos
+                            </label>
+                        </div>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -144,6 +157,12 @@
                                 <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.pedidos" id="perm_pedidos">
                                 <label class="form-check-label" for="perm_pedidos">
                                     Pedidos
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.pagos" id="perm_pagos">
+                                <label class="form-check-label" for="perm_pagos">
+                                    Pagos
                                 </label>
                             </div>
                             <div class="form-check">
@@ -208,6 +227,12 @@
                                     Desperdicios
                                 </label>
                             </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.proveedores" id="perm_proveedores">
+                                <label class="form-check-label" for="perm_proveedores">
+                                    Proveedores
+                                </label>
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <h6 class="text-danger mb-3">Mantenimiento</h6>
@@ -221,6 +246,12 @@
                                 <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.mant_correctivo" id="perm_mant_correctivo">
                                 <label class="form-check-label" for="perm_mant_correctivo">
                                     Correctivo
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.mant_preventivo" id="perm_mant_preventivo">
+                                <label class="form-check-label" for="perm_mant_preventivo">
+                                    Preventivo
                                 </label>
                             </div>
                         </div>
@@ -255,6 +286,12 @@
                         </div>
                         <div class="col-md-6">
                             <h6 class="text-dark mb-3">Administración</h6>
+                            <div class="form-check">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.notificaciones" id="perm_notificaciones">
+                                <label class="form-check-label" for="perm_notificaciones">
+                                    Notificaciones
+                                </label>
+                            </div>
                             <div class="form-check">
                                 <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.reportes" id="perm_reportes">
                                 <label class="form-check-label" for="perm_reportes">
@@ -522,6 +559,19 @@
                 // Abrir el modal
                 const m = new bootstrap.Modal(document.getElementById('modalPermisosRol'));
                 m.show();
+            });
+
+            // Seleccionar / deseleccionar todos los permisos
+            $('#perm_todos').on('change', function(){
+                const checked = $(this).is(':checked');
+                $('.permiso-checkbox').prop('checked', checked);
+            });
+
+            // Mantener sincronizado el checkbox "Seleccionar todos" cuando se cambian individuales
+            $(document).on('change', '.permiso-checkbox', function(){
+                const total = $('.permiso-checkbox').length;
+                const marcados = $('.permiso-checkbox:checked').length;
+                $('#perm_todos').prop('checked', total > 0 && marcados === total);
             });
 
             // Guardar permisos del rol

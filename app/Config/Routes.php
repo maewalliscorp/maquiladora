@@ -218,7 +218,6 @@ $routes->get('/editarpedido/(:num)', 'Modulos::m1_editar/$1', ['filter' => 'auth
 $routes->get('/detalle_pedido/(:num)', 'Modulos::m1_detalles/$1', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
 $routes->get('/perfildisenador', 'Modulos::m2_perfildisenador', ['filter' => 'auth']);
 $routes->get('/catalogodisenos', 'Modulos::m2_catalogodisenos', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
-$routes->get('/agregardiseno', 'Modulos::m2_agregardiseno', ['filter' => 'auth:Administrador,Jefe,Diseñador']);
 
 /* --------------------------------------------------------------------
  * Módulo 1
@@ -226,6 +225,8 @@ $routes->get('/agregardiseno', 'Modulos::m2_agregardiseno', ['filter' => 'auth:A
 $routes->group('modulo1', [], function ($routes) {
     $routes->get('/', 'Modulos::m1_index');
     $routes->get('pedidos', 'Modulos::m1_pedidos', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
+    $routes->get('pedidos_clientes', 'Modulos::m1_pedidos_clientes', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
+    $routes->get('pagos', 'Modulos::m1_pagos', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
     $routes->get('produccion', 'Modulos::m1_produccion', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte']);
     $routes->get('agregar', 'Modulos::m1_agregar', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
     $routes->get('agregar_pedido', 'Modulos::m1_agregar', ['filter' => 'auth:Administrador,Jefe,Inspector,Diseñador,Empleado,Corte,Calidad,Envios']);
@@ -611,8 +612,10 @@ $routes->group('calidad', [], function ($routes) {
 
 /* --------------------------------------------------------------------
  * Módulo 11 · Usuarios (UI)
+ * Ahora el acceso fino se controla vía permisos (menu.roles, menu.usuarios),
+ * por eso dejamos aquí solo el filtro de autenticación genérico.
  * ------------------------------------------------------------------*/
-$routes->group('modulo11', ['filter' => 'auth:Administrador,Jefe,RH'], function ($routes) {
+$routes->group('modulo11', ['filter' => 'auth'], function ($routes) {
     $routes->get('roles', 'Modulos::m11_roles');
     $routes->post('roles/actualizar', 'Modulos::m11_roles_actualizar');
     $routes->post('roles/agregar', 'Modulos::m11_roles_agregar');
