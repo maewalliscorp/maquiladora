@@ -2,6 +2,7 @@
 namespace App\Controllers;
 
 use App\Models\InspeccionModel;
+use App\Services\NotificationService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 
 class Inspeccion extends BaseController
@@ -420,6 +421,10 @@ class Inspeccion extends BaseController
         $cantidadReproceso = $this->request->getPost('cantidad_reproceso');
         $cantidadReproceso = ($cantidadReproceso === '' || $cantidadReproceso === null) ? null : (int)$cantidadReproceso;
         $fechaReproceso = trim((string)($this->request->getPost('fecha_reproceso') ?? '')) ?: null;
+        
+        // Obtener el resultado anterior para verificar si hubo cambio
+        $resultadoAnterior = $inspeccion['resultado'] ?? '';
+        $resultadoNuevo = $data['resultado'] ?? '';
 
         // Validar los datos
         $rules = [
@@ -526,6 +531,48 @@ class Inspeccion extends BaseController
 
             if ($db->transStatus() === false) {
                 throw new \Exception('Error al guardar los datos');
+            }
+
+            // Crear notificaciones si el resultado cambió a "aprobado" o "rechazado"
+            if ($resultadoAnterior !== $resultadoNuevo && ($resultadoNuevo === 'aprobado' || $resultadoNuevo === 'rechazado')) {
+                try {
+                    $notificationService = new NotificationService();
+                    
+                    // Obtener datos para la notificación
+                    $inspeccionData = $db->query("
+                        SELECT i.id, op.folio, pi.tipo as puntoInspeccion
+                        FROM inspeccion i
+                        LEFT JOIN orden_produccion op ON op.id = i.ordenProduccionId
+                        LEFT JOIN punto_inspeccion pi ON pi.id = i.puntoInspeccionId
+                        WHERE i.id = ?
+                    ", [$id])->getRowArray();
+
+                    if ($inspeccionData) {
+                        $maquiladoraId = session()->get('maquiladoraID') ?? session()->get('maquiladora_id') ?? 1;
+                        $numeroInspeccion = 'INSP-' . str_pad($id, 5, '0', STR_PAD_LEFT);
+                        $ordenFolio = $inspeccionData['folio'] ?? 'OP-' . ($inspeccionData['ordenProduccionId'] ?? 'Desconocido');
+                        $puntoInspeccion = $inspeccionData['puntoInspeccion'] ?? 'Punto no especificado';
+
+                        if ($resultadoNuevo === 'aprobado') {
+                            $notificationService->notifyInspeccionAprobada(
+                                $maquiladoraId,
+                                $numeroInspeccion,
+                                $ordenFolio,
+                                $puntoInspeccion
+                            );
+                        } elseif ($resultadoNuevo === 'rechazado') {
+                            $notificationService->notifyInspeccionRechazada(
+                                $maquiladoraId,
+                                $numeroInspeccion,
+                                $ordenFolio,
+                                $puntoInspeccion
+                            );
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // No fallar el guardado si hay error en la notificación
+                    log_message('warning', 'Error al crear notificación de inspección: ' . $e->getMessage());
+                }
             }
 
             return $this->response->setJSON([

@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Models\IncidenciaModel;
 use App\Models\EmpleadoModel;
 use App\Models\OrdenProduccionModel;
+use App\Services\NotificationService;
 
 class Incidencias extends BaseController
 {
@@ -89,7 +90,42 @@ class Incidencias extends BaseController
         if ($data['ordenProduccionFK'] <= 0 || $data['tipo'] === '' || $data['fecha'] === '') {
             return redirect()->back()->with('error','Faltan campos obligatorios (OP, tipo, fecha).');
         }
-        (new IncidenciaModel())->insert($data);
+        
+        // Insertar la incidencia
+        $incidenciaModel = new IncidenciaModel();
+        $incidenciaId = $incidenciaModel->insert($data);
+        
+        // Crear notificación si se registró la incidencia correctamente
+        if ($incidenciaId) {
+            try {
+                $notificationService = new NotificationService();
+                $ordenProduccionModel = new OrdenProduccionModel();
+                
+                // Obtener datos para la notificación
+                $orden = $ordenProduccionModel->find($data['ordenProduccionFK']);
+                
+                if ($orden) {
+                    $maquiladoraId = session()->get('maquiladoraID') ?? session()->get('maquiladora_id') ?? 1;
+                    $ordenFolio = $orden['folio'] ?? 'OP-' . $data['ordenProduccionFK'];
+                    $tipoIncidencia = $data['tipo'];
+                    $descripcion = $data['descripcion'];
+                    
+                    // Limitar la descripción para la notificación
+                    $descripcionCorta = strlen($descripcion) > 100 ? substr($descripcion, 0, 100) . '...' : $descripcion;
+                    
+                    $notificationService->notifyIncidenciaRegistrada(
+                        $maquiladoraId,
+                        $tipoIncidencia,
+                        $ordenFolio,
+                        $descripcionCorta
+                    );
+                }
+            } catch (\Throwable $e) {
+                // No fallar el registro si hay error en la notificación
+                log_message('warning', 'Error al crear notificación de incidencia: ' . $e->getMessage());
+            }
+        }
+        
         return redirect()->to(site_url('modulo3/incidencias'))->with('ok','Incidencia registrada.');
     }
 

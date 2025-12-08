@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\MuestraModel;
+use App\Services\NotificationService;
 
 class Muestras extends BaseController
 {
@@ -95,6 +96,17 @@ class Muestras extends BaseController
         $comentarios = $this->request->getPost('comentarios');
         $observaciones = $this->request->getPost('observaciones');
 
+        // Obtener el estado anterior para verificar si hubo cambio
+        $estadoAnterior = '';
+        try {
+            $muestraActual = $db->table('muestra')->where('id', $id)->get()->getRowArray();
+            $estadoAnterior = $muestraActual['estado'] ?? '';
+            log_message('debug', "MUESTRAS DEBUG - ID: {$id}, Estado anterior: '{$estadoAnterior}', Estado nuevo: '{$estado}'");
+        } catch (\Throwable $e) {
+            $estadoAnterior = '';
+            log_message('error', 'MUESTRAS DEBUG - Error al obtener estado anterior: ' . $e->getMessage());
+        }
+
         $db->transStart();
         try {
             $mData = [];
@@ -138,6 +150,61 @@ class Muestras extends BaseController
 
             $db->transComplete();
             if ($db->transStatus() === false) { throw new \Exception('Error en la transacción'); }
+
+            // Crear notificaciones si el estado cambió a "Aprobada" o "Rechazada"
+            $condicionNotificacion = $estadoAnterior !== $estado && ($estado === 'Aprobada' || $estado === 'Rechazada');
+            log_message('debug', "MUESTRAS DEBUG - Condición notificación: {$condicionNotificacion}");
+            log_message('debug', "MUESTRAS DEBUG - Estados: anterior='{$estadoAnterior}' != nuevo='{$estado}' y (nuevo es 'Aprobada' o 'Rechazada')");
+            
+            if ($condicionNotificacion) {
+                try {
+                    log_message('debug', "MUESTRAS DEBUG - Intentando crear notificación...");
+                    $notificationService = new NotificationService();
+                    
+                    // Obtener datos para la notificación
+                    $muestraData = $db->query("
+                        SELECT m.prototipoId, c.nombre as clienteNombre
+                        FROM muestra m
+                        LEFT JOIN aprobacion_muestra am ON am.muestraId = m.id
+                        LEFT JOIN clientes c ON c.id = am.clienteId
+                        WHERE m.id = ?
+                    ", [$id])->getRowArray();
+
+                    log_message('debug', "MUESTRAS DEBUG - Datos muestra: " . json_encode($muestraData));
+
+                    if ($muestraData) {
+                        $maquiladoraId = session()->get('maquiladoraID') ?? session()->get('maquiladora_id') ?? 1;
+                        $prototipoId = $muestraData['prototipoId'] ?? 'Desconocido';
+                        $clienteNombre = $muestraData['clienteNombre'] ?? 'No especificado';
+
+                        log_message('debug', "MUESTRAS DEBUG - Enviando notificación: maquiladora={$maquiladoraId}, prototipo={$prototipoId}, cliente={$clienteNombre}");
+
+                        if ($estado === 'Aprobada') {
+                            $result = $notificationService->notifyMuestraAprobada(
+                                $maquiladoraId,
+                                $prototipoId,
+                                $clienteNombre
+                            );
+                            log_message('debug', "MUESTRAS DEBUG - Resultado notificación aprobada: {$result}");
+                        } elseif ($estado === 'Rechazada') {
+                            $result = $notificationService->notifyMuestraRechazada(
+                                $maquiladoraId,
+                                $prototipoId,
+                                $clienteNombre
+                            );
+                            log_message('debug', "MUESTRAS DEBUG - Resultado notificación rechazada: {$result}");
+                        }
+                    } else {
+                        log_message('warning', "MUESTRAS DEBUG - No se encontraron datos de la muestra para notificación");
+                    }
+                } catch (\Throwable $e) {
+                    // No fallar el guardado si hay error en la notificación
+                    log_message('error', 'MUESTRAS DEBUG - Error al crear notificación de muestra: ' . $e->getMessage());
+                }
+            } else {
+                log_message('debug', "MUESTRAS DEBUG - No se crea notificación porque no cumple condiciones");
+            }
+
             return $this->response->setJSON(['ok'=>true, 'message'=>'Guardado']);
         } catch (\Throwable $e) {
             try { $db->transRollback(); } catch (\Throwable $e2) {}

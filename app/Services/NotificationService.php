@@ -35,6 +35,8 @@ class NotificationService
         string $nivel = 'info',
         ?string $color = null
     ) {
+        log_message('debug', "NOTIFICATION DEBUG - createNotification llamado con: maquiladora={$maquiladoraId}, titulo='{$titulo}', mensaje='{$mensaje}'");
+        
         $db = \Config\Database::connect();
         $db->transStart();
         
@@ -49,17 +51,23 @@ class NotificationService
                 'color' => $color ?? $this->getColorForLevel($nivel)
             ];
 
+            log_message('debug', "NOTIFICATION DEBUG - Insertando notificación con datos: " . json_encode($data));
+
             $notificationId = $this->notificationModel->insert($data);
             
             if (!$notificationId) {
                 throw new \Exception('No se pudo crear la notificación');
             }
 
+            log_message('debug', "NOTIFICATION DEBUG - Notificación insertada con ID: {$notificationId}");
+
             // Obtener todos los usuarios de la maquiladora
             $usuarios = $db->table('users')
                            ->where('maquiladoraIdFK', $maquiladoraId)
                            ->get()
                            ->getResultArray();
+
+            log_message('debug', "NOTIFICATION DEBUG - Usuarios encontrados: " . count($usuarios));
 
             // Asignar la notificación a cada usuario
             foreach ($usuarios as $usuario) {
@@ -79,11 +87,12 @@ class NotificationService
                 throw new \Exception('Error en la transacción de notificación');
             }
 
+            log_message('debug', "NOTIFICATION DEBUG - Transacción completada exitosamente");
             return $notificationId;
             
         } catch (\Throwable $e) {
             $db->transRollback();
-            log_message('error', 'Error al crear notificación: ' . $e->getMessage());
+            log_message('error', 'NOTIFICATION DEBUG - Error al crear notificación: ' . $e->getMessage());
             return false;
         }
     }
@@ -412,6 +421,142 @@ class NotificationService
             "Se ha reportado una incidencia: {$tipoIncidencia} - {$descripcion}",
             null,
             'danger'
+        );
+    }
+
+    /**
+     * Notificación cuando se asigna un empleado a una orden de producción
+     */
+    public function notifyEmpleadoAsignado(int $maquiladoraId, string $ordenFolio, string $empleadoNombre, string $empleadoPuesto): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Empleado Asignado a Orden',
+            "Se ha asignado a {$empleadoNombre} ({$empleadoPuesto}) a la orden {$ordenFolio}",
+            null,
+            'info'
+        );
+    }
+
+    /**
+     * Notificación cuando se asignan múltiples empleados a una orden de producción
+     */
+    public function notifyEmpleadosAsignadosMultiple(int $maquiladoraId, string $ordenFolio, int $cantidadEmpleados): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Empleados Asignados a Orden',
+            "Se han asignado {$cantidadEmpleados} empleados a la orden {$ordenFolio}",
+            null,
+            'info'
+        );
+    }
+
+    /**
+     * Notificación cuando una muestra es aprobada
+     */
+    public function notifyMuestraAprobada(int $maquiladoraId, string $prototipoId, string $clienteNombre): int|false
+    {
+        log_message('debug', "NOTIFICATION DEBUG - notifyMuestraAprobada llamado con: maquiladora={$maquiladoraId}, prototipo={$prototipoId}, cliente={$clienteNombre}");
+        
+        $result = $this->createNotification(
+            $maquiladoraId,
+            'Muestra Aprobada',
+            "La muestra del prototipo {$prototipoId} ha sido aprobada",
+            "Cliente: {$clienteNombre}",
+            'success'
+        );
+        
+        log_message('debug', "NOTIFICATION DEBUG - notifyMuestraAprobada resultado: {$result}");
+        return $result;
+    }
+
+    /**
+     * Notificación cuando una muestra es rechazada
+     */
+    public function notifyMuestraRechazada(int $maquiladoraId, string $prototipoId, string $clienteNombre): int|false
+    {
+        log_message('debug', "NOTIFICATION DEBUG - notifyMuestraRechazada llamado con: maquiladora={$maquiladoraId}, prototipo={$prototipoId}, cliente={$clienteNombre}");
+        
+        $result = $this->createNotification(
+            $maquiladoraId,
+            'Muestra Rechazada',
+            "La muestra del prototipo {$prototipoId} ha sido rechazada",
+            "Cliente: {$clienteNombre}",
+            'warning'
+        );
+        
+        log_message('debug', "NOTIFICATION DEBUG - notifyMuestraRechazada resultado: {$result}");
+        return $result;
+    }
+
+    /**
+     * Notificación cuando se registra una incidencia en producción
+     */
+    public function notifyIncidenciaRegistrada(int $maquiladoraId, string $tipoIncidencia, string $ordenFolio, string $descripcion): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Incidencia Registrada',
+            "Se ha reportado una incidencia tipo: {$tipoIncidencia} en la orden {$ordenFolio}",
+            "Descripción: {$descripcion}",
+            'danger'
+        );
+    }
+
+    /**
+     * Notificación cuando una inspección es aprobada
+     */
+    public function notifyInspeccionAprobada(int $maquiladoraId, string $numeroInspeccion, string $ordenFolio, string $puntoInspeccion): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Inspección Aprobada',
+            "La inspección {$numeroInspeccion} ha sido aprobada",
+            "Orden: {$ordenFolio} - Punto: {$puntoInspeccion}",
+            'success'
+        );
+    }
+
+    /**
+     * Notificación cuando una inspección es rechazada
+     */
+    public function notifyInspeccionRechazada(int $maquiladoraId, string $numeroInspeccion, string $ordenFolio, string $puntoInspeccion): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Inspección Rechazada',
+            "La inspección {$numeroInspeccion} ha sido rechazada",
+            "Orden: {$ordenFolio} - Punto: {$puntoInspeccion}",
+            'danger'
+        );
+    }
+
+    /**
+     * Notificación cuando se crea un nuevo rol
+     */
+    public function notifyRolCreado(int $maquiladoraId, string $nombreRol, string $descripcion): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Nuevo Rol Creado',
+            "Se ha creado el rol: {$nombreRol}",
+            "Descripción: {$descripcion}",
+            'info'
+        );
+    }
+
+    /**
+     * Notificación cuando se actualiza un rol
+     */
+    public function notifyRolActualizado(int $maquiladoraId, string $nombreRol, string $descripcion): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Rol Actualizado',
+            "Se ha actualizado el rol: {$nombreRol}",
+            "Descripción: {$descripcion}",
+            'warning'
         );
     }
 }

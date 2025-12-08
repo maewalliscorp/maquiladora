@@ -5,6 +5,7 @@ use App\Models\OrdenProduccionModel;
 use App\Models\AsignacionTareaModel;
 use App\Models\EmpleadoModel;
 use App\Models\TiempoTrabajoModel;
+use App\Services\NotificationService;
 
 class Produccion extends BaseController
 {
@@ -281,6 +282,35 @@ class Produccion extends BaseController
         if (!$asigModel->agregar($opId, $empleadoId, $desde, $hasta, $ruta)) {
             return $this->response->setStatusCode(500)->setJSON(['error' => 'No se pudo asignar']);
         }
+
+        // Crear notificación de asignación
+        try {
+            $notificationService = new NotificationService();
+            $ordenModel = new OrdenProduccionModel();
+            $empleadoModel = new EmpleadoModel();
+            
+            // Obtener datos para la notificación
+            $orden = $ordenModel->find($opId);
+            $empleado = $empleadoModel->find($empleadoId);
+            
+            if ($orden && $empleado) {
+                $maquiladoraId = session()->get('maquiladoraID') ?? 1;
+                $ordenFolio = $orden['folio'] ?? 'OP-' . $opId;
+                $empleadoNombre = trim(($empleado['nombre'] ?? '') . ' ' . ($empleado['apellido'] ?? ''));
+                $empleadoPuesto = $empleado['puesto'] ?? 'Empleado';
+                
+                $notificationService->notifyEmpleadoAsignado(
+                    $maquiladoraId,
+                    $ordenFolio,
+                    $empleadoNombre,
+                    $empleadoPuesto
+                );
+            }
+        } catch (\Throwable $e) {
+            // No fallar la asignación si hay error en la notificación
+            log_message('warning', 'Error al crear notificación de asignación: ' . $e->getMessage());
+        }
+
         return $this->response->setJSON(['ok' => true]);
     }
 
@@ -321,6 +351,52 @@ class Produccion extends BaseController
             else
                 $fail++;
         }
+
+        // Crear notificación si se asignaron empleados exitosamente
+        if ($ok > 0) {
+            try {
+                $notificationService = new NotificationService();
+                $ordenModel = new OrdenProduccionModel();
+                
+                // Obtener datos para la notificación
+                $orden = $ordenModel->find($opId);
+                
+                if ($orden) {
+                    $maquiladoraId = session()->get('maquiladoraID') ?? 1;
+                    $ordenFolio = $orden['folio'] ?? 'OP-' . $opId;
+                    
+                    // Si solo se asignó un empleado, usar la notificación individual
+                    if ($ok === 1 && count($empleados) === 1) {
+                        $empleadoModel = new EmpleadoModel();
+                        $empleadoId = (int) $empleados[0];
+                        $empleado = $empleadoModel->find($empleadoId);
+                        
+                        if ($empleado) {
+                            $empleadoNombre = trim(($empleado['nombre'] ?? '') . ' ' . ($empleado['apellido'] ?? ''));
+                            $empleadoPuesto = $empleado['puesto'] ?? 'Empleado';
+                            
+                            $notificationService->notifyEmpleadoAsignado(
+                                $maquiladoraId,
+                                $ordenFolio,
+                                $empleadoNombre,
+                                $empleadoPuesto
+                            );
+                        }
+                    } else {
+                        // Usar notificación múltiple
+                        $notificationService->notifyEmpleadosAsignadosMultiple(
+                            $maquiladoraId,
+                            $ordenFolio,
+                            $ok
+                        );
+                    }
+                }
+            } catch (\Throwable $e) {
+                // No fallar la asignación si hay error en la notificación
+                log_message('warning', 'Error al crear notificación de asignación múltiple: ' . $e->getMessage());
+            }
+        }
+
         return $this->response->setJSON(['ok' => true, 'asignados' => $ok, 'duplicados' => $dup, 'fallidos' => $fail]);
     }
 

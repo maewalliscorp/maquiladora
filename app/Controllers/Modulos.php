@@ -2,6 +2,8 @@
 
 namespace App\Controllers;
 
+use App\Services\NotificationService;
+
 /** Controlador principal: vistas y endpoints JSON de módulos. */
 class Modulos extends BaseController
 {
@@ -3257,6 +3259,23 @@ class Modulos extends BaseController
                 throw new \Exception($msg);
             }
             $id = $db->insertID();
+
+            // Crear notificación para el nuevo rol
+            try {
+                $notificationService = new NotificationService();
+                $maquiladoraId = session()->get('maquiladoraID') ?? session()->get('maquiladora_id') ?? 1;
+                $descripcionCorta = strlen($desc) > 100 ? substr($desc, 0, 100) . '...' : $desc;
+
+                $notificationService->notifyRolCreado(
+                    $maquiladoraId,
+                    $nom,
+                    $descripcionCorta
+                );
+            } catch (\Throwable $e) {
+                // No fallar la creación del rol si hay error en la notificación
+                log_message('warning', 'Error al crear notificación de rol creado: ' . $e->getMessage());
+            }
+
             return $this->response->setJSON(['success' => true, 'id' => (int) $id, 'message' => 'Rol agregado correctamente']);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON([
@@ -3302,6 +3321,23 @@ class Modulos extends BaseController
                 $msg = $err['message'] ?? 'No se pudo actualizar';
                 throw new \Exception($msg);
             }
+            
+            // Crear notificación para el rol actualizado
+            try {
+                $notificationService = new NotificationService();
+                $maquiladoraId = session()->get('maquiladoraID') ?? session()->get('maquiladora_id') ?? 1;
+                $descripcionCorta = strlen($desc) > 100 ? substr($desc, 0, 100) . '...' : $desc;
+                
+                $notificationService->notifyRolActualizado(
+                    $maquiladoraId,
+                    $nom,
+                    $descripcionCorta
+                );
+            } catch (\Throwable $e) {
+                // No fallar la actualización del rol si hay error en la notificación
+                log_message('warning', 'Error al crear notificación de rol actualizado: ' . $e->getMessage());
+            }
+            
             return $this->response->setJSON(['success' => true, 'message' => 'Rol actualizado correctamente']);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON([
