@@ -559,4 +559,32 @@ class NotificationService
             'warning'
         );
     }
+
+    /**
+     * Notificación cuando se actualizan los permisos de un rol
+     */
+    public function notifyPermisosRolActualizados(int $maquiladoraId, string $nombreRol, int $cantidadPermisos): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Permisos de Rol Actualizados',
+            "Se han actualizado los permisos del rol: {$nombreRol}",
+            "Cantidad de permisos asignados: {$cantidadPermisos}",
+            'warning'
+        );
+    }
+
+    /**
+     * Notificación cuando se actualiza un usuario
+     */
+    public function notifyUsuarioActualizado(int $maquiladoraId, string $nombreUsuario, string $email): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Usuario Actualizado',
+            "Se ha actualizado el usuario: {$nombreUsuario}",
+            "Email: {$email}",
+            'warning'
+        );
+    }
 }

@@ -262,967 +262,109 @@ class Modulos extends BaseController
                     $rowNext = $db->query('SELECT COALESCE(MAX(id),0)+1 AS nextId FROM usuario_rol')->getRowArray();
                     if ($rowNext && isset($rowNext['nextId'])) {
                         $nextId = (int) $rowNext['nextId'];
-                    }
-                } catch (\Throwable $e) {
-                    $nextId = time();
                 }
-
-                $okRole = $db->table('usuario_rol')->insert([
-                    'id' => $nextId,
-                    'usuarioIdFK' => $id,
-                    'rolIdFK' => (int) $rolId,
-                ]);
-                if (!$okRole) {
-                    $dbErr = $db->error();
-                    $dbMsg = isset($dbErr['message']) && $dbErr['message'] ? $dbErr['message'] : 'No se pudo asignar el rol';
-                    throw new \Exception($dbMsg);
-                }
+            } catch (\Throwable $e) {
+                $nextId = time();
             }
 
-            $db->transComplete();
-            if ($db->transStatus() === false) {
+            $okRole = $db->table('usuario_rol')->insert([
+                'id' => $nextId,
+                'usuarioIdFK' => $id,
+                'rolIdFK' => (int) $rolId,
+            ]);
+            if (!$okRole) {
                 $dbErr = $db->error();
-                $dbMsg = isset($dbErr['message']) && $dbErr['message'] ? $dbErr['message'] : 'Error en la transacción';
-                try {
-                    log_message('error', 'm11_actualizar_usuario transStatus=false: ' . $dbMsg);
-                } catch (\Throwable $e) {
-                }
+                $dbMsg = isset($dbErr['message']) && $dbErr['message'] ? $dbErr['message'] : 'No se pudo asignar el rol';
                 throw new \Exception($dbMsg);
             }
-
-            return $this->response->setJSON(['success' => true, 'message' => 'Usuario y rol actualizados correctamente']);
-        } catch (\Throwable $e) {
-            try {
-                $db->transRollback();
-            } catch (\Throwable $e3) {
-            }
-            $errMsg = $e->getMessage();
-            try {
-                log_message('error', 'm11_actualizar_usuario exception: ' . $errMsg);
-            } catch (\Throwable $e2) {
-            }
-            return $this->response->setStatusCode(500)->setJSON([
-                'success' => false,
-                'message' => 'Error al actualizar: ' . $errMsg,
-            ]);
-        }
-    }
-
-    /**
-     * Eliminar usuario (lógica): marca deleted_at o, si no existe, active=0
-     * Entrada: POST id
-     * Salida: JSON { success, message }
-     */
-    public function m11_eliminar_usuario()
-    {
-        // Aceptar la petición sin forzar método, la ruta ya limita a POST
-        $id = (int) ($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
-        if ($id <= 0) {
-            return $this->response->setStatusCode(400)->setJSON([
-                'success' => false,
-                'message' => 'ID inválido'
-            ]);
         }
 
-        $db = \Config\Database::connect();
-        try {
-            // Intentar soft delete con deleted_at
-            $ok = false;
+        $db->transComplete();
+        if ($db->transStatus() === false) {
+            $dbErr = $db->error();
+            $dbMsg = isset($dbErr['message']) && $dbErr['message'] ? $dbMsg : 'Error en la transacción';
             try {
-                $ok = $db->table('users')->where('id', $id)
-                    ->update(['deleted_at' => date('Y-m-d H:i:s')]);
+                log_message('error', 'm11_actualizar_usuario transStatus=false: ' . $dbMsg);
             } catch (\Throwable $e) {
-                $ok = false;
             }
-            if (!$ok) {
-                // Fallback: desactivar
-                $db->table('users')->where('id', $id)->update(['active' => 0]);
-            }
+            throw new \Exception($dbMsg);
+        }
 
-            return $this->response->setJSON([
-                'success' => true,
-                'message' => 'Usuario eliminado correctamente'
-            ]);
+        // Crear notificación para el usuario actualizado
+        try {
+            $notificationService = new NotificationService();
+            $maquiladoraId = session()->get('maquiladoraID') ?? session()->get('maquiladora_id') ?? 1;
+            
+            $notificationService->notifyUsuarioActualizado(
+                $maquiladoraId,
+                $nombre,
+                $email
+            );
         } catch (\Throwable $e) {
-            return $this->response->setStatusCode(500)->setJSON([
-                'success' => false,
-                'message' => 'Error al eliminar: ' . $e->getMessage(),
-            ]);
-        }
-    }
-
-    /**
-     * Actualizar un diseño y su última versión.
-     * Entrada (POST): codigo?, nombre?, descripcion?, version?, fecha?, notas?, archivoCadUrl?, archivoPatronUrl?, aprobado?, materials?[]
-     * - Si se incluye archivoCadFile/archivoPatronFile, se actualiza la URL correspondiente.
-     * - Reemplaza por completo la lista de materiales de la última versión si viene 'materials'.
-     * Respuesta: JSON { ok: bool, message }
-     */
-    public function m2_actualizar($id = null)
-    {
-        $method = strtolower($this->request->getMethod());
-        if ($method === 'options') {
-            return $this->response->setJSON(['ok' => true, 'message' => 'OK']);
-        }
-        if ($method !== 'post') {
-            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
-        }
-        $id = (int) ($id ?? 0);
-        if ($id <= 0) {
-            return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
+            // No fallar la actualización del usuario si hay error en la notificación
+            log_message('warning', 'Error al crear notificación de usuario actualizado: ' . $e->getMessage());
         }
 
-        $db = \Config\Database::connect();
-
-        // Datos a actualizar
-        $dataDiseno = [];
-        $dataVersion = [];
-        $mapGet = function (string $k) {
-            return trim((string) ($this->request->getPost($k) ?? ''));
-        };
-        foreach (['codigo', 'nombre', 'descripcion'] as $k) {
-            $v = $mapGet($k);
-            if ($v !== '') {
-                $dataDiseno[$k] = $v;
-            }
-        }
-        // clienteId (opcional, permitir limpiar cuando viene vacío)
-        $cliIdUp = $this->request->getPost('clienteId') ?? $this->request->getVar('clienteId');
-        if ($cliIdUp !== null) {
-            $dataDiseno['clienteId'] = ($cliIdUp === '') ? null : (int) $cliIdUp;
-        }
-        // precio_unidad (opcional, numérico)
-        if ($this->request->getPost('precio_unidad') !== null && $this->request->getPost('precio_unidad') !== '') {
-            $pu = (float) $this->request->getPost('precio_unidad');
-            if ($pu >= 0) {
-                $dataDiseno['precio_unidad'] = $pu;
-            }
-        }
-        // Campos de catálogo (sexo, talla, tipo corte, tipo ropa)
-        foreach (['idSexoFK', 'idTallasFK', 'idTipoCorteFK', 'idTipoRopaFK'] as $k) {
-            $val = $this->request->getPost($k);
-            if ($val !== null) {
-                $dataDiseno[$k] = ($val === '' || $val === '0') ? null : (int) $val;
-            }
-        }
-        foreach (['version', 'fecha', 'notas'] as $k) {
-            $v = $mapGet($k);
-            if ($v !== '') {
-                $dataVersion[$k] = $v;
-            }
-        }
-        if ($this->request->getPost('aprobado') !== null) {
-            $dataVersion['aprobado'] = (int) (bool) $this->request->getPost('aprobado');
-        }
-
-        // Manejo de archivos (BLOBs)
+        return $this->response->setJSON(['success' => true, 'message' => 'Usuario y rol actualizados correctamente']);
+    } catch (\Throwable $e) {
         try {
-            $fotoFile = $this->request->getFile('foto');
-            if ($fotoFile && $fotoFile->isValid()) {
-                $dataVersion['foto'] = file_get_contents($fotoFile->getTempName());
-            }
-        } catch (\Throwable $e) { /* ignore */
-        }
-        try {
-            $patronFile = $this->request->getFile('patron');
-            if ($patronFile && $patronFile->isValid()) {
-                $dataVersion['patron'] = file_get_contents($patronFile->getTempName());
-            }
-        } catch (\Throwable $e) { /* ignore */
-        }
-
-        $db->transStart();
-        try {
-            // Update diseno
-            if (!empty($dataDiseno)) {
-                foreach (['diseno', 'Diseno'] as $t) {
-                    try {
-                        $db->table($t)->where('id', $id)->update($dataDiseno);
-                        break;
-                    } catch (\Throwable $e) { /* next */
-                    }
-                }
-            }
-
-            // Obtener última versión de este diseño
-            $dvId = null;
-            try {
-                $dvId = $db->query(
-                    "SELECT dv.id FROM diseno_version dv WHERE dv.disenoId = ? ORDER BY dv.fecha DESC, dv.id DESC LIMIT 1",
-                    [$id]
-                )->getRow('id');
-            } catch (\Throwable $e) {
-                try {
-                    $dvId = $db->query(
-                        "SELECT dv.id FROM disenoversion dv WHERE dv.disenoId = ? ORDER BY dv.fecha DESC, dv.id DESC LIMIT 1",
-                        [$id]
-                    )->getRow('id');
-                } catch (\Throwable $e2) {
-                    $dvId = null;
-                }
-            }
-
-            if (!$dvId) {
-                throw new \Exception('No se encontró la versión a actualizar');
-            }
-
-            // Update versión
-            if (!empty($dataVersion)) {
-                foreach (['diseno_version', 'disenoversion'] as $t) {
-                    try {
-                        $db->table($t)->where('id', (int) $dvId)->update($dataVersion);
-                        break;
-                    } catch (\Throwable $e) { /* next */
-                    }
-                }
-            }
-
-            // Reemplazar materiales si vienen
-            $materialsRaw = $this->request->getPost('materials');
-            if ($materialsRaw) {
-                $materials = is_array($materialsRaw) ? $materialsRaw : json_decode((string) $materialsRaw, true);
-                if (is_array($materials)) {
-                    $lmTables = ['lista_materiales', 'listamateriales', 'ListaMateriales'];
-                    // Borrar actuales
-                    foreach ($lmTables as $t) {
-                        try {
-                            $db->table($t)->where('disenoVersionId', (int) $dvId)->delete();
-                            break;
-                        } catch (\Throwable $e) { /* next */
-                        }
-                    }
-                    // Insertar nuevos
-                    foreach ($materials as $m) {
-                        $artId = isset($m['articuloId']) ? (int) $m['articuloId'] : (int) ($m['id'] ?? 0);
-                        if ($artId <= 0) {
-                            continue;
-                        }
-                        $cant = isset($m['cantidadPorUnidad']) ? (float) $m['cantidadPorUnidad'] : (float) ($m['cantidad'] ?? 0);
-                        $merma = isset($m['mermaPct']) ? (float) $m['mermaPct'] : (isset($m['merma']) ? (float) $m['merma'] : null);
-                        $rowLM = [
-                            'disenoVersionId' => (int) $dvId,
-                            'articuloId' => $artId,
-                            'cantidadPorUnidad' => $cant,
-                            'mermaPct' => $merma,
-                        ];
-                        $inserted = false;
-                        foreach ($lmTables as $t) {
-                            try {
-                                $db->table($t)->insert($rowLM);
-                                $inserted = true;
-                                break;
-                            } catch (\Throwable $e) { /* next */
-                            }
-                        }
-                        if (!$inserted) {
-                            try {
-                                $db->query('INSERT INTO lista_materiales (disenoVersionId, articuloId, cantidadPorUnidad, mermaPct) VALUES (?,?,?,?)', [(int) $dvId, $artId, $cant, $merma]);
-                            } catch (\Throwable $e) {
-                            }
-                        }
-                    }
-                }
-            }
-
-            $db->transComplete();
-            if ($db->transStatus() === false) {
-                throw new \Exception('Error en la transacción');
-            }
-
-            return $this->response->setJSON(['ok' => true, 'message' => 'Diseño actualizado']);
-        } catch (\Throwable $e) {
             $db->transRollback();
-            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'message' => 'Error al actualizar: ' . $e->getMessage()]);
+        } catch (\Throwable $e3) {
         }
+        $errMsg = $e->getMessage();
+        try {
+            log_message('error', 'm11_actualizar_usuario exception: ' . $errMsg);
+        } catch (\Throwable $e2) {
+        }
+        return $this->response->setStatusCode(500)->setJSON([
+            'success' => false,
+            'message' => 'Error al actualizar: ' . $errMsg,
+        ]);
+    }
+}
+
+/**
+ * Eliminar usuario (lógica): marca deleted_at o, si no existe, active=0
+ * Entrada: POST id
+ * Salida: JSON { success, message }
+ */
+public function m11_eliminar_usuario()
+{
+    // Aceptar la petición sin forzar método, la ruta ya limita a POST
+    $id = (int) ($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
+    if ($id <= 0) {
+        return $this->response->setStatusCode(400)->setJSON([
+            'success' => false,
+            'message' => 'ID inválido'
+        ]);
     }
 
-    /**
-     * Crear un nuevo diseño y su primera versión.
-     * Entrada (POST): codigo?, nombre (req), descripcion?, version (req), fecha?, notas?, archivoCadUrl?, archivoPatronUrl?, aprobado?
-     * Respuesta: JSON { ok: bool, id, versionId, message }
-     */
-    public function m2_crear_diseno()
-    {
-        $method = strtolower($this->request->getMethod());
-        if ($method === 'options') {
-            return $this->response->setJSON(['ok' => true, 'message' => 'OK']);
-        }
-        if ($method !== 'post') {
-            return $this->response->setStatusCode(405)->setJSON(['ok' => false, 'message' => 'Método no permitido']);
-        }
-
-        $db = \Config\Database::connect();
-        $dataDiseno = [
-            'codigo' => trim((string) $this->request->getPost('codigo')) ?: null,
-            'nombre' => trim((string) $this->request->getPost('nombre')),
-            'descripcion' => trim((string) $this->request->getPost('descripcion')) ?: null,
-        ];
-        // Asignar maquiladora del usuario autenticado, si existe en sesión
-        $maquiladoraId = session()->get('maquiladora_id');
-        if ($maquiladoraId) {
-            $dataDiseno['maquiladoraID'] = (int) $maquiladoraId;
-        }
-        // clienteId opcional desde el modal
-        $cid = $this->request->getPost('clienteId') ?? $this->request->getVar('clienteId');
-        if ($cid !== null) {
-            $dataDiseno['clienteId'] = ($cid === '') ? null : (int) $cid;
-        }
-        // precio_unidad desde el modal (float)
-        if (($p = $this->request->getPost('precio_unidad')) !== null && $p !== '') {
-            $dataDiseno['precio_unidad'] = (float) $p;
-        }
-        // FK opcionales (sexo, talla, tipo corte, tipo ropa)
-        $idSexo = $this->request->getPost('idSexoFK') ?? $this->request->getPost('id_sexo') ?? $this->request->getPost('sexoId');
-        $idTalla = $this->request->getPost('idTallasFK') ?? $this->request->getPost('id_talla') ?? $this->request->getPost('tallaId');
-        $idCorte = $this->request->getPost('idTipoCorteFK') ?? $this->request->getPost('id_tipo_corte') ?? $this->request->getPost('tipoCorteId');
-        $idRopa = $this->request->getPost('idTipoRopaFK') ?? $this->request->getPost('id_tipo_ropa') ?? $this->request->getPost('tipoRopaId');
-        if ($idSexo !== null && $idSexo !== '') {
-            $dataDiseno['idSexoFK'] = (int) $idSexo;
-        }
-        if ($idTalla !== null && $idTalla !== '') {
-            $dataDiseno['IdTallasFK'] = (int) $idTalla;
-        }
-        if ($idCorte !== null && $idCorte !== '') {
-            $dataDiseno['idTipoCorteFK'] = (int) $idCorte;
-        }
-        if ($idRopa !== null && $idRopa !== '') {
-            $dataDiseno['idTipoRopaFK'] = (int) $idRopa;
-        }
-        $dataVersion = [
-            'version' => trim((string) $this->request->getPost('version')),
-            'fecha' => $this->request->getPost('fecha') ?: date('Y-m-d'),
-            'notas' => trim((string) $this->request->getPost('notas')) ?: null,
-            'aprobado' => $this->request->getPost('aprobado') === null ? null : (int) (bool) $this->request->getPost('aprobado'),
-        ];
-
-        // Manejo de archivos (BLOBs)
+    $db = \Config\Database::connect();
+    try {
+        // Intentar soft delete con deleted_at
+        $ok = false;
         try {
-            $fotoFile = $this->request->getFile('foto');
-            if ($fotoFile && $fotoFile->isValid()) {
-                $dataVersion['foto'] = file_get_contents($fotoFile->getTempName());
-            }
-        } catch (\Throwable $e) { /* ignorar carga foto */
-        }
-
-        try {
-            $patronFile = $this->request->getFile('patron');
-            if ($patronFile && $patronFile->isValid()) {
-                $dataVersion['patron'] = file_get_contents($patronFile->getTempName());
-            }
-        } catch (\Throwable $e) { /* ignorar carga patrón */
-        }
-
-        // Validación mínima
-        if ($dataDiseno['nombre'] === '' || $dataVersion['version'] === '') {
-            return $this->response->setStatusCode(422)->setJSON(['ok' => false, 'message' => 'Nombre y versión son obligatorios']);
-        }
-
-        $db->transStart();
-        try {
-            // Insertar en diseno
-            $db->table('diseno')->insert($dataDiseno);
-            // Revisar error inmediato
-            $err = $db->error();
-            if (!empty($err['message'])) {
-                throw new \Exception('Error al insertar en diseno: ' . $err['message']);
-            }
-            $idDiseno = (int) $db->insertID();
-            if ($idDiseno === 0) {
-                // Fallback: obtener último ID insertado por orden
-                try {
-                    $row = $db->query('SELECT id FROM diseno ORDER BY id DESC LIMIT 1')->getRowArray();
-                    if ($row && isset($row['id'])) {
-                        $idDiseno = (int) $row['id'];
-                    }
-                } catch (\Throwable $e) { /* intentar mayúscula */
-                }
-            }
-
-            if (!$idDiseno) {
-                // Fallback por mayúsculas
-                $db->table('Diseno')->insert($dataDiseno);
-                $err = $db->error();
-                if (!empty($err['message'])) {
-                    throw new \Exception('Error al insertar en Diseno: ' . $err['message']);
-                }
-                $idDiseno = (int) $db->insertID();
-                if ($idDiseno === 0) {
-                    try {
-                        $row = $db->query('SELECT id FROM Diseno ORDER BY id DESC LIMIT 1')->getRowArray();
-                        if ($row && isset($row['id'])) {
-                            $idDiseno = (int) $row['id'];
-                        }
-                    } catch (\Throwable $e) { /* no se pudo obtener */
-                    }
-                }
-            }
-
-            if (!$idDiseno) {
-                throw new \Exception('No se pudo crear el diseño');
-            }
-
-            // Insertar versión
-            $dataVersion['disenoId'] = $idDiseno;
-            $db->table('diseno_version')->insert($dataVersion);
-            $err = $db->error();
-            if (!empty($err['message'])) {
-                throw new \Exception('Error al insertar en diseno_version: ' . $err['message']);
-            }
-            $idVersion = (int) $db->insertID();
-            if ($idVersion === 0) {
-                try {
-                    $row = $db->query('SELECT id FROM diseno_version WHERE disenoId = ? ORDER BY id DESC LIMIT 1', [$idDiseno])->getRowArray();
-                    if ($row && isset($row['id'])) {
-                        $idVersion = (int) $row['id'];
-                    }
-                } catch (\Throwable $e) { /* fallback abajo */
-                }
-            }
-            if (!$idVersion) {
-                // Fallback por mayúsculas / sin guiones
-                $db->table('disenoversion')->insert($dataVersion);
-                $err = $db->error();
-                if (!empty($err['message'])) {
-                    throw new \Exception('Error al insertar en disenoversion: ' . $err['message']);
-                }
-                $idVersion = (int) $db->insertID();
-                if ($idVersion === 0) {
-                    try {
-                        $row = $db->query('SELECT id FROM disenoversion WHERE disenoId = ? ORDER BY id DESC LIMIT 1', [$idDiseno])->getRowArray();
-                        if ($row && isset($row['id'])) {
-                            $idVersion = (int) $row['id'];
-                        }
-                    } catch (\Throwable $e) { /* no se pudo obtener */
-                    }
-                }
-            }
-
-            if (!$idVersion) {
-                throw new \Exception('No se pudo crear la versión');
-            }
-
-            // Guardar materiales si vienen en la solicitud
-            $materialsRaw = $this->request->getPost('materials');
-            if ($materialsRaw) {
-                $materials = is_array($materialsRaw) ? $materialsRaw : json_decode((string) $materialsRaw, true);
-                if (is_array($materials)) {
-                    // Intentar varios nombres de tabla por compatibilidad
-                    $lmTables = ['lista_materiales', 'listamateriales', 'ListaMateriales'];
-                    foreach ($materials as $m) {
-                        $artId = isset($m['articuloId']) ? (int) $m['articuloId'] : (int) ($m['id'] ?? 0);
-                        if ($artId <= 0) {
-                            continue;
-                        }
-                        $cant = isset($m['cantidadPorUnidad']) ? (float) $m['cantidadPorUnidad'] : (float) ($m['cantidad'] ?? 0);
-                        $merma = isset($m['mermaPct']) ? (float) $m['mermaPct'] : (isset($m['merma']) ? (float) $m['merma'] : null);
-                        $rowLM = [
-                            'disenoVersionId' => $idVersion,
-                            'articuloId' => $artId,
-                            'cantidadPorUnidad' => $cant,
-                            'mermaPct' => $merma,
-                        ];
-                        $inserted = false;
-                        foreach ($lmTables as $t) {
-                            try {
-                                $db->table($t)->insert($rowLM);
-                                $inserted = true;
-                                break;
-                            } catch (\Throwable $e) { /* probar siguiente */
-                            }
-                        }
-                        if (!$inserted) {
-                            // Como último recurso, intenta con columnas alternativas
-                            try {
-                                $db->query('INSERT INTO lista_materiales (disenoVersionId, articuloId, cantidadPorUnidad, mermaPct) VALUES (?,?,?,?)', [$idVersion, $artId, $cant, $merma]);
-                            } catch (\Throwable $e) { /* ignorar error individual */
-                            }
-                        }
-                    }
-                }
-            }
-
-            // === Crear automáticamente PROTOTIPO y MUESTRA ===
-            $userName = (string) (session()->get('user_name') ?? '');
-
-            // 1) PROTOTIPO: referenciar la versión, dejar fechas/estado/notas en NULL
-            $prototipoId = null;
-            $rowProt = [
-                'disenoVersionId' => $idVersion,
-                'codigo' => $dataDiseno['codigo'] ?? null,
-                'fechainicio' => null,
-                'fechaFin' => null,
-                'estado' => null,
-                'notas' => null,
-            ];
-            try {
-                $db->table('prototipo')->insert($rowProt);
-                $prototipoId = (int) $db->insertID();
-            } catch (\Throwable $e) {
-                try {
-                    $db->table('Prototipo')->insert($rowProt);
-                    $prototipoId = (int) $db->insertID();
-                } catch (\Throwable $e2) {
-                    $err = $db->error();
-                    $msg = $err['message'] ?? $e2->getMessage() ?? 'Error desconocido al crear prototipo';
-                    throw new \Exception('No se pudo crear el prototipo: ' . $msg);
-                }
-            }
-            if (!$prototipoId) {
-                $err = $db->error();
-                $msg = $err['message'] ?? 'Error desconocido al crear prototipo';
-                throw new \Exception('No se pudo crear el prototipo: ' . $msg);
-            }
-
-            // 2) MUESTRA: prototipoId del paso anterior; solicitadaPor = username; fechaSolicitud = hoy; demás NULL
-            $rowMuestra = [
-                'prototipoId' => $prototipoId,
-                'solicitadaPor' => $userName !== '' ? $userName : null,
-                'fechaSolicitud' => date('Y-m-d'),
-                'fechaEnvio' => null,
-                'estado' => 'Pendiente',
-                'observaciones' => null,
-            ];
-            try {
-                $db->table('muestra')->insert($rowMuestra);
-            } catch (\Throwable $e) {
-                try {
-                    $db->table('Muestra')->insert($rowMuestra);
-                } catch (\Throwable $e2) {
-                    $err = $db->error();
-                    $msg = $err['message'] ?? $e2->getMessage() ?? 'Error desconocido al crear muestra';
-                    throw new \Exception('No se pudo crear la muestra: ' . $msg);
-                }
-            }
-            // Obtener ID de la muestra recién creada
-            $muestraId = (int) $db->insertID();
-            if ($muestraId === 0) {
-                try {
-                    $row = $db->query('SELECT id FROM muestra ORDER BY id DESC LIMIT 1')->getRowArray();
-                    if ($row && isset($row['id'])) {
-                        $muestraId = (int) $row['id'];
-                    }
-                } catch (\Throwable $e) {
-                    try {
-                        $row = $db->query('SELECT id FROM Muestra ORDER BY id DESC LIMIT 1')->getRowArray();
-                        if ($row && isset($row['id'])) {
-                            $muestraId = (int) $row['id'];
-                        }
-                    } catch (\Throwable $e2) {
-                        $muestraId = 0;
-                    }
-                }
-            }
-            if ($muestraId <= 0) {
-                throw new \Exception('No se pudo obtener el ID de la muestra creada');
-            }
-
-            // Crear registro de aprobacion_muestra con valores NULL
-            $rowAprob = [
-                'muestraId' => $muestraId,
-                'clienteId' => null,
-                'fecha' => null,
-                'decision' => 'Pendiente',
-                'comentarios' => null,
-            ];
-            $insertedAprob = false;
-            try {
-                $db->table('aprobacion_muestra')->insert($rowAprob);
-                $insertedAprob = true;
-            } catch (\Throwable $e) {
-                try {
-                    $db->table('Aprobacion_Muestra')->insert($rowAprob);
-                    $insertedAprob = true;
-                } catch (\Throwable $e2) { /* se validará abajo */
-                }
-        $db = \Config\Database::connect();
-        $maquiladoraId = session()->get('maquiladora_id');
-        $where = $maquiladoraId ? "WHERE maquiladoraID = " . $db->escape($maquiladoraId) : "";
-        
-        $rows = [];
-        $queries = [
-            "SELECT id_talla AS id, nombre, descripcion FROM tallas $where ORDER BY nombre",
-            "SELECT id_talla AS id, nombre, descripcion FROM Tallas $where ORDER BY nombre",
-        ];
-        foreach ($queries as $q) {
-            try {
-                $rows = $db->query($q)->getResultArray();
-                if ($rows !== null) break;
-            } catch (\Throwable $e) {}
-        }
-        return $this->response->setJSON(['items' => $rows]);
-    }
-
-            $pedidoModel = new \App\Models\PedidoModel();
-            // Traer detalle completo (cliente + clasificacion + items)
-            $detalle = $pedidoModel->getPedidoDetalle($id);
-            // Fallback: al menos datos básicos del pedido
-            if (!$detalle) {
-                $basic = $pedidoModel->getPedidoPorId($id);
-                if (!$basic) {
-                    return $this->response->setStatusCode(404)->setJSON(['error' => 'Pedido no encontrado']);
-                }
-                $detalle = [
-                    'id' => (int) ($basic['id'] ?? $id),
-                    'folio' => $basic['folio'] ?? '',
-                    'fecha' => $basic['fecha'] ?? null,
-                    'estatus' => $basic['estatus'] ?? '',
-                    'moneda' => $basic['moneda'] ?? '',
-                    'total' => $basic['total'] ?? 0,
-                    'cliente' => [
-                        'nombre' => $basic['empresa'] ?? '',
-                    ],
-                    'items' => [],
-                ];
-            }
-
-            // Rellenar diseño directamente si viniera vacío
-            if (empty($detalle['diseno'])) {
-                $db = \Config\Database::connect();
-                $row = null;
-                try {
-                    $row = $db->query(
-                        "SELECT dv.*, d.id AS d_id, d.codigo AS d_codigo, d.nombre AS d_nombre, d.descripcion AS d_descripcion
-                         FROM orden_produccion op
-                         LEFT JOIN diseno_version dv ON dv.id = op.disenoVersionId
-                         LEFT JOIN diseno d ON d.id = dv.disenoId
-                         WHERE op.ordenCompraId = ?
-                         ORDER BY op.id DESC
-                         LIMIT 1",
-                        [$id]
-                    )->getRowArray();
-                } catch (\Throwable $e) {
-                    $row = null;
-                }
-                if (!$row) {
-                    try {
-                        $row = $db->query(
-                            "SELECT dv.*, d.id AS d_id, d.codigo AS d_codigo, d.nombre AS d_nombre, d.descripcion AS d_descripcion
-                             FROM OrdenProduccion op
-                             LEFT JOIN DisenoVersion dv ON dv.id = op.disenoVersionId
-                             LEFT JOIN Diseno d ON d.id = dv.disenoId
-                             WHERE op.ordenCompraId = ?
-                             ORDER BY op.id DESC
-                             LIMIT 1",
-                            [$id]
-                        )->getRowArray();
-                    } catch (\Throwable $e2) {
-                        $row = null;
-                    }
-                }
-                if ($row && isset($row['d_id'])) {
-                    $detalle['diseno'] = [
-                        'id' => $row['d_id'],
-                        'codigo' => $row['d_codigo'] ?? '',
-                        'nombre' => $row['d_nombre'] ?? '',
-                        'descripcion' => $row['d_descripcion'] ?? '',
-                        'version' => [
-                            'id' => $row['id'] ?? null,
-                            'version' => $row['version'] ?? null,
-                            'fecha' => $row['fecha'] ?? null,
-                            'aprobado' => $row['aprobado'] ?? null,
-                            'notas' => $row['notas'] ?? null,
-                            'archivoCadUrl' => $row['archivoCadUrl'] ?? null,
-                            'archivoPatronUrl' => $row['archivoPatronUrl'] ?? null,
-                        ],
-                        'archivoCadUrl' => $row['archivoCadUrl'] ?? null,
-                        'archivoPatronUrl' => $row['archivoPatronUrl'] ?? null,
-                    ];
-                }
-            }
-
-            // Normalizar para el modal
-            $out = [
-                'id' => (int) ($detalle['id'] ?? $id),
-                'folio' => $detalle['folio'] ?? '',
-                'fecha' => isset($detalle['fecha']) ? date('Y-m-d', strtotime($detalle['fecha'])) : '',
-                'estatus' => $detalle['estatus'] ?? '',
-                'moneda' => $detalle['moneda'] ?? '',
-                'total' => isset($detalle['total']) ? number_format((float) $detalle['total'], 2) : '0.00',
-                'empresa' => $detalle['cliente']['nombre'] ?? ($detalle['empresa'] ?? ''),
-                'cliente' => $detalle['cliente'] ?? null,
-                'items' => $detalle['items'] ?? [],
-                'diseno' => $detalle['diseno'] ?? null,
-                'disenos' => $detalle['disenos'] ?? [],
-                'documento_url' => $detalle['documento_url'] ?? '',
-                // OP ligada
-                'op_id' => $detalle['op_id'] ?? null,
-                'op_folio' => $detalle['op_folio'] ?? null,
-                'op_disenoVersionId' => $detalle['op_disenoVersionId'] ?? null,
-                'op_cantidadPlan' => $detalle['op_cantidadPlan'] ?? null,
-                'op_fechaInicioPlan' => $detalle['op_fechaInicioPlan'] ?? null,
-                'op_fechaFinPlan' => $detalle['op_fechaFinPlan'] ?? null,
-                'op_status' => $detalle['op_status'] ?? null,
-            ];
-
-            // Convertir BLOBs a base64 en el diseño y versión
-            if (isset($out['diseno']) && is_array($out['diseno'])) {
-                // Convertir foto si existe
-                if (isset($out['diseno']['foto']) && !empty($out['diseno']['foto'])) {
-                    $out['diseno']['foto'] = base64_encode($out['diseno']['foto']);
-                }
-                if (isset($out['diseno']['patron']) && !empty($out['diseno']['patron'])) {
-                    $out['diseno']['patron'] = base64_encode($out['diseno']['patron']);
-                }
-                // Convertir en la versión anidada si existe
-                if (isset($out['diseno']['version']) && is_array($out['diseno']['version'])) {
-                    if (isset($out['diseno']['version']['foto']) && !empty($out['diseno']['version']['foto'])) {
-                        $out['diseno']['version']['foto'] = base64_encode($out['diseno']['version']['foto']);
-                    }
-                    if (isset($out['diseno']['version']['patron']) && !empty($out['diseno']['version']['patron'])) {
-                        $out['diseno']['version']['patron'] = base64_encode($out['diseno']['version']['patron']);
-                    }
-                }
-            }
-
-            // Limpiar datos antes de convertir a JSON
-            $out = $cleanUtf8($out);
-
-            return $this->response->setJSON($out);
+            $ok = $db->table('users')->where('id', $id)
+                ->update(['deleted_at' => date('Y-m-d H:i:s')]);
         } catch (\Throwable $e) {
-            log_message('error', 'Error en m1_pedido_json: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
-            return $this->response->setStatusCode(500)->setJSON([
-                'error' => 'Error interno al cargar el pedido',
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
+            $ok = false;
         }
+        if (!$ok) {
+            // Fallback: desactivar
+            $db->table('users')->where('id', $id)->update(['active' => 0]);
+        }
+
+        return $this->response->setJSON([
+            'success' => true,
+            'message' => 'Usuario eliminado correctamente'
+        ]);
+    } catch (\Throwable $e) {
+        return $this->response->setStatusCode(500)->setJSON([
+            'success' => false,
+            'message' => 'Error al eliminar: ' . $e->getMessage(),
+        ]);
     }
-
-    /**
-     * Generar PDF del pedido
-     */
-    public function m1_pedido_pdf($id = null)
-    {
-        // Obtener información de la maquiladora del usuario logueado
-        $maquiladora = [];
-        // Obtener el ID de la maquiladora de la sesión (puede estar como 'maquiladora_id' o 'maquiladoraIdFK')
-        $maquiladoraId = session()->get('maquiladora_id') ?? session()->get('maquiladoraIdFK');
-
-        log_message('debug', 'ID de maquiladora obtenido de la sesión: ' . $maquiladoraId);
-
-        if ($maquiladoraId) {
-            $db = \Config\Database::connect();
-
-            // Primero intentamos con la tabla en minúsculas
-            $maquiladora = $db->table('maquiladora')
-                ->select([
-                    'idmaquiladora',
-                    'Nombre_Maquila AS nombre',
-                    'Dueno AS dueno',
-                    'Telefono AS telefono',
-                    'Correo AS correo',
-                    'Domicilio AS domicilio',
-                    'logo'
-                ])
-                ->where('idmaquiladora', $maquiladoraId)
-                ->get()
-                ->getRowArray();
-
-            log_message('debug', 'Primer intento - Datos de la maquiladora: ' . print_r($maquiladora, true));
-
-            // Si no se encontró, intentar con mayúsculas
-            if (empty($maquiladora)) {
-                $maquiladora = $db->table('Maquiladora')
-                    ->select([
-                        'idmaquiladora',
-                        'Nombre_Maquila AS nombre',
-                        'Dueno AS dueno',
-                        'Telefono AS telefono',
-                        'Correo AS correo',
-                        'Domicilio AS domicilio',
-                        'logo'
-                    ])
-                    ->where('idmaquiladora', $maquiladoraId)
-                    ->get()
-                    ->getRowArray();
-
-                log_message('debug', 'Segundo intento - Datos de la maquiladora: ' . print_r($maquiladora, true));
-            }
-
-            // Si aún no hay datos, crear un array con valores por defecto
-            if (empty($maquiladora)) {
-                $maquiladora = [
-                    'idmaquiladora' => $maquiladoraId,
-                    'nombre' => 'Maquiladora no encontrada',
-                    'dueno' => 'No especificado',
-                    'telefono' => 'No especificado',
-                    'correo' => 'No especificado',
-                    'domicilio' => 'No especificado',
-                    'logo' => null
-                ];
-                log_message('error', 'No se pudo encontrar la maquiladora con ID: ' . $maquiladoraId);
-            }
-
-            // Preparar logo para visualización
-            if (!empty($maquiladora['logo'])) {
-                $maquiladora['logo_base64'] = base64_encode($maquiladora['logo']);
-                try {
-                    $finfo = new \finfo(FILEINFO_MIME_TYPE);
-                    $mime = $finfo->buffer($maquiladora['logo']);
-                    $maquiladora['logo_mime'] = $mime;
-                } catch (\Throwable $e) {
-                    $maquiladora['logo_mime'] = 'image/jpeg'; // Fallback
-                }
-            } else {
-                $maquiladora['logo_base64'] = null;
-                $maquiladora['logo_mime'] = null;
-            }
-        }
-
-        $id = (int) ($id ?? 0);
-        if ($id <= 0) {
-            return $this->response->setStatusCode(400)->setJSON(['error' => 'ID inválido']);
-        }
-
-        try {
-            $pedidoModel = new \App\Models\PedidoModel();
-            // Obtener detalle completo del pedido
-            $detalle = $pedidoModel->getPedidoDetalle($id);
-
-            if (!$detalle) {
-                $basic = $pedidoModel->getPedidoPorId($id);
-                if (!$basic) {
-                    return $this->response->setStatusCode(404)->setJSON(['error' => 'Pedido no encontrado']);
-                }
-                $detalle = [
-                    'id' => (int) ($basic['id'] ?? $id),
-                    'folio' => $basic['folio'] ?? '',
-                    'fecha' => $basic['fecha'] ?? null,
-                    'estatus' => $basic['estatus'] ?? '',
-                    'moneda' => $basic['moneda'] ?? '',
-                    'total' => $basic['total'] ?? 0,
-                    'cliente' => [
-                        'nombre' => $basic['empresa'] ?? '',
-                    ],
-                    'items' => [],
-                    'op_cantidadPlan' => $basic['op_cantidadPlan'] ?? null,
-                ];
-            }
-
-            // Rellenar diseño si está vacío (mismo código que m1_pedido_json)
-            if (empty($detalle['diseno'])) {
-                $db = \Config\Database::connect();
-                $row = null;
-                try {
-                    $row = $db->query(
-                        "SELECT dv.*, d.id AS d_id, d.codigo AS d_codigo, d.nombre AS d_nombre, d.descripcion AS d_descripcion,
-                                COALESCE(dv.precio_unidad, dv.precioUnidad, d.precio_unidad, d.precioUnidad) AS precio_unidad
-                         FROM orden_produccion op
-                         LEFT JOIN diseno_version dv ON dv.id = op.disenoVersionId
-                         LEFT JOIN diseno d ON d.id = dv.disenoId
-                         WHERE op.ordenCompraId = ?
-                         ORDER BY op.id DESC
-                         LIMIT 1",
-                        [$id]
-                    )->getRowArray();
-                } catch (\Throwable $e) {
-                    $row = null;
-                }
-                if (!$row) {
-                    try {
-                        $row = $db->query(
-                            "SELECT dv.*, d.id AS d_id, d.codigo AS d_codigo, d.nombre AS d_nombre, d.descripcion AS d_descripcion,
-                                    COALESCE(dv.precio_unidad, dv.precioUnidad, d.precio_unidad, d.precioUnidad) AS precio_unidad
-                             FROM OrdenProduccion op
-                             LEFT JOIN DisenoVersion dv ON dv.id = op.disenoVersionId
-                             LEFT JOIN Diseno d ON d.id = dv.disenoId
-                             WHERE op.ordenCompraId = ?
-                             ORDER BY op.id DESC
-                             LIMIT 1",
-                            [$id]
-                        )->getRowArray();
-                    } catch (\Throwable $e2) {
-                        $row = null;
-                    }
-                }
-                if ($row && isset($row['d_id'])) {
-                    $detalle['diseno'] = [
-                        'id' => $row['d_id'],
-                        'codigo' => $row['d_codigo'] ?? '',
-                        'nombre' => $row['d_nombre'] ?? '',
-                        'descripcion' => $row['d_descripcion'] ?? '',
-                        'precio_unidad' => $row['precio_unidad'] ?? $row['precioUnidad'] ?? null,
-                        'version' => [
-                            'id' => $row['id'] ?? null,
-                            'version' => $row['version'] ?? null,
-                            'fecha' => $row['fecha'] ?? null,
-                            'aprobado' => $row['aprobado'] ?? null,
-                        ],
-                    ];
-                }
-            }
-
-            // Preparar datos para la vista del PDF
-            $data = [
-                'maquiladora' => $maquiladora,
-                'pedido' => [
-                    'id' => (int) ($detalle['id'] ?? $id),
-                    'folio' => $detalle['folio'] ?? '',
-                    'fecha' => isset($detalle['fecha']) ? date('d/m/Y', strtotime($detalle['fecha'])) : date('d/m/Y'),
-                    'estatus' => $detalle['estatus'] ?? '',
-                    'moneda' => $detalle['moneda'] ?? 'MXN',
-                    'total' => isset($detalle['total']) ? number_format((float) $detalle['total'], 2) : '0.00',
-                ],
-                'cliente' => $detalle['cliente'] ?? [],
-                'diseno' => $detalle['diseno'] ?? null,
-                'op_cantidadPlan' => $detalle['op_cantidadPlan'] ?? null,
-                'op_fechaInicioPlan' => isset($detalle['op_fechaInicioPlan']) ? date('d/m/Y', strtotime($detalle['op_fechaInicioPlan'])) : null,
-                'op_fechaFinPlan' => isset($detalle['op_fechaFinPlan']) ? date('d/m/Y', strtotime($detalle['op_fechaFinPlan'])) : null,
-            ];
-
-            // Cargar detalle por tallas para el PDF
-            $tallas = [];
-            if (!empty($detalle['op_id'])) {
-                try {
-                    $tallas = $pedidoModel->getTallasPorOP($detalle['op_id']);
-                } catch (\Throwable $eT) {
-                    $tallas = [];
-                }
-            } elseif (!empty($detalle['tallas']) && is_array($detalle['tallas'])) {
-                // Fallback si getPedidoDetalle ya devolvió tallas
-                $tallas = $detalle['tallas'];
-            }
-            $data['tallas'] = $tallas;
-
-            // Renderizar HTML de la vista
-            $html = view('modulos/pedido_pdf', $data);
-
-            // Configurar Dompdf
-            $opt = new \Dompdf\Options();
-            $opt->set('isRemoteEnabled', true);
-            $opt->set('isHtml5ParserEnabled', true);
-            $dompdf = new \Dompdf\Dompdf($opt);
-
-            $dompdf->loadHtml($html, 'UTF-8');
-            $dompdf->setPaper('letter', 'portrait');
-            $dompdf->render();
-
-            $pdfBytes = $dompdf->output();
-
-            // Limpiar cualquier output buffer
-            while (ob_get_level() > 0) {
-                @ob_end_clean();
-            }
-
-            // Responder con el PDF
-            $filename = 'pedido_' . ($data['pedido']['folio'] ?: $id) . '.pdf';
-
-            return $this->response
-                ->setStatusCode(200)
-                ->setHeader('Content-Type', 'application/pdf')
-                ->setHeader('Content-Disposition', 'inline; filename="' . $filename . '"')
-                ->setHeader('Cache-Control', 'private, max-age=0, must-revalidate')
-                ->setHeader('Pragma', 'public')
-                ->setBody($pdfBytes);
-        } catch (\Throwable $e) {
-            log_message('error', 'Error al generar PDF del pedido: ' . $e->getMessage());
-            return $this->response->setStatusCode(500)->setJSON([
-                'error' => 'Error al generar el PDF',
-                'message' => $e->getMessage()
-            ]);
-        }
-    }
+}
 
     /**
      * Generar Excel del pedido
@@ -3474,6 +2616,25 @@ public function m11_roles_guardar_permisos()
         }
 
         log_message('debug', 'Permisos guardados exitosamente para rol_id: ' . $rolId);
+
+        // Crear notificación para los permisos actualizados
+        try {
+            $notificationService = new NotificationService();
+            $maquiladoraId = session()->get('maquiladoraID') ?? session()->get('maquiladora_id') ?? 1;
+            
+            // Obtener el nombre del rol
+            $rolData = $db->table('rol')->select('nombre')->where('id', $rolId)->get()->getRowArray();
+            $nombreRol = $rolData['nombre'] ?? 'Rol #' . $rolId;
+            
+            $notificationService->notifyPermisosRolActualizados(
+                $maquiladoraId,
+                $nombreRol,
+                count($permisos)
+            );
+        } catch (\Throwable $e) {
+            // No fallar el guardado de permisos si hay error en la notificación
+            log_message('warning', 'Error al crear notificación de permisos actualizados: ' . $e->getMessage());
+        }
 
         return $this->response->setJSON([
             'success' => true,

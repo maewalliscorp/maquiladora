@@ -183,12 +183,6 @@
                                     Clientes
                                 </label>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input permiso-checkbox" type="checkbox" value="menu.pedidos_clientes" id="perm_pedidos_clientes">
-                                <label class="form-check-label" for="perm_pedidos_clientes">
-                                    Pedidos Clientes
-                                </label>
-                            </div>
                         </div>
                         <div class="col-md-6">
                             <h6 class="text-success mb-3">Muestras e Inspección</h6>
