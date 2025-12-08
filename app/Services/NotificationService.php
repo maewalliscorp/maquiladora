@@ -587,4 +587,18 @@ class NotificationService
             'warning'
         );
     }
+
+    /**
+     * Notificación cuando se registra un nuevo usuario
+     */
+    public function notifyUsuarioRegistrado(int $maquiladoraId, string $nombreUsuario, string $email): int|false
+    {
+        return $this->createNotification(
+            $maquiladoraId,
+            'Nuevo Usuario Registrado',
+            "Se ha registrado un nuevo usuario: {$nombreUsuario}",
+            "Email: {$email}",
+            'info'
+        );
+    }
 }

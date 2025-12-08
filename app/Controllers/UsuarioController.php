@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Models\UserModel;
 use App\Models\MaquiladoraModel;
+use App\Services\NotificationService;
 use CodeIgniter\Controller;
 
 class UsuarioController extends Controller
@@ -230,14 +231,31 @@ class UsuarioController extends Controller
 
         $userModel = new UserModel();
         try {
+            $username = $this->request->getPost('username');
+            $correo = $this->request->getPost('correo');
+            $maquiladoraId = $this->request->getPost('maquiladoraIdFK');
+            
             $userModel->save([
-                'username' => $this->request->getPost('username'),
-                'correo' => $this->request->getPost('correo'),
+                'username' => $username,
+                'correo' => $correo,
                 'password' => $this->request->getPost('password'),
-                'maquiladoraIdFK' => $this->request->getPost('maquiladoraIdFK'),
+                'maquiladoraIdFK' => $maquiladoraId,
                 'status' => 'inactivo',
                 'active' => 0
             ]);
+
+            // Crear notificación para el nuevo usuario registrado
+            try {
+                $notificationService = new NotificationService();
+                $notificationService->notifyUsuarioRegistrado(
+                    (int) $maquiladoraId,
+                    $username,
+                    $correo
+                );
+            } catch (\Throwable $e) {
+                // No fallar el registro si hay error en la notificación
+                log_message('warning', 'Error al crear notificación de usuario registrado: ' . $e->getMessage());
+            }
         } catch (\CodeIgniter\Database\Exceptions\DatabaseException $e) {
             $msg = $e->getMessage();
             $errors = [];

@@ -904,17 +904,123 @@ public function m11_eliminar_usuario()
 
     public function notificaciones()
     {
-        $items = [
-            ['nivel' => 'Crítica', 'color' => '#e03131', 'titulo' => 'Actualizar avance WIP en OP-2025-014', 'sub' => 'Atrasado 1 día • Módulo: Confección (WIP)'],
-            ['nivel' => 'Alta', 'color' => '#ffd43b', 'titulo' => 'Revisar muestra M-0045 del cliente A', 'sub' => 'Vence hoy • Módulo: Prototipos'],
-            ['nivel' => 'Media', 'color' => '#4dabf7', 'titulo' => 'Revisar muestra M-0045 del cliente A', 'sub' => 'Módulo: Prototipos'],
-        ];
+        // Obtener ID de maquiladora y usuario de la sesión (usando el mismo patrón que otros controladores)
+        $maquiladoraId = session()->get('maquiladora_id') ?? session()->get('maquiladoraID');
+        $userId = session()->get('user_id');
+        
+        // Debug: Log para verificar los IDs de sesión
+        log_message('debug', 'Notificaciones - Session IDs: maquiladora_id=' . session()->get('maquiladora_id') . 
+                   ', maquiladoraID=' . session()->get('maquiladoraID') . 
+                   ', user_id=' . session()->get('user_id'));
+        
+        // Validar que tengamos IDs válidos
+        if (!$maquiladoraId || !$userId) {
+            log_message('error', 'Notificaciones - Faltan datos de sesión: maquiladoraId=' . $maquiladoraId . ', userId=' . $userId);
+            return view('modulos/notificaciones', $this->payload([
+                'title' => 'Notificaciones',
+                'items' => [],
+                'notifCount' => 0,
+                'error' => 'No se pudo identificar tu sesión. Por favor inicia sesión nuevamente.'
+            ]));
+        }
+        
+        // Cargar modelo de notificaciones
+        $notificationModel = new \App\Models\NotificacionModel();
+        
+        try {
+            // Debug: Log para verificar la consulta
+            log_message('debug', 'Notificaciones - Consultando para maquiladoraId: ' . (int) $maquiladoraId . ', userId: ' . (int) $userId);
+            
+            // Obtener notificaciones con estado de lectura para el usuario actual
+            $notifications = $notificationModel->getWithReadStatus(
+                (int) $maquiladoraId,
+                (int) $userId,
+                50 // Límite de notificaciones a mostrar
+            );
+            
+            // Debug: Log resultados
+            log_message('debug', 'Notificaciones - Encontradas: ' . count($notifications) . ' notificaciones');
+            
+            // Formatear las notificaciones para la vista
+            $items = [];
+            foreach ($notifications as $notif) {
+                // Determinar color según nivel
+                $color = '#4dabf7'; // Default azul
+                $nivel = 'Media';
+                
+                switch (strtolower($notif['nivel'] ?? '')) {
+                    case 'critical':
+                    case 'crítica':
+                        $color = '#e03131';
+                        $nivel = 'Crítica';
+                        break;
+                    case 'high':
+                    case 'alta':
+                        $color = '#ffd43b';
+                        $nivel = 'Alta';
+                        break;
+                    case 'warning':
+                    case 'advertencia':
+                        $color = '#ff8787';
+                        $nivel = 'Advertencia';
+                        break;
+                    case 'info':
+                    case 'información':
+                        $color = '#4dabf7';
+                        $nivel = 'Media';
+                        break;
+                }
+                
+                // Formatear tiempo
+                $timeAgo = $this->timeAgo($notif['created_at']);
+                
+                $items[] = [
+                    'id' => $notif['id'],
+                    'nivel' => $nivel,
+                    'color' => $color,
+                    'titulo' => $notif['titulo'] ?? 'Notificación',
+                    'sub' => ($notif['sub'] ?? '') . ' • ' . $timeAgo,
+                    'is_leida' => (int) ($notif['is_leida'] ?? 0),
+                    'created_at' => $notif['created_at']
+                ];
+            }
+            
+        } catch (\Throwable $e) {
+            // En caso de error, mostrar array vacío
+            log_message('error', 'Error al cargar notificaciones: ' . $e->getMessage());
+            $items = [];
+        }
 
         return view('modulos/notificaciones', $this->payload([
             'title' => 'Notificaciones',
             'items' => $items,
             'notifCount' => count($items),
+            'debug_maquiladora_id' => $maquiladoraId // Para depuración en la vista
         ]));
+    }
+    
+    /**
+     * Helper: Convert timestamp to "time ago" format
+     */
+    protected function timeAgo($datetime): string
+    {
+        $timestamp = strtotime($datetime);
+        $diff = time() - $timestamp;
+
+        if ($diff < 60) {
+            return 'Justo ahora';
+        } elseif ($diff < 3600) {
+            $mins = floor($diff / 60);
+            return "Hace {$mins} " . ($mins == 1 ? 'minuto' : 'minutos');
+        } elseif ($diff < 86400) {
+            $hours = floor($diff / 3600);
+            return "Hace {$hours} " . ($hours == 1 ? 'hora' : 'horas');
+        } elseif ($diff < 604800) {
+            $days = floor($diff / 86400);
+            return "Hace {$days} " . ($days == 1 ? 'día' : 'días');
+        } else {
+            return date('d/m/Y', $timestamp);
+        }
     }
 
     public function mrp()
@@ -932,206 +1038,6 @@ public function m11_eliminar_usuario()
             'ocs' => $ocs,
             'notifCount' => 0,
         ]));
-    }
-
-    // ===== CRUD Requerimientos =====
-    public function crearRequerimiento()
-    {
-        $reqModel = new \App\Models\MrpRequerimientoModel();
-        $post = $this->request->getPost();
-
-        try {
-            $data = [
-                'mat' => $post['mat'] ?? null,
-                'u' => $post['u'] ?? null,
-                'necesidad' => $post['necesidad'] ?? 0,
-                'stock' => $post['stock'] ?? 0,
-                'comprar' => $post['comprar'] ?? 0,
-            ];
-
-            $reqModel->insert($data);
-            return redirect()->to('/modulo3/mrp')->with('success', 'Requerimiento creado');
-        } catch (\Throwable $e) {
-            log_message('error', '[MRP Req] ' . $e->getMessage());
-            return redirect()->to('/modulo3/mrp')->with('error', 'Error al crear requerimiento');
-        }
-    }
-
-    public function editarRequerimiento($id)
-    {
-        $reqModel = new \App\Models\MrpRequerimientoModel();
-        $post = $this->request->getPost();
-
-        try {
-            $data = [
-                'mat' => $post['mat'] ?? null,
-                'u' => $post['u'] ?? null,
-                'necesidad' => $post['necesidad'] ?? 0,
-                'stock' => $post['stock'] ?? 0,
-                'comprar' => $post['comprar'] ?? 0,
-            ];
-
-            $reqModel->update($id, $data);
-            return redirect()->to('/modulo3/mrp')->with('success', 'Requerimiento actualizado');
-        } catch (\Throwable $e) {
-            log_message('error', '[MRP Req Edit] ' . $e->getMessage());
-            return redirect()->to('/modulo3/mrp')->with('error', 'Error al actualizar requerimiento');
-        }
-    }
-
-    public function eliminarRequerimiento($id)
-    {
-        $reqModel = new \App\Models\MrpRequerimientoModel();
-
-        try {
-            $reqModel->delete($id);
-            return redirect()->to('/modulo3/mrp')->with('success', 'Requerimiento eliminado');
-        } catch (\Throwable $e) {
-            log_message('error', '[MRP Req Delete] ' . $e->getMessage());
-            return redirect()->to('/modulo3/mrp')->with('error', 'Error al eliminar requerimiento');
-        }
-    }
-
-    public function requerimientoJson($id)
-    {
-        $reqModel = new \App\Models\MrpRequerimientoModel();
-        $req = $reqModel->find($id);
-
-        if (!$req) {
-            return $this->response->setStatusCode(404)->setJSON(['error' => 'No encontrado']);
-        }
-
-        return $this->response->setJSON($req);
-    }
-
-    // ===== CRUD OCs =====
-    public function crearOC()
-    {
-        $ocModel = new \App\Models\MrpOcModel();
-        $post = $this->request->getPost();
-
-        try {
-            $data = [
-                'prov' => $post['prov'] ?? null,
-                'mat' => $post['mat'] ?? null,
-                'cant' => $post['cant'] ?? 0,
-                'u' => $post['u'] ?? null,
-                'eta' => $post['eta'] ?? date('Y-m-d'),
-            ];
-
-            $ocId = $ocModel->insert($data);
-
-            // Generate PDF
-            $pdfGenerator = new \App\Libraries\PdfGenerator();
-            $ocData = $ocModel->find($ocId);
-            $pdfPath = $pdfGenerator->generateOCPdf($ocData);
-
-            if ($pdfPath) {
-                $ocModel->update($ocId, ['pdf_path' => $pdfPath]);
-            }
-
-            return redirect()->to('/modulo3/mrp')->with('success', 'OC creada');
-        } catch (\Throwable $e) {
-            log_message('error', '[MRP OC] ' . $e->getMessage());
-            return redirect()->to('/modulo3/mrp')->with('error', 'Error al crear OC');
-        }
-    }
-
-    public function editarOC($id)
-    {
-        $ocModel = new \App\Models\MrpOcModel();
-        $post = $this->request->getPost();
-
-        try {
-            $data = [
-                'prov' => $post['prov'] ?? null,
-                'mat' => $post['mat'] ?? null,
-                'cant' => $post['cant'] ?? 0,
-                'u' => $post['u'] ?? null,
-                'eta' => $post['eta'] ?? date('Y-m-d'),
-            ];
-
-            $ocModel->update($id, $data);
-            return redirect()->to('/modulo3/mrp')->with('success', 'OC actualizada');
-        } catch (\Throwable $e) {
-            log_message('error', '[MRP OC Edit] ' . $e->getMessage());
-            return redirect()->to('/modulo3/mrp')->with('error', 'Error al actualizar OC');
-        }
-    }
-
-    public function eliminarOC($id)
-    {
-        $ocModel = new \App\Models\MrpOcModel();
-
-        try {
-            $ocModel->delete($id);
-            return redirect()->to('/modulo3/mrp')->with('success', 'OC eliminada');
-        } catch (\Throwable $e) {
-            log_message('error', '[MRP OC Delete] ' . $e->getMessage());
-            return redirect()->to('/modulo3/mrp')->with('error', 'Error al eliminar OC');
-        }
-    }
-
-    public function ocJson($id)
-    {
-        $ocModel = new \App\Models\MrpOcModel();
-        $oc = $ocModel->find($id);
-
-        if (!$oc) {
-            return $this->response->setStatusCode(404)->setJSON(['error' => 'No encontrado']);
-        }
-
-        return $this->response->setJSON($oc);
-    }
-
-    public function generarOCDesdeRequerimiento($id)
-    {
-        $reqModel = new \App\Models\MrpRequerimientoModel();
-        $ocModel = new \App\Models\MrpOcModel();
-
-        try {
-            // Obtener el requerimiento
-            $req = $reqModel->find($id);
-
-            if (!$req) {
-                return redirect()->to('/modulo3/mrp')->with('error', 'Requerimiento no encontrado');
-            }
-
-            // Solo generar OC si hay cantidad a comprar
-            if ($req['comprar'] <= 0) {
-                return redirect()->to('/modulo3/mrp')->with('error', 'No hay cantidad a comprar para este requerimiento');
-            }
-
-            // Crear la OC automáticamente
-            $data = [
-                'prov' => 'Proveedor por definir',
-                'mat' => $req['mat'],
-                'cant' => $req['comprar'],
-                'u' => $req['u'],
-                'eta' => date('Y-m-d', strtotime('+15 days')), // ETA en 15 días
-            ];
-
-            $ocId = $ocModel->insert($data);
-
-            // Generate PDF
-            $pdfGenerator = new \App\Libraries\PdfGenerator();
-            $ocData = $ocModel->find($ocId);
-            $pdfPath = $pdfGenerator->generateOCPdf($ocData);
-
-            if ($pdfPath) {
-                $ocModel->update($ocId, ['pdf_path' => $pdfPath]);
-            }
-
-            // Create notification
-            $notifService = new \App\Services\NotificationService();
-            $maquiladoraId = session('maquiladoraID') ?? 1;
-            $notifService->createOCNotification($maquiladoraId, $ocId, $ocData['mat']);
-
-            return redirect()->to('/modulo3/mrp')->with('success', 'OC generada exitosamente');
-        } catch (\Throwable $e) {
-            log_message('error', '[MRP Gen OC] ' . $e->getMessage());
-            return redirect()->to('/modulo3/mrp')->with('error', 'Error al generar OC');
-        }
     }
 
     public function descargarOCPdf($id)
