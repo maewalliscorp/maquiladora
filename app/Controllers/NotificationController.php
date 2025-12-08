@@ -24,9 +24,21 @@ class NotificationController extends ResourceController
     protected function getCurrentUserData(): array
     {
         $session = session();
+        $userId = $session->get('user_id') ?? $session->get('userId');
+        $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID');
+        
+        if (!$userId || !$maquiladoraId) {
+            log_message('error', 'NotificationController - Faltan datos de sesión: userId=' . $userId . ', maquiladoraId=' . $maquiladoraId);
+            return [
+                'userId' => null,
+                'maquiladoraId' => null,
+                'error' => 'No se pudo identificar tu sesión'
+            ];
+        }
+        
         return [
-            'userId' => $session->get('userId') ?? 1, // Default to 1 for testing
-            'maquiladoraId' => $session->get('maquiladoraID') ?? 1 // Default to 1 for testing
+            'userId' => $userId,
+            'maquiladoraId' => $maquiladoraId
         ];
     }
 
@@ -37,6 +49,14 @@ class NotificationController extends ResourceController
     public function index()
     {
         $userData = $this->getCurrentUserData();
+        
+        if (isset($userData['error'])) {
+            return $this->respond([
+                'success' => false,
+                'error' => $userData['error']
+            ], 401);
+        }
+        
         $limit = $this->request->getVar('limit') ?? 10;
 
         $notifications = $this->notificationModel->getWithReadStatus(
@@ -63,6 +83,13 @@ class NotificationController extends ResourceController
     public function unreadCount()
     {
         $userData = $this->getCurrentUserData();
+        
+        if (isset($userData['error'])) {
+            return $this->respond([
+                'success' => false,
+                'error' => $userData['error']
+            ], 401);
+        }
 
         $count = $this->notificationModel->getUnreadCount(
             $userData['maquiladoraId'],

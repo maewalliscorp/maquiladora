@@ -22,9 +22,21 @@ class NotificacionesController extends BaseController
     protected function getCurrentUserData(): array
     {
         $session = session();
+        $userId = $session->get('user_id') ?? $session->get('userId');
+        $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID');
+        
+        if (!$userId || !$maquiladoraId) {
+            log_message('error', 'NotificacionesController - Faltan datos de sesión: userId=' . $userId . ', maquiladoraId=' . $maquiladoraId);
+            return [
+                'userId' => null,
+                'maquiladoraId' => null,
+                'error' => 'No se pudo identificar tu sesión'
+            ];
+        }
+        
         return [
-            'userId' => $session->get('userId') ?? $session->get('user_id') ?? 1,
-            'maquiladoraId' => $session->get('maquiladoraID') ?? $session->get('maquiladora_id') ?? 1
+            'userId' => $userId,
+            'maquiladoraId' => $maquiladoraId
         ];
     }
 
@@ -34,6 +46,14 @@ class NotificacionesController extends BaseController
     public function apiIndex()
     {
         $userData = $this->getCurrentUserData();
+        
+        if (isset($userData['error'])) {
+            return $this->response->setStatusCode(401)->setJSON([
+                'success' => false,
+                'error' => $userData['error']
+            ]);
+        }
+        
         $limit = $this->request->getVar('limit') ?? 10;
 
         $notifications = $this->notificationModel->getWithReadStatus(
@@ -59,6 +79,13 @@ class NotificacionesController extends BaseController
     public function apiUnreadCount()
     {
         $userData = $this->getCurrentUserData();
+        
+        if (isset($userData['error'])) {
+            return $this->response->setStatusCode(401)->setJSON([
+                'success' => false,
+                'error' => $userData['error']
+            ]);
+        }
 
         $count = $this->notificationModel->getUnreadCount(
             $userData['maquiladoraId'],

@@ -25,14 +25,34 @@ class Notificaciones2 extends BaseController
      */
     public function index()
     {
-        $userId = (int) (session('user_id') ?? session('id') ?? 1);
-        $maquiladoraId = (int) (session('maquiladoraID') ?? 1);
+        $userId = (int) (session('user_id') ?? session('id'));
+        $maquiladoraId = session('maquiladora_id') ?? session('maquiladoraID');
+
+        // Debug: Log para verificar los IDs de sesión
+        log_message('debug', 'Notificaciones2 - Session IDs: maquiladora_id=' . session('maquiladora_id') . 
+                   ', maquiladoraID=' . session('maquiladoraID') . 
+                   ', user_id=' . session('user_id'));
+
+        // Validar que tengamos IDs válidos
+        if (!$maquiladoraId || !$userId) {
+            log_message('error', 'Notificaciones2 - Faltan datos de sesión: maquiladoraId=' . $maquiladoraId . ', userId=' . $userId);
+            return view('modulos/notificaciones2', [
+                'title' => 'Notificaciones (Sistema Nuevo)',
+                'notifications' => [],
+                'unreadCount' => 0,
+                'error' => 'No se pudo identificar tu sesión. Por favor inicia sesión nuevamente.'
+            ]);
+        }
 
         // Get notifications with read status
-        $notifications = $this->notificationModel->getWithReadStatus($maquiladoraId, $userId, 50);
+        log_message('debug', 'Notificaciones2 - Consultando para maquiladoraId: ' . (int) $maquiladoraId . ', userId: ' . (int) $userId);
+        $notifications = $this->notificationModel->getWithReadStatus((int) $maquiladoraId, (int) $userId, 50);
 
         // Get unread count
-        $unreadCount = $this->notificationModel->getUnreadCount($maquiladoraId, $userId);
+        $unreadCount = $this->notificationModel->getUnreadCount((int) $maquiladoraId, (int) $userId);
+
+        // Debug: Log resultados
+        log_message('debug', 'Notificaciones2 - Encontradas: ' . count($notifications) . ' notificaciones, no leídas: ' . $unreadCount);
 
         // Add time ago to each notification
         foreach ($notifications as &$notification) {
@@ -43,6 +63,7 @@ class Notificaciones2 extends BaseController
             'title' => 'Notificaciones (Sistema Nuevo)',
             'notifications' => $notifications,
             'unreadCount' => $unreadCount,
+            'debug_maquiladora_id' => $maquiladoraId // Para depuración en la vista
         ]);
     }
 
@@ -51,10 +72,14 @@ class Notificaciones2 extends BaseController
      */
     public function markAsRead($id)
     {
-        $userId = (int) (session('user_id') ?? session('id') ?? 1);
-        $maquiladoraId = (int) (session('maquiladoraID') ?? 1);
+        $userId = (int) (session('user_id') ?? session('id'));
+        $maquiladoraId = session('maquiladora_id') ?? session('maquiladoraID');
 
-        $this->userNotificationModel->markAsRead((int) $id, $userId, $maquiladoraId);
+        if (!$maquiladoraId || !$userId) {
+            return redirect()->back()->with('error', 'No se pudo identificar tu sesión');
+        }
+
+        $this->userNotificationModel->markAsRead((int) $id, $userId, (int) $maquiladoraId);
 
         return redirect()->back()->with('success', 'Notificación marcada como leída');
     }
@@ -64,10 +89,14 @@ class Notificaciones2 extends BaseController
      */
     public function markAllAsRead()
     {
-        $userId = (int) (session('user_id') ?? session('id') ?? 1);
-        $maquiladoraId = (int) (session('maquiladoraID') ?? 1);
+        $userId = (int) (session('user_id') ?? session('id'));
+        $maquiladoraId = session('maquiladora_id') ?? session('maquiladoraID');
 
-        $this->userNotificationModel->markAllAsRead($userId, $maquiladoraId);
+        if (!$maquiladoraId || !$userId) {
+            return redirect()->back()->with('error', 'No se pudo identificar tu sesión');
+        }
+
+        $this->userNotificationModel->markAllAsRead($userId, (int) $maquiladoraId);
 
         return redirect()->back()->with('success', 'Todas las notificaciones marcadas como leídas');
     }
@@ -77,7 +106,11 @@ class Notificaciones2 extends BaseController
      */
     public function delete($id)
     {
-        $userId = (int) (session('user_id') ?? session('id') ?? 1);
+        $userId = (int) (session('user_id') ?? session('id'));
+
+        if (!$userId) {
+            return redirect()->back()->with('error', 'No se pudo identificar tu sesión');
+        }
 
         $this->userNotificationModel
             ->where(['idUserFK' => $userId, 'idNotificacionFK' => $id])
@@ -91,7 +124,11 @@ class Notificaciones2 extends BaseController
      */
     public function generateTestNotifications()
     {
-        $maquiladoraId = (int) (session('maquiladoraID') ?? 1);
+        $maquiladoraId = session('maquiladora_id') ?? session('maquiladoraID');
+
+        if (!$maquiladoraId) {
+            return redirect()->back()->with('error', 'No se pudo identificar tu sesión');
+        }
 
         // Create different types of test notifications
         $this->notificationService->createStockAlert($maquiladoraId, 'Tela Algodón 180g', 5.0, 50.0);

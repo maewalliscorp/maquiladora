@@ -9,11 +9,30 @@ class Notificaciones1 extends BaseController
 {
     public function index()
     {
-        $userId = (int) (session('user_id') ?? session('id') ?? 1);
+        $userId = (int) (session('user_id') ?? session('id'));
+        $maquiladoraId = session('maquiladora_id') ?? session('maquiladoraID');
+
+        // Debug: Log para verificar los IDs de sesión
+        log_message('debug', 'Notificaciones1 - Session IDs: maquiladora_id=' . session('maquiladora_id') . 
+                   ', maquiladoraID=' . session('maquiladoraID') . 
+                   ', user_id=' . session('user_id'));
+
+        // Validar que tengamos IDs válidos
+        if (!$maquiladoraId || !$userId) {
+            log_message('error', 'Notificaciones1 - Faltan datos de sesión: maquiladoraId=' . $maquiladoraId . ', userId=' . $userId);
+            return view('modulos/notificaciones1', [
+                'title'      => 'Notificaciones',
+                'items'      => [],
+                'notifCount' => 0,
+                'error'      => 'No se pudo identificar tu sesión. Por favor inicia sesión nuevamente.'
+            ]);
+        }
 
         $db = \Config\Database::connect();
 
-        // Listado: no leídas primero, luego más recientes.
+        // Listado: no leídas primero, luego más recientes, FILTRADO POR MAQUILADORA
+        log_message('debug', 'Notificaciones1 - Consultando para maquiladoraId: ' . (int) $maquiladoraId . ', userId: ' . (int) $userId);
+        
         $items = $db->table('notificaciones n')
             ->select('n.*, IFNULL(un.is_leida,0) AS is_leida, un.id AS enlace_id')
             ->join(
@@ -22,9 +41,12 @@ class Notificaciones1 extends BaseController
                 'left',
                 false // no escape en la condición del JOIN
             )
+            ->where('n.maquiladoraID', (int) $maquiladoraId) // FILTRO CRÍTICO POR MAQUILADORA
             // FIX: un solo orderBy crudo para evitar que CI meta "ASC" dentro del IFNULL
             ->orderBy('IFNULL(un.is_leida,0) ASC, n.created_at DESC', '', false)
             ->get()->getResultArray();
+
+        log_message('debug', 'Notificaciones1 - Encontradas: ' . count($items) . ' notificaciones');
 
         $notifCount = (new UsuarioNotificacionModel())->contarNoLeidas($userId);
 
@@ -32,13 +54,19 @@ class Notificaciones1 extends BaseController
             'title'      => 'Notificaciones',
             'items'      => $items,
             'notifCount' => $notifCount,
+            'debug_maquiladora_id' => $maquiladoraId // Para depuración en la vista
         ]);
     }
 
     // Marca UNA notificación como leída para el usuario
     public function leer(int $notifId)
     {
-        $userId = (int) (session('user_id') ?? session('id') ?? 1);
+        $userId = (int) (session('user_id') ?? session('id'));
+        $maquiladoraId = session('maquiladora_id') ?? session('maquiladoraID');
+
+        if (!$maquiladoraId || !$userId) {
+            return redirect()->back()->with('error', 'No se pudo identificar tu sesión');
+        }
 
         $un = new UsuarioNotificacionModel();
         $row = $un->where([
@@ -61,7 +89,12 @@ class Notificaciones1 extends BaseController
     // Marca TODAS como leídas
     public function leerTodas()
     {
-        $userId = (int) (session('user_id') ?? session('id') ?? 1);
+        $userId = (int) (session('user_id') ?? session('id'));
+        $maquiladoraId = session('maquiladora_id') ?? session('maquiladoraID');
+
+        if (!$maquiladoraId || !$userId) {
+            return redirect()->back()->with('error', 'No se pudo identificar tu sesión');
+        }
 
         $db = \Config\Database::connect();
         // marca las que ya tengan enlace
