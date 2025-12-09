@@ -636,3 +636,49 @@ body[data-theme="dark"] .card-header.bg-success,
 body[data-theme="dark"] .card-header.bg-warning{
     color: #f8f9fa !important;
 }
+
+/* ===== Tabla de pagos diarios (modo oscuro) ===== */
+/* Asegurar que la tabla de pagos diarios tenga bordes visibles y espaciado */
+body[data-theme="dark"] #tablaPagosDiarios {
+    border-bottom: 1px solid #444 !important;
+    margin-bottom: 1rem !important;
+}
+
+/* Encabezados de la tabla de pagos diarios - mejorar visibilidad */
+body[data-theme="dark"] #tablaPagosDiarios thead {
+    background-color: #2d3748 !important;
+}
+
+body[data-theme="dark"] #tablaPagosDiarios thead th {
+    background-color: #2d3748 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    border-bottom: 2px solid #4a5568 !important;
+    padding: 0.75rem !important;
+}
+
+body[data-theme="dark"] #tablaPagosDiarios tbody tr:last-child td {
+    border-bottom: 1px solid #444 !important;
+}
+
+/* Fila de carga y mensajes en la tabla de pagos */
+body[data-theme="dark"] #tablaPagosDiarios tbody tr td[colspan] {
+    background-color: #2a2a2a !important;
+    color: #ced4da !important;
+    padding: 1rem !important;
+    border-bottom: 1px solid #444 !important;
+}
+
+/* Contenedor de la tabla de pagos con espaciado adecuado */
+body[data-theme="dark"] #pane-pagos .card-body {
+    padding-bottom: 1rem !important;
+}
+
+/* Footer o copyright después de la tabla en modo oscuro */
+body[data-theme="dark"] #pane-pagos .card-body:after {
+    content: '';
+    display: block;
+    height: 1px;
+    background-color: #444;
+    margin-top: 1rem;
+}
